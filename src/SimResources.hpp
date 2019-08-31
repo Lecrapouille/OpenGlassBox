@@ -6,110 +6,113 @@
 #  include <vector>
 
 static constexpr uint32_t MaxCapacity = std::numeric_limits<uint32_t>::max();
+class SimResourceBin;
 
 // -----------------------------------------------------------------------------
-//! \brief The basic currency of the game:
-//! Oil, coal, crops, wood, water ...
-//! Money, electricity, labour, pollution
+//!
 // -----------------------------------------------------------------------------
-struct SimResource
+struct SimResourceType
 {
   std::string id;
 };
 
 // -----------------------------------------------------------------------------
-//! Resources come in bins.
-//! Bin of resource R, has m_capacity C
-//! Bin value is an integer, 0..C
+//! \brief The basic currency of the game:
+//! -- Oil, coal, crops, wood, water ...
+//! -- Money, electricity, labour, pollution
+// -----------------------------------------------------------------------------
+class SimResource
+{
+public:
+
+  SimResource(SimResourceType const& resourceType)
+  {
+    this->resourceType = resourceType;
+    this->amount = amount;
+    this->capacity = capacity;
+  }
+
+  void Add(uint32_t toAdd)
+  {
+    amount += toAdd; // Fixme integer overflow
+    if (amount > capacity)
+      amount = capacity;
+  }
+
+  void Remove(uint32_t toRemove)
+  {
+    if (amount > toRemove)
+      amount -= toRemove;
+    else
+      amount = 0;
+  }
+
+  void TransferTo(SimResource& targetBin)
+  {
+    uint32_t toTransfer =
+      std::min(amount, targetBin.capacity - targetBin.amount);
+
+    Remove(toTransfer);
+    targetBin.Add(toTransfer);
+  }
+
+  void SetCapacity(uint32_t const capacity)
+  {
+    this->capacity = capacity;
+    if (amount > capacity)
+      amount = capacity;
+  }
+
+public:
+
+  SimResourceType resourceType;
+  uint32_t capacity = MaxCapacity;
+  uint32_t amount = 0;
+};
+
+// -----------------------------------------------------------------------------
+//! \brief Resources come in bin.
+//! Bin of resource R, has capacity C
+//! Bin value is an integer: 0..C
 //! Capacity is fixed
 // -----------------------------------------------------------------------------
 class SimResourceBin
 {
 public:
 
-  void Add(uint32_t toAdd) // TODO integer overflow
-  {
-    m_amount += toAdd;
-    if (m_amount > m_capacity)
-      m_amount = m_capacity;
-  }
-
-  void Remove(uint32_t toRemove)
-  {
-    if (m_amount > toRemove)
-      m_amount -= toRemove;
-    else
-      m_amount = 0;
-  }
-
-  void TransferTo(SimResourceBin targetBin)
-  {
-    uint32_t toTransfer =
-      std::min(m_amount, targetBin.m_capacity - targetBin.m_amount);
-
-    Remove(toTransfer);
-    targetBin.Add(toTransfer);
-  }
-
-  void SetCapacity(uint32_t capacity)
-  {
-    m_capacity = capacity;
-    if (m_amount > capacity)
-      m_amount = capacity;
-  }
-
-public:
-
-  SimResource m_resouce;
-  uint32_t m_capacity = MaxCapacity;
-  uint32_t m_amount = 0;
-};
-
-// -----------------------------------------------------------------------------
-//! \brief
-// -----------------------------------------------------------------------------
-class SimResourceBinCollection
-{
-public:
-
-  SimResourceBinCollection()
+  SimResourceBin()
   {}
 
-  ~SimResourceBinCollection()
+  ~SimResourceBin()
   {
-    uint32_t i = m_bins.size();
+    uint32_t i = bin.size();
     while (i--)
       {
-        delete m_bins[i];
+        delete bin[i];
       }
   }
 
-  void AddResource(SimResource const& resource, uint32_t const amount)
+  void AddResource(SimResourceType const& resourceType,
+                   uint32_t const amount)
   {
-    SimResourceBin& bin = FindOrAddBin(resource);
-
-    bin.Add(amount);
+    SimResource& res = FindOrAddResource(resourceType);
+    res.Add(amount);
   }
 
-  void AddResources(SimResourceBinCollection const& resourcesToAdd)
+  void AddResources(SimResourceBin const& resourcesToAdd)
   {
-    uint32_t i = m_bins.size();
-    while (i--)
+    for (auto const& it: resourcesToAdd.bin)
       {
-        AddResource(resourcesToAdd.m_bins[i]->m_resouce,
-                    resourcesToAdd.m_bins[i]->m_amount);
+        AddResource(it->resourceType, it->amount);
       }
   }
 
-  bool CanAddSomeResources(SimResourceBinCollection const& resourcesToTryAdd)
+  bool CanAddSomeResources(SimResourceBin const& resourcesToTryAdd)
   {
-    uint32_t i = m_bins.size();
-    while (i--)
+    for (auto& it: resourcesToTryAdd.bin)
       {
-        SimResourceBin& sourceBin = *(resourcesToTryAdd.m_bins[i]);
-
-        if ((sourceBin.m_amount > 0) &&
-            (GetAmount(sourceBin.m_resouce) < GetCapacity(sourceBin.m_resouce)))
+        if ((it->amount > 0) &&
+            (GetAmount(it->resourceType) < GetCapacity(it->resourceType)))
           {
             return true;
           }
@@ -118,63 +121,56 @@ public:
     return false;
   }
 
-  void TransferResourcesTo(SimResourceBinCollection& resourcesTarget)
+  void TransferResourcesTo(SimResourceBin& resourcesTarget)
   {
-    uint32_t i = m_bins.size();
-    while (i--)
+    for (auto& it: bin)
       {
-        SimResourceBin& sourceBin = *m_bins[i];
-        SimResourceBin& targetBin = resourcesTarget.FindOrAddBin(sourceBin.m_resouce);
-
-        sourceBin.TransferTo(targetBin);
+        it->TransferTo(resourcesTarget.FindOrAddResource(it->resourceType));
       }
   }
 
-  void RemoveResource(SimResource const& resource, uint32_t const amount)
+  void RemoveResource(SimResourceType const& resourceType, uint32_t const amount)
   {
-    SimResourceBin* bin = FindBin(resource);
+    SimResource* res = FindResource(resourceType);
 
-    if (bin != nullptr)
-      bin->Remove(amount);
+    if (res != nullptr)
+      res->Remove(amount);
   }
 
-  uint32_t GetAmount(SimResource const& resource)
+  uint32_t GetAmount(SimResourceType const& resourceType)
   {
-    SimResourceBin* bin = FindBin(resource);
+    SimResource* res = FindResource(resourceType);
 
-    return (bin != nullptr) ? bin->m_amount : 0;
+    return (res != nullptr) ? res->amount : 0;
   }
 
-  void SetCapacity(SimResource const& resource, uint32_t const capacity)
+  void SetCapacity(SimResourceType const& resourceType, uint32_t const capacity)
   {
-    SimResourceBin& bin = FindOrAddBin(resource);
+    SimResource& res = FindOrAddResource(resourceType);
 
-    bin.SetCapacity(capacity);
+    res.SetCapacity(capacity);
   }
 
-  void SetCapacities(SimResourceBinCollection const& resourcesCapacities)
+  void SetCapacities(SimResourceBin const& resourcesCapacities)
   {
-    uint32_t i = m_bins.size();
-    while (i--)
+    for (auto& it: resourcesCapacities.bin)
       {
-        SetCapacity(resourcesCapacities.m_bins[i]->m_resouce,
-                    resourcesCapacities.m_bins[i]->m_amount);
+        SetCapacity(it->resourceType, it->amount);
       }
   }
 
-  uint32_t GetCapacity(SimResource const& resource)
+  uint32_t GetCapacity(SimResourceType const& resourceType)
   {
-    SimResourceBin* bin = FindBin(resource);
+    SimResource* b = FindResource(resourceType);
 
-    return (bin != nullptr) ? bin->m_capacity : MaxCapacity;
+    return (b != nullptr) ? b->capacity : MaxCapacity;
   }
 
-  bool IsEmpty()
+  bool IsEmpty() const
   {
-    uint32_t i = m_bins.size();
-    while (i--)
+    for (auto const& it: bin)
       {
-        if (m_bins[i]->m_amount > 0)
+        if (it->amount > 0)
           return false;
       }
 
@@ -183,35 +179,33 @@ public:
 
 private:
 
-  SimResourceBin* FindBin(SimResource const& resource)
+  SimResource* FindResource(SimResourceType const& resourceType)
   {
-    uint32_t i = m_bins.size();
-    while (i--)
+    for (auto& it: bin)
       {
-        if (m_bins[i]->m_resouce.id == resource.id)
-          return m_bins[i];
+        if (it->resourceType.id == resourceType.id)
+          return it;
       }
 
     return nullptr;
   }
 
-  SimResourceBin& FindOrAddBin(SimResource const& resource)
+  SimResource& FindOrAddResource(SimResourceType const& resourceType)
   {
-    SimResourceBin* bin = FindBin(resource);
+    SimResource* b = FindResource(resourceType);
 
-    if (bin == nullptr)
+    if (b == nullptr)
       {
-        bin = new SimResourceBin();
-        bin->m_resouce = resource;
-        m_bins.push_back(bin);
+        b = new SimResource(resourceType);
+        bin.push_back(b);
       }
 
-    return *bin;
+    return *b;
   }
 
 public:
 
-  std::vector<SimResourceBin*> m_bins;
+  std::vector<SimResource*> bin;
 };
 
 #endif
