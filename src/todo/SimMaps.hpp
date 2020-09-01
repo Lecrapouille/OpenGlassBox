@@ -180,7 +180,7 @@ public:
     while (remainingToRemove > 0 && c.GetNextCoordinate(&x, &y))
       {
         uint32_t val = GetValue(x, y);
-
+mapType
         toRemove = std::min(val, remainingToRemove);
         if (toRemove > 0)
           {
@@ -218,7 +218,7 @@ public:
             for (uint32_t j = 0; j < tilesAmount; j++)
               if (r.GetNextCoordinate(&context.mapPositionX, &context.mapPositionY))
                 rule.Execute(context);
-          }
+          }id
         else
           {
             for (uint32_t x = 0; x < sizeX; ++x)
