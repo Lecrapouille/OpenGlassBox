@@ -1,5 +1,4 @@
 #include "Simulation.hpp"
-#include "City.hpp"
 
 #define MAX_ITERATIONS_PER_UPDATE 20u
 #define TICKS_PER_SECOND 200.0f

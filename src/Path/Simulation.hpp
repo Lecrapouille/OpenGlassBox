@@ -1,11 +1,11 @@
 #ifndef SIMULATION_HPP
 #define SIMULATION_HPP
 
+#  include "City.hpp"
+#  include "Path.hpp"
 #  include <string>
 #  include <map>
 #  include <memory>
-
-class City;
 
 //==============================================================================
 //! \brief Entry point class managing (add, get, remove) a collection of Cities
