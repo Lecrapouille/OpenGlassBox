@@ -2,14 +2,18 @@
 #  define CITY_HPP
 
 #  include "Resources.hpp"
+#  include "Vector.hpp"
 #  include <map>
 #  include <string>
 #  include <vector>
 #  include <memory>
 
 class Map;
+class Unit;
 class Path;
+class Node;
 class Agent;
+class Resources;
 
 //==============================================================================
 //! \brief Class holding everything that makes up a city.
@@ -61,12 +65,15 @@ public:
     //! \brief
     // -------------------------------------------------------------------------
     Agent& addAgent(uint32_t id, Node const& node, Unit& owner,
-                    Resources const& resources, string const& searchTarget);
+                    Resources const& resources, std::string const& searchTarget);
+
+    uint32_t gridSizeX() const { return m_gridSizeX; }
+    uint32_t gridSizeY() const { return m_gridSizeY; }
 
 private:
 
     using Maps = std::map<std::string, std::shared_ptr<Map>>;
-    using Pats = std::map<std::string, std::shared_ptr<Path>>;
+    using Paths = std::map<std::string, std::shared_ptr<Path>>;
     using Units = std::vector<std::shared_ptr<Unit>>;
     using Agents = std::vector<std::shared_ptr<Agent>>;
 

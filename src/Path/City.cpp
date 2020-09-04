@@ -1,5 +1,6 @@
 #include "City.hpp"
 #include "Map.hpp"
+#include "Unit.hpp"
 #include "Path.hpp"
 #include "Agent.hpp"
 

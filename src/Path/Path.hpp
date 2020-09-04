@@ -11,7 +11,7 @@ class Node;
 class Segment;
 class Path;
 class Unit;
-class Box;
+class City;
 
 // =============================================================================
 //! \brief Class defining the extrimity of a Segment constituing a Path. This
@@ -54,7 +54,7 @@ public:
     //! \brief A Maps are simple uniform size grids. This method return the
     //! indices on the map (maps have all the same pavement).
     // -------------------------------------------------------------------------
-    void getMapPosition(int32_t& u, int32_t& v);
+    void getMapPosition(uint32_t& u, uint32_t& v);
 
     // -------------------------------------------------------------------------
     //! \brief Return the segment which the given node belongs to.
@@ -89,7 +89,7 @@ private:
     //! \brief Unique identifier.
     uint32_t              m_id;
     //! \brief
-    uint32_t             m_color;
+    uint32_t              m_color;
     //! \brief World position.
     Vector3f              m_position;
     //! \brief Path owning this node instance.
@@ -135,12 +135,12 @@ public:
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    Node const& node1() const { return *m_node1; }
+    Node& node1() { return *m_node1; }
 
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    Node const& node2() const { return *m_node2; }
+    Node& node2() { return *m_node2; }
 
     // -------------------------------------------------------------------------
     //! \brief
@@ -195,7 +195,7 @@ public:
     //! \brief Empty Path: no nodes, no segments.
     //! \param
     // -------------------------------------------------------------------------
-    Path(std::string const& id, Box& box);
+    Path(std::string const& id, City& city);
 
     // -------------------------------------------------------------------------
     //! \brief Create and store a new node given its world position.
@@ -231,9 +231,9 @@ public:
     std::string const& id() const { return m_id; }
 
     // -------------------------------------------------------------------------
-    //! \brief Return the owner box.
+    //! \brief Return the owner city.
     // -------------------------------------------------------------------------
-    Box& box() const { return m_box; }
+    City& city() const { return m_city; }
 
     // -------------------------------------------------------------------------
     //! \brief Return the list of nodes.
@@ -249,8 +249,8 @@ private:
 
     //! \brief
     std::string          m_id;
-    //! \brief The reference to the Box owner of this Path instance.
-    Box                 &m_box;
+    //! \brief The reference to the City owner of this Path instance.
+    City                 &m_city;
     //! \brief
     std::vector<Node>    m_nodes;
     //! \brief

@@ -1,5 +1,6 @@
 #include "Rule.hpp"
 #include <cstdlib>
+#include <stdexcept>
 
 template<class T>
 static bool TryParse(std::string const& str, T& res)
@@ -8,35 +9,38 @@ static bool TryParse(std::string const& str, T& res)
     {
         std::size_t sz;
         res = T(std::stoll(str, &sz, 10));
-        return sz == word.length();
+        return sz == str.length(); //TODO LOG
     }
-    catch (const std::invalid_argument& /*ia*/)
+    catch (std::invalid_argument const& /*ia*/)
     {
+        //TODO LOG
         return false;
     }
 }
 
-virtual bool Rule::execute(Rule::Context& context)
+bool Rule::execute(Rule::Context& context)
 {
-    for (size_t i = 0u; i < m_commands.size(); ++i)
+    size_t i = m_commands.size();
+    while (i--)
     {
-        if (!m_commands[i].validate(context))
+        if (!m_commands[i]->validate(context))
             return false;
     }
 
-    for (size_t i = 0u; i < m_commands.size(); ++i)
-        m_commands[i].execute(context);
+    i = m_commands.size();
+    while (i--)
+    {
+        m_commands[i]->execute(context);
+    }
 
     return true;
 }
 
-virtual void Rule::setOption(std::string const& optionId, std::string const& val)
+void Rule::setOption(std::string const& optionId, std::string const& val)
 {
-    switch (optionId)
+    if (optionId == "rate")
     {
-    case "rate":
         if (!TryParse<uint32_t>(val, m_rate))
             m_rate = 1u;
-        break;
     }
 }

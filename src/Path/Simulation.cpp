@@ -2,7 +2,7 @@
 #include "City.hpp"
 
 #define MAX_ITERATIONS_PER_UPDATE 20u
-#define TICKS_PER_SECOND 200.0f;
+#define TICKS_PER_SECOND 200.0f
 
 Simulation::Simulation(uint32_t gridSizeX, uint32_t gridSizeY)
     : m_gridSizeX(gridSizeX),
@@ -19,17 +19,15 @@ void Simulation::update(float const deltaTime)
     {
         m_time -= 1.0f / TICKS_PER_SECOND;
 
-        uint32_t t = m_boxes.size();
-        while (i--) {
-            m_boxes[i].update();
+        for (auto& it: m_boxes) {
+            it.second->update();
         }
     }
 }
 
 City& Simulation::addCity(std::string const& id)
 {
-    std::make_shared<City> box =
-            std::make_shared<City>(id, m_gridSizeX, m_gridSizeY);
+    auto box = std::make_shared<City>(id, m_gridSizeX, m_gridSizeY);
     m_boxes[id] = box;
     return *box;
 }

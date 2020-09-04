@@ -2,8 +2,9 @@
 
 const float Map::GRID_SIZE = 2.0f;
 
-Map::Map(uint32_t sizeX, uint32_t sizeY)
-    : m_sizeX(sizeX), m_sizeY(sizeY),
+Map::Map(std::string const& id, uint32_t sizeX, uint32_t sizeY)
+    : m_id(id),
+      m_sizeX(sizeX), m_sizeY(sizeY),
       m_resources(sizeX * sizeY, 0u)
 {}
 
@@ -27,6 +28,7 @@ uint32_t Map::getValue(uint32_t const x, uint32_t const y)
     return m_resources[y * m_sizeX + x];
 }
 
+#if 0
 uint32_t Map::getValue(uint32_t const x, uint32_t const y, uint32_t radius)
 {
     uint32_t totalInsideRadius = 0u;
@@ -53,8 +55,9 @@ uint32_t Map::getCapacity(uint32_t const x, uint32_t const y, uint32_t const rad
 
     return capacityInsideRadius;
 }
+#endif
 
-void Map::add(uint32_t const x, uint32_t const y, uint32_t const toAdd)
+void Map::add(uint32_t const x, uint32_t const y, uint32_t toAdd)
 {
     uint32_t val = getValue(x, y);
 
@@ -66,6 +69,7 @@ void Map::add(uint32_t const x, uint32_t const y, uint32_t const toAdd)
     }
 }
 
+#if 0
 void Map::add(uint32_t const x, uint32_t const y, uint32_t const radius, uint32_t const toAdd)
 {
     CoordinatesInsideRadius c(radius, x, y, 0, m_sizeX, 0, m_sizeY, true);
@@ -84,8 +88,9 @@ void Map::add(uint32_t const x, uint32_t const y, uint32_t const radius, uint32_
         }
     }
 }
+#endif
 
-void Map::remove(uint32_t const x, uint32_t const y, uint32_t const toRemove)
+void Map::remove(uint32_t const x, uint32_t const y, uint32_t toRemove)
 {
     uint32_t val = getValue(x, y);
 
@@ -97,6 +102,7 @@ void Map::remove(uint32_t const x, uint32_t const y, uint32_t const toRemove)
     }
 }
 
+#if 0
 void Map::remove(uint32_t const x, uint32_t const y, uint32_t radius, uint32_t toRemove)
 {
     uint32_t remainingToRemove = toRemove;
@@ -105,9 +111,8 @@ void Map::remove(uint32_t const x, uint32_t const y, uint32_t radius, uint32_t t
     while ((remainingToRemove > 0u) && c.GetNextCoordinate(&x, &y))
     {
         uint32_t val = getValue(x, y);
-        mapType
-                toRemove = std::min(val, remainingToRemove);
-        if (toRemove > 0)
+        uint32_ toRemove = std::min(val, remainingToRemove);
+        if (toRemove > 0u)
         {
             val -= toRemove;
             remainingToRemove -= toRemove;
@@ -115,6 +120,7 @@ void Map::remove(uint32_t const x, uint32_t const y, uint32_t radius, uint32_t t
         }
     }
 }
+#endif
 
 Vector3f Map::getWorldPosition(uint32_t const x, uint32_t const y)
 {
@@ -125,13 +131,15 @@ Vector3f Map::getWorldPosition(uint32_t const x, uint32_t const y)
 
 void Map::executeRules()
 {
-    ticks++;
+#if 0
+    m_ticks++;
 
-    for (uint32_t i = 0u; i < m_rules.size(); ++i)
+    size_t i = m_rules.size();
+    while (i--)
     {
         SimRuleMap& rule = *(m_rules[i]);
 
-        if (ticks % rule.rate == 0u)
+        if (m_ticks % rule.rate == 0u)
             continue;
 
         if (rule.randomTiles)
@@ -158,4 +166,5 @@ void Map::executeRules()
             }
         }
     }
+#endif
 }

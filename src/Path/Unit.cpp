@@ -1,14 +1,13 @@
 #include "Unit.hpp"
-#include "Path.hpp"
 
 // TODO: a completer
 
-Unit::Unit(std::string const& id, Node const& node)
-    : m_id(id)
+Unit::Unit(std::string const& id, Node& node)
+    : m_id(id),
+      m_node(node)
 {
     //m_color = initValues.color;
 
-    m_node = node;
     m_node.addUnit(*this);
 
     //m_resources.setCapacities(initValues.capacities);

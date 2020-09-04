@@ -1,10 +1,9 @@
 #include "Path.hpp"
 #include "Map.hpp"
+#include "City.hpp"
 #include <algorithm>
 
-#define GRID_SIZE 100.0f
-
-Node::Node(Path& path, uint32_t id, Vector3f const& position)
+Node::Node(uint32_t id, Vector3f const& position, Path& path)
     : m_id(id),
       m_position(position),
       m_path(&path)
@@ -24,15 +23,15 @@ void Node::getMapPosition(uint32_t& u, uint32_t& v)
 
     if (x < 0.0f)
         u = 0u;
-    else if (x >= m_path->box.gridSizeX)
-        u = m_path->box.gridSizeX - 1u;
+    else if (x >= m_path->city().gridSizeX())
+        u = m_path->city().gridSizeX() - 1u;
     else
         u = uint32_t(x);
 
     if (y < 0.0f)
         v = 0u;
-    else if (y >= m_path->box.gridSizeY)
-        v = m_path->box.gridSizeY - 1u;
+    else if (y >= m_path->city().gridSizeY())
+        v = m_path->city().gridSizeY() - 1u;
     else
         y = uint32_t(y);
 }
@@ -78,14 +77,14 @@ void Segment::changeNode2(Node& newNode2)
     updateLength();
 }
 
-Path::Path(std::string const& id, Box& box)
+Path::Path(std::string const& id, City& city)
     : m_id(id),
-      m_box(box)
+      m_city(city)
 {}
 
 Node& Path::addNode(Vector3f const& position)
 {
-    m_nodes.push_back(Node(*this, m_nextNodeId++, position));
+    m_nodes.push_back(Node(m_nextNodeId++, position, *this));
     return m_nodes.back();
 }
 
@@ -106,7 +105,7 @@ Node& Path::splitSegment(Segment& segment, float offset)
            + (segment.position2() - segment.position1()) * offset;
     Node& newNode = addNode(wordPosition);
 
-    addSegment(segment.id, newNode, segment.node2());
+    addSegment(newNode, segment.node2());
     segment.changeNode2(newNode);
 
     return newNode;

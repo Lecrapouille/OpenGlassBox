@@ -8,6 +8,8 @@
 #  include <algorithm>
 
 class RuleUnit;
+class Node;
+class Resources;
 
 // =============================================================================
 //! \brief A Unit represents things: houses, factories, even people.
@@ -21,7 +23,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    Unit(std::string const& id, Node const& node);
+    Unit(std::string const& id, Node& node);
 
     // -------------------------------------------------------------------------
     //! \brief
@@ -53,8 +55,8 @@ protected:
 
     std::string              m_id;
     uint32_t                 m_color;
-    Node                     m_node;
-    Resources              m_resources;
+    Node                    &m_node;
+    Resources                m_resources;
     //RuleContext            m_context;
     std::vector<RuleUnit*>   m_rules;
     std::vector<std::string> m_targets;

@@ -27,7 +27,7 @@ public:
 
 public:
 
-    virtual Rule() = default;
+    virtual ~Rule() = default;
 
     virtual bool execute(Rule::Context& context);
     virtual void setOption(std::string const& optionId, std::string const& val);
@@ -57,16 +57,16 @@ struct RuleUnit : public Rule
 {
 public:
 
-    virtual bool execute(Rule::Context context) override
+    virtual bool execute(Rule::Context& context) override
     {
         return (Rule::execute(context))
                 ? true
-                : m_onFailure.execute(context);
+                : false; // FIXME m_onFailure.execute(context);
     }
 
 public:
 
-    RuleUnit m_onFailure;
+    //RuleUnit m_onFailure;
 };
 
 // -----------------------------------------------------------------------------
@@ -76,18 +76,19 @@ class RuleCommand
 {
 public:
 
-    virtual bool validate(Rule::Context context)
+    virtual bool validate(Rule::Context& /*context*/)
     {
         return true;
     }
 
-    virtual void execute(Rule::Context context)
+    virtual void execute(Rule::Context& /*context*/)
     {}
 };
 
 // -----------------------------------------------------------------------------
 //!
 // -----------------------------------------------------------------------------
+#if 0
 class RuleCommandAgent : RuleCommand
 {
 public:
@@ -105,9 +106,10 @@ public:
 
 public:
 
-  string searchTarget;
-  SimAgentType agentType;
-  SimResourcesCollection resources;
+    std::string   m_searchTarget;
+    Agent        *m_agent;
+    Resources    *m_resources;
 };
+#endif
 
 #endif

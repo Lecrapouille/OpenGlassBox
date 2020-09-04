@@ -2,9 +2,9 @@
 
 int main()
 {
-    Simulation sim; sim.load("simulation.fth");
+    Simulation sim; //TODO sim.load("simulation.fth");
 
-    Box& city = sim.addBox("Paris", Vector3f(0.0f, 0.0f, 0.0f), 32u, 32u);
+    City& city = sim.addCity("Paris", Vector3f(0.0f, 0.0f, 0.0f), 32u, 32u);
 
     Path& road = city.getPath("Road");
 
