@@ -1,14 +1,13 @@
 #ifndef UNIT_HPP
 #  define UNIT_HPP
 
-#  include "ResourceBin.hpp"
-
-#  include "Rule.hpp"
-//#  include "SimContext.hpp"
+#  include "Resources.hpp"
 #  include "Path.hpp"
 #  include <string>
 #  include <vector>
 #  include <algorithm>
+
+class RuleUnit;
 
 // =============================================================================
 //! \brief A Unit represents things: houses, factories, even people.
@@ -38,7 +37,7 @@ public:
     //! \brief
     // -------------------------------------------------------------------------
     bool accepts(std::string const& searchTarget,
-                 ResourceBin const& resourcesToTryToAdd);
+                 Resources const& resourcesToTryToAdd);
 
     // -------------------------------------------------------------------------
     //! \brief
@@ -48,16 +47,16 @@ public:
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    inline ResourceBin& resources() { return m_resources; }
+    inline Resources& resources() { return m_resources; }
 
 protected:
 
     std::string              m_id;
     uint32_t                 m_color;
     Node                     m_node;
-    ResourceBin              m_resources;
+    Resources              m_resources;
     //RuleContext            m_context;
-    std::vector<RuleUnit>    m_rules;
+    std::vector<RuleUnit*>   m_rules;
     std::vector<std::string> m_targets;
     uint32_t                 m_ticks = 0u;
 };

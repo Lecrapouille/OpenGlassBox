@@ -13,7 +13,7 @@ public:
     Agent(std::string id,
           Vector3f position,
           Unit* owner,
-          ResourceBin const& resources,
+          Resources const& resources,
           std::string const& searchTarget);
     void move();
     bool unloadResources();
@@ -32,7 +32,7 @@ private:
     float       m_radius;
     uint32_t    m_color;
     Vector3f    m_position;
-    ResourceBin m_resources;
+    Resources m_resources;
     Unit*       m_owner;
     std::string m_searchTarget;
     float       m_offset = 0.0f;

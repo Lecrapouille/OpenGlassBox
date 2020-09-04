@@ -1,4 +1,5 @@
 #include "Unit.hpp"
+#include "Path.hpp"
 
 // TODO: a completer
 
@@ -39,7 +40,7 @@ void Unit::executeRules()
     }*/
 }
 
-bool Unit::accepts(std::string const& searchTarget, ResourceBin const& resourcesToTryToAdd)
+bool Unit::accepts(std::string const& searchTarget, Resources const& resourcesToTryToAdd)
 {
     return find(m_targets.begin(), m_targets.end(), searchTarget) != m_targets.end()
             && m_resources.canAddSomeResources(resourcesToTryToAdd);

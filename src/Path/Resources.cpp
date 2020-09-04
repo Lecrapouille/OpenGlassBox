@@ -1,7 +1,7 @@
-#include "ResourceBin.hpp"
+#include "Resources.hpp"
 
 // -----------------------------------------------------------------------------
-Resource& ResourceBin::addResource(Resource::Type const& type, uint32_t const amount)
+Resource& Resources::addResource(Resource::Type const& type, uint32_t const amount)
 {
     Resource& res = findOrAddResource(type);
     res.add(amount);
@@ -10,14 +10,14 @@ Resource& ResourceBin::addResource(Resource::Type const& type, uint32_t const am
 }
 
 // -----------------------------------------------------------------------------
-void ResourceBin::addResources(ResourceBin const& resourcesToAdd)
+void Resources::addResources(Resources const& resourcesToAdd)
 {
     for (auto const& it: resourcesToAdd.m_bin)
         addResource(it.type(), it.amount());
 }
 
 // -----------------------------------------------------------------------------
-bool ResourceBin::canAddSomeResources(ResourceBin const& resourcesToTryAdd)
+bool Resources::canAddSomeResources(Resources const& resourcesToTryAdd)
 {
     for (auto& it: resourcesToTryAdd.m_bin)
     {
@@ -33,14 +33,14 @@ bool ResourceBin::canAddSomeResources(ResourceBin const& resourcesToTryAdd)
 }
 
 // -----------------------------------------------------------------------------
-void ResourceBin::transferResourcesTo(ResourceBin& resourcesTarget)
+void Resources::transferResourcesTo(Resources& resourcesTarget)
 {
     for (auto& it: m_bin)
         it.transferTo(resourcesTarget.findOrAddResource(it.type()));
 }
 
 // -----------------------------------------------------------------------------
-void ResourceBin::removeResource(Resource::Type const& resourceType, uint32_t const amount)
+void Resources::removeResource(Resource::Type const& resourceType, uint32_t const amount)
 {
     Resource* res = findResource(resourceType);
 
@@ -49,7 +49,7 @@ void ResourceBin::removeResource(Resource::Type const& resourceType, uint32_t co
 }
 
 // -----------------------------------------------------------------------------
-uint32_t ResourceBin::amount(Resource::Type const& resourceType)
+uint32_t Resources::getAmount(Resource::Type const& resourceType)
 {
     Resource* res = findResource(resourceType);
 
@@ -57,7 +57,7 @@ uint32_t ResourceBin::amount(Resource::Type const& resourceType)
 }
 
 // -----------------------------------------------------------------------------
-void ResourceBin::setCapacity(Resource::Type const& resourceType, uint32_t const capacity)
+void Resources::setCapacity(Resource::Type const& resourceType, uint32_t const capacity)
 {
     Resource& res = findOrAddResource(resourceType);
 
@@ -65,22 +65,22 @@ void ResourceBin::setCapacity(Resource::Type const& resourceType, uint32_t const
 }
 
 // -----------------------------------------------------------------------------
-void ResourceBin::setCapacities(ResourceBin const& resourcesCapacities)
+void Resources::setCapacities(Resources const& resourcesCapacities)
 {
     for (auto& it: resourcesCapacities.m_bin)
         setCapacity(it.type(), it.amount());
 }
 
 // -----------------------------------------------------------------------------
-uint32_t ResourceBin::capacity(Resource::Type const& resourceType)
+uint32_t Resources::getCapacity(Resource::Type const& resourceType)
 {
     Resource* b = findResource(resourceType);
 
-    return (b != nullptr) ? b->capacity() : Resource::maxCapacity();
+    return (b != nullptr) ? b->capacity() : Resource::MAX_CAPACITY;
 }
 
 // -----------------------------------------------------------------------------
-bool ResourceBin::isEmpty() const
+bool Resources::isEmpty() const
 {
     for (auto const& it: m_bin)
     {
@@ -92,7 +92,7 @@ bool ResourceBin::isEmpty() const
 }
 
 // -----------------------------------------------------------------------------
-Resource* ResourceBin::findResource(Resource::Type const& resourceType)
+Resource* Resources::findResource(Resource::Type const& resourceType)
 {
     for (auto& it: m_bin)
     {
@@ -103,7 +103,7 @@ Resource* ResourceBin::findResource(Resource::Type const& resourceType)
     return nullptr;
 }
 
-Resource& ResourceBin::findOrAddResource(Resource::Type const& resourceType)
+Resource& Resources::findOrAddResource(Resource::Type const& resourceType)
 {
     Resource* b = findResource(resourceType);
 

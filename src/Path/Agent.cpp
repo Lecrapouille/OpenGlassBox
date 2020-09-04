@@ -6,7 +6,7 @@
 Agent::Agent(std::string id,
              Vector3f position,
              Unit* owner,
-             ResourceBin const& resources,
+             Resources const& resources,
              std::string const& searchTarget)
 {
     m_id = id;

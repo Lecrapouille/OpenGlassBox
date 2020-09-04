@@ -5,9 +5,9 @@
 
 //==============================================================================
 //! \brief Resources come in a container. This class manages a collection of
-//! Resources. A ResourceBin starts with no resource.
+//! Resources. A Resources starts with no resource.
 //==============================================================================
-class ResourceBin
+class Resources
 {
 public:
 
@@ -26,7 +26,7 @@ public:
     //! \brief Add a collection of resources. Apply addResource() for each type
     //! of resource.
     // -------------------------------------------------------------------------
-    void addResources(ResourceBin const& resourcesToAdd);
+    void addResources(Resources const& resourcesToAdd);
 
     // -------------------------------------------------------------------------
     //! \brief Check if we can add at least one resource
@@ -35,13 +35,13 @@ public:
     //! and recipient shall not be full.
     //! \return true if it possible to add resources, else return false.
     // -------------------------------------------------------------------------
-    bool canAddSomeResources(ResourceBin const& resourcesToTryAdd);
+    bool canAddSomeResources(Resources const& resourcesToTryAdd);
 
     // -------------------------------------------------------------------------
     //! \brief Transfer all resources to the recipient. For each resource the
     //! amount of resource is limited by the capacity of the recipient.
     // -------------------------------------------------------------------------
-    void transferResourcesTo(ResourceBin& resourcesTarget);
+    void transferResourcesTo(Resources& resourcesTarget);
 
     // -------------------------------------------------------------------------
     //! \brief
@@ -61,7 +61,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    void setCapacities(ResourceBin const& resourcesCapacities);
+    void setCapacities(Resources const& resourcesCapacities);
 
     // -------------------------------------------------------------------------
     //! \brief

@@ -18,8 +18,8 @@ public:
     {
         //Box box;
         Unit        m_unit;
-        ResourceBin m_localResources;
-        ResourceBin m_globalResources;
+        Resources m_localResources;
+        Resources m_globalResources;
         uint32_t    m_mapPositionX;
         uint32_t    m_mapPositionY;
         uint32_t    m_mapPositionRadius;
@@ -107,7 +107,7 @@ public:
 
   string searchTarget;
   SimAgentType agentType;
-  SimResourceBinCollection resources;
+  SimResourcesCollection resources;
 };
 
 #endif

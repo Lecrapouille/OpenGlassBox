@@ -1,4 +1,5 @@
 #include "Simulation.hpp"
+#include "City.hpp"
 
 #define MAX_ITERATIONS_PER_UPDATE 20u
 #define TICKS_PER_SECOND 200.0f;
@@ -14,8 +15,7 @@ void Simulation::update(float const deltaTime)
 
     // Rules are execute at TICKS_PER_SECOND intervals
     uint32_t maxIterations = MAX_ITERATIONS_PER_UPDATE;
-    while ((m_time >= 1.0f / TICKS_PER_SECOND) &&
-           (maxIterations-- > 0u))
+    while ((m_time >= 1.0f / TICKS_PER_SECOND) && (maxIterations-- > 0u))
     {
         m_time -= 1.0f / TICKS_PER_SECOND;
 
@@ -26,15 +26,15 @@ void Simulation::update(float const deltaTime)
     }
 }
 
-Box& Box::addBox(std::string const& id)
+City& Simulation::addCity(std::string const& id)
 {
-    std::make_shared<Box> box =
-            std::make_shared<Box>(id, this, m_gridSizeX, m_gridSizeY);
+    std::make_shared<City> box =
+            std::make_shared<City>(id, m_gridSizeX, m_gridSizeY);
     m_boxes[id] = box;
     return *box;
 }
 
-Box& Box::getBox(std::string const& id)
+City& Simulation::getCity(std::string const& id)
 {
     return *m_boxes.at(id);
 }
