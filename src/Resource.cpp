@@ -11,7 +11,12 @@ Resource::Resource(Resource::Type const& type)
 // -----------------------------------------------------------------------------
 void Resource::add(uint32_t const toAdd)
 {
-    m_amount += toAdd; // FIXME integer overflow
+    // Avoid integer overflow
+    if (m_amount >= Resource::MAX_CAPACITY - toAdd)
+        m_amount = Resource::MAX_CAPACITY;
+    else
+        m_amount += toAdd;
+
     if (m_amount > m_capacity)
         m_amount = m_capacity;
 }

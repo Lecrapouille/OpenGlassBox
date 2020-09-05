@@ -12,8 +12,20 @@ class Resources
 public:
 
     // -------------------------------------------------------------------------
+    //! \brief
+    // -------------------------------------------------------------------------
+    Resource* findResource(Resource::Type const& resourceType);
+
+    // -------------------------------------------------------------------------
+    //! \brief
+    // -------------------------------------------------------------------------
+    Resource& findOrAddResource(Resource::Type const& resourceType);
+
+    // -------------------------------------------------------------------------
     //! \brief Find for an existing resource in the collection. If not found
-    //! create and store a new resource. Set increase the amount of resource.
+    //! create and store a new resource with the current amount. If the resource
+    //! already existes then increase its amount of resource (limited by its
+    //! capacity).
     //!
     //! \param type: the type of resource.
     //! \param amount: increase the current amount of resource by the given
@@ -23,10 +35,22 @@ public:
     Resource& addResource(Resource::Type const& type, uint32_t const amount);
 
     // -------------------------------------------------------------------------
+    //! \brief Reduce a given quantity of resource.
+    //! \note this method does not delete the resource.
+    //! \return boolean indicating if the desired resource has been found.
+    // -------------------------------------------------------------------------
+    bool removeResource(Resource::Type const& resourceType, uint32_t const amount);
+
+    // -------------------------------------------------------------------------
     //! \brief Add a collection of resources. Apply addResource() for each type
     //! of resource.
     // -------------------------------------------------------------------------
     void addResources(Resources const& resourcesToAdd);
+
+    // -------------------------------------------------------------------------
+    //! \brief
+    // -------------------------------------------------------------------------
+    void removeResources(Resources const& resourcesToReduce);
 
     // -------------------------------------------------------------------------
     //! \brief Check if we can add at least one resource
@@ -46,15 +70,17 @@ public:
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    void removeResource(Resource::Type const& resourceType, uint32_t const amount);
-
-    // -------------------------------------------------------------------------
-    //! \brief
-    // -------------------------------------------------------------------------
     uint32_t getAmount(Resource::Type const& resourceType);
 
     // -------------------------------------------------------------------------
-    //! \brief
+    //! \brief Find for an existing resource in the collection. If not found
+    //! create and store a new resource with the current capacity. If the
+    //! resource already existes then its capacity is changed and the current
+    //! amount of resource is limited to the new capacity.
+    //!
+    //! \param type: the type of resource.
+    //! \param capacity: new capacity.
+    //! \return the found resource or newly created.
     // -------------------------------------------------------------------------
     void setCapacity(Resource::Type const& resourceType, uint32_t const capacity);
 
@@ -82,18 +108,6 @@ public:
     }
 
 private:
-
-    // -------------------------------------------------------------------------
-    //! \brief
-    // -------------------------------------------------------------------------
-    Resource* findResource(Resource::Type const& resourceType);
-
-    // -------------------------------------------------------------------------
-    //! \brief
-    // -------------------------------------------------------------------------
-    Resource& findOrAddResource(Resource::Type const& resourceType);
-
-public:
 
     std::vector<Resource> m_bin;
 };

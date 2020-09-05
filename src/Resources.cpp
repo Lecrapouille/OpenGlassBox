@@ -40,12 +40,21 @@ void Resources::transferResourcesTo(Resources& resourcesTarget)
 }
 
 // -----------------------------------------------------------------------------
-void Resources::removeResource(Resource::Type const& resourceType, uint32_t const amount)
+bool Resources::removeResource(Resource::Type const& resourceType, uint32_t const amount)
 {
     Resource* res = findResource(resourceType);
 
     if (res != nullptr)
         res->remove(amount);
+
+    return res != nullptr;
+}
+
+// -----------------------------------------------------------------------------
+void Resources::removeResources(Resources const& resourcesToReduce)
+{
+    for (auto const& it: resourcesToReduce.m_bin)
+        removeResource(it.type(), it.amount());
 }
 
 // -----------------------------------------------------------------------------
@@ -60,7 +69,6 @@ uint32_t Resources::getAmount(Resource::Type const& resourceType)
 void Resources::setCapacity(Resource::Type const& resourceType, uint32_t const capacity)
 {
     Resource& res = findOrAddResource(resourceType);
-
     res.setCapacity(capacity);
 }
 
@@ -68,15 +76,14 @@ void Resources::setCapacity(Resource::Type const& resourceType, uint32_t const c
 void Resources::setCapacities(Resources const& resourcesCapacities)
 {
     for (auto& it: resourcesCapacities.m_bin)
-        setCapacity(it.type(), it.amount());
+        setCapacity(it.type(), it.capacity());
 }
 
 // -----------------------------------------------------------------------------
 uint32_t Resources::getCapacity(Resource::Type const& resourceType)
 {
     Resource* b = findResource(resourceType);
-
-    return (b != nullptr) ? b->capacity() : Resource::MAX_CAPACITY;
+    return (b != nullptr) ? b->capacity() : 0u; // Resource::MAX_CAPACITY;
 }
 
 // -----------------------------------------------------------------------------
