@@ -1,3 +1,18 @@
+# Project specific
+*~
+build
+cov-int
+src/*.tar.bz2
+src/build
+tests/build
+external/.downloaded
+doc/html
+doc/coverage
+doc/gprof
+gmon.out
+foo
+_*
+
 # Prerequisites
 *.d
 

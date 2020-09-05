@@ -1,35 +1,65 @@
 #ifndef UNIT_HPP
 #  define UNIT_HPP
 
-#  include "Base.hpp"
-#  include "Rule.hpp"
-//#  include "SimContext.hpp"
-//#  include "Point.hpp"
-
+#  include "Resources.hpp"
+#  include "Path.hpp"
 #  include <string>
 #  include <vector>
 #  include <algorithm>
 
-// -----------------------------------------------------------------------------
-//! \brief Represent things: houses, factories, even people.
-//! A unit has state: A collection of resource bins
-//! Also a well-defined spatial extent: Bounding volume, Simulation footprint.
-// -----------------------------------------------------------------------------
-class Unit: protected UnitType
+class RuleUnit;
+class Node;
+class Resources;
+
+// =============================================================================
+//! \brief A Unit represents things: houses, factories, even people.
+//! A unit has state: a collection of resource.
+//! But also a well-defined spatial extent: bounding volume, simulation footprint.
+// =============================================================================
+class Unit
 {
 public:
 
-    Unit(UnitType const& initValues, Point const& position);
+    // -------------------------------------------------------------------------
+    //! \brief
+    // -------------------------------------------------------------------------
+    Unit(std::string const& id, Node& node);
+
+    // -------------------------------------------------------------------------
+    //! \brief
+    // -------------------------------------------------------------------------
     ~Unit();
+
+    // -------------------------------------------------------------------------
+    //! \brief
+    // -------------------------------------------------------------------------
     void executeRules();
-    bool accepts(std::string const& searchTarget, ResourceBin const& resourcesToTryToAdd);
+
+    // -------------------------------------------------------------------------
+    //! \brief
+    // -------------------------------------------------------------------------
+    bool accepts(std::string const& searchTarget,
+                 Resources const& resourcesToTryToAdd);
+
+    // -------------------------------------------------------------------------
+    //! \brief
+    // -------------------------------------------------------------------------
+    inline std::string const& id() const { return m_id; }
+
+    // -------------------------------------------------------------------------
+    //! \brief
+    // -------------------------------------------------------------------------
+    inline Resources& resources() { return m_resources; }
 
 protected:
 
     std::string              m_id;
-    Point                    m_position;
-    ResourceBin              m_resources;
-    //RuleContext              m_context;
+    uint32_t                 m_color;
+    Node                    &m_node;
+    Resources                m_resources;
+    //RuleContext            m_context;
+    std::vector<RuleUnit*>   m_rules;
+    std::vector<std::string> m_targets;
     uint32_t                 m_ticks = 0u;
 };
 

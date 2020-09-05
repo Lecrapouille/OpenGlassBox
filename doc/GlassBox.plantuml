@@ -1,0 +1,23 @@
+@startuml
+
+class Simulation {
++update(dt)
+}
+
+class Box 
+
+Simulation -> "*" Box
+Box -> "*" Map
+Box -> "*" Path
+Box -> "*" Agent
+
+Path --> "*" Segment
+Segment --> "*" Node
+
+Unit --> "*" Resource
+Unit --> "*" Rule
+
+Map -> Unit
+Unit <- Node
+
+@enduml

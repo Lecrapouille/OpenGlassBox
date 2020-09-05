@@ -1,10 +1,11 @@
 #ifndef RULE_HPP
 #define RULE_HPP
 
-#  include "Resource.hpp"
 #  include "Unit.hpp"
 #  include <string>
 #  include <vector>
+
+class RuleCommand;
 
 // -----------------------------------------------------------------------------
 //!
@@ -16,25 +17,25 @@ public:
     struct Context
     {
         //Box box;
-        Unit unit;
-        ResourceBin localResources;
-        ResourceBin globalResources;
-        uint32_t mapPositionX;
-        uint32_t mapPositionY;
-        uint32_t mapPositionRadius;
+        Unit        m_unit;
+        Resources m_localResources;
+        Resources m_globalResources;
+        uint32_t    m_mapPositionX;
+        uint32_t    m_mapPositionY;
+        uint32_t    m_mapPositionRadius;
     };
 
 public:
 
-    virtual Rule() = default;
+    virtual ~Rule() = default;
 
     virtual bool execute(Rule::Context& context);
     virtual void setOption(std::string const& optionId, std::string const& val);
 
 public:
 
-    std::string id;
-    uint32_t m_rate = 1u;
+    std::string               m_id;
+    uint32_t                  m_rate = 1u;
     std::vector<RuleCommand*> m_commands;
 };
 
@@ -45,8 +46,8 @@ struct RuleMap : public Rule
 {
 protected:
 
-    bool randomTiles = false;
-    int randomTilesPercent = 10;
+    bool     m_randomTiles = false;
+    uint32_t m_randomTilesPercent = 10u;
 };
 
 // -----------------------------------------------------------------------------
@@ -56,16 +57,59 @@ struct RuleUnit : public Rule
 {
 public:
 
-    virtual bool execute(Rule::Context context) override
+    virtual bool execute(Rule::Context& context) override
     {
         return (Rule::execute(context))
                 ? true
-                : m_onFailure.execute(context);
+                : false; // FIXME m_onFailure.execute(context);
     }
 
 public:
 
-    RuleUnit m_onFailure;
+    //RuleUnit m_onFailure;
 };
+
+// -----------------------------------------------------------------------------
+//!
+// -----------------------------------------------------------------------------
+class RuleCommand
+{
+public:
+
+    virtual bool validate(Rule::Context& /*context*/)
+    {
+        return true;
+    }
+
+    virtual void execute(Rule::Context& /*context*/)
+    {}
+};
+
+// -----------------------------------------------------------------------------
+//!
+// -----------------------------------------------------------------------------
+#if 0
+class RuleCommandAgent : RuleCommand
+{
+public:
+
+    virtual bool validate(Rule::Context& context) override
+    {
+        return true;
+    }
+
+    virtual void execute(Rule::Context& context) override
+    {
+        //context.box.AddAgent(agentType, context.unit.position,
+        //                     context.unit, resources, searchTarget);
+    }
+
+public:
+
+    std::string   m_searchTarget;
+    Agent        *m_agent;
+    Resources    *m_resources;
+};
+#endif
 
 #endif
