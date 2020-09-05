@@ -28,7 +28,7 @@ private:
     uint32_t      m_gridSizeX;
     uint32_t      m_gridSizeY;
     float         m_time = 0.0f;
-    Cities        m_boxes;
+    Cities        m_cities;
 };
 
 #endif

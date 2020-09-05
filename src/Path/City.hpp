@@ -49,7 +49,7 @@ public:
     //! \brief Create and store a new Path. Remove the map of the same name if
     //! the identifier is already known.
     // -------------------------------------------------------------------------
-    Map& addPath(std::string const& id);
+    Path& addPath(std::string const& id);
 
     // -------------------------------------------------------------------------
     //! \brief
@@ -59,12 +59,12 @@ public:
     // -------------------------------------------------------------------------
     //! \brief Create and store a new Unit.
     // -------------------------------------------------------------------------
-    Unit& addUnit(std::string const& id, Node const& node);
+    Unit& addUnit(std::string const& id, Node& node);
 
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    Agent& addAgent(uint32_t id, Node const& node, Unit& owner,
+    Agent& addAgent(Node& node, Unit& owner,
                     Resources const& resources, std::string const& searchTarget);
 
     uint32_t gridSizeX() const { return m_gridSizeX; }
@@ -86,6 +86,7 @@ private:
     Resources     m_globals;
     Maps          m_maps;
     Paths         m_paths;
+    Units         m_units;
     Agents        m_agents;
 };
 

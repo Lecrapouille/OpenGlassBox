@@ -18,7 +18,7 @@ void Simulation::update(float const deltaTime)
     {
         m_time -= 1.0f / TICKS_PER_SECOND;
 
-        for (auto& it: m_boxes) {
+        for (auto& it: m_cities) {
             it.second->update();
         }
     }
@@ -27,11 +27,11 @@ void Simulation::update(float const deltaTime)
 City& Simulation::addCity(std::string const& id)
 {
     auto box = std::make_shared<City>(id, m_gridSizeX, m_gridSizeY);
-    m_boxes[id] = box;
+    m_cities[id] = box;
     return *box;
 }
 
 City& Simulation::getCity(std::string const& id)
 {
-    return *m_boxes.at(id);
+    return *m_cities.at(id);
 }

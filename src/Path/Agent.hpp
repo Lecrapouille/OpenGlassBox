@@ -10,9 +10,9 @@ class Agent
 {
 public:
 
-    Agent(std::string id,
-          Vector3f position,
-          Unit* owner,
+    Agent(uint32_t id,
+          Node& node,//Vector3f position,
+          Unit& owner,
           Resources const& resources,
           std::string const& searchTarget);
     void move();
@@ -27,13 +27,14 @@ private:
 
 private:
 
-    std::string m_id;
+    uint32_t m_id;
     float       m_speed;
     float       m_radius;
     uint32_t    m_color;
+    Node& m_node;
     Vector3f    m_position;
     Resources m_resources;
-    Unit*       m_owner;
+    Unit&       m_owner;
     std::string m_searchTarget;
     float       m_offset = 0.0f;
     Segment    *m_currentSegment = nullptr;

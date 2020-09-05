@@ -3,18 +3,18 @@
 
 #define TICKS_PER_SECOND 10.0f
 
-Agent::Agent(std::string id,
-             Vector3f position,
-             Unit* owner,
+Agent::Agent(uint32_t id,
+             Node& node,
+             Unit& owner,
              Resources const& resources,
              std::string const& searchTarget)
+    : m_id(id),
+      m_node(node),
+      m_resources(resources),
+      m_owner(owner),
+      m_searchTarget(searchTarget)
 {
-    m_id = id;
-    m_owner = owner;
-    m_searchTarget = m_searchTarget;
-    m_resources.addResources(resources);
-    m_position = position;
-    m_searchTarget = searchTarget;
+    updatePosition();
 }
 
 void Agent::move()
