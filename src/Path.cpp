@@ -19,21 +19,21 @@ void Node::getMapPosition(uint32_t& u, uint32_t& v)
     Vector3f worldPos = m_position;
 
     float x = worldPos.x / Map::GRID_SIZE;
-    float y = worldPos.z / Map::GRID_SIZE;
+    float y = worldPos.y / Map::GRID_SIZE;
 
     if (x < 0.0f)
         u = 0u;
-    else if (x >= m_path->city().gridSizeX())
+    else if (uint32_t(x) >= m_path->city().gridSizeX())
         u = m_path->city().gridSizeX() - 1u;
     else
         u = uint32_t(x);
 
     if (y < 0.0f)
         v = 0u;
-    else if (y >= m_path->city().gridSizeY())
+    else if (uint32_t(y) >= m_path->city().gridSizeY())
         v = m_path->city().gridSizeY() - 1u;
     else
-        y = uint32_t(y);
+        v = uint32_t(y);
 }
 
 Segment* Node::getSegmentToNode(Node& node)
