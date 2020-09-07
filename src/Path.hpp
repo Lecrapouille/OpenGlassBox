@@ -3,7 +3,7 @@
 
 #  include "Unit.hpp"
 #  include "Vector.hpp"
-#  include <vector>
+#  include <deque>
 #  include <cstdint>
 #  include <string>
 
@@ -115,17 +115,12 @@ public:
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    Segment(Path& path, uint32_t id, Node& node1, Node& node2);
+    Segment(uint32_t id, Node& node1, Node& node2, Path& path);
 
     // -------------------------------------------------------------------------
     //! \brief Used by Path::splitSegment()
     // -------------------------------------------------------------------------
     void changeNode2(Node& newNode2);
-
-    // -------------------------------------------------------------------------
-    //! \brief
-    // -------------------------------------------------------------------------
-    float length();
 
     // -------------------------------------------------------------------------
     //! \brief
@@ -238,23 +233,25 @@ public:
     // -------------------------------------------------------------------------
     //! \brief Return the list of nodes.
     // -------------------------------------------------------------------------
-    std::vector<Node> const& nodes() const { return m_nodes; }
+    std::deque<Node> const& nodes() const { return m_nodes; }
 
     // -------------------------------------------------------------------------
     //! \brief Return the list of Segments.
     // -------------------------------------------------------------------------
-    std::vector<Segment> const& segments() const { return m_segments; }
+    std::deque<Segment> const& segments() const { return m_segments; }
 
 private:
 
     //! \brief
     std::string          m_id;
     //! \brief The reference to the City owner of this Path instance.
-    City                 &m_city;
-    //! \brief
-    std::vector<Node>    m_nodes;
-    //! \brief
-    std::vector<Segment> m_segments;
+    City                &m_city;
+    //! \brief Holde nodes. Do not use vector<> to avoid references to be
+    //! invalidated.
+    std::deque<Node>     m_nodes;
+    //! \brief Holde segments. Do not use vector<> to avoid references to be
+    //! invalidated.
+    std::deque<Segment>  m_segments;
     //! \brief
     uint32_t             m_nextNodeId = 0u;
     //! \brief

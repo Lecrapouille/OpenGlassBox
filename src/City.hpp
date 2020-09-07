@@ -67,6 +67,11 @@ public:
     Agent& addAgent(Node& node, Unit& owner,
                     Resources const& resources, std::string const& searchTarget);
 
+    // -------------------------------------------------------------------------
+    //! \brief Return the unique identifier
+    // -------------------------------------------------------------------------
+    std::string const& id() const { return m_id; }
+
     uint32_t gridSizeX() const { return m_gridSizeX; }
     uint32_t gridSizeY() const { return m_gridSizeY; }
 
