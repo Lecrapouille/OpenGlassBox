@@ -246,6 +246,7 @@ TEST(TestsPath, SplitSegment)
     Node& n4 = p.splitSegment(s1, 1.0f);
     ASSERT_EQ(&n4, &n2);
 
+    // FIXME segfault
     //Node& n5 = p.splitSegment(s1, 0.5f);
     //ASSERT_NE(&n5, &n1);
     //ASSERT_NE(&n5, &n2);

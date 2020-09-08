@@ -74,7 +74,7 @@ public:
 protected:
 
     Type     m_type;
-    uint32_t m_capacity = MAX_CAPACITY;
+    uint32_t m_capacity = Resource::MAX_CAPACITY;
     uint32_t m_amount = 0u;
 };
 
