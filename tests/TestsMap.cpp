@@ -6,6 +6,12 @@
 #undef protected
 #undef private
 
+TEST(TestsCity, Constants)
+{
+    ASSERT_GE(Map::MAX_CAPACITY, 65535);
+    ASSERT_GT(Map::GRID_SIZE, 0.0f);
+}
+
 TEST(TestsMap, Constructor)
 {
     const uint32_t GRILL = 4u;

@@ -12,7 +12,7 @@ VPATH += $(P):$(P)/src
 INCLUDES += -I$(P) -I$(P)/src
 
 OBJS += Simulation.o Map.o City.o Unit.o Path.o Agent.o Resource.o Resources.o Rule.o
-OBJS += TestsResource.o TestsResources.o TestsUnit.o TestsPath.o TestsMap.o
+OBJS += TestsResource.o TestsResources.o TestsUnit.o TestsPath.o TestsMap.o TestsCity.o
 OBJS += main.o
 
 DEFINES += -Wno-unused-function -Wno-undef -Wno-keyword-macro -Wno-float-equal
