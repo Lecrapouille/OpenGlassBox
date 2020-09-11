@@ -68,12 +68,23 @@ public:
                     Resources const& resources, std::string const& searchTarget);
 
     // -------------------------------------------------------------------------
+    //! \brief
+    // -------------------------------------------------------------------------
+    void removeAgent(Agent& agent);
+
+    // -------------------------------------------------------------------------
     //! \brief Return the unique identifier
     // -------------------------------------------------------------------------
     std::string const& id() const { return m_id; }
 
+    // -------------------------------------------------------------------------
+    //! \brief Get the Map indice U and V from a world position.
+    // -------------------------------------------------------------------------
+    void world2mapPosition(Vector3f worldPos, uint32_t& u, uint32_t& v);
+
     uint32_t gridSizeX() const { return m_gridSizeX; }
     uint32_t gridSizeY() const { return m_gridSizeY; }
+    Resources& globalResources() { return m_globals; }
 
 private:
 

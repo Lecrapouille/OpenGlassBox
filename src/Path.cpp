@@ -1,12 +1,13 @@
 #include "Path.hpp"
-#include "Map.hpp"
-#include "City.hpp"
+#include "Config.hpp"
+//#include "City.hpp"
+#include "Unit.hpp"
 #include <algorithm>
 
-Node::Node(uint32_t id, Vector3f const& position, Path& path)
+Node::Node(uint32_t id, Vector3f const& position/*, Path& path*/)
     : m_id(id),
-      m_position(position),
-      m_path(&path)
+      m_position(position)//,
+      //m_path(&path)
 {}
 
 void Node::addUnit(Unit& unit)
@@ -14,26 +15,24 @@ void Node::addUnit(Unit& unit)
     m_units.push_back(&unit);
 }
 
-void Node::getMapPosition(uint32_t& u, uint32_t& v)
+void Node::getMapPosition(uint32_t gridSizeX, uint32_t gridSizeY, uint32_t& u, uint32_t& v)
 {
-    Vector3f worldPos = m_position;
+    uint32_t x = uint32_t(m_position.x / config::GRID_SIZE);
+    uint32_t y = uint32_t(m_position.y / config::GRID_SIZE);
 
-    float x = worldPos.x / Map::GRID_SIZE;
-    float y = worldPos.y / Map::GRID_SIZE;
-
-    if (x < 0.0f)
+    if (m_position.x <= 0.0f)
         u = 0u;
-    else if (uint32_t(x) >= m_path->city().gridSizeX())
-        u = m_path->city().gridSizeX() - 1u;
+    else if (x >= gridSizeX)
+        u = gridSizeX - 1u;
     else
-        u = uint32_t(x);
+        u = x;
 
-    if (y < 0.0f)
+    if (m_position.y <= 0.0f)
         v = 0u;
-    else if (uint32_t(y) >= m_path->city().gridSizeY())
-        v = m_path->city().gridSizeY() - 1u;
+    else if (y >= gridSizeY)
+        v = gridSizeY - 1u;
     else
-        v = uint32_t(y);
+        v = y;
 }
 
 Segment* Node::getSegmentToNode(Node& node)
@@ -51,11 +50,11 @@ Segment* Node::getSegmentToNode(Node& node)
     return nullptr;
 }
 
-Segment::Segment(uint32_t id, Node& node1, Node& node2, Path& path)
+Segment::Segment(uint32_t id, Node& node1, Node& node2/*, Path& path*/)
     : m_id(id),
       m_node1(&node1),
-      m_node2(&node2),
-      m_path(&path)
+      m_node2(&node2)//,
+      //m_path(&path)
 {
     m_node1->m_segments.push_back(this);
     m_node2->m_segments.push_back(this);
@@ -76,22 +75,22 @@ void Segment::changeNode2(Node& newNode2)
     updateLength();
 }
 
-Path::Path(std::string const& id, City& city)
-    : m_id(id),
-      m_city(city)
+Path::Path(std::string const& id/*, City& city*/)
+    : m_id(id)//,
+      //m_city(city)
 {}
 
 // FIXME: can be invalidated
 Node& Path::addNode(Vector3f const& position)
 {
-    m_nodes.push_back(Node(m_nextNodeId++, position, *this));
+    m_nodes.push_back(Node(m_nextNodeId++, position/*, *this*/));
     return m_nodes.back();
 }
 
 // FIXME: can be invalidated
 Segment& Path::addSegment(Node& p1, Node& p2)
 {
-    m_segments.push_back(Segment(m_nextSegmentId++, p1, p2, *this));
+    m_segments.push_back(Segment(m_nextSegmentId++, p1, p2/*, *this*/));
     return m_segments.back();
 }
 

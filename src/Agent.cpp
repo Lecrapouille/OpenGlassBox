@@ -1,8 +1,10 @@
 #include "Agent.hpp"
+#include "City.hpp"
 #include <iostream>
 
 #define TICKS_PER_SECOND 10.0f
 
+//------------------------------------------------------------------------------
 Agent::Agent(uint32_t id,
              Node& node,
              Unit& owner,
@@ -10,44 +12,68 @@ Agent::Agent(uint32_t id,
              std::string const& searchTarget)
     : m_id(id),
       m_node(node),
-      m_resources(resources),
       m_owner(owner),
+      m_resources(resources),
       m_searchTarget(searchTarget)
 {
     updatePosition();
 }
 
-void Agent::move()
+//------------------------------------------------------------------------------
+void Agent::configure(AgentConfig const& config)
 {
+    m_speed = config.speed;
+    m_radius = config.radius;
+    m_color = config.color;
+}
+
+//------------------------------------------------------------------------------
+void Agent::move(City& city)
+{
+    // Reached the destination node ?
     if (m_nextNode == nullptr)
     {
+        // Yes ! Transfer resources to the Unit.
+        // Has Agent no more resource ?
         if (unloadResources())
         {
-            //TODO m_lastNode->path().box.RemoveAgent(this);
+            // Yes ! Remove it !
+            city.removeAgent(*this);
         }
         else
         {
+            // No ! Keep finding another destination to unload resources.
             findNextNode();
         }
     }
     else
     {
+        // Driving on the Segment
         moveTowardsNextNode();
     }
-  }
+}
 
+//------------------------------------------------------------------------------
 void Agent::moveTowardsNextNode()
 {
     float direction;
 
     if (m_nextNode == &m_currentSegment->node2())
-        direction = 1.0f; // moving from node1 to node2
+    {
+        // Moving from node1 to node2
+        direction = 1.0f;
+    }
     else
-        direction = -1.0f; // moving from node2 to node1
+    {
+        // Moving from node2 to node1
+        direction = -1.0f;
+    }
 
-    m_offset += direction * (m_speed / TICKS_PER_SECOND); //FIXME / m_currentSegment->length();
+    m_offset += direction
+                * (m_speed / TICKS_PER_SECOND)
+                / m_currentSegment->length();
 
-    // Reached node1
+    // Reached node1 ?
     if (m_offset < 0.0f)
     {
         m_offset = 0.0f;
@@ -55,7 +81,7 @@ void Agent::moveTowardsNextNode()
         m_nextNode = nullptr;
     }
 
-    // Reached node2
+    // Reached node2 ?
     else if (m_offset > 1.0f)
     {
         m_offset = 1.0f;
@@ -66,6 +92,7 @@ void Agent::moveTowardsNextNode()
     updatePosition();
 }
 
+//------------------------------------------------------------------------------
 void Agent::updatePosition()
 {
     m_position = m_currentSegment->position1() +
@@ -73,6 +100,7 @@ void Agent::updatePosition()
                  * m_offset;
 }
 
+//------------------------------------------------------------------------------
 void Agent::findNextNode()
 {
     m_nextNode = nullptr; // TODO m_lastNode->path().findNextNode(m_lastNode, m_searchTarget, m_resources);
@@ -94,6 +122,7 @@ void Agent::findNextNode()
     }
 }
 
+//------------------------------------------------------------------------------
 bool Agent::unloadResources()
 {
     std::vector<Unit*>& units = m_lastNode->units();
@@ -109,6 +138,7 @@ bool Agent::unloadResources()
     return m_resources.isEmpty();
 }
 
+//------------------------------------------------------------------------------
 /*Unit* Agent::searchUnit()
 {
     std::vector<Unit*>& units = m_lastNode->units();

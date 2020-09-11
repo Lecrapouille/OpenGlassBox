@@ -1,25 +1,11 @@
 #include "Unit.hpp"
-
-// TODO: a completer
+#include "City.hpp"
 
 Unit::Unit(std::string const& id, Node& node)
     : m_id(id),
       m_node(node)
 {
-    //m_color = initValues.color;
-
     m_node.addUnit(*this);
-
-    //m_resources.setCapacities(initValues.capacities);
-    //m_resources.addResources(initValues.resources);
-
-    //m_context.m_unit = this;
-    //m_context.m_box = m_node.path.box;
-    //m_context.m_globalResources = m_context.m_box.globals;
-    //m_context.m_localResources = &m_resources;
-
-    //m_rules = initValues.rules;
-    //m_targets = initValues.targets;
 }
 
 Unit::~Unit()
@@ -27,16 +13,31 @@ Unit::~Unit()
     //m_node.units.remove(this);
 }
 
+void Unit::configure(Unit::Config const& conf, City& city)
+{
+    m_color = conf.color;
+    m_rules = conf.rules;
+    m_targets = conf.targets;
+
+    m_resources.setCapacities(conf.capacities);
+    m_resources.addResources(conf.resources);
+
+    m_context.unit = this;
+    m_context.city = &city;//&(m_node.path().city());
+    m_context.globals = &(city.globalResources());
+    m_context.locals = &m_resources;
+}
+
 void Unit::executeRules()
 {
     m_ticks += 1u;
 
-    /*m_node.getMapPosition(m_context.mapPositionX, m_context.mapPositionY);
+    m_context.city->world2mapPosition(m_node.position(), m_context.u, m_context.v);
     for (size_t i = 0u; i < m_rules.size(); ++i)
     {
-        if (m_ticks % m_rules[i].rate == 0)
-            m_rules[i].execute(m_context);
-    }*/
+        if (m_ticks % m_rules[i]->rate() == 0)
+            m_rules[i]->execute(m_context);
+    }
 }
 
 bool Unit::accepts(std::string const& searchTarget, Resources const& resourcesToTryToAdd)

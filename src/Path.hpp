@@ -1,9 +1,10 @@
 #ifndef PATH_HPP
 #  define PATH_HPP
 
-#  include "Unit.hpp"
+//#  include "Unit.hpp"
 #  include "Vector.hpp"
 #  include <deque>
+#  include <vector>
 #  include <cstdint>
 #  include <string>
 
@@ -11,7 +12,7 @@ class Node;
 class Segment;
 class Path;
 class Unit;
-class City;
+//class City;
 
 // =============================================================================
 //! \brief Class defining the extrimity of a Segment constituing a Path. This
@@ -38,7 +39,7 @@ public:
     //! \param path: the Path owning this node.
     //! \param position: the world position.
     // -------------------------------------------------------------------------
-    Node(uint32_t id, Vector3f const& position, Path& path);
+    Node(uint32_t id, Vector3f const& position/*, Path& path*/);
 
     // -------------------------------------------------------------------------
     //! \brief Constructor by copy.
@@ -54,7 +55,13 @@ public:
     //! \brief A Maps are simple uniform size grids. This method return the
     //! indices on the map (maps have all the same pavement).
     // -------------------------------------------------------------------------
-    void getMapPosition(uint32_t& u, uint32_t& v);
+    void getMapPosition(uint32_t gridSizeX, uint32_t gridSizeY, uint32_t& u, uint32_t& v);
+
+    template<class T>
+    void getMapPosition(T const& x, uint32_t& u, uint32_t& v)
+    {
+        getMapPosition(x.gridSizeX(), x.gridSizeY(), u, v);
+    }
 
     // -------------------------------------------------------------------------
     //! \brief Return the segment which the given node belongs to.
@@ -77,7 +84,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    Path& path() { return *m_path; }
+    //Path& path() { return *m_path; }
 
     // -------------------------------------------------------------------------
     //! \brief
@@ -93,7 +100,7 @@ private:
     //! \brief World position.
     Vector3f              m_position;
     //! \brief Path owning this node instance.
-    Path                 *m_path = nullptr;
+    //Path                 *m_path = nullptr;
     //! \brief Segments owning this node instance.
     std::vector<Segment*> m_segments;
     //! \brief Units owning this node instance.
@@ -115,7 +122,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    Segment(uint32_t id, Node& node1, Node& node2, Path& path);
+    Segment(uint32_t id, Node& node1, Node& node2/*, Path& path*/);
 
     // -------------------------------------------------------------------------
     //! \brief Used by Path::splitSegment()
@@ -150,7 +157,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    Path& path() { return *m_path; }
+    //Path& path() { return *m_path; }
 
     // -------------------------------------------------------------------------
     //! \brief
@@ -172,7 +179,7 @@ private:
     //! \brief
     Node                *m_node2 = nullptr;
     //! \brief
-    Path                *m_path = nullptr;
+    //Path                *m_path = nullptr;
     //! \brief
     float                m_length = 0.0f;
 };
@@ -190,7 +197,7 @@ public:
     //! \brief Empty Path: no nodes, no segments.
     //! \param
     // -------------------------------------------------------------------------
-    Path(std::string const& id, City& city);
+    Path(std::string const& id/*, City& city*/);
 
     // -------------------------------------------------------------------------
     //! \brief Create and store a new node given its world position.
@@ -228,7 +235,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief Return the owner city.
     // -------------------------------------------------------------------------
-    City& city() const { return m_city; }
+    //City& city() const { return m_city; }
 
     // -------------------------------------------------------------------------
     //! \brief Return the list of nodes.
@@ -244,8 +251,8 @@ private:
 
     //! \brief
     std::string          m_id;
-    //! \brief The reference to the City owner of this Path instance.
-    City                &m_city;
+    //! \brief The reference to the City owning this Path instance.
+    //City                &m_city;
     //! \brief Holde nodes. Do not use vector<> to avoid references to be
     //! invalidated.
     std::deque<Node>     m_nodes;

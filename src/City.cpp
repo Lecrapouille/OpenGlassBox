@@ -3,6 +3,7 @@
 #include "Unit.hpp"
 #include "Path.hpp"
 #include "Agent.hpp"
+#include "Config.hpp"
 
 City::City(std::string const& id, uint32_t gridSizeX, uint32_t gridSizeY)
     : m_id(id),
@@ -14,7 +15,7 @@ void City::update()
 {
     size_t i = m_agents.size();
     while (i--) {
-        m_agents[i]->move();
+        m_agents[i]->move(*this);
     }
 
     i = m_units.size();
@@ -25,6 +26,26 @@ void City::update()
     for (auto& map: m_maps) {
         map.second->executeRules();
     }
+}
+
+void City::world2mapPosition(Vector3f worldPos, uint32_t& u, uint32_t& v)
+{
+    float x = worldPos.x / config::GRID_SIZE;
+    float y = worldPos.y / config::GRID_SIZE;
+
+    if (x < 0.0f)
+        u = 0u;
+    else if (uint32_t(x) >= m_gridSizeX)
+        u = m_gridSizeX - 1u;
+    else
+        u = uint32_t(x);
+
+    if (y < 0.0f)
+        v = 0u;
+    else if (uint32_t(y) >= m_gridSizeY)
+        v = m_gridSizeY - 1u;
+    else
+        v = uint32_t(y);
 }
 
 Map& City::addMap(std::string const& id)
@@ -41,7 +62,7 @@ Map& City::getMap(std::string const& id)
 
 Path& City::addPath(std::string const& id)
 {
-    auto path = std::make_shared<Path>(id, *this);
+    auto path = std::make_shared<Path>(id/*, *this*/);
     m_paths[id] = path;
     return *path;
 }
@@ -67,4 +88,9 @@ Agent& City::addAgent(Node& node, Unit& owner,
                                resources, searchTarget);
     m_agents.push_back(agent);
     return *agent;
+}
+
+void City::removeAgent(Agent& agent)
+{
+    //m_agents.erase(std::remove(m_agents.begin(), m_agents.end(), &agent));
 }

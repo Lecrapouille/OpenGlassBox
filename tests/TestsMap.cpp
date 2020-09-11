@@ -9,7 +9,7 @@
 TEST(TestsCity, Constants)
 {
     ASSERT_GE(Map::MAX_CAPACITY, 65535);
-    ASSERT_GT(Map::GRID_SIZE, 0.0f);
+    ASSERT_GT(config::GRID_SIZE, 0.0f);
 }
 
 TEST(TestsMap, Constructor)
@@ -91,13 +91,13 @@ TEST(TestsMap, getWorldPosition)
     ASSERT_EQ(v.z, 0.0f);
 
     v = map.getWorldPosition(1u, 1u);
-    ASSERT_EQ(v.x, Map::GRID_SIZE);
-    ASSERT_EQ(v.y, Map::GRID_SIZE);
+    ASSERT_EQ(v.x, config::GRID_SIZE);
+    ASSERT_EQ(v.y, config::GRID_SIZE);
     ASSERT_EQ(v.z, 0.0f);
 
     v = map.getWorldPosition(GRILL, GRILL + 1u);
-    ASSERT_EQ(v.x, Map::GRID_SIZE * float(GRILL));
-    ASSERT_EQ(v.y, Map::GRID_SIZE * float(GRILL + 1u));
+    ASSERT_EQ(v.x, config::GRID_SIZE * float(GRILL));
+    ASSERT_EQ(v.y, config::GRID_SIZE * float(GRILL + 1u));
     ASSERT_EQ(v.z, 0.0f);
 }
 

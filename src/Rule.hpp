@@ -1,11 +1,29 @@
 #ifndef RULE_HPP
 #define RULE_HPP
 
-#  include "Unit.hpp"
+#  include "Resources.hpp"
 #  include <string>
 #  include <vector>
 
 class RuleCommand;
+class City;
+class Unit;
+
+struct RuleContext
+{
+    //! \brief
+    City       *city;
+    //! \brief
+    Unit       *unit;
+    //! \brief Local resources
+    Resources  *locals;
+    //! \brief Global resources
+    Resources  *globals;
+    //! \brief Position on the grid
+    uint32_t    u, v;
+    //! \brief Radius action of Map resources
+    float       radius;
+};
 
 // -----------------------------------------------------------------------------
 //!
@@ -14,23 +32,11 @@ class Rule
 {
 public:
 
-    struct Context
-    {
-        //Box box;
-        Unit        m_unit;
-        Resources m_localResources;
-        Resources m_globalResources;
-        uint32_t    m_mapPositionX;
-        uint32_t    m_mapPositionY;
-        uint32_t    m_mapPositionRadius;
-    };
-
-public:
-
     virtual ~Rule() = default;
 
-    virtual bool execute(Rule::Context& context);
+    virtual bool execute(RuleContext& context);
     virtual void setOption(std::string const& optionId, std::string const& val);
+    uint32_t rate() const { return m_rate; }
 
 public:
 
@@ -57,7 +63,7 @@ struct RuleUnit : public Rule
 {
 public:
 
-    virtual bool execute(Rule::Context& context) override
+    virtual bool execute(RuleContext& context) override
     {
         return (Rule::execute(context))
                 ? true
@@ -76,12 +82,12 @@ class RuleCommand
 {
 public:
 
-    virtual bool validate(Rule::Context& /*context*/)
+    virtual bool validate(RuleContext& /*context*/)
     {
         return true;
     }
 
-    virtual void execute(Rule::Context& /*context*/)
+    virtual void execute(RuleContext& /*context*/)
     {}
 };
 
@@ -93,12 +99,12 @@ class RuleCommandAgent : RuleCommand
 {
 public:
 
-    virtual bool validate(Rule::Context& context) override
+    virtual bool validate(RuleContext& context) override
     {
         return true;
     }
 
-    virtual void execute(Rule::Context& context) override
+    virtual void execute(RuleContext& context) override
     {
         //context.box.AddAgent(agentType, context.unit.position,
         //                     context.unit, resources, searchTarget);

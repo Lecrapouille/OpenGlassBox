@@ -50,7 +50,7 @@ TEST(TestsCity, addMap)
     Path& p2 = c.getPath("path1");
     ASSERT_EQ(&p1, &p2);
 
-    Node n1(42u, Vector3f(1.0f, 2.0f, 3.0f), p1);
+    Node n1(42u, Vector3f(1.0f, 2.0f, 3.0f)/*, p1*/);
     Unit& u1 = c.addUnit("unit1", n1);
     //Unit& u2 = c.getUnit("unit1");
     //ASSERT_EQ(&u1, &u2);

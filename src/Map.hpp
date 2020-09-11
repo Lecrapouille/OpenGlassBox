@@ -2,6 +2,7 @@
 #  define MAP_HPP
 
 #  include "Vector.hpp"
+#  include "Config.hpp"
 #  include <string>
 #  include <vector>
 #  include <limits>
@@ -85,9 +86,12 @@ public:
     // -------------------------------------------------------------------------
     std::string const& id() const { return m_id; }
 
+    uint32_t gridSizeX() const { return m_sizeU; }
+    uint32_t gridSizeY() const { return m_sizeV; }
+
 public:
 
-    static const float GRID_SIZE;
+    //static const float GRID_SIZE;
     static const uint32_t MAX_CAPACITY;
 
 private:

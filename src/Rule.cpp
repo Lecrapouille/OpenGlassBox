@@ -18,7 +18,7 @@ static bool TryParse(std::string const& str, T& res)
     }
 }
 
-bool Rule::execute(Rule::Context& context)
+bool Rule::execute(RuleContext& context)
 {
     size_t i = m_commands.size();
     while (i--)

@@ -1,6 +1,7 @@
 #include "Map.hpp"
+#include "Config.hpp"
 
-const float Map::GRID_SIZE = 2.0f;
+//const float Map::GRID_SIZE = 2.0f;
 const uint32_t Map::MAX_CAPACITY = std::numeric_limits<uint32_t>::max();
 
 template<typename T>
@@ -136,8 +137,8 @@ void Map::removeResource(uint32_t const u, uint32_t const v, uint32_t radius, ui
 
 Vector3f Map::getWorldPosition(uint32_t const u, uint32_t const v)
 {
-    return Vector3f(float(clamp(u, 0u, m_sizeU)) * GRID_SIZE,
-                    float(clamp(v, 0u, m_sizeV)) * GRID_SIZE,
+    return Vector3f(float(clamp(u, 0u, m_sizeU)) * config::GRID_SIZE,
+                    float(clamp(v, 0u, m_sizeV)) * config::GRID_SIZE,
                     0.0f);
 }
 
