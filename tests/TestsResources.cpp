@@ -15,7 +15,7 @@ TEST(TestsResources, Constructor)
     ASSERT_EQ(house.isEmpty(), true);
 }
 
-TEST(TestsResources, Nomila)
+TEST(TestsResources, Nominal)
 {
     Resources house;
 
@@ -107,22 +107,45 @@ TEST(TestsResources, PathologicalCases)
     ASSERT_EQ(house.getCapacity("foo"), 0u);
 }
 
-/*
+TEST(TestsResources, canAddSomeResources)
+{
+    Resources house;
+    Resources foo;
 
+    bool ret = house.canAddSomeResources(foo);
+    ASSERT_EQ(ret, false);
 
-    ASSERT_EQ(house.getAmount("pepole"), 8u);
+    foo.addResource("car", 5u);
+    ret = house.canAddSomeResources(foo);
+    ASSERT_EQ(ret, false);
 
-    house.addResource("pepole", 8u);
-    ASSERT_EQ(house.getAmount("pepole"), 16u);
+    house.addResource("car", 5u);
+    ret = house.canAddSomeResources(foo);
+    ASSERT_EQ(ret, true);
 
-    ASSERT_EQ(house.hasResource("pepole"), true);
-    ASSERT_EQ(house.hasResource("foo"), false);
-
-    Resources house2;
-    house2.addResources(house);
-    ASSERT_EQ(house2.getAmount("pepole"), 16u);
-    house.transferResourcesTo(house2);
-    ASSERT_EQ(house.getAmount("pepole"), 0u);
-    ASSERT_EQ(house2.getAmount("pepole"), 32u);
+    house.setCapacity("car", 5u);
+    ret = house.canAddSomeResources(foo);
+    ASSERT_EQ(ret, false);
 }
-*/
+
+TEST(TestsResources, transferResourcesTo)
+{
+    Resources house;
+    Resources foo;
+
+    house.addResource("car", 5u);
+    foo.addResource("oil", 5u);
+    foo.addResource("car", 5u);
+
+    house.transferResourcesTo(foo);
+    ASSERT_EQ(house.getAmount("car"), 0u);
+    ASSERT_EQ(foo.getAmount("car"), 10u);
+    ASSERT_EQ(foo.getAmount("oil"), 5u);
+
+    // Full ! No transfer !
+    house.addResource("car", 5u);
+    foo.setCapacity("car", 12u);
+    house.transferResourcesTo(foo);
+    ASSERT_EQ(house.getAmount("car"), 3u);
+    ASSERT_EQ(foo.getAmount("car"), 12u);
+}

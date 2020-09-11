@@ -2,12 +2,12 @@
 #include "Config.hpp"
 //#include "City.hpp"
 #include "Unit.hpp"
+#include "Unique.hpp"
 #include <algorithm>
 
-Node::Node(uint32_t id, Vector3f const& position/*, Path& path*/)
+Node::Node(uint32_t id, Vector3f const& position)
     : m_id(id),
-      m_position(position)//,
-      //m_path(&path)
+      m_position(position)
 {}
 
 void Node::addUnit(Unit& unit)
@@ -35,13 +35,14 @@ void Node::getMapPosition(uint32_t gridSizeX, uint32_t gridSizeY, uint32_t& u, u
         v = y;
 }
 
+// FIXME: raw pointer from unique_ptr
 Segment* Node::getSegmentToNode(Node& node)
 {
     size_t i = m_segments.size();
     while (i--)
     {
-        if ((m_segments[i]->m_node1 == &node) ||
-            (m_segments[i]->m_node2 == &node))
+        if (((m_segments[i]->m_node1 == &node) && (m_segments[i]->m_node2 == this)) ||
+            ((m_segments[i]->m_node2 == &node) && (m_segments[i]->m_node1 == this)))
         {
             return m_segments[i];
         }
@@ -50,11 +51,10 @@ Segment* Node::getSegmentToNode(Node& node)
     return nullptr;
 }
 
-Segment::Segment(uint32_t id, Node& node1, Node& node2/*, Path& path*/)
+Segment::Segment(uint32_t id, Node& node1, Node& node2)
     : m_id(id),
       m_node1(&node1),
-      m_node2(&node2)//,
-      //m_path(&path)
+      m_node2(&node2)
 {
     m_node1->m_segments.push_back(this);
     m_node2->m_segments.push_back(this);
@@ -75,26 +75,23 @@ void Segment::changeNode2(Node& newNode2)
     updateLength();
 }
 
-Path::Path(std::string const& id/*, City& city*/)
-    : m_id(id)//,
-      //m_city(city)
+Path::Path(std::string const& id)
+    : m_id(id)
 {}
 
-// FIXME: can be invalidated
 Node& Path::addNode(Vector3f const& position)
 {
-    m_nodes.push_back(Node(m_nextNodeId++, position/*, *this*/));
-    return m_nodes.back();
+    m_nodes.push_back(std::make_unique<Node>(m_nextNodeId++, position/*, *this*/));
+    return *m_nodes.back();
 }
 
-// FIXME: can be invalidated
+// TODO: replace existing segment or allow multi-graph (== speedway)
 Segment& Path::addSegment(Node& p1, Node& p2)
 {
-    m_segments.push_back(Segment(m_nextSegmentId++, p1, p2/*, *this*/));
-    return m_segments.back();
+    m_segments.push_back(std::make_unique<Segment>(m_nextSegmentId++, p1, p2/*, *this*/));
+    return *m_segments.back();
 }
 
-// FIXME: can be invalidated
 Node& Path::splitSegment(Segment& segment, float offset)
 {
     if (offset <= 0.0f)

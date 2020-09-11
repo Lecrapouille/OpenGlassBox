@@ -7,6 +7,7 @@
 #  include <vector>
 #  include <cstdint>
 #  include <string>
+#  include <memory>
 
 class Node;
 class Segment;
@@ -84,11 +85,6 @@ public:
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    //Path& path() { return *m_path; }
-
-    // -------------------------------------------------------------------------
-    //! \brief
-    // -------------------------------------------------------------------------
     std::vector<Unit*>& units() { return m_units; }
 
 private:
@@ -99,13 +95,14 @@ private:
     uint32_t              m_color;
     //! \brief World position.
     Vector3f              m_position;
-    //! \brief Path owning this node instance.
-    //Path                 *m_path = nullptr;
     //! \brief Segments owning this node instance.
     std::vector<Segment*> m_segments;
     //! \brief Units owning this node instance.
     std::vector<Unit*>    m_units;
 };
+
+using NodePtr = std::unique_ptr<Node>;
+using Nodes = std::deque<NodePtr>;
 
 // =============================================================================
 //! \brief Class defining the segment of a Path. A segment is defined by two
@@ -123,6 +120,8 @@ public:
     //! \brief
     // -------------------------------------------------------------------------
     Segment(uint32_t id, Node& node1, Node& node2/*, Path& path*/);
+
+    Segment() = default;
 
     // -------------------------------------------------------------------------
     //! \brief Used by Path::splitSegment()
@@ -157,11 +156,6 @@ public:
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    //Path& path() { return *m_path; }
-
-    // -------------------------------------------------------------------------
-    //! \brief
-    // -------------------------------------------------------------------------
     float length() const { return m_length; }
 
 private:
@@ -179,10 +173,11 @@ private:
     //! \brief
     Node                *m_node2 = nullptr;
     //! \brief
-    //Path                *m_path = nullptr;
-    //! \brief
     float                m_length = 0.0f;
 };
+
+using SegmentPtr = std::unique_ptr<Segment>;
+using Segments = std::deque<SegmentPtr>;
 
 // =============================================================================
 //! \brief Nodes connected by Segments make up Paths make up Path Sets.
@@ -240,29 +235,29 @@ public:
     // -------------------------------------------------------------------------
     //! \brief Return the list of nodes.
     // -------------------------------------------------------------------------
-    std::deque<Node> const& nodes() const { return m_nodes; }
+    Nodes const& nodes() const { return m_nodes; }
 
     // -------------------------------------------------------------------------
     //! \brief Return the list of Segments.
     // -------------------------------------------------------------------------
-    std::deque<Segment> const& segments() const { return m_segments; }
+    Segments const& segments() const { return m_segments; }
 
 private:
 
     //! \brief
-    std::string          m_id;
+    std::string m_id;
     //! \brief The reference to the City owning this Path instance.
-    //City                &m_city;
+    //City &m_city;
     //! \brief Holde nodes. Do not use vector<> to avoid references to be
     //! invalidated.
-    std::deque<Node>     m_nodes;
+    Nodes m_nodes;
     //! \brief Holde segments. Do not use vector<> to avoid references to be
     //! invalidated.
-    std::deque<Segment>  m_segments;
+    Segments m_segments;
     //! \brief
-    uint32_t             m_nextNodeId = 0u;
+    uint32_t m_nextNodeId = 0u;
     //! \brief
-    uint32_t             m_nextSegmentId = 0u;
+    uint32_t m_nextSegmentId = 0u;
 };
 
 #endif
