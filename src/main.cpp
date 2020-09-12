@@ -10,7 +10,7 @@ bool GlassBox::onInit()
     // m_simulation.load("simulation.fth");
 
     City& city = m_simulation.addCity("Paris");
-    Path& road = city.getPath("Road");
+    Path& road = city.addPath("Road");
 
     Node& n1 = road.addNode(Vector3f(20.0f, 20.0f, 0.0f));
     Node& n2 = road.addNode(Vector3f(50.0f, 50.0f, 0.0f));
@@ -31,15 +31,27 @@ bool GlassBox::onInit()
 
 void GlassBox::onPaint(SDL_Renderer& renderer, float dt)
 {
-    //City& city = m_simulation.getCity("Paris");
-    //Path& road = city.getPath("Road");
+    City& city = m_simulation.getCity("Paris");
+    Path& road = city.getPath("Road");
 
     // TODO use SDL_RenderDrawLines to draw a batch of segments
     for (auto& it: road.segments())
     {
         SDL_SetRenderDrawColor(&renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
-        SDL_RenderDrawLine(&renderer, int(it->position1().x), int(it->position1().y),
+        SDL_RenderDrawLine(&renderer,
+                           int(it->position1().x), int(it->position1().y),
                            int(it->position2().x), int(it->position2().y));
+    }
+
+    for (auto& it: road.nodes())
+    {
+        SDL_SetRenderDrawColor(&renderer, 255, 0, 0, SDL_ALPHA_OPAQUE);
+        SDL_Rect rect;
+        rect.x = int(it->position().x);
+        rect.y = int(it->position().y);
+        rect.w = 5;
+        rect.h = 5;
+        SDL_RenderFillRect(&renderer, &rect);
     }
 
     //m_simulation.update(dt);

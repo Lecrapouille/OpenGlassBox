@@ -66,7 +66,7 @@ bool Window::run(IGame& game)
         }
 
         game.onPaint(*m_renderer, 0.01f);
-        SDL_RenderPresent(&m_renderer);
+        SDL_RenderPresent(m_renderer);
         SDL_Delay(100); // ms
     }
 
