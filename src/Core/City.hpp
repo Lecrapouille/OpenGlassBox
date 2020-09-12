@@ -63,6 +63,7 @@ public:
     Unit& addUnit(std::string const& id, Node& node);
 
     Units& getUnits() { return m_units; }
+    Paths& getPaths() { return m_paths; }
 
     // -------------------------------------------------------------------------
     //! \brief

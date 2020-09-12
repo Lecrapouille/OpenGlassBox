@@ -30,14 +30,14 @@ void Unit::configure(Unit::Config const& conf, City& city)
 
 void Unit::executeRules()
 {
-    m_ticks += 1u;
+    /*    m_ticks += 1u;
 
     m_context.city->world2mapPosition(m_node.position(), m_context.u, m_context.v);
     for (size_t i = 0u; i < m_rules.size(); ++i)
     {
         if (m_ticks % m_rules[i]->rate() == 0)
             m_rules[i]->execute(m_context);
-    }
+            }*/
 }
 
 bool Unit::accepts(std::string const& searchTarget, Resources const& resourcesToTryToAdd)
