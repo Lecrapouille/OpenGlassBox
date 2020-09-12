@@ -1,9 +1,9 @@
 #ifndef MAP_HPP
 #  define MAP_HPP
 
-#  include "Vector.hpp"
-#  include "Unique.hpp"
-#  include "Config.hpp"
+#  include "Core/Vector.hpp"
+#  include "Core/Unique.hpp"
+#  include "Core/Config.hpp"
 #  include <string>
 #  include <vector>
 #  include <limits>

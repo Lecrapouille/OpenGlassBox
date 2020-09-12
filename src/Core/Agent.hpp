@@ -1,18 +1,24 @@
 #ifndef AGENT_HPP
 #define AGENT_HPP
 
-#include "Vector.hpp"
-#include "Unit.hpp"
-#include "Path.hpp"
+#include "Core/Vector.hpp"
+#include "Core/Unit.hpp"
+#include "Core/Path.hpp"
 #include <string>
 
 class City;
 
 struct AgentConfig
 {
-    float     speed = 1.0f;
-    float     radius = 1.0f;
-    uint32_t  color = 0xFFFFFF;
+    AgentConfig(float s = 1.0f,
+                float r = 1.0f,
+                uint32_t c = 0xFFFFFF)
+        : speed(s), radius(r), color(c)
+    {}
+
+    float     speed;
+    float     radius;
+    uint32_t  color;
 };
 
 //==============================================================================
@@ -75,7 +81,6 @@ private:
 private:
 
     uint32_t    m_id;
-    Node       &m_node;
     Unit       &m_owner;
     Resources   m_resources;
     std::string m_searchTarget;
@@ -85,6 +90,7 @@ private:
     Node       *m_lastNode = nullptr;
     Node       *m_nextNode = nullptr;
 
+    // Should be an int refering a global table
     float       m_speed = 1.0f;
     float       m_radius = 1.0f;
     uint32_t    m_color = 0xFFFFFF;

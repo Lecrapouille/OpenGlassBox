@@ -1,5 +1,5 @@
-#include "Map.hpp"
-#include "Config.hpp"
+#include "Core/Map.hpp"
+#include "Core/Config.hpp"
 
 //const float Map::GRID_SIZE = 2.0f;
 const uint32_t Map::MAX_CAPACITY = std::numeric_limits<uint32_t>::max();

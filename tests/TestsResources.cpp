@@ -3,7 +3,7 @@
 
 #define protected public
 #define private public
-#  include "src/Resources.hpp"
+#  include "src/Core/Resources.hpp"
 #undef protected
 #undef private
 

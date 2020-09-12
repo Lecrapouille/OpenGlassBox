@@ -1,7 +1,7 @@
 #ifndef RESOURCEBIN_HPP
 #  define RESOURCEBIN_HPP
 
-#  include "Resource.hpp"
+#  include "Core/Resource.hpp"
 
 //==============================================================================
 //! \brief Resources come in a container. This class manages a collection of

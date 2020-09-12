@@ -2,9 +2,8 @@
 
 #define protected public
 #define private public
-//#  include "src/Path.hpp"
-#  include "src/City.hpp"
-#  include "src/Unit.hpp"
+#  include "src/Core/City.hpp"
+#  include "src/Core/Unit.hpp"
 #undef protected
 #undef private
 

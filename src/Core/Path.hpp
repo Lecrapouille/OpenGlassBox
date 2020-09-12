@@ -1,9 +1,9 @@
 #ifndef PATH_HPP
 #  define PATH_HPP
 
-//#  include "Unit.hpp"
-#  include "Vector.hpp"
-#  include "Unique.hpp"
+//#  include "Core/Unit.hpp"
+#  include "Core/Vector.hpp"
+#  include "Core/Unique.hpp"
 #  include <deque>
 #  include <vector>
 #  include <cstdint>
@@ -83,6 +83,11 @@ public:
     //! \brief
     // -------------------------------------------------------------------------
     Vector3f& position() { return m_position; }
+
+    // -------------------------------------------------------------------------
+    //! \brief
+    // -------------------------------------------------------------------------
+    std::vector<Segment*> const& segments() const { return m_segments; }
 
     // -------------------------------------------------------------------------
     //! \brief

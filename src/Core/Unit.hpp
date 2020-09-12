@@ -1,10 +1,10 @@
 #ifndef UNIT_HPP
 #  define UNIT_HPP
 
-#  include "Rule.hpp"
-#  include "Resources.hpp"
-#  include "Path.hpp"
-#  include "Unique.hpp"
+#  include "Core/Rule.hpp"
+#  include "Core/Resources.hpp"
+#  include "Core/Path.hpp"
+#  include "Core/Unique.hpp"
 #  include <string>
 #  include <vector>
 #  include <algorithm>

@@ -7,8 +7,12 @@ P := .
 M := $(P)/.makefile
 include $(M)/Makefile.header
 
-VPATH += $(P)/src
-OBJS += Simulation.o Map.o City.o Unit.o Path.o Agent.o Resource.o Resources.o Rule.o main.o
+VPATH += $(P)/src $(P)/src/Core $(P)/src/Display
+INCLUDES += -I$(P)/src
+OBJS += Simulation.o Map.o City.o Unit.o Path.o Agent.o Resource.o Resources.o Rule.o
+OBJS += Window.o main.o
+
+PKG_LIBS = sdl2
 
 all: $(TARGET)
 

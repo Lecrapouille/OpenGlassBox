@@ -1,9 +1,9 @@
 #ifndef SIMULATION_HPP
 #define SIMULATION_HPP
 
-#  include "City.hpp"
-#  include "Path.hpp"
-#  include "Unique.hpp"
+#  include "Core/City.hpp"
+#  include "Core/Path.hpp"
+#  include "Core/Unique.hpp"
 #  include <string>
 #  include <map>
 #  include <memory>

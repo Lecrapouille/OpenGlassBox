@@ -1,7 +1,7 @@
 #ifndef RULE_HPP
 #define RULE_HPP
 
-#  include "Resources.hpp"
+#  include "Core/Resources.hpp"
 #  include <string>
 #  include <vector>
 

@@ -1,5 +1,5 @@
-#include "Unit.hpp"
-#include "City.hpp"
+#include "Core/Unit.hpp"
+#include "Core/City.hpp"
 
 Unit::Unit(std::string const& id, Node& node)
     : m_id(id),

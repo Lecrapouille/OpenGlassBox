@@ -1,11 +1,11 @@
 #ifndef CITY_HPP
 #  define CITY_HPP
 
-#  include "Resources.hpp"
-#  include "Vector.hpp"
-#  include "Unit.hpp"
-#  include "Agent.hpp"
-#  include "Map.hpp"
+#  include "Core/Resources.hpp"
+#  include "Core/Vector.hpp"
+#  include "Core/Unit.hpp"
+#  include "Core/Agent.hpp"
+#  include "Core/Map.hpp"
 #  include <map>
 #  include <string>
 #  include <vector>

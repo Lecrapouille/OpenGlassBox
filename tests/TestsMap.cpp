@@ -2,7 +2,7 @@
 
 #define protected public
 #define private public
-#  include "src/Map.hpp"
+#  include "src/Core/Map.hpp"
 #undef protected
 #undef private
 

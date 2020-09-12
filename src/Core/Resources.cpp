@@ -1,4 +1,4 @@
-#include "Resources.hpp"
+#include "Core/Resources.hpp"
 
 // -----------------------------------------------------------------------------
 Resource& Resources::addResource(Resource::Type const& type, uint32_t const amount)

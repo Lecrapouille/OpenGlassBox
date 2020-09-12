@@ -1,9 +1,9 @@
-#include "City.hpp"
-#include "Map.hpp"
-#include "Unit.hpp"
-#include "Path.hpp"
-#include "Agent.hpp"
-#include "Config.hpp"
+#include "Core/City.hpp"
+#include "Core/Map.hpp"
+#include "Core/Unit.hpp"
+#include "Core/Path.hpp"
+#include "Core/Agent.hpp"
+#include "Core/Config.hpp"
 
 City::City(std::string const& id, uint32_t gridSizeX, uint32_t gridSizeY)
     : m_id(id),

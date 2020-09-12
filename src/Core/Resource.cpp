@@ -1,4 +1,4 @@
-#include "Resource.hpp"
+#include "Core/Resource.hpp"
 
 // -----------------------------------------------------------------------------
 const uint32_t Resource::MAX_CAPACITY = std::numeric_limits<uint32_t>::max();

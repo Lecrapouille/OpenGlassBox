@@ -1,8 +1,8 @@
-#include "Path.hpp"
-#include "Config.hpp"
-//#include "City.hpp"
-#include "Unit.hpp"
-#include "Unique.hpp"
+#include "Core/Path.hpp"
+#include "Core/Config.hpp"
+//#include "Core/City.hpp"
+#include "Core/Unit.hpp"
+#include "Core/Unique.hpp"
 #include <algorithm>
 
 Node::Node(uint32_t id, Vector3f const& position)

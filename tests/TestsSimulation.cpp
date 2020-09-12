@@ -2,7 +2,7 @@
 
 #define protected public
 #define private public
-#  include "src/Simulation.hpp"
+#  include "src/Core/Simulation.hpp"
 #undef protected
 #undef private
 
