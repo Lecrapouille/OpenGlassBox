@@ -52,8 +52,9 @@ TEST(TestsCity, addMap)
 
     Node n1(42u, Vector3f(1.0f, 2.0f, 3.0f)/*, p1*/);
     Unit& u1 = c.addUnit("unit1", n1);
-    //Unit& u2 = c.getUnit("unit1");
-    //ASSERT_EQ(&u1, &u2);
+    ASSERT_EQ(c.getUnits().size(), 1u);
+    Unit& u2 = *(c.getUnits()[0]);
+    ASSERT_EQ(&u1, &u2);
 
     // FIXME segfault
     //Resources r;

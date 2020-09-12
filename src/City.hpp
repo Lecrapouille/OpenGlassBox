@@ -3,16 +3,15 @@
 
 #  include "Resources.hpp"
 #  include "Vector.hpp"
+#  include "Unit.hpp"
+#  include "Agent.hpp"
+#  include "Map.hpp"
 #  include <map>
 #  include <string>
 #  include <vector>
-#  include <memory>
 
-class Map;
-class Unit;
 class Path;
 class Node;
-class Agent;
 class Resources;
 
 //==============================================================================
@@ -27,6 +26,8 @@ public:
     //! \brief Create a empty city.
     // -------------------------------------------------------------------------
     City(std::string const& id, uint32_t gridSizeX, uint32_t gridSizeY);
+
+    City() = default;
 
     // -------------------------------------------------------------------------
     //! \brief Move agents, execute rule scripts of maps, execute rule scripts
@@ -61,11 +62,15 @@ public:
     // -------------------------------------------------------------------------
     Unit& addUnit(std::string const& id, Node& node);
 
+    Units& getUnits() { return m_units; }
+
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
     Agent& addAgent(Node& node, Unit& owner,
                     Resources const& resources, std::string const& searchTarget);
+
+    Agents& getAgents() { return m_agents; }
 
     // -------------------------------------------------------------------------
     //! \brief
@@ -88,11 +93,6 @@ public:
 
 private:
 
-    using Maps = std::map<std::string, std::shared_ptr<Map>>;
-    using Paths = std::map<std::string, std::shared_ptr<Path>>;
-    using Units = std::vector<std::shared_ptr<Unit>>;
-    using Agents = std::vector<std::shared_ptr<Agent>>;
-
     std::string   m_id;
     Vector3f      m_position;
     uint32_t      m_gridSizeX;
@@ -105,5 +105,7 @@ private:
     Units         m_units;
     Agents        m_agents;
 };
+
+using Cities = std::map<std::string, std::unique_ptr<City>>;
 
 #endif

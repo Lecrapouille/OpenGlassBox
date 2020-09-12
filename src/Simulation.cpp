@@ -26,9 +26,10 @@ void Simulation::update(float const deltaTime)
 
 City& Simulation::addCity(std::string const& id)
 {
-    auto box = std::make_shared<City>(id, m_gridSizeX, m_gridSizeY);
-    m_cities[id] = box;
-    return *box;
+    auto ptr = std::make_unique<City>(id, m_gridSizeX, m_gridSizeY);
+    City& city = *ptr;
+    m_cities[id] = std::move(ptr);
+    return city;
 }
 
 City& Simulation::getCity(std::string const& id)

@@ -45,3 +45,6 @@ bool Unit::accepts(std::string const& searchTarget, Resources const& resourcesTo
     return find(m_targets.begin(), m_targets.end(), searchTarget) != m_targets.end()
             && m_resources.canAddSomeResources(resourcesToTryToAdd);
 }
+
+//Units& Unit::getUnits() { return m_units; }
+//Agents& Unit::getAgents() { return m_agents; }

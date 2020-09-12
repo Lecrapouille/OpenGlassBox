@@ -90,4 +90,6 @@ private:
     uint32_t    m_color = 0xFFFFFF;
 };
 
+using Agents = std::vector<std::unique_ptr<Agent>>;
+
 #endif

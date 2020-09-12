@@ -3,6 +3,7 @@
 
 #  include "City.hpp"
 #  include "Path.hpp"
+#  include "Unique.hpp"
 #  include <string>
 #  include <map>
 #  include <memory>
@@ -22,8 +23,6 @@ public:
     City& getCity(std::string const& id);
 
 private:
-
-    using Cities = std::map<std::string, std::shared_ptr<City>>;
 
     uint32_t      m_gridSizeX;
     uint32_t      m_gridSizeY;

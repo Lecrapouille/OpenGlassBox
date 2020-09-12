@@ -3,11 +3,13 @@
 
 //#  include "Unit.hpp"
 #  include "Vector.hpp"
+#  include "Unique.hpp"
 #  include <deque>
 #  include <vector>
 #  include <cstdint>
 #  include <string>
 #  include <memory>
+#  include <map>
 
 class Node;
 class Segment;
@@ -259,5 +261,7 @@ private:
     //! \brief
     uint32_t m_nextSegmentId = 0u;
 };
+
+using Paths = std::map<std::string, std::unique_ptr<Path>>;
 
 #endif

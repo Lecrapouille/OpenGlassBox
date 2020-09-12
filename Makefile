@@ -1,6 +1,6 @@
 PROJECT = GlassBox
 TARGET = $(PROJECT)
-DESCRIPTION = An Interpretation of SimCity Game Engine (2012)
+DESCRIPTION = An Interpretation of SimCity2013 Game Engine
 BUILD_TYPE = release
 
 P := .

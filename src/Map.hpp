@@ -2,10 +2,12 @@
 #  define MAP_HPP
 
 #  include "Vector.hpp"
+#  include "Unique.hpp"
 #  include "Config.hpp"
 #  include <string>
 #  include <vector>
 #  include <limits>
+#  include <map>
 
 //==============================================================================
 //! \brief Maps are simple uniform size grids. A Map represents a single type of
@@ -103,5 +105,7 @@ private:
     uint32_t              m_capacity;
     std::vector<uint32_t> m_resources;
 };
+
+using Maps = std::map<std::string, std::unique_ptr<Map>>;
 
 #endif

@@ -4,6 +4,7 @@
 #  include "Rule.hpp"
 #  include "Resources.hpp"
 #  include "Path.hpp"
+#  include "Unique.hpp"
 #  include <string>
 #  include <vector>
 #  include <algorithm>
@@ -83,5 +84,7 @@ protected:
     std::vector<std::string> m_targets;
     uint32_t                 m_ticks = 0u;
 };
+
+using Units = std::vector<std::unique_ptr<Unit>>;
 
 #endif

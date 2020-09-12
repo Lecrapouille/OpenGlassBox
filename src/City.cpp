@@ -50,9 +50,10 @@ void City::world2mapPosition(Vector3f worldPos, uint32_t& u, uint32_t& v)
 
 Map& City::addMap(std::string const& id)
 {
-    auto map = std::make_shared<Map>(id, m_gridSizeX, m_gridSizeY);
-    m_maps[id] = map;
-    return *map;
+    auto ptr = std::make_unique<Map>(id, m_gridSizeX, m_gridSizeY);
+    Map& map = *ptr;
+    m_maps[id] = std::move(ptr);
+    return map;
 }
 
 Map& City::getMap(std::string const& id)
@@ -62,9 +63,10 @@ Map& City::getMap(std::string const& id)
 
 Path& City::addPath(std::string const& id)
 {
-    auto path = std::make_shared<Path>(id/*, *this*/);
-    m_paths[id] = path;
-    return *path;
+    auto ptr = std::make_unique<Path>(id);
+    Path& path = *ptr;
+    m_paths[id] = std::move(ptr);
+    return path;
 }
 
 Path& City::getPath(std::string const& id)
@@ -74,20 +76,22 @@ Path& City::getPath(std::string const& id)
 
 Unit& City::addUnit(std::string const& id, Node& node)
 {
-    auto unit = std::make_shared<Unit>(id,/*m_nextUnitId++,*/ node);
-    m_units.push_back(unit);
-    return *unit;
+    auto ptr = std::make_unique<Unit>(id,/*m_nextUnitId++,*/ node);
+    Unit& unit = *ptr;
+    m_units.push_back(std::move(ptr));
+    return unit;
 }
 
 Agent& City::addAgent(Node& node, Unit& owner,
                       Resources const& resources,
                       std::string const& searchTarget)
 {
-    auto agent =
-       std::make_shared<Agent>(m_nextAgentId++, node, owner,
+    auto ptr =
+       std::make_unique<Agent>(m_nextAgentId++, node, owner,
                                resources, searchTarget);
-    m_agents.push_back(agent);
-    return *agent;
+    Agent& agent = *ptr;
+    m_agents.push_back(std::move(ptr));
+    return agent;
 }
 
 void City::removeAgent(Agent& agent)

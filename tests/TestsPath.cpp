@@ -23,35 +23,40 @@ TEST(TestsNode, Constructor)
     ASSERT_EQ(n.m_units.size(), 0u);
 }
 
-// FIXME node::m_unit KO
 TEST(TestsNode, AddUnit)
 {
     Node n1(42u, Vector3f(1.0f, 2.0f, 3.0f));
     Node n2(43u, Vector3f(2.0f, 3.0f, 4.0f));
-
     ASSERT_EQ(n1.m_units.size(), 0u);
     ASSERT_EQ(n2.m_units.size(), 0u);
 
+    // Add unit u1 to node n1. Check relationship.
     Unit u1("maison", n1);
     ASSERT_EQ(n1.m_units.size(), 1u);
-    ASSERT_NE(n1.m_units[0], nullptr);
-    ASSERT_STREQ(n1.m_units[0]->id().c_str(), "maison");
+    ASSERT_EQ(n1.m_units[0], &u1);
+    ASSERT_EQ(n1.units()[0], &u1);
     ASSERT_EQ(&(n1.m_units[0]->m_node), &n1);
+    ASSERT_STREQ(n1.m_units[0]->id().c_str(), "maison");
 
+    // Add again unit u1 to node n2.
     n2.addUnit(u1);
     ASSERT_EQ(n2.m_units.size(), 1u);
-    ASSERT_NE(n2.m_units[0], nullptr);
+    ASSERT_EQ(n2.m_units[0], &u1);
+    ASSERT_EQ(n2.units()[0], &u1);
+    ASSERT_EQ(&(n2.m_units[0]->m_node), &n1);
     ASSERT_STREQ(n2.m_units[0]->id().c_str(), "maison");
-    // EXPECT_EQ(&(n2.m_units[0]->m_node), &n2); // FIXME KO shall not be &n1
 
+    // Add unit u2 to node n1.
     Unit u2("maison", n2);
     n1.addUnit(u2);
     ASSERT_EQ(n1.m_units.size(), 2u);
-    ASSERT_NE(n1.m_units[0], nullptr);
-    ASSERT_NE(n1.m_units[1], nullptr);
+    ASSERT_EQ(n1.m_units[0], &u1);
+    ASSERT_EQ(n1.m_units[1], &u2);
+    ASSERT_EQ(n1.units()[0], &u1);
+    ASSERT_EQ(n1.units()[1], &u2);
     ASSERT_STREQ(n1.m_units[0]->id().c_str(), "maison");
-    ASSERT_EQ(&(n1.m_units[0]->m_node), &n1);
     ASSERT_STREQ(n1.m_units[1]->id().c_str(), "maison");
+    ASSERT_EQ(&(n1.m_units[0]->m_node), &n1);
     ASSERT_EQ(&(n1.m_units[1]->m_node), &n2);
 }
 
