@@ -1,9 +1,10 @@
 #include "Core/Rule.hpp"
+#include <iostream>
 #include <cstdlib>
 #include <stdexcept>
 
 template<class T>
-static bool TryParse(std::string const& str, T& res)
+static bool tryConvertion(std::string const& str, T& res)
 {
     try
     {
@@ -13,12 +14,19 @@ static bool TryParse(std::string const& str, T& res)
     }
     catch (std::invalid_argument const& /*ia*/)
     {
-        //TODO LOG
+        std::cerr << "Failed converting '" << str
+                  << "' field '" << res
+                  << "' into integer!"
+                  << std::endl;
         return false;
     }
 }
 
-bool Rule::execute(RuleContext& context)
+IRule::IRule(std::string const& name)
+    : m_id(name)
+{}
+
+bool IRule::execute(RuleContext& context)
 {
     size_t i = m_commands.size();
     while (i--)
@@ -36,11 +44,11 @@ bool Rule::execute(RuleContext& context)
     return true;
 }
 
-void Rule::setOption(std::string const& optionId, std::string const& val)
+void IRule::setOption(std::string const& option, std::string const& value)
 {
-    if (optionId == "rate")
+    if (option == "rate")
     {
-        if (!TryParse<uint32_t>(val, m_rate))
+        if (!tryConvertion<uint32_t>(value, m_rate))
             m_rate = 1u;
     }
 }

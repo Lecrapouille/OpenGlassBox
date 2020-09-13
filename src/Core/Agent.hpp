@@ -8,11 +8,17 @@
 
 class City;
 
-struct AgentConfig
+//==============================================================================
+//! \brief Class constructed during the parsing of simulation scripts.
+//! Examples:
+//!  - agent People color 0xFFFF00 speed 10
+//!  - agent Worker color 0xFFFFFF speed 10
+//==============================================================================
+struct AgentType
 {
-    AgentConfig(float s = 1.0f,
-                float r = 1.0f,
-                uint32_t c = 0xFFFFFF)
+    AgentType(float s = 1.0f,
+              float r = 1.0f,
+              uint32_t c = 0xFFFFFF)
         : speed(s), radius(r), color(c)
     {}
 
@@ -40,10 +46,10 @@ public:
           Resources const& resources,
           std::string const& searchTarget);
 
-    //------------------------------------------------------------------------------
-    //! \brief Configurate the agent. Method called from the Rule
     //--------------------------------------------------------------------------
-    void configure(AgentConfig const& config);
+    //! \brief Configure the Agent from information get on simulation scripts
+    //--------------------------------------------------------------------------
+    void configure(AgentType const& type);
 
     //--------------------------------------------------------------------------
     //! \brief Driving on Segments, transporting resources and unloading them on
@@ -52,10 +58,15 @@ public:
     void move(City& city);
 
     //--------------------------------------------------------------------------
-    //! \brief
+    //! \brief Transfert the amount of resource to the target Unit.
+    //! \return true if after the transfert the Agent has no more resource to
+    //! carry.
     //--------------------------------------------------------------------------
     bool unloadResources();
 
+    //--------------------------------------------------------------------------
+    //! \brief Return the world position
+    //--------------------------------------------------------------------------
     Vector3f const& position() const { return m_position; }
 
 private:

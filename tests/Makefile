@@ -13,7 +13,7 @@ INCLUDES += -I$(P) -I$(P)/src
 
 OBJS += Simulation.o Map.o City.o Unit.o Path.o Agent.o Resource.o Resources.o Rule.o
 OBJS += TestsResource.o TestsResources.o TestsUnit.o TestsPath.o TestsMap.o TestsCity.o
-OBJS += TestsAgent.o main.o
+OBJS += TestsAgent.o TestsCommand.o TestsRule.o main.o
 
 DEFINES += -Wno-unused-function -Wno-undef -Wno-keyword-macro -Wno-float-equal
 PKG_LIBS += gtest gmock

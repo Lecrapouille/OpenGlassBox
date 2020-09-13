@@ -1,0 +1,68 @@
+resources
+	resource Water
+	resource Grass
+	resource People
+end
+
+paths
+	path Road color 0xAAAAAA
+end
+
+segments
+	segment Dirt color 0xAAAAAA
+end
+
+agents
+	agent People color 0xFFFF00 speed 10
+	agent Worker color 0xFFFFFF speed 10
+end
+
+rules
+
+	mapRule CreateGrass
+		rate 7
+
+		map Water remove 10
+		map Grass add 1
+	end
+
+	unitRule SendPeopleToWork
+		rate 20
+
+		local People remove 1
+
+		agent People to Work add [ People 1 ]
+	end
+
+	unitRule SendPeopleToHome
+		rate 100
+
+		map Water greater 300
+
+		local People remove 1
+
+		agent Worker to Home add [ People 1 ]
+	end
+
+	unitRule UsePeopleToWater
+		rate 5
+
+		local People greater 1
+
+		map Water add 30
+	end
+
+end
+
+units
+
+	unit Home color 0xFF00FF mapRadius 1 rules [ SendPeopleToWork ] targets [ Home ] caps [ People 4 ] resources [ People 4 ]
+
+	unit Work color 0x00FFFF mapRadius 3 rules [ SendPeopleToHome UsePeopleToWater ] targets [ Work ] caps [ People 2 ]
+
+end
+
+maps
+	map Water color 0x0000FF capacity 100 rules [  ]
+	map Grass color 0x00FF00 capacity 10 rules [ CreateGrass ]
+end

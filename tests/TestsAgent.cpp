@@ -14,7 +14,7 @@ TEST(TestsAgent, Constructor)
     Unit u("U", n);
     Resources r; r.addResource("oil", 5u);
     Agent a(43u, n, u, r, "???");
-    AgentConfig c(5.0f, 3.0f, 42u);
+    AgentType c(5.0f, 3.0f, 42u);
     a.configure(c);
 
     ASSERT_EQ(a.m_id, 43u);

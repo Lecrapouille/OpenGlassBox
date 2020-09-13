@@ -8,6 +8,7 @@
 Agent::Agent(uint32_t id,
              Node& node, // FIXME should be linked at least one segment
              Unit& owner,
+             // TODO from constructor ?
              Resources const& resources,
              std::string const& searchTarget)
     : m_id(id),
@@ -21,7 +22,7 @@ Agent::Agent(uint32_t id,
 }
 
 //------------------------------------------------------------------------------
-void Agent::configure(AgentConfig const& config)
+void Agent::configure(AgentType const& config)
 {
     m_speed = config.speed;
     m_radius = config.radius;
