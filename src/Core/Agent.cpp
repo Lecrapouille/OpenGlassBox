@@ -102,7 +102,7 @@ void Agent::updatePosition()
     if (m_currentSegment != nullptr)
     {
         m_position = m_currentSegment->position1() +
-                     (m_currentSegment->position1() - m_currentSegment->position2())
+                     (m_currentSegment->position2() - m_currentSegment->position1())
                      * m_offset;
     }
     else

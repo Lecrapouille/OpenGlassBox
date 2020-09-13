@@ -56,10 +56,10 @@ TEST(TestsAgent, Move)
     ASSERT_EQ(a.m_nextNode, &n2);
 
     a.move(city);
-    //ASSERT_EQ(a.m_position.x, 1.0f);
+    ASSERT_GT(a.m_position.x, 1.0f);
     ASSERT_EQ(a.m_position.y, 2.0f);
     ASSERT_EQ(a.m_position.z, 3.0f);
-    ASSERT_EQ(a.m_offset, 0.0f);
+    ASSERT_GT(a.m_offset, 0.0f);
     ASSERT_EQ(a.m_currentSegment, &s1);
     ASSERT_EQ(a.m_lastNode, &n1);
     ASSERT_EQ(a.m_nextNode, &n2);
