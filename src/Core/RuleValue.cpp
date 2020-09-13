@@ -52,7 +52,7 @@ uint32_t RuleValueMap::get(RuleContext& context)
 
 uint32_t RuleValueMap::capacity(RuleContext& context)
 {
-    return context.city->getMap(mapId).getCapacity(/*context.u, context.v, context.radius*/);
+    return context.city->getMap(mapId).getCapacity();
 }
 
 void RuleValueMap::add(RuleContext& context, uint32_t toAdd)

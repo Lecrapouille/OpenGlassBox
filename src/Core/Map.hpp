@@ -4,6 +4,7 @@
 #  include "Core/Vector.hpp"
 #  include "Core/Unique.hpp"
 #  include "Core/Config.hpp"
+#  include "Core/MapCoordinatesInsideRadius.hpp"
 #  include <string>
 #  include <vector>
 #  include <limits>
@@ -41,17 +42,10 @@ public:
     // -------------------------------------------------------------------------
     uint32_t getResource(uint32_t const u, uint32_t const v, uint32_t radius);
 
+    // -------------------------------------------------------------------------
+    //! \brief
+    // -------------------------------------------------------------------------
     uint32_t getCapacity() const { return m_capacity; }
-
-    // -------------------------------------------------------------------------
-    //! \brief
-    // -------------------------------------------------------------------------
-    //uint32_t getCapacity(uint32_t const u, uint32_t const v);
-
-    // -------------------------------------------------------------------------
-    //! \brief
-    // -------------------------------------------------------------------------
-    //uint32_t getCapacity(uint32_t const u, uint32_t const v, uint32_t const radius);
 
     // -------------------------------------------------------------------------
     //! \brief
@@ -93,17 +87,17 @@ public:
 
 public:
 
-    //static const float GRID_SIZE;
     static const uint32_t MAX_CAPACITY;
 
 private:
 
-    std::string           m_id;
-    uint32_t              m_sizeU;
-    uint32_t              m_sizeV;
-    uint32_t              m_ticks = 0u;
-    uint32_t              m_capacity;
-    std::vector<uint32_t> m_resources;
+    std::string             m_id;
+    uint32_t                m_sizeU;
+    uint32_t                m_sizeV;
+    uint32_t                m_ticks = 0u;
+    uint32_t                m_capacity;
+    std::vector<uint32_t>   m_resources;
+    MapCoordinatesInsideRadius m_coordinates;
 };
 
 using Maps = std::map<std::string, std::unique_ptr<Map>>;
