@@ -11,6 +11,20 @@ std::random_device rd;
 std::mt19937 generator(rd());
 
 //------------------------------------------------------------------------------
+int32_t MapCoordinatesInsideRadius::compress(int32_t u, int32_t v)
+{
+    return ((u + MapCoordinatesInsideRadius::MAX_RADIUS) << 16) |
+            (v + MapCoordinatesInsideRadius::MAX_RADIUS);
+}
+
+//------------------------------------------------------------------------------
+void MapCoordinatesInsideRadius::uncompress(int32_t val, int32_t& u, int32_t& v)
+{
+    u = ((val >> 16) & 0xFFFF) - MapCoordinatesInsideRadius::MAX_RADIUS;
+    v = (val & 0xFFFF) - MapCoordinatesInsideRadius::MAX_RADIUS;
+}
+
+//------------------------------------------------------------------------------
 void MapCoordinatesInsideRadius::init(uint32_t radius,
                                       uint32_t centerU, uint32_t centerV,
                                       uint32_t minU, uint32_t maxU,
@@ -25,11 +39,11 @@ void MapCoordinatesInsideRadius::init(uint32_t radius,
     m_minV = minV;
     m_maxV = maxV;
 
-    std::vector<uint32_t>& values = cachedCoordinates(radius);
+    Coordinates& values = cachedCoordinates(radius);
     m_values = &values;
     if (values.size() == 0u)
     {
-        createCoordinates(radius, values);
+        createCoordinates(int32_t(radius), values);
     }
 
     if (random)
@@ -43,35 +57,36 @@ void MapCoordinatesInsideRadius::init(uint32_t radius,
     }
 }
 
-void MapCoordinatesInsideRadius::createCoordinates(uint32_t radius, std::vector<uint32_t> &res)
+//------------------------------------------------------------------------------
+void MapCoordinatesInsideRadius::createCoordinates(int32_t radius, Coordinates &res)
 {
     res.clear();
     //res.reserve(radius * radius);
 
-    for (uint32_t u = -radius; u <= radius; ++u)
+    for (int32_t u = -radius; u <= radius; ++u)
     {
-        for (uint32_t v = -radius; v <= radius; ++v)
+        for (int32_t v = -radius; v <= radius; ++v)
         {
-            if (u + v <= radius)
+            if (std::abs(u) + std::abs(v) <= radius)
             {
-                res.push_back(((u + MAX_RADIUS) << 16) | (v + MAX_RADIUS));
+                res.push_back(compress(u, v));
             }
         }
     }
 }
 
+//------------------------------------------------------------------------------
 bool MapCoordinatesInsideRadius::next(uint32_t& u, uint32_t& v)
 {
     size_t const size = m_values->size();
     while (m_offset < size)
     {
-        uint32_t val = (*m_values)[(m_startingIndex + m_offset++) % size];
+        int32_t val = (*m_values)[(m_startingIndex + m_offset++) % size];
+        int32_t iu; int32_t iv;
 
-        u = ((val >> 16) & 0xFFFF) - MAX_RADIUS;
-        v = (val & 0xFFFF) - MAX_RADIUS;
-
-        u += m_centerU;
-        v += m_centerV;
+        uncompress(val, iu, iv);
+        u = uint32_t(iu) + m_centerU;
+        v = uint32_t(iv) + m_centerV;
 
         if ((u >= m_minU) && (u < m_maxU) && (v >= m_minV) && (v < m_maxV))
             return true;
