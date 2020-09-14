@@ -101,6 +101,7 @@ public:
 
 public:
 
+    AgentType     type;
     std::string   target;
     Resources     resources;
 };
