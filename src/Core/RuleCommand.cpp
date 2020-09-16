@@ -36,10 +36,5 @@ bool RuleCommandAgent::validate(RuleContext const& /*context*/) const
 //------------------------------------------------------------------------------
 void RuleCommandAgent::execute(RuleContext& context)
 {
-    Agent& a = context.city->addAgent(context.unit->node(),
-                                      *(context.unit),
-                                      resources,
-                                      target);
-    a.configure(type);
-
+    context.city->addAgent(type, *(context.unit), resources, target);
 }

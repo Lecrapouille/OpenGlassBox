@@ -85,7 +85,7 @@ public:
 //! agent People color 0xFFFF00 speed 10
 //! \endcode
 //==============================================================================
-class RuleCommandAgent : public IRuleCommand, public AgentType
+class RuleCommandAgent : public IRuleCommand, public Agent::Type
 {
 public:
 
@@ -101,7 +101,7 @@ public:
 
 public:
 
-    AgentType     type;
+    Agent::Type   type;
     std::string   target;
     Resources     resources;
 };

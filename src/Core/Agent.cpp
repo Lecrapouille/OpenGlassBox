@@ -1,32 +1,34 @@
 #include "Core/Agent.hpp"
 #include "Core/City.hpp"
+#include "Core/Config.hpp"
 #include <iostream>
 
-#define TICKS_PER_SECOND 10.0f
-
 //------------------------------------------------------------------------------
-Agent::Agent(uint32_t id,
-             Node& node, // FIXME should be linked at least one segment
-             Unit& owner,
-             // TODO from constructor ?
-             Resources const& resources,
-             std::string const& searchTarget)
+Agent::Agent(uint32_t id, Agent::Type const& type, Unit& owner,
+             Resources const& resources, std::string const& searchTarget)
     : m_id(id),
       m_owner(owner),
       m_resources(resources),
       m_searchTarget(searchTarget),
-      m_lastNode(&node)
+      m_lastNode(&(owner.node())) // FIXME should be linked at least one segment
 {
+    configure(type);
     findNextNode();
     updatePosition();
+    if (m_currentSegment == nullptr)
+    {
+        std::cerr << "Ill formed Agent " << id << ": does not belong to any segment"
+                  << std::endl;
+    }
+
 }
 
 //------------------------------------------------------------------------------
-void Agent::configure(AgentType const& config)
+void Agent::configure(Agent::Type const& type)
 {
-    m_speed = config.speed;
-    m_radius = config.radius;
-    m_color = config.color;
+    m_speed = type.speed;
+    m_radius = type.radius;
+    m_color = type.color;
 }
 
 //------------------------------------------------------------------------------
@@ -74,7 +76,7 @@ void Agent::moveTowardsNextNode()
         }
 
         m_offset += direction
-                    * (m_speed / TICKS_PER_SECOND)
+                    * (m_speed / config::TICKS_PER_SECOND)
                     / m_currentSegment->length();
 
         // Reached node1 ?
@@ -115,11 +117,12 @@ void Agent::updatePosition()
 //------------------------------------------------------------------------------
 void Agent::findNextNode()
 {
+    // Ill formed agent: abord
     if ((m_lastNode == nullptr) || (m_lastNode->segments().size() == 0u))
         return ;
 
     m_nextNode = &(m_lastNode->segments()[0]->node2());
-            //nullptr; // TODO m_lastNode->path().findNextNode(m_lastNode, m_searchTarget, m_resources);
+    //nullptr; // TODO m_lastNode->path().findNextNode(m_lastNode, m_searchTarget, m_resources);
 
     if (m_nextNode != nullptr)
     {
@@ -139,9 +142,6 @@ void Agent::findNextNode()
 }
 
 //------------------------------------------------------------------------------
-
-
-//------------------------------------------------------------------------------
 bool Agent::unloadResources()
 {
     std::vector<Unit*>& units = m_lastNode->units();
@@ -158,6 +158,7 @@ bool Agent::unloadResources()
 }
 
 //------------------------------------------------------------------------------
+// TODO
 /*Unit* Agent::searchUnit()
 {
     std::vector<Unit*>& units = m_lastNode->units();

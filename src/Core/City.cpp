@@ -82,13 +82,10 @@ Unit& City::addUnit(std::string const& id, Node& node)
     return unit;
 }
 
-Agent& City::addAgent(Node& node, Unit& owner,
-                      Resources const& resources,
+Agent& City::addAgent(Agent::Type const& type, Unit& owner, Resources const& resources,
                       std::string const& searchTarget)
 {
-    auto ptr =
-       std::make_unique<Agent>(m_nextAgentId++, node, owner,
-                               resources, searchTarget);
+    auto ptr = std::make_unique<Agent>(m_nextAgentId++, type, owner, resources, searchTarget);
     Agent& agent = *ptr;
     m_agents.push_back(std::move(ptr));
     return agent;

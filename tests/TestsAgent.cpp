@@ -13,8 +13,9 @@ TEST(TestsAgent, Constructor)
     Node n(42u, Vector3f(1.0f, 2.0f, 3.0f));
     Unit u("U", n);
     Resources r; r.addResource("oil", 5u);
-    Agent a(43u, n, u, r, "???");
-    AgentType c(5.0f, 3.0f, 42u);
+    Agent::Type c0(6.0f, 7.0f, 43u);
+    Agent a(43u, c0, u, r, "???");
+    Agent::Type c(5.0f, 3.0f, 42u);
     a.configure(c);
 
     ASSERT_EQ(a.m_id, 43u);
@@ -28,6 +29,8 @@ TEST(TestsAgent, Constructor)
     ASSERT_EQ(a.m_offset, 0.0f);
     ASSERT_EQ(a.m_currentSegment, nullptr); // FIXME temporary
     ASSERT_EQ(a.m_lastNode, &n);
+    ASSERT_EQ(a.m_lastNode, &(u.m_node));
+    ASSERT_EQ(&n, &(u.m_node));
     ASSERT_EQ(a.m_nextNode, nullptr);
     ASSERT_EQ(a.m_speed, 5.0f);
     ASSERT_EQ(a.m_radius, 3.0f);
@@ -45,7 +48,8 @@ TEST(TestsAgent, Move)
     Segment& s1 = p.addSegment(n1, n2);
 
     Unit u("U", n1); Resources r;
-    Agent a(43u, n1, u, r, "???");
+    Agent::Type c(5.0f, 3.0f, 42u);
+    Agent a(43u, c, u, r, "???");
 
     ASSERT_EQ(a.m_position.x, 1.0f);
     ASSERT_EQ(a.m_position.y, 2.0f);
@@ -53,6 +57,8 @@ TEST(TestsAgent, Move)
     ASSERT_EQ(a.m_offset, 0.0f);
     ASSERT_EQ(a.m_currentSegment, &s1);
     ASSERT_EQ(a.m_lastNode, &n1);
+    ASSERT_EQ(a.m_lastNode, &(u.m_node));
+    ASSERT_EQ(&n1, &(u.m_node));
     ASSERT_EQ(a.m_nextNode, &n2);
 
     a.move(city);

@@ -63,10 +63,12 @@ TEST(TestsCity, addMap)
     ASSERT_EQ(&u1, &u2);
 
     // Add agent
-    Resources r;
-    Agent& a1 = c.addAgent(n1, u1, r, "???");
+    Resources r; Agent::Type t; t.speed = 42.0f;
+    Agent& a1 = c.addAgent(t, u1, r, "???");
     Agent& a2 = *(c.getAgents()[0]);
     ASSERT_EQ(&a1, &a2);
+    ASSERT_EQ(a1.m_speed, t.speed);
+    ASSERT_EQ(&(a1.m_owner), &u1);
 }
 
 TEST(TestsCity, CreateCity)

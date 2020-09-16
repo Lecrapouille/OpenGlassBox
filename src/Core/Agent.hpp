@@ -9,47 +9,45 @@
 class City;
 
 //==============================================================================
-//! \brief Class constructed during the parsing of simulation scripts.
-//! Examples:
-//!  - agent People color 0xFFFF00 speed 10
-//!  - agent Worker color 0xFFFFFF speed 10
-//==============================================================================
-struct AgentType
-{
-    AgentType(float s = 1.0f,
-              float r = 1.0f,
-              uint32_t c = 0xFFFFFF)
-        : speed(s), radius(r), color(c)
-    {}
-
-    float     speed;
-    float     radius;
-    uint32_t  color;
-};
-
-//==============================================================================
-//! \brief Carry resources from one Unit to another.
-//!
-//! Created by Unit rules. Each Agent has a set of resources.
+//! \brief Created by UnitRules. Each Agent has a set of resources and carry
+//! these resources from one Unit to another. Agents do not run rules because
+//! there are 10,000s of agents by simulation)
 //! Each agent is given a destination (Home, Work, Fire, Sickness).
 //==============================================================================
 class Agent
 {
 public:
 
+    //==========================================================================
+    //! \brief Type of Agents (people, worker ...).
+    //! Class constructed during the parsing of simulation scripts.
+    //! Examples:
+    //!  - agent People color 0xFFFF00 speed 10.5
+    //!  - agent Worker color 0xFFFFFF speed 10 radius 3
+    //==========================================================================
+    struct Type
+    {
+        Type(float s = 1.0f, uint32_t r = 1u, uint32_t c = 0xFFFFFF)
+            : speed(s), radius(r), color(c)
+        {}
+
+        float     speed;
+        uint32_t  radius;
+        uint32_t  color;
+    };
+
+public:
+
     //--------------------------------------------------------------------------
     //! \brief
     //--------------------------------------------------------------------------
-    Agent(uint32_t id,
-          Node& node,
-          Unit& owner,
-          Resources const& resources,
-          std::string const& searchTarget);
+    Agent(uint32_t id, Agent::Type const& type, Unit& owner,
+          Resources const& resources, std::string const& searchTarget);
 
     //--------------------------------------------------------------------------
     //! \brief Configure the Agent from information get on simulation scripts
     //--------------------------------------------------------------------------
-    void configure(AgentType const& type);
+    void configure(Agent::Type const& type);
 
     //--------------------------------------------------------------------------
     //! \brief Driving on Segments, transporting resources and unloading them on
@@ -105,7 +103,7 @@ private:
 
     // Should be an int refering a global table
     float       m_speed = 1.0f;
-    float       m_radius = 1.0f;
+    uint32_t    m_radius = 1u;
     uint32_t    m_color = 0xFFFFFF;
 };
 

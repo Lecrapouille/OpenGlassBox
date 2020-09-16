@@ -68,7 +68,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    Agent& addAgent(Node& node, Unit& owner,
+    Agent& addAgent(Agent::Type const& type, Unit& owner,
                     Resources const& resources, std::string const& searchTarget);
 
     Agents& getAgents() { return m_agents; }

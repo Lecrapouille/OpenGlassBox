@@ -22,9 +22,10 @@ bool GlassBox::onInit()
 
     // city.AddUnit/*OnSegment*/(m_simulation.getUnitType("Home"), { s1, off=0.66f });
 
-    Unit& u1 = city.addUnit("work", n2);
+    Unit& u1 = city.addUnit("work", n1);
     Resources r;
-    city.addAgent(n1, u1, r, "work");
+    Agent::Type t; t.speed = 3.0f;
+    city.addAgent(t, u1, r, "work");
 
     return true;
 }
