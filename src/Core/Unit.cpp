@@ -13,7 +13,7 @@ Unit::~Unit()
     //m_node.units.remove(this);
 }
 
-void Unit::configure(Unit::Config const& conf, City& city)
+void Unit::configure(Unit::Type const& conf, City& city)
 {
     m_color = conf.color;
     m_rules = conf.rules;

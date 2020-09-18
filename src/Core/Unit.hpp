@@ -26,7 +26,14 @@ class Unit
 {
 public:
 
-    struct Config
+    //==========================================================================
+    //! \brief Type of Units (Home, Work ...).
+    //! Class constructed during the parsing of simulation scripts.
+    //! Examples:
+    //!  - unit Home color 0xFF00FF mapRadius 1 rules [ SendPeopleToWork ]
+    //!          targets [ Home ] caps [ People 4 ] resources [ People 4 ]
+    //==========================================================================
+    struct Type
     {
         uint32_t                 color;
         Resources                capacities;
@@ -45,7 +52,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    void configure(Unit::Config const& conf, City& city);
+    void configure(Unit::Type const& conf, City& city);
 
     // -------------------------------------------------------------------------
     //! \brief
