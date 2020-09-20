@@ -6,26 +6,28 @@ GlassBox::GlassBox()
 
 bool GlassBox::onInit()
 {
-    // TODO
-    // m_simulation.load("simulation.fth");
+    // TODO m_simulation.load("simulation.fth");
+    // TODO m_simulation.getSegmentType("Dirt")
+    ResourceType resource_type[3] = { "Water", "Grass", "People" };
+    PathType path_type("Road"/*, 0xAAAAAA*/);
+    SegmentType segment_type("Dirt", 0xAAAAAA);
+    AgentType agent_type[2] = { { "Worker", 0xFFFF00, 10 }, { "People", 0xFFFF00, 10 } };
+    Resources r; r.addResource("Water", 10); r.addResource("People", 10);
+    UnitType unit_type[2] = { { "Home", 0xFF00FF, r, {}, {} }, 
+                              { "Work", 0xFF00FF, r, {}, {} } };
 
     City& city = m_simulation.addCity("Paris");
-    Path& road = city.addPath("Road");
-
+    Path& road = city.addPath(path_type);
     Node& n1 = road.addNode(Vector3f(20.0f, 20.0f, 0.0f));
     Node& n2 = road.addNode(Vector3f(50.0f, 50.0f, 0.0f));
     Node& n3 = road.addNode(Vector3f(20.0f, 50.0f, 0.0f));
+    Segment& s1 = road.addSegment(segment_type, n1, n2);
+    Segment& s2 = road.addSegment(segment_type, n2, n3);
+    Segment& s3 = road.addSegment(segment_type, n3, n1);
 
-    Segment& s1 = road.addSegment(n1, n2); // TODO pass as param: m_simulation.getSegmentType("Dirt")
-    Segment& s2 = road.addSegment(n2, n3);
-    Segment& s3 = road.addSegment(n3, n1);
-
-    // city.AddUnit/*OnSegment*/(m_simulation.getUnitType("Home"), { s1, off=0.66f });
-
-    Unit& u1 = city.addUnit("work", n1);
-    Resources r;
-    Agent::Type t; t.speed = 3.0f;
-    city.addAgent(t, u1, r, "work");
+    // TODO city.AddUnit/*OnSegment*/(m_simulation.getUnitType("Home"), { s1, off=0.66f });
+    Unit& u1 = city.addUnit(unit_type[0], n1);
+    city.addAgent(agent_type[0], u1, r, "work");
 
     return true;
 }

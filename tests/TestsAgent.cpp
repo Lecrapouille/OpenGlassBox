@@ -10,13 +10,13 @@
 
 TEST(TestsAgent, Constructor)
 {
-    Node n(42u, Vector3f(1.0f, 2.0f, 3.0f));
-    Unit u("U", n);
+    City city("Paris", 4, 4);
     Resources r; r.addResource("oil", 5u);
-    Agent::Type c0(6.0f, 7.0f, 43u);
-    Agent a(43u, c0, u, r, "???");
-    Agent::Type c(5.0f, 3.0f, 42u);
-    a.configure(c);
+    UnitType type = { "Home", 0xFF00FF, r, {}, {} };
+    Node n(42u, Vector3f(1.0f, 2.0f, 3.0f));
+    Unit u(type, n, city);
+    AgentType c(5.0f, 3.0f, 42u);
+    Agent a(43u, c, u, r, "???");
 
     ASSERT_EQ(a.m_id, 43u);
     ASSERT_EQ(&(a.m_owner), &u);
@@ -42,13 +42,17 @@ TEST(TestsAgent, Move)
     const uint32_t GRILL_SIZE = 32u;
     City city("Paris", GRILL_SIZE, GRILL_SIZE);
 
-    Path& p = city.addPath("route");
+    PathType type1("route"/*, 0xAAAAAA*/);
+    Path& p = city.addPath(type1);
     Node& n1 = p.addNode(Vector3f(1.0f, 2.0f, 3.0f));
     Node& n2 = p.addNode(Vector3f(3.0f, 2.0f, 3.0f));
-    Segment& s1 = p.addSegment(n1, n2);
+    SegmentType type2("Dirt", 0xAAAAAA);
+    Segment& s1 = p.addSegment(type2, n1, n2);
 
-    Unit u("U", n1); Resources r;
-    Agent::Type c(5.0f, 3.0f, 42u);
+    Resources r;
+    UnitType type = { "Home", 0xFF00FF, r, {}, {} };
+    Unit u(type, n1, city);
+    AgentType c(5.0f, 3.0f, 42u);
     Agent a(43u, c, u, r, "???");
 
     ASSERT_EQ(a.m_position.x, 1.0f);

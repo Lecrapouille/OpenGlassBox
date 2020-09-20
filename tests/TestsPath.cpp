@@ -24,18 +24,25 @@ TEST(TestsNode, Constructor)
 
 TEST(TestsNode, AddUnit)
 {
+    City c("Paris", 1u, 1u);
+
     Node n1(42u, Vector3f(1.0f, 2.0f, 3.0f));
     Node n2(43u, Vector3f(2.0f, 3.0f, 4.0f));
     ASSERT_EQ(n1.m_units.size(), 0u);
     ASSERT_EQ(n2.m_units.size(), 0u);
 
+    Resources r;
+    r.setCapacity("people", 10);
+    r.addResource("people", 10);
+    UnitType unit_type = { "maison", 0xFF00FF, r, {}, {} };
+
     // Add unit u1 to node n1. Check relationship.
-    Unit u1("maison", n1);
+    Unit u1(unit_type, n1, c);
     ASSERT_EQ(n1.m_units.size(), 1u);
     ASSERT_EQ(n1.m_units[0], &u1);
     ASSERT_EQ(n1.units()[0], &u1);
     ASSERT_EQ(&(n1.m_units[0]->m_node), &n1);
-    ASSERT_STREQ(n1.m_units[0]->id().c_str(), "maison");
+    ASSERT_STREQ(n1.m_units[0]->name().c_str(), "maison");
 
     // Add again unit u1 to node n2.
     n2.addUnit(u1);
@@ -43,18 +50,18 @@ TEST(TestsNode, AddUnit)
     ASSERT_EQ(n2.m_units[0], &u1);
     ASSERT_EQ(n2.units()[0], &u1);
     ASSERT_EQ(&(n2.m_units[0]->m_node), &n1);
-    ASSERT_STREQ(n2.m_units[0]->id().c_str(), "maison");
+    ASSERT_STREQ(n2.m_units[0]->name().c_str(), "maison");
 
     // Add unit u2 to node n1.
-    Unit u2("maison", n2);
+    Unit u2(unit_type, n2, c);
     n1.addUnit(u2);
     ASSERT_EQ(n1.m_units.size(), 2u);
     ASSERT_EQ(n1.m_units[0], &u1);
     ASSERT_EQ(n1.m_units[1], &u2);
     ASSERT_EQ(n1.units()[0], &u1);
     ASSERT_EQ(n1.units()[1], &u2);
-    ASSERT_STREQ(n1.m_units[0]->id().c_str(), "maison");
-    ASSERT_STREQ(n1.m_units[1]->id().c_str(), "maison");
+    ASSERT_STREQ(n1.m_units[0]->name().c_str(), "maison");
+    ASSERT_STREQ(n1.m_units[1]->name().c_str(), "maison");
     ASSERT_EQ(&(n1.m_units[0]->m_node), &n1);
     ASSERT_EQ(&(n1.m_units[1]->m_node), &n2);
 }
@@ -111,13 +118,17 @@ TEST(TestsSegment, Constuctor)
     Node n1(42u, Vector3f(1.0f, 1.0f, 0.0f));
     Node n2(43u, Vector3f(2.0f, 2.0f, 0.0f));
 
-    Segment s1(55u, n1, n2);
+    SegmentType type("Dirt", 0xAAAAAA);
+    Segment s1(55u, type, n1, n2);
     ASSERT_EQ(s1.id(), 55u);
+    ASSERT_STREQ(s1.name().c_str(), "Dirt");
+    ASSERT_EQ(s1.color(), 0xAAAAAA);
     ASSERT_EQ(s1.m_node1, &n1);
     ASSERT_EQ(s1.m_node2, &n2);
     ASSERT_EQ(&s1.node1(), &n1);
     ASSERT_EQ(&s1.node2(), &n2);
     ASSERT_EQ(s1.length(), std::sqrt(2.0f));
+
 }
 
 TEST(TestsSegment, changeNode2)
@@ -126,13 +137,15 @@ TEST(TestsSegment, changeNode2)
     Node n2(43u, Vector3f(2.0f, 2.0f, 0.0f));
     Node n3(43u, Vector3f(3.0f, 3.0f, 0.0f));
 
+    SegmentType type("Dirt", 0xAAAAAA);
+
     // Create the following path:
     //
     //     s1
     // |-------|       |
     // n1      n2      n3
     //
-    Segment s1(55u, n1, n2);
+    Segment s1(55u, type, n1, n2);
     ASSERT_EQ(&s1.node2(), &n2);
     ASSERT_EQ(n1.m_segments.size(), 1u);
     ASSERT_EQ(n2.m_segments.size(), 1u);
@@ -163,7 +176,9 @@ TEST(TestsSegment, changeNode2)
 
 TEST(TestsSegment, PathchangeNode2)
 {
-    Path p("route");
+    PathType type1("route");
+    Path p(type1);
+    ASSERT_STREQ(p.name().c_str(), "route");
 
     Node& n1 = p.addNode(Vector3f(1.0f, 1.0f, 0.0f));
     Node& n2 = p.addNode(Vector3f(2.0f, 2.0f, 0.0f));
@@ -185,7 +200,8 @@ TEST(TestsSegment, PathchangeNode2)
     // |-------|       |
     // n1      n2      n3
     //
-    Segment& s1 = p.addSegment(n1, n2);
+    SegmentType type2("road");
+    Segment& s1 = p.addSegment(type2, n1, n2);
     ASSERT_EQ(p.m_nodes.size(), 3u);
     ASSERT_EQ(p.m_segments.size(), 1u);
     ASSERT_EQ(&s1.node2(), &n2);
@@ -239,8 +255,9 @@ TEST(TestsNode, getSegmentToNode)
     Node n2(43u, Vector3f(2.0f, 2.0f, 0.0f));
     Node n3(43u, Vector3f(3.0f, 3.0f, 0.0f));
     Node n4(44u, Vector3f(3.0f, 4.0f, 0.0f));
-    Segment s1(55u, n1, n2);
-    Segment s2(56u, n1, n3);
+    SegmentType type("road");
+    Segment s1(55u, type, n1, n2);
+    Segment s2(56u, type, n1, n3);
 
     // Check that n1 has two neighboring segments.
     Segment* s = n1.getSegmentToNode(n2);
@@ -257,7 +274,7 @@ TEST(TestsNode, getSegmentToNode)
     ASSERT_EQ(s, nullptr);
 
     // Add a loop segment
-    Segment s3(57u, n4, n4);
+    Segment s3(57u, type, n4, n4);
     s = n4.getSegmentToNode(n4);
     ASSERT_EQ(s, &s3);
 
@@ -268,9 +285,10 @@ TEST(TestsNode, getSegmentToNode)
 
 TEST(TestsPath, Constructor)
 {
-    Path p("route");
+    PathType type("route");
+    Path p(type);
 
-    ASSERT_STREQ(p.id().c_str(), "route");
+    ASSERT_STREQ(p.name().c_str(), "route");
     ASSERT_EQ(p.m_nodes.size(), 0u);
     ASSERT_EQ(p.m_segments.size(), 0u);
     ASSERT_EQ(p.m_nextNodeId, 0u);
@@ -279,7 +297,8 @@ TEST(TestsPath, Constructor)
 
 TEST(TestsPath, Adding)
 {
-    Path p("route");
+    PathType type1("route");
+    Path p(type1);
 
     // Add 1st node on the path.
     // Check new node added in the path.
@@ -305,7 +324,8 @@ TEST(TestsPath, Adding)
 
     // Add 1st segment on the path.
     // Check new segment added in the path.
-    Segment& s1 = p.addSegment(n1, n2);
+    SegmentType type2("Dirt", 0xAAAAAA);
+    Segment& s1 = p.addSegment(type2, n1, n2);
     ASSERT_EQ(p.m_nodes.size(), 2u);
     ASSERT_EQ(p.m_nodes[0]->id(), 0u);
     ASSERT_EQ(p.m_nodes[1]->id(), 1u);
@@ -318,7 +338,7 @@ TEST(TestsPath, Adding)
     // Add 2nd segment on the 1st path.
     // Check new segment added in the path.
     // FIXME Replace the segment or allow multi-graph (== speedway) ?
-    Segment& s2 = p.addSegment(n1, n2);
+    Segment& s2 = p.addSegment(type2, n1, n2);
     ASSERT_EQ(p.m_nodes.size(), 2u);
     ASSERT_EQ(p.m_nodes[0]->id(), 0u);
     ASSERT_EQ(p.m_nodes[1]->id(), 1u);
@@ -333,11 +353,13 @@ TEST(TestsPath, Adding)
 
 TEST(TestsPath, SplitSegment)
 {
-    Path p("route");
+    PathType type1("route");
+    Path p(type1);
 
     Node& n1 = p.addNode(Vector3f(1.0f, 1.0f, 0.0f));
     Node& n2 = p.addNode(Vector3f(1.0f, 3.0f, 0.0f));
-    Segment& s1 = p.addSegment(n1, n2);
+    SegmentType type2("Dirt", 0xAAAAAA);
+    Segment& s1 = p.addSegment(type2, n1, n2);
     ASSERT_EQ(p.m_nodes.size(), 2u);
     ASSERT_EQ(p.m_segments.size(), 1u);
 

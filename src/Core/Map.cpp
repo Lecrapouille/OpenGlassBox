@@ -1,7 +1,7 @@
 #include "Core/Map.hpp"
 #include "Core/Config.hpp"
 
-const uint32_t Map::MAX_CAPACITY = std::numeric_limits<uint32_t>::max();
+const uint32_t MapType::MAX_CAPACITY = std::numeric_limits<uint32_t>::max();
 
 template<typename T>
 static inline T clamp(T const value, T const lower, T const upper)
@@ -15,10 +15,9 @@ static inline T clamp(T const value, T const lower, T const upper)
     return value;
 }
 
-Map::Map(std::string const& id, uint32_t sizeU, uint32_t sizeV, uint32_t capacity)
-    : m_id(id),
+Map::Map(MapType const& type, uint32_t sizeU, uint32_t sizeV)
+    : MapType(type),
       m_sizeU(sizeU), m_sizeV(sizeV),
-      m_capacity(capacity),
       m_resources(sizeU * sizeV, 0u)
 {}
 
@@ -128,7 +127,7 @@ void Map::executeRules()
     size_t i = m_rules.size();
     while (i--)
     {
-        SimRuleMap& rule = *(m_rules[i]);
+        RuleMap& rule = *(m_rules[i]);
 
         if (m_ticks % rule.rate == 0u)
             continue;

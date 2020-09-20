@@ -101,4 +101,40 @@ private:
     std::vector<IRuleCommand*> m_commands;
 };
 
+//==============================================================================
+//! \brief
+//==============================================================================
+class RuleMap: public IRule
+{
+public:
+
+    RuleMap(std::string const& name, bool randomTiles = false, uint32_t randomTilesPercent = 10u)
+        : IRule(name),
+          m_randomTiles(randomTiles),
+          m_randomTilesPercent(std::min(100u, randomTilesPercent))
+    {}
+
+    //--------------------------------------------------------------------------
+    //! \brief Use randomized values ?
+    //--------------------------------------------------------------------------
+    bool IsRandom() const
+    {
+        return m_randomTiles;
+    }
+
+    //--------------------------------------------------------------------------
+    //! \brief Compute the percent of the given value
+    //--------------------------------------------------------------------------
+    template<class T>
+    T percent(T value) const
+    {
+        return value * T(m_randomTilesPercent) / T(100);
+    }
+
+private:
+
+    bool m_randomTiles;
+    uint32_t m_randomTilesPercent;
+};
+
 #endif

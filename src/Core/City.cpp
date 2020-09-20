@@ -5,8 +5,8 @@
 #include "Core/Agent.hpp"
 #include "Core/Config.hpp"
 
-City::City(std::string const& id, uint32_t gridSizeX, uint32_t gridSizeY)
-    : m_id(id),
+City::City(std::string const& name, uint32_t gridSizeX, uint32_t gridSizeY)
+    : m_name(name),
       m_gridSizeX(gridSizeX),
       m_gridSizeY(gridSizeY)
 {}
@@ -48,11 +48,11 @@ void City::world2mapPosition(Vector3f worldPos, uint32_t& u, uint32_t& v)
         v = uint32_t(y);
 }
 
-Map& City::addMap(std::string const& id)
+Map& City::addMap(MapType const& type)
 {
-    auto ptr = std::make_unique<Map>(id, m_gridSizeX, m_gridSizeY);
+    auto ptr = std::make_unique<Map>(type, m_gridSizeX, m_gridSizeY);
     Map& map = *ptr;
-    m_maps[id] = std::move(ptr);
+    m_maps[type.m_id] = std::move(ptr);
     return map;
 }
 
@@ -61,12 +61,10 @@ Map& City::getMap(std::string const& id)
     return *m_maps.at(id);
 }
 
-Path& City::addPath(std::string const& id)
+Path& City::addPath(PathType const& type)
 {
-    auto ptr = std::make_unique<Path>(id);
-    Path& path = *ptr;
-    m_paths[id] = std::move(ptr);
-    return path;
+    m_paths[type.m_name] = std::make_unique<Path>(type);
+    return *m_paths[type.m_name];
 }
 
 Path& City::getPath(std::string const& id)
@@ -74,21 +72,17 @@ Path& City::getPath(std::string const& id)
     return *m_paths.at(id);
 }
 
-Unit& City::addUnit(std::string const& id, Node& node)
+Unit& City::addUnit(UnitType const& type, Node& node)
 {
-    auto ptr = std::make_unique<Unit>(id,/*m_nextUnitId++,*/ node);
-    Unit& unit = *ptr;
-    m_units.push_back(std::move(ptr));
-    return unit;
+    m_units.push_back(std::make_unique<Unit>(type,/*m_nextUnitId++,*/ node, *this));
+    return *m_units.back();
 }
 
-Agent& City::addAgent(Agent::Type const& type, Unit& owner, Resources const& resources,
+Agent& City::addAgent(AgentType const& type, Unit& owner, Resources const& resources,
                       std::string const& searchTarget)
 {
-    auto ptr = std::make_unique<Agent>(m_nextAgentId++, type, owner, resources, searchTarget);
-    Agent& agent = *ptr;
-    m_agents.push_back(std::move(ptr));
-    return agent;
+    m_agents.push_back(std::make_unique<Agent>(m_nextAgentId++, type, owner, resources, searchTarget));
+    return *m_agents.back();
 }
 
 void City::removeAgent(Agent& agent)

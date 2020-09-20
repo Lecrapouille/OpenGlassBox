@@ -1,27 +1,11 @@
 #include "Core/Unit.hpp"
 #include "Core/City.hpp"
 
-Unit::Unit(std::string const& id, Node& node)
-    : m_id(id),
+Unit::Unit(UnitType const& type, Node& node, City& city)
+    : UnitType(type),
       m_node(node)
 {
     m_node.addUnit(*this);
-}
-
-Unit::~Unit()
-{
-    //m_node.units.remove(this);
-}
-
-void Unit::configure(Unit::Type const& conf, City& city)
-{
-    m_color = conf.color;
-    m_rules = conf.rules;
-    m_targets = conf.targets;
-
-    m_resources.setCapacities(conf.capacities);
-    m_resources.addResources(conf.resources);
-
     m_context.unit = this;
     m_context.city = &city;//&(m_node.path().city());
     m_context.globals = &(city.globalResources());
@@ -45,6 +29,3 @@ bool Unit::accepts(std::string const& searchTarget, Resources const& resourcesTo
     return find(m_targets.begin(), m_targets.end(), searchTarget) != m_targets.end()
             && m_resources.canAddSomeResources(resourcesToTryToAdd);
 }
-
-//Units& Unit::getUnits() { return m_units; }
-//Agents& Unit::getAgents() { return m_agents; }

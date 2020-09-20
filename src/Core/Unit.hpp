@@ -16,48 +16,61 @@ class Node;
 class Resources;
 class City;
 
+//==========================================================================
+//! \brief Type of Units (Home, Work ...).
+//! Class constructed during the parsing of simulation scripts.
+//! Examples:
+//!  - unit Home color 0xFF00FF mapRadius 1 rules [ SendPeopleToWork ]
+//!          targets [ Home ] caps [ People 4 ] resources [ People 4 ]
+//==========================================================================
+class UnitType
+{
+public:
+
+    UnitType(UnitType const&) = default;
+
+    UnitType(std::string const& name)
+        : m_name(name),
+          m_color(0xFFFFFF)
+    {}
+
+    UnitType(std::string const& name,
+             uint32_t color,
+             //Resources capacities,
+             Resources resources,
+             std::vector<RuleUnit*> rules,
+             std::vector<std::string> targets)
+        : m_name(name),
+          m_color(color),
+          m_resources(resources),
+          m_rules(rules),
+          m_targets(targets)
+    {
+        //m_resources.setCapacities(capacities);
+        //m_resources.addResources(resources);
+    }
+
+    std::string              m_name;
+    uint32_t                 m_color;
+    Resources                m_resources;
+    std::vector<RuleUnit*>   m_rules;
+    std::vector<std::string> m_targets;
+};
+
 //==============================================================================
 //! \brief A Unit represents things: houses, factories, even people.
 //! A unit has state: a collection of resource.
 //! But also a well-defined spatial extent: bounding volume, simulation
 //! footprint.
 //==============================================================================
-class Unit
+class Unit: private UnitType
 {
 public:
 
-    //==========================================================================
-    //! \brief Type of Units (Home, Work ...).
-    //! Class constructed during the parsing of simulation scripts.
-    //! Examples:
-    //!  - unit Home color 0xFF00FF mapRadius 1 rules [ SendPeopleToWork ]
-    //!          targets [ Home ] caps [ People 4 ] resources [ People 4 ]
-    //==========================================================================
-    struct Type
-    {
-        uint32_t                 color;
-        Resources                capacities;
-        Resources                resources;
-        std::vector<RuleUnit*>   rules;
-        std::vector<std::string> targets;
-    };
-
-public:
-
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    Unit(std::string const& id, Node& node);
-
-    // -------------------------------------------------------------------------
-    //! \brief
-    // -------------------------------------------------------------------------
-    void configure(Unit::Type const& conf, City& city);
-
-    // -------------------------------------------------------------------------
-    //! \brief
-    // -------------------------------------------------------------------------
-    ~Unit();
+    Unit(UnitType const& type, Node& node, City& city);
 
     // -------------------------------------------------------------------------
     //! \brief
@@ -73,7 +86,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    inline std::string const& id() const { return m_id; }
+    inline std::string const& name() const { return m_name; }
 
     // -------------------------------------------------------------------------
     //! \brief
@@ -90,16 +103,16 @@ public:
     // -------------------------------------------------------------------------
     inline Node& node() { return m_node; }
 
+    // -------------------------------------------------------------------------
+    //! \brief
+    // -------------------------------------------------------------------------
+    uint32_t color() const { return m_color; }
+
 protected:
 
-    std::string              m_id;
-    uint32_t                 m_color;
-    Node                    &m_node;
-    Resources                m_resources;
-    RuleContext              m_context;
-    std::vector<RuleUnit*>   m_rules;
-    std::vector<std::string> m_targets;
-    uint32_t                 m_ticks = 0u;
+    Node          &m_node;
+    RuleContext    m_context;
+    uint32_t       m_ticks = 0u;
 };
 
 using Units = std::vector<std::unique_ptr<Unit>>;

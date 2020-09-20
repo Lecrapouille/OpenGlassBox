@@ -4,6 +4,12 @@ Simple implementation of the technology behind SimCity 5 (GlassBox).
 
 A C++ portage of https://github.com/federicodangelo/MultiAgentSimulation from C#
 
+## Axe of Developement
+
+- Simplification of class coupling from original code
+- Replacement of home script by Forth
+- SimCity spreadsheet: insert/edit on cells to add rules and types.
+
 ## Inspiration
 
 - http://www.andrewwillmott.com/talks/inside-glassbox with some explanations here https://www.gamasutra.com/view/news/164870/GDC_2012_Breaking_down_SimCitys_Glassbox_engine.php or https://www.reddit.com/r/SimCity/comments/1a9fz6/how_the_glassbox_engine_works_based_on_the_gdc/

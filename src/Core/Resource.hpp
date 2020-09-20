@@ -6,6 +6,14 @@
 #  include <vector>
 
 //==============================================================================
+//! \brief Type of Resource (Water, Citizen ...)
+//! Typde defined during the parsing of simulation scripts.
+//! Examples:
+//!  - resource Water
+//==============================================================================
+using ResourceType = std::string;
+
+//==============================================================================
 //! \brief The basic currency of the game defined by its type, amount and
 //! capacity.
 //!
@@ -20,13 +28,9 @@ class Resource
 {
 public:
 
-    using Type = std::string;
-
-public:
-
     //! \brief Start with zero amount of resource but with the greater capacity
     //! possible.
-    Resource(Resource::Type const& type);
+    Resource(ResourceType const& type);
 
     //! \brief Increase of a given quantity the current amount of resource.
     //! The result is limited by the capacity.
@@ -73,9 +77,9 @@ public:
 
 protected:
 
-    Type     m_type;
-    uint32_t m_capacity = Resource::MAX_CAPACITY;
-    uint32_t m_amount = 0u;
+    ResourceType m_type;
+    uint32_t     m_capacity = Resource::MAX_CAPACITY;
+    uint32_t     m_amount = 0u;
 };
 
 #endif

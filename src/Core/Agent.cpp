@@ -4,15 +4,15 @@
 #include <iostream>
 
 //------------------------------------------------------------------------------
-Agent::Agent(uint32_t id, Agent::Type const& type, Unit& owner,
+Agent::Agent(uint32_t id, AgentType const& type, Unit& owner,
              Resources const& resources, std::string const& searchTarget)
-    : m_id(id),
+    : AgentType(type),
+      m_id(id),
       m_owner(owner),
       m_resources(resources),
       m_searchTarget(searchTarget),
       m_lastNode(&(owner.node())) // FIXME should be linked at least one segment
 {
-    configure(type);
     findNextNode();
     updatePosition();
     if (m_currentSegment == nullptr)
@@ -21,14 +21,6 @@ Agent::Agent(uint32_t id, Agent::Type const& type, Unit& owner,
                   << std::endl;
     }
 
-}
-
-//------------------------------------------------------------------------------
-void Agent::configure(Agent::Type const& type)
-{
-    m_speed = type.speed;
-    m_radius = type.radius;
-    m_color = type.color;
 }
 
 //------------------------------------------------------------------------------

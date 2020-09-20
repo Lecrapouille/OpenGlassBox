@@ -25,7 +25,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief Create a empty city.
     // -------------------------------------------------------------------------
-    City(std::string const& id, uint32_t gridSizeX, uint32_t gridSizeY);
+    City(std::string const& name, uint32_t gridSizeX, uint32_t gridSizeY);
 
     City() = default;
 
@@ -39,7 +39,7 @@ public:
     //! \brief Create and store a new Map. Remove the map of the same name if
     //! the identifier is already known.
     // -------------------------------------------------------------------------
-    Map& addMap(std::string const& id);
+    Map& addMap(MapType const& type);
 
     // -------------------------------------------------------------------------
     //! \brief
@@ -50,7 +50,7 @@ public:
     //! \brief Create and store a new Path. Remove the map of the same name if
     //! the identifier is already known.
     // -------------------------------------------------------------------------
-    Path& addPath(std::string const& id);
+    Path& addPath(PathType const& type);
 
     // -------------------------------------------------------------------------
     //! \brief
@@ -60,7 +60,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief Create and store a new Unit.
     // -------------------------------------------------------------------------
-    Unit& addUnit(std::string const& id, Node& node);
+    Unit& addUnit(UnitType const& type, Node& node);
 
     Units& getUnits() { return m_units; }
     Paths& getPaths() { return m_paths; }
@@ -68,7 +68,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    Agent& addAgent(Agent::Type const& type, Unit& owner,
+    Agent& addAgent(AgentType const& type, Unit& owner,
                     Resources const& resources, std::string const& searchTarget);
 
     Agents& getAgents() { return m_agents; }
@@ -81,7 +81,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief Return the unique identifier
     // -------------------------------------------------------------------------
-    std::string const& id() const { return m_id; }
+    std::string const& name() const { return m_name; }
 
     // -------------------------------------------------------------------------
     //! \brief Get the Map indice U and V from a world position.
@@ -94,7 +94,7 @@ public:
 
 private:
 
-    std::string   m_id;
+    std::string   m_name;
     Vector3f      m_position;
     uint32_t      m_gridSizeX;
     uint32_t      m_gridSizeY;

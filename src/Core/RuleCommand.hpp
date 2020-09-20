@@ -85,9 +85,13 @@ public:
 //! agent People color 0xFFFF00 speed 10
 //! \endcode
 //==============================================================================
-class RuleCommandAgent : public IRuleCommand, public Agent::Type
+class RuleCommandAgent : public IRuleCommand, public AgentType
 {
 public:
+
+    RuleCommandAgent(AgentType const& type, std::string const& target, Resources const& resources)
+        : AgentType(type), m_target(target), m_resources(resources)
+    {}
 
     //--------------------------------------------------------------------------
     //! \brief Always true
@@ -101,9 +105,8 @@ public:
 
 public:
 
-    Agent::Type   type;
-    std::string   target;
-    Resources     resources;
+    std::string   m_target;
+    Resources     m_resources;
 };
 
 #endif

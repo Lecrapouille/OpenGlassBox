@@ -51,8 +51,9 @@ Segment* Node::getSegmentToNode(Node& node)
     return nullptr;
 }
 
-Segment::Segment(uint32_t id, Node& node1, Node& node2)
-    : m_id(id),
+Segment::Segment(uint32_t id, SegmentType const& type, Node& node1, Node& node2)
+    : SegmentType(type),
+      m_id(id),
       m_node1(&node1),
       m_node2(&node2)
 {
@@ -75,8 +76,8 @@ void Segment::changeNode2(Node& newNode2)
     updateLength();
 }
 
-Path::Path(std::string const& id)
-    : m_id(id)
+Path::Path(PathType const& type/*, City& city*/)
+    : PathType(type)
 {}
 
 Node& Path::addNode(Vector3f const& position)
@@ -86,9 +87,9 @@ Node& Path::addNode(Vector3f const& position)
 }
 
 // TODO: replace existing segment or allow multi-graph (== speedway)
-Segment& Path::addSegment(Node& p1, Node& p2)
+Segment& Path::addSegment(SegmentType const& type, Node& p1, Node& p2)
 {
-    m_segments.push_back(std::make_unique<Segment>(m_nextSegmentId++, p1, p2/*, *this*/));
+    m_segments.push_back(std::make_unique<Segment>(m_nextSegmentId++, type, p1, p2/*, *this*/));
     return *m_segments.back();
 }
 
@@ -103,7 +104,7 @@ Node& Path::splitSegment(Segment& segment, float offset)
            + (segment.position2() - segment.position1()) * offset;
     Node& newNode = addNode(wordPosition);
 
-    addSegment(newNode, segment.node2());
+    addSegment(segment, newNode, segment.node2());
     segment.changeNode2(newNode);
 
     return newNode;

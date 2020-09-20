@@ -1,7 +1,7 @@
 #include "Core/Resources.hpp"
 
 // -----------------------------------------------------------------------------
-Resource& Resources::addResource(Resource::Type const& type, uint32_t const amount)
+Resource& Resources::addResource(ResourceType const& type, uint32_t const amount)
 {
     Resource& res = findOrAddResource(type);
     res.add(amount);
@@ -40,7 +40,7 @@ void Resources::transferResourcesTo(Resources& resourcesTarget)
 }
 
 // -----------------------------------------------------------------------------
-bool Resources::removeResource(Resource::Type const& resourceType, uint32_t const amount)
+bool Resources::removeResource(ResourceType const& resourceType, uint32_t const amount)
 {
     Resource* res = findResource(resourceType);
 
@@ -58,7 +58,7 @@ void Resources::removeResources(Resources const& resourcesToReduce)
 }
 
 // -----------------------------------------------------------------------------
-uint32_t Resources::getAmount(Resource::Type const& resourceType)
+uint32_t Resources::getAmount(ResourceType const& resourceType)
 {
     Resource* res = findResource(resourceType);
 
@@ -66,7 +66,7 @@ uint32_t Resources::getAmount(Resource::Type const& resourceType)
 }
 
 // -----------------------------------------------------------------------------
-void Resources::setCapacity(Resource::Type const& resourceType, uint32_t const capacity)
+void Resources::setCapacity(ResourceType const& resourceType, uint32_t const capacity)
 {
     Resource& res = findOrAddResource(resourceType);
     res.setCapacity(capacity);
@@ -80,7 +80,7 @@ void Resources::setCapacities(Resources const& resourcesCapacities)
 }
 
 // -----------------------------------------------------------------------------
-uint32_t Resources::getCapacity(Resource::Type const& resourceType)
+uint32_t Resources::getCapacity(ResourceType const& resourceType)
 {
     Resource* b = findResource(resourceType);
     return (b != nullptr) ? b->capacity() : 0u; // Resource::MAX_CAPACITY;
@@ -99,7 +99,7 @@ bool Resources::isEmpty() const
 }
 
 // -----------------------------------------------------------------------------
-Resource* Resources::findResource(Resource::Type const& resourceType)
+Resource* Resources::findResource(ResourceType const& resourceType)
 {
     for (auto& it: m_bin)
     {
@@ -110,7 +110,7 @@ Resource* Resources::findResource(Resource::Type const& resourceType)
     return nullptr;
 }
 
-Resource& Resources::findOrAddResource(Resource::Type const& resourceType)
+Resource& Resources::findOrAddResource(ResourceType const& resourceType)
 {
     Resource* b = findResource(resourceType);
 

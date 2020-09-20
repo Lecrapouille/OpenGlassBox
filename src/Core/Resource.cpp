@@ -4,7 +4,7 @@
 const uint32_t Resource::MAX_CAPACITY = std::numeric_limits<uint32_t>::max();
 
 // -----------------------------------------------------------------------------
-Resource::Resource(Resource::Type const& type)
+Resource::Resource(ResourceType const& type)
     : m_type(type)
 {}
 

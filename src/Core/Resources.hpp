@@ -14,12 +14,22 @@ public:
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    Resource* findResource(Resource::Type const& resourceType);
+    Resources(Resources const&) = default;
 
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    Resource& findOrAddResource(Resource::Type const& resourceType);
+    Resources() = default;
+
+    // -------------------------------------------------------------------------
+    //! \brief
+    // -------------------------------------------------------------------------
+    Resource* findResource(ResourceType const& resourceType);
+
+    // -------------------------------------------------------------------------
+    //! \brief
+    // -------------------------------------------------------------------------
+    Resource& findOrAddResource(ResourceType const& resourceType);
 
     // -------------------------------------------------------------------------
     //! \brief Find for an existing resource in the collection. If not found
@@ -32,14 +42,14 @@ public:
     //! quantity.
     //! \return the found resource or newly created.
     // -------------------------------------------------------------------------
-    Resource& addResource(Resource::Type const& type, uint32_t const amount);
+    Resource& addResource(ResourceType const& type, uint32_t const amount);
 
     // -------------------------------------------------------------------------
     //! \brief Reduce a given quantity of resource.
     //! \note this method does not delete the resource.
     //! \return boolean indicating if the desired resource has been found.
     // -------------------------------------------------------------------------
-    bool removeResource(Resource::Type const& resourceType, uint32_t const amount);
+    bool removeResource(ResourceType const& resourceType, uint32_t const amount);
 
     // -------------------------------------------------------------------------
     //! \brief Add a collection of resources. Apply addResource() for each type
@@ -70,7 +80,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    uint32_t getAmount(Resource::Type const& resourceType);
+    uint32_t getAmount(ResourceType const& resourceType);
 
     // -------------------------------------------------------------------------
     //! \brief Find for an existing resource in the collection. If not found
@@ -82,7 +92,7 @@ public:
     //! \param capacity: new capacity.
     //! \return the found resource or newly created.
     // -------------------------------------------------------------------------
-    void setCapacity(Resource::Type const& resourceType, uint32_t const capacity);
+    void setCapacity(ResourceType const& resourceType, uint32_t const capacity);
 
     // -------------------------------------------------------------------------
     //! \brief
@@ -92,7 +102,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    uint32_t getCapacity(Resource::Type const& resourceType);
+    uint32_t getCapacity(ResourceType const& resourceType);
 
     // -------------------------------------------------------------------------
     //! \brief
@@ -102,7 +112,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    inline bool hasResource(Resource::Type const& resourceType)
+    inline bool hasResource(ResourceType const& resourceType)
     {
         return findResource(resourceType) != nullptr;
     }
