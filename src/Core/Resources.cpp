@@ -12,6 +12,9 @@ Resource& Resources::addResource(ResourceType const& type, uint32_t const amount
 // -----------------------------------------------------------------------------
 void Resources::addResources(Resources const& resourcesToAdd)
 {
+    if (this == &resourcesToAdd)
+        return ;
+
     for (auto const& it: resourcesToAdd.m_bin)
         addResource(it.type(), it.amount());
 }
@@ -19,6 +22,9 @@ void Resources::addResources(Resources const& resourcesToAdd)
 // -----------------------------------------------------------------------------
 bool Resources::canAddSomeResources(Resources const& resourcesToTryAdd)
 {
+    if (this == &resourcesToTryAdd)
+        return false;
+
     for (auto& it: resourcesToTryAdd.m_bin)
     {
         if (it.hasAmount())
@@ -35,14 +41,17 @@ bool Resources::canAddSomeResources(Resources const& resourcesToTryAdd)
 // -----------------------------------------------------------------------------
 void Resources::transferResourcesTo(Resources& resourcesTarget)
 {
+    if (this == &resourcesTarget)
+        return ;
+
     for (auto& it: m_bin)
         it.transferTo(resourcesTarget.findOrAddResource(it.type()));
 }
 
 // -----------------------------------------------------------------------------
-bool Resources::removeResource(ResourceType const& resourceType, uint32_t const amount)
+bool Resources::removeResource(ResourceType const& type, uint32_t const amount)
 {
-    Resource* res = findResource(resourceType);
+    Resource* res = findResource(type);
 
     if (res != nullptr)
         res->remove(amount);
@@ -53,22 +62,25 @@ bool Resources::removeResource(ResourceType const& resourceType, uint32_t const 
 // -----------------------------------------------------------------------------
 void Resources::removeResources(Resources const& resourcesToReduce)
 {
+    if (this == &resourcesToReduce)
+        return ;
+
     for (auto const& it: resourcesToReduce.m_bin)
         removeResource(it.type(), it.amount());
 }
 
 // -----------------------------------------------------------------------------
-uint32_t Resources::getAmount(ResourceType const& resourceType)
+uint32_t Resources::getAmount(ResourceType const& type)
 {
-    Resource* res = findResource(resourceType);
+    Resource* res = findResource(type);
 
     return (res != nullptr) ? res->amount() : 0u;
 }
 
 // -----------------------------------------------------------------------------
-void Resources::setCapacity(ResourceType const& resourceType, uint32_t const capacity)
+void Resources::setCapacity(ResourceType const& type, uint32_t const capacity)
 {
-    Resource& res = findOrAddResource(resourceType);
+    Resource& res = findOrAddResource(type);
     res.setCapacity(capacity);
 }
 
@@ -80,9 +92,9 @@ void Resources::setCapacities(Resources const& resourcesCapacities)
 }
 
 // -----------------------------------------------------------------------------
-uint32_t Resources::getCapacity(ResourceType const& resourceType)
+uint32_t Resources::getCapacity(ResourceType const& type)
 {
-    Resource* b = findResource(resourceType);
+    Resource* b = findResource(type);
     return (b != nullptr) ? b->capacity() : 0u; // Resource::MAX_CAPACITY;
 }
 
@@ -99,24 +111,24 @@ bool Resources::isEmpty() const
 }
 
 // -----------------------------------------------------------------------------
-Resource* Resources::findResource(ResourceType const& resourceType)
+Resource* Resources::findResource(ResourceType const& type)
 {
     for (auto& it: m_bin)
     {
-        if (it.type() == resourceType)
+        if (it.type() == type)
             return &it;
     }
 
     return nullptr;
 }
 
-Resource& Resources::findOrAddResource(ResourceType const& resourceType)
+Resource& Resources::findOrAddResource(ResourceType const& type)
 {
-    Resource* b = findResource(resourceType);
+    Resource* b = findResource(type);
 
     if (b != nullptr)
         return *b;
 
-    m_bin.push_back(Resource(resourceType));
+    m_bin.push_back(Resource(type));
     return m_bin.back();
 }

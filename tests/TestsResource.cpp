@@ -9,6 +9,7 @@
 
 TEST(TestsResource, Constants)
 {
+    // Check maximal quantity of resource.
     ASSERT_GE(Resource::MAX_CAPACITY, 65535);
 }
 
@@ -16,12 +17,12 @@ TEST(TestsResource, Constructor)
 {
     Resource oil("oil");
 
-    // Initial values
+    // Check initial values (member variables).
     ASSERT_STREQ(oil.m_type.c_str(), "oil");
     ASSERT_EQ(oil.m_amount, 0u);
     ASSERT_EQ(oil.m_capacity, Resource::MAX_CAPACITY);
 
-    // Initial values
+    // Check initial values (getter methods).
     ASSERT_EQ(oil.amount(), 0u);
     ASSERT_EQ(oil.hasAmount(), false);
     ASSERT_EQ(oil.capacity(), Resource::MAX_CAPACITY);
@@ -32,23 +33,25 @@ TEST(TestsResource, AddAmount)
 {
     Resource oil("oil");
 
-    // Initial values
+    // Check initial values.
     ASSERT_EQ(oil.m_amount, 0u);
     ASSERT_EQ(oil.m_capacity, Resource::MAX_CAPACITY);
 
-    // +32 resources, infinite capacity
+    // The capacity is infinite. Increment resources of 32.
+    // Check 32 amount of resource is present.
     oil.add(32u);
     ASSERT_EQ(oil.m_amount, 32u);
     ASSERT_EQ(oil.amount(), 32u);
     ASSERT_EQ(oil.hasAmount(), true);
 
-    // +32 resources, infinite capacity
+    // The capacity is infinite. Increment resources of 32.
+    // Check 64 amount of resource is present.
     oil.add(32u);
     ASSERT_EQ(oil.m_amount, 64u);
     ASSERT_EQ(oil.amount(), 64u);
     ASSERT_EQ(oil.hasAmount(), true);
 
-    // Capacity limited to 32
+    // Capacity is now limited to 32. Check the amount has been reduced.
     oil.setCapacity(32u);
     ASSERT_EQ(oil.m_capacity, 32u);
     ASSERT_EQ(oil.capacity(), 32u);
@@ -56,7 +59,8 @@ TEST(TestsResource, AddAmount)
     ASSERT_EQ(oil.amount(), 32u);
     ASSERT_EQ(oil.hasAmount(), true);
 
-    // +32 resources, capacity limited to 32
+    // The capacity is infinite. Increment resources of 32.
+    // Check the amount of resource did not changed.
     oil.add(32u);
     ASSERT_EQ(oil.m_capacity, 32u);
     ASSERT_EQ(oil.capacity(), 32u);
@@ -64,7 +68,7 @@ TEST(TestsResource, AddAmount)
     ASSERT_EQ(oil.amount(), 32u);
     ASSERT_EQ(oil.hasAmount(), true);
 
-    // Capacity limited to 0
+    // Capacity is now limited to 32. Check resource is empty.
     oil.setCapacity(0u);
     ASSERT_EQ(oil.m_capacity, 0u);
     ASSERT_EQ(oil.capacity(), 0u);
@@ -77,17 +81,19 @@ TEST(TestsResource, AddAmountPathologicalCase)
 {
     Resource oil("oil");
 
-    // 32 resources, infinite capacity
+    // Initial states: 32 resources, infinite capacity.
     oil.add(32u);
     ASSERT_EQ(oil.amount(), 32u);
     ASSERT_EQ(oil.hasAmount(), true);
 
-    // +inf resources, infinite capacity
+    // Add an infity amount of resources, infinite capacity.
+    // Check the amount of resource is infinite.
     oil.add(Resource::MAX_CAPACITY);
     ASSERT_EQ(oil.amount(), Resource::MAX_CAPACITY);
     ASSERT_EQ(oil.hasAmount(), true);
 
-    // +inf resources, capacity limited to 32
+    // Add an infity amount of resources while capacity is limited.
+    // Check the amount did not changed.
     oil.m_amount = 32u;
     oil.setCapacity(32u);
     oil.add(Resource::MAX_CAPACITY);
@@ -99,17 +105,18 @@ TEST(TestsResource, RemoveAmount)
 {
     Resource oil("oil");
 
-    // 32 resources, infinite capacity
+    // Initial states: 32 resources, infinite capacity.
     oil.add(32u);
     ASSERT_EQ(oil.amount(), 32u);
     ASSERT_EQ(oil.hasAmount(), true);
 
-    // -16 resources
+    // Decrease amount of resources by 16. Check the amount has been reduced.
     oil.remove(16u);
     ASSERT_EQ(oil.amount(), 16u);
     ASSERT_EQ(oil.hasAmount(), true);
 
-    // -18 resources, saturated to 0
+    // Decrease amount of resources by 18. Check the amount is constrained to 0
+    // and is not negative.
     oil.remove(18u);
     ASSERT_EQ(oil.amount(), 0u);
     ASSERT_EQ(oil.hasAmount(), false);
@@ -120,32 +127,33 @@ TEST(TestsResource, Transfert)
     Resource oil("oil");
     Resource gaz("gaz");
 
-    // 0 resource, infinite capacity
+    // Initial states: 0 resource, infinite capacity.
     ASSERT_EQ(oil.amount(), 0u);
     ASSERT_EQ(oil.capacity(), Resource::MAX_CAPACITY);
     ASSERT_EQ(gaz.amount(), 0u);
     ASSERT_EQ(gaz.capacity(), Resource::MAX_CAPACITY);
 
-    // 32 resources, infinite capacity
+    // +32 resources, infinite capacity.
     oil.add(32u);
     ASSERT_EQ(oil.amount(), 32u);
     ASSERT_EQ(oil.capacity(), Resource::MAX_CAPACITY);
 
-    // Transfert 32 resources, infinite capacity
+    // Transfert 32 resources, infinite capacity.
+    // Check all resources have been transfered.
     oil.transferTo(gaz);
     ASSERT_EQ(oil.amount(), 0u);
     ASSERT_EQ(oil.capacity(), Resource::MAX_CAPACITY);
     ASSERT_EQ(gaz.amount(), 32u);
     ASSERT_EQ(gaz.capacity(), Resource::MAX_CAPACITY);
 
-    // Transfert 0 resources, infinite capacity
+    // Try again! Check nothing happened.
     oil.transferTo(gaz);
     ASSERT_EQ(oil.amount(), 0u);
     ASSERT_EQ(oil.capacity(), Resource::MAX_CAPACITY);
     ASSERT_EQ(gaz.amount(), 32u);
     ASSERT_EQ(gaz.capacity(), Resource::MAX_CAPACITY);
 
-    // No transfert: recipient is full
+    // Full recipient. Check that transfert has not been made.
     oil.add(32u);
     gaz.setCapacity(16u);
     ASSERT_EQ(oil.amount(), 32u);
@@ -153,7 +161,7 @@ TEST(TestsResource, Transfert)
     ASSERT_EQ(gaz.amount(), 16u);
     ASSERT_EQ(gaz.capacity(), 16u);
 
-    // Transfert limited to capacity of the recipient
+    // Check transfert has been limited to the capacity of the recipient.
     gaz.remove(1u);
     ASSERT_EQ(gaz.amount(), 15u);
     ASSERT_EQ(gaz.capacity(), 16u);
