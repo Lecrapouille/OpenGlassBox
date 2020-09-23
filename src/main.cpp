@@ -6,6 +6,9 @@ GlassBox::GlassBox()
 
 bool GlassBox::onInit()
 {
+    Script script("/home/qq/MyGitHub/GlassBox/src/Simulation/TestCity2.txt");
+
+#if 0
     // TODO m_simulation.load("simulation.fth");
     // TODO m_simulation.getSegmentType("Dirt")
     ResourceType resource_type[3] = { "Water", "Grass", "People" };
@@ -13,7 +16,7 @@ bool GlassBox::onInit()
     SegmentType segment_type("Dirt", 0xAAAAAA);
     AgentType agent_type[2] = { { "Worker", 0xFFFF00, 10 }, { "People", 0xFFFF00, 10 } };
     Resources r; r.addResource("Water", 10); r.addResource("People", 10);
-    UnitType unit_type[2] = { { "Home", 0xFF00FF, r, {}, {} }, 
+    UnitType unit_type[2] = { { "Home", 0xFF00FF, r, {}, {} },
                               { "Work", 0xFF00FF, r, {}, {} } };
 
     City& city = m_simulation.addCity("Paris");
@@ -28,13 +31,13 @@ bool GlassBox::onInit()
     // TODO city.AddUnit/*OnSegment*/(m_simulation.getUnitType("Home"), { s1, off=0.66f });
     Unit& u1 = city.addUnit(unit_type[0], n1);
     city.addAgent(agent_type[0], u1, r, "work");
-
+#endif
     return true;
 }
 
 // TODO use SDL_RenderDrawLines to draw a batch of segments
 void GlassBox::onPaint(SDL_Renderer& renderer, float dt)
-{
+{ return ;
     City& city = m_simulation.getCity("Paris");
 
     // Draw the grid

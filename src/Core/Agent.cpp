@@ -4,13 +4,11 @@
 #include <iostream>
 
 //------------------------------------------------------------------------------
-Agent::Agent(uint32_t id, AgentType const& type, Unit& owner,
-             Resources const& resources, std::string const& searchTarget)
+Agent::Agent(uint32_t id, AgentType const& type, Unit& owner, Resources const& resources)
     : AgentType(type),
       m_id(id),
       m_owner(owner),
       m_resources(resources),
-      m_searchTarget(searchTarget),
       m_lastNode(&(owner.node())) // FIXME should be linked at least one segment
 {
     findNextNode();

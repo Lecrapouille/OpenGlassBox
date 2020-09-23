@@ -22,8 +22,8 @@ static bool tryConvertion(std::string const& str, T& res)
     }
 }
 
-IRule::IRule(std::string const& name)
-    : m_id(name)
+IRule::IRule(std::string const& name, uint32_t rate, std::vector<IRuleCommand*> const& commands)
+    : m_id(name), m_rate(rate), m_commands(commands)
 {}
 
 bool IRule::execute(RuleContext& context)

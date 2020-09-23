@@ -21,14 +21,21 @@ public:
 
     AgentType(AgentType const&) = default;
 
-    AgentType(/*std::string const& name,*/ float speed /*= 1.0f*/, uint32_t radius /*= 1u*/, uint32_t color /*= 0xFFFFFF*/)
-        : /*m_name(name),*/ m_speed(speed), m_radius(radius), m_color(color)
+    AgentType(/*std::string const& name,*/)
+        : m_speed(1.0f), m_radius(1u), m_color(0xFFFF00)
+    {}
+
+    AgentType(/*std::string const& name,*/ float speed,
+              uint32_t radius, uint32_t color, std::string const& searchTarget)
+        : /*m_name(name),*/ m_speed(speed), m_radius(radius), m_color(color),
+          m_searchTarget(searchTarget)
     {}
 
     //std::string m_name; // FIXME nooo!
     float       m_speed;
     uint32_t    m_radius;
     uint32_t    m_color;
+    std::string m_searchTarget;
 };
 
 //==============================================================================
@@ -44,8 +51,7 @@ public:
     //--------------------------------------------------------------------------
     //! \brief
     //--------------------------------------------------------------------------
-    Agent(uint32_t id, AgentType const& type, Unit& owner,
-          Resources const& resources, std::string const& searchTarget);
+    Agent(uint32_t id, AgentType const& type, Unit& owner, Resources const& resources);
 
     //--------------------------------------------------------------------------
     //! \brief Driving on Segments, transporting resources and unloading them on

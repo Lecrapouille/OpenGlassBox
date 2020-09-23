@@ -20,8 +20,8 @@ class City;
 //! \brief Type of Units (Home, Work ...).
 //! Class constructed during the parsing of simulation scripts.
 //! Examples:
-//!  - unit Home color 0xFF00FF mapRadius 1 rules [ SendPeopleToWork ]
-//!          targets [ Home ] caps [ People 4 ] resources [ People 4 ]
+//!  - unit Home color 0xFF00FF radius 1 rules [ SendPeopleToWork ]
+//!          targets [ Home ] capacities [ People 4 ] resources [ People 4 ]
 //==========================================================================
 class UnitType
 {
@@ -36,22 +36,21 @@ public:
 
     UnitType(std::string const& name,
              uint32_t color,
-             //Resources capacities,
+             uint32_t radius,
              Resources resources,
-             std::vector<RuleUnit*> rules,
+             std::vector<RuleUnit*> rules, // TODO reflexion lazy search: vec<string> puis m_rules(getRuleUnit(string))
              std::vector<std::string> targets)
         : m_name(name),
           m_color(color),
+          m_radius(radius),
           m_resources(resources),
           m_rules(rules),
           m_targets(targets)
-    {
-        //m_resources.setCapacities(capacities);
-        //m_resources.addResources(resources);
-    }
+    {}
 
     std::string              m_name;
     uint32_t                 m_color;
+    uint32_t                 m_radius;
     Resources                m_resources;
     std::vector<RuleUnit*>   m_rules;
     std::vector<std::string> m_targets;

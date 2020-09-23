@@ -25,16 +25,16 @@ public:
     MapType() = default;
     MapType(MapType const&) = default;
 
-    MapType(std::string const& name)
-        : m_id(name), m_color(0xFFFFFF), m_capacity(MapType::MAX_CAPACITY)
+    MapType(std::string const& type)
+        : m_type(type), m_color(0xFFFFFF), m_capacity(MapType::MAX_CAPACITY)
     {}
 
-    MapType(std::string const& name, uint32_t color, uint32_t capacity,
+    MapType(std::string const& type, uint32_t color, uint32_t capacity,
          std::initializer_list<RuleMap> list = {})
-        : m_id(name), m_color(color), m_capacity(capacity), m_rules(list)
+        : m_type(type), m_color(color), m_capacity(capacity), m_rules(list)
     {}
 
-    std::string          m_id;
+    std::string          m_type;
     uint32_t             m_color;
     uint32_t             m_capacity;
     std::vector<RuleMap> m_rules;
@@ -113,7 +113,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    std::string const& type() const { return m_id; }
+    std::string const& type() const { return m_type; }
 
     // -------------------------------------------------------------------------
     //! \brief

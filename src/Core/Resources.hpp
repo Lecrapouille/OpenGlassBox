@@ -30,6 +30,7 @@ public:
     //! found.
     // -------------------------------------------------------------------------
     Resource* findResource(ResourceType const& type);
+    const Resource* findResource(ResourceType const& type) const;
 
     // -------------------------------------------------------------------------
     //! \brief Search for a resource given its name. If the resource is not
@@ -104,7 +105,7 @@ public:
     //! \brief Return the amount of resource of the given type. If the resource
     //! does not exist return 0.
     // -------------------------------------------------------------------------
-    uint32_t getAmount(ResourceType const& type);
+    uint32_t getAmount(ResourceType const& type) const;
 
     // -------------------------------------------------------------------------
     //! \brief Find for an existing resource in the collection and change its
@@ -128,7 +129,7 @@ public:
     //! \brief Return the maximal amount of resource of the given type. If the
     //! resource does not exist return 0.
     // -------------------------------------------------------------------------
-    uint32_t getCapacity(ResourceType const& type);
+    uint32_t getCapacity(ResourceType const& type) const;
 
     // -------------------------------------------------------------------------
     //! \brief Return true if all resources are empty.

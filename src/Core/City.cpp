@@ -52,7 +52,7 @@ Map& City::addMap(MapType const& type)
 {
     auto ptr = std::make_unique<Map>(type, m_gridSizeX, m_gridSizeY);
     Map& map = *ptr;
-    m_maps[type.m_id] = std::move(ptr);
+    m_maps[type.m_type] = std::move(ptr);
     return map;
 }
 
@@ -78,10 +78,9 @@ Unit& City::addUnit(UnitType const& type, Node& node)
     return *m_units.back();
 }
 
-Agent& City::addAgent(AgentType const& type, Unit& owner, Resources const& resources,
-                      std::string const& searchTarget)
+Agent& City::addAgent(AgentType const& type, Unit& owner, Resources const& resources)
 {
-    m_agents.push_back(std::make_unique<Agent>(m_nextAgentId++, type, owner, resources, searchTarget));
+    m_agents.push_back(std::make_unique<Agent>(m_nextAgentId++, type, owner, resources));
     return *m_agents.back();
 }
 

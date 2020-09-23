@@ -3,6 +3,7 @@
 
 #include "Display/Window.hpp"
 #include "Core/Simulation.hpp"
+#include "Core/Script.hpp"
 
 class GlassBox: public IGame
 {

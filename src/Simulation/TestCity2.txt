@@ -22,7 +22,7 @@ rules
 	mapRule CreateGrass
 		rate 7
 
-		map Water remove 10
+		map Water remove 10 randomTilesPercent 90
 		map Grass add 1
 	end
 
@@ -58,7 +58,7 @@ units
 
 	unit Home color 0xFF00FF mapRadius 1 rules [ SendPeopleToWork ] targets [ Home ] caps [ People 4 ] resources [ People 4 ]
 
-	unit Work color 0x00FFFF mapRadius 3 rules [ SendPeopleToHome UsePeopleToWater ] targets [ Work ] caps [ People 2 ]
+	unit Work color 0x00FFFF mapRadius 3 rules [ SendPeopleToHome UsePeopleToWater ] targets [ Work ] caps [ People 2 ] resources [ ]
 
 end
 

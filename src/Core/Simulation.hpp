@@ -18,6 +18,7 @@ class Simulation
 public:
 
     Simulation(uint32_t gridSizeX = 32u, uint32_t gridSizeY = 32u);
+    void load(std::string const& file);
     void update(float const deltaTime);
     City& addCity(std::string const& id);
     City& getCity(std::string const& id);

@@ -89,16 +89,41 @@ class IRule
 {
 public:
 
-    IRule(std::string const& name);
+    IRule(std::string const& name, uint32_t rate, std::vector<IRuleCommand*> const& commands);
     virtual ~IRule() = default;
     virtual bool execute(RuleContext& context);
     virtual void setOption(std::string const& option, std::string const& value);
+    std::string const& id() const { return m_id; }
+    uint32_t rate() const { return m_rate; }
+    std::vector<IRuleCommand*> const& commands() const { return m_commands; }
+
 
 private:
 
     std::string                m_id;
     uint32_t                   m_rate = 1u;
     std::vector<IRuleCommand*> m_commands;
+};
+
+//==========================================================================
+//! \brief Type of RuleMap. Class constructed during the parsing of simulation
+//! scripts. Examples:
+//!  - map Water remove 10
+//!  - map Grass add 1
+//==========================================================================
+class RuleMapType
+{
+public:
+
+   RuleMapType(std::string const& name)
+        : m_name(name)
+   {}
+
+   std::string m_name;
+   uint32_t m_rate = 1u;
+   bool m_randomTiles = false;
+   uint32_t m_randomTilesPercent = 10u;
+   std::vector<IRuleCommand*> m_commands;
 };
 
 //==============================================================================
@@ -108,10 +133,10 @@ class RuleMap: public IRule
 {
 public:
 
-    RuleMap(std::string const& name, bool randomTiles = false, uint32_t randomTilesPercent = 10u)
-        : IRule(name),
-          m_randomTiles(randomTiles),
-          m_randomTilesPercent(std::min(100u, randomTilesPercent))
+    RuleMap(RuleMapType const& type)
+        : IRule(type.m_name, type.m_rate, type.m_commands),
+          m_randomTiles(type.m_randomTiles),
+          m_randomTilesPercent(std::min(100u, type.m_randomTilesPercent))
     {}
 
     //--------------------------------------------------------------------------
@@ -135,6 +160,60 @@ private:
 
     bool m_randomTiles;
     uint32_t m_randomTilesPercent;
+};
+
+class RuleUnit;
+
+//==========================================================================
+//! \brief Type of RuleMap. Class constructed during the parsing of simulation
+//! scripts. Examples:
+//!  - map Water remove 10
+//!  - map Grass add 1
+//==========================================================================
+class RuleUnitType
+{
+public:
+
+    RuleUnitType(std::string const& name)
+        : m_name(name)
+    {}
+
+    std::string m_name;
+    uint32_t m_rate = 1u;
+    RuleUnit* m_onFail = nullptr;
+    std::vector<IRuleCommand*> m_commands;
+};
+
+//==============================================================================
+//! \brief
+//==============================================================================
+class RuleUnit: public IRule
+{
+public:
+
+    RuleUnit(RuleUnitType const& type)
+        : IRule(type.m_name, type.m_rate, type.m_commands),
+          m_onFail(type.m_onFail)
+    {}
+
+    virtual bool execute(RuleContext& context) override
+    {
+        if (IRule::execute(context))
+        {
+            return true;
+        }
+        else
+        {
+            if (m_onFail != nullptr)
+                return m_onFail->execute(context);
+            else
+                return false;
+        }
+    }
+
+private:
+
+    RuleUnit* m_onFail;
 };
 
 #endif
