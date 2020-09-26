@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <stdexcept>
 
+#if 0
 template<class T>
 static bool tryConvertion(std::string const& str, T& res)
 {
@@ -21,6 +22,7 @@ static bool tryConvertion(std::string const& str, T& res)
         return false;
     }
 }
+#endif
 
 IRule::IRule(std::string const& name, uint32_t rate, std::vector<IRuleCommand*> const& commands)
     : m_id(name), m_rate(rate), m_commands(commands)
@@ -44,6 +46,7 @@ bool IRule::execute(RuleContext& context)
     return true;
 }
 
+#if 0
 void IRule::setOption(std::string const& option, std::string const& value)
 {
     if (option == "rate")
@@ -52,3 +55,4 @@ void IRule::setOption(std::string const& option, std::string const& value)
             m_rate = 1u;
     }
 }
+#endif

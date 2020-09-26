@@ -75,8 +75,8 @@ private:
     void parseAgent();
     void parseUnits();
     void parseUnit();
-    void parseMapRule();
-    void parseUnitRule();
+    void parseRuleMap();
+    void parseRuleUnit();
     void parseStringArray(std::vector<std::string>& vec);
     void parseRuleArray(std::vector<RuleMap>& rules);
     IRuleCommand* parseCommand(std::string const& token);

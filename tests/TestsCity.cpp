@@ -15,8 +15,8 @@ TEST(TestsCity, Constructor)
     City c("Paris", GRILL, GRILL + 1u);
 
     ASSERT_STREQ(c.name().c_str(), "Paris");
-    ASSERT_EQ(c.m_gridSizeX, GRILL);
-    ASSERT_EQ(c.m_gridSizeY, GRILL + 1u);
+    ASSERT_EQ(c.m_gridSizeU, GRILL);
+    ASSERT_EQ(c.m_gridSizeV, GRILL + 1u);
     ASSERT_EQ(c.m_nextUnitId, 0u);
     ASSERT_EQ(c.m_nextAgentId, 0u);
     ASSERT_EQ(c.m_globals.m_bin.size(), 0u);
@@ -66,7 +66,7 @@ TEST(TestsCity, addMap)
 
     // Add units
     Resources r;
-    UnitType type4 = { "unit1", 0xFF00FF, r, {}, {} };
+    UnitType type4 = { "unit1", 0xFF00FF, 2u, r, {}, {} };
     Node n1(42u, Vector3f(1.0f, 2.0f, 3.0f)/*, p1*/);
     Unit& u1 = c.addUnit(type4, n1);
     ASSERT_EQ(c.getUnits().size(), 1u);
@@ -75,13 +75,14 @@ TEST(TestsCity, addMap)
     ASSERT_EQ(u2.color(), 0xFF00FF);
 
     // Add agent
-    AgentType t(1.0f, 2u, 0xFFFFFF); t.m_speed = 42.0f;
-    Agent& a1 = c.addAgent(t, u1, r, "???");
+    AgentType t("Worker", 1.0f, 2u, 0xFFFFFF);
+    Agent& a1 = c.addAgent(t, u2, r, "???");
     Agent& a2 = *(c.getAgents()[0]);
     ASSERT_EQ(&a1, &a2);
-    ASSERT_EQ(a1.m_speed, t.m_speed);
-    ASSERT_EQ(a1.m_color, t.m_color);
-    ASSERT_EQ(a1.m_speed, t.m_speed);
+    ASSERT_STREQ(a1.speed.c_str(), "Worker");
+    ASSERT_EQ(a1.speed, t.m_speed);
+    ASSERT_EQ(a1.m_type.color, t.m_color);
+    ASSERT_EQ(a1.speed, t.m_speed);
     ASSERT_EQ(&(a1.m_owner), &u1);
 }
 

@@ -9,51 +9,57 @@
 
 TEST(TestsNode, Constructor)
 {
-    //City c("Paris", 32u, 32u);
-    //Path p("route", c);
     Node n(42u, Vector3f(1.0f, 2.0f, 3.0f));
 
+    // Check initial values (member variables).
+    ASSERT_EQ(n.m_id, 42u);
+    ASSERT_EQ(int32_t(n.m_position.x), 1);
+    ASSERT_EQ(int32_t(n.m_position.y), 2);
+    ASSERT_EQ(int32_t(n.m_position.z), 3);
+    ASSERT_EQ(n.m_segments.size(), 0u);
+    ASSERT_EQ(n.m_units.size(), 0u);
+
+    // Check initial values (getter methods).
     ASSERT_EQ(n.id(), 42u);
     ASSERT_EQ(int32_t(n.position().x), 1);
     ASSERT_EQ(int32_t(n.position().y), 2);
     ASSERT_EQ(int32_t(n.position().z), 3);
-    //ASSERT_STREQ(n.path().id().c_str(), "route");
-    ASSERT_EQ(n.m_segments.size(), 0u);
-    ASSERT_EQ(n.m_units.size(), 0u);
+    ASSERT_EQ(n.segments().size(), 0u);
+    ASSERT_EQ(n.units().size(), 0u);
 }
 
 TEST(TestsNode, AddUnit)
 {
-    City c("Paris", 1u, 1u);
-
+    // Create two nodes. Check no units are attached
     Node n1(42u, Vector3f(1.0f, 2.0f, 3.0f));
     Node n2(43u, Vector3f(2.0f, 3.0f, 4.0f));
-    ASSERT_EQ(n1.m_units.size(), 0u);
-    ASSERT_EQ(n2.m_units.size(), 0u);
+    ASSERT_EQ(n1.units().size(), 0u);
+    ASSERT_EQ(n2.units().size(), 0u);
 
+    // Create an Unit "house" holding resources "people".
+    City city("Paris", 1u, 1u);
     Resources r;
     r.setCapacity("people", 10);
     r.addResource("people", 10);
-    UnitType unit_type = { "maison", 0xFF00FF, r, {}, {} };
-
-    // Add unit u1 to node n1. Check relationship.
-    Unit u1(unit_type, n1, c);
-    ASSERT_EQ(n1.m_units.size(), 1u);
+    UnitType unit_type = { "maison", 0xFF00FF, 2u, r, {}, {} };
+    Unit u1(unit_type, n1, city);
+    ASSERT_EQ(n1.units().size(), 1u);
     ASSERT_EQ(n1.m_units[0], &u1);
     ASSERT_EQ(n1.units()[0], &u1);
-    ASSERT_EQ(&(n1.m_units[0]->m_node), &n1);
-    ASSERT_STREQ(n1.m_units[0]->name().c_str(), "maison");
+    ASSERT_EQ(&(n1.unit(0)), &u1);
+    ASSERT_EQ(&(n1.unit(0).m_node), &n1);
+    ASSERT_STREQ(n1.unit(0).name().c_str(), "maison");
 
-    // Add again unit u1 to node n2.
+    // Add Unit u1 to Node n1. Check if the Unit has been attached.
     n2.addUnit(u1);
-    ASSERT_EQ(n2.m_units.size(), 1u);
+    ASSERT_EQ(n2.units().size(), 1u);
     ASSERT_EQ(n2.m_units[0], &u1);
     ASSERT_EQ(n2.units()[0], &u1);
     ASSERT_EQ(&(n2.m_units[0]->m_node), &n1);
     ASSERT_STREQ(n2.m_units[0]->name().c_str(), "maison");
 
-    // Add unit u2 to node n1.
-    Unit u2(unit_type, n2, c);
+    // Add Unit u2 to Node n1. Check if the Unit has been attached.
+    Unit u2(unit_type, n2, city);
     n1.addUnit(u2);
     ASSERT_EQ(n1.m_units.size(), 2u);
     ASSERT_EQ(n1.m_units[0], &u1);

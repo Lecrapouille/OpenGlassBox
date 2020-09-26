@@ -26,18 +26,18 @@ TEST(TestsScript, Constructor)
         ASSERT_EQ(script.m_resources.size(), 3u);
         Resource const& r1 = script.getResource("Water");
         ASSERT_STREQ(r1.type().c_str(), "Water");
-        ASSERT_EQ(r1.capacity(), Resource::MAX_CAPACITY);
-        ASSERT_EQ(r1.amount(), 0u);
+        ASSERT_EQ(r1.getCapacity(), Resource::MAX_CAPACITY);
+        ASSERT_EQ(r1.getAmount(), 0u);
 
         Resource const& r2 = script.getResource("Grass");
         ASSERT_STREQ(r2.type().c_str(), "Grass");
-        ASSERT_EQ(r2.capacity(), Resource::MAX_CAPACITY);
-        ASSERT_EQ(r2.amount(), 0u);
+        ASSERT_EQ(r2.getCapacity(), Resource::MAX_CAPACITY);
+        ASSERT_EQ(r2.getAmount(), 0u);
 
         Resource const& r3 = script.getResource("People");
         ASSERT_STREQ(r3.type().c_str(), "People");
-        ASSERT_EQ(r3.capacity(), Resource::MAX_CAPACITY);
-        ASSERT_EQ(r3.amount(), 0u);
+        ASSERT_EQ(r3.getCapacity(), Resource::MAX_CAPACITY);
+        ASSERT_EQ(r3.getAmount(), 0u);
     }
 
     // -- Path types
@@ -113,10 +113,32 @@ TEST(TestsScript, Constructor)
 
     // -- Map Rules
     {
+         ASSERT_EQ(script.m_ruleMaps.size(), 1u);
+         RuleMap const& rm1 = script.getRuleMap("CreateGrass");
+         ASSERT_STREQ(rm1.m_id.c_str(), "CreateGrass");
+         ASSERT_EQ(rm1.m_rate, 7u);
+         // TODO map
 
     }
 
     // -- Unit Rules
+    {
+        ASSERT_EQ(script.m_ruleUnits.size(), 3u);
+        RuleUnit const& ru1 = script.getRuleUnit("SendPeopleToWork");
+        ASSERT_STREQ(ru1.m_id.c_str(), "SendPeopleToWork");
+        ASSERT_EQ(ru1.m_rate, 20u);
+
+        RuleUnit const& ru2 = script.getRuleUnit("SendPeopleToHome");
+        ASSERT_STREQ(ru2.m_id.c_str(), "SendPeopleToHome");
+        ASSERT_EQ(ru2.m_rate, 100u);
+
+        RuleUnit const& ru3 = script.getRuleUnit("UsePeopleToWater");
+        ASSERT_STREQ(ru3.m_id.c_str(), "UsePeopleToWater");
+        ASSERT_EQ(ru3.m_rate, 5u);
+
+        // TODO local
+        // TODO agent
+    }
 }
 
 TEST(TestsScript, BadSyntax)

@@ -11,7 +11,6 @@
 
 class Rule;
 class RuleUnit;
-//class RuleContext;
 class Node;
 class Resources;
 class City;
@@ -29,31 +28,24 @@ public:
 
     UnitType(UnitType const&) = default;
 
-    UnitType(std::string const& name)
-        : m_name(name),
-          m_color(0xFFFFFF)
+    UnitType(std::string const& name_)
+        : name(name_), color(0xFFFFFF), radius(1u)
     {}
 
-    UnitType(std::string const& name,
-             uint32_t color,
-             uint32_t radius,
-             Resources resources,
-             std::vector<RuleUnit*> rules, // TODO reflexion lazy search: vec<string> puis m_rules(getRuleUnit(string))
-             std::vector<std::string> targets)
-        : m_name(name),
-          m_color(color),
-          m_radius(radius),
-          m_resources(resources),
-          m_rules(rules),
-          m_targets(targets)
+    UnitType(std::string const& name_, uint32_t const color_, uint32_t const radius_,
+             Resources const& resources_,
+             std::vector<RuleUnit*> const& rules_, // TODO reflexion lazy search: vec<string> puis rules(getRuleUnit(string))
+             std::vector<std::string> const& targets_)
+        : name(name_), color(color_), radius(radius_),
+          resources(resources_), rules(rules_), targets(targets_)
     {}
 
-    std::string              m_name;
-    uint32_t                 m_color;
-    uint32_t                 m_radius;
-    Resources                m_resources;
-    std::vector<RuleUnit*>   m_rules;
-    std::vector<std::string> m_targets;
+    std::string              name;
+    uint32_t                 color;
+    uint32_t                 radius;
+    Resources                resources;
+    std::vector<RuleUnit*>   rules;
+    std::vector<std::string> targets;
 };
 
 //==============================================================================
@@ -62,14 +54,15 @@ public:
 //! But also a well-defined spatial extent: bounding volume, simulation
 //! footprint.
 //==============================================================================
-class Unit: private UnitType
+class Unit
 {
 public:
 
     // -------------------------------------------------------------------------
     //! \brief
+    //! TODO const& type ?
     // -------------------------------------------------------------------------
-    Unit(UnitType const& type, Node& node, City& city);
+    Unit(UnitType& type, Node& node, City& city);
 
     // -------------------------------------------------------------------------
     //! \brief
@@ -85,17 +78,17 @@ public:
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    inline std::string const& name() const { return m_name; }
+    inline std::string const& name() const { return m_type.name; }
 
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    inline Resources& resources() { return m_resources; }
+    inline Resources& resources() { return m_type.resources; }
 
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    inline Vector3f& position() { return m_node.position(); }
+    inline Vector3f const& position() const { return m_node.position(); }
 
     // -------------------------------------------------------------------------
     //! \brief
@@ -105,13 +98,14 @@ public:
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    uint32_t color() const { return m_color; }
+    uint32_t color() const { return m_type.color; }
 
-protected:
+private:
 
-    Node          &m_node;
-    RuleContext    m_context;
-    uint32_t       m_ticks = 0u;
+    UnitType       &m_type;
+    Node           &m_node;
+    RuleContext     m_context;
+    uint32_t        m_ticks = 0u;
 };
 
 using Units = std::vector<std::unique_ptr<Unit>>;

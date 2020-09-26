@@ -237,17 +237,17 @@ void Script::parseAgents()
 
 void Script::parseAgent()
 {
-    AgentType* agent = new AgentType();
-    m_agentTypes[nextToken()] = agent;
+    AgentType* agent = new AgentType(nextToken());
+    m_agentTypes[agent->name] = agent;
 
     while (true)
     {
         std::string const& token = nextToken();
         if (token == "color")
-            agent->m_color = toColor(nextToken());
+            agent->color = toColor(nextToken());
         else if (token == "speed")
         {
-            agent->m_speed = toFloat(nextToken());
+            agent->speed = toFloat(nextToken());
             return ;
         }
         else
@@ -263,15 +263,15 @@ void Script::parseRules()
         if (token == "end")
             return ;
         else if (token == "mapRule")
-            parseMapRule();
+            parseRuleMap();
         else if (token == "unitRule")
-            parseUnitRule();
+            parseRuleUnit();
         else
             throw std::runtime_error("parseRules()");
     }
 }
 
-void Script::parseMapRule()
+void Script::parseRuleMap()
 {
     RuleMapType type(nextToken());
 
@@ -298,7 +298,7 @@ void Script::parseMapRule()
     }
 }
 
-void Script::parseUnitRule()
+void Script::parseRuleUnit()
 {
     RuleUnitType type(nextToken());
 
@@ -493,7 +493,7 @@ void Script::parseUnits()
 void Script::parseUnit()
 {
     UnitType* unit = new UnitType(nextToken());
-    m_unitTypes[unit->m_name] = unit;
+    m_unitTypes[unit->name] = unit;
 
     Resources caps;
     Resources resources;
@@ -502,23 +502,23 @@ void Script::parseUnit()
     {
         std::string const& token = nextToken();
         if (token == "color")
-            unit->m_color = toColor(nextToken());
+            unit->color = toColor(nextToken());
         else if (token == "mapRadius")
-            unit->m_radius = toUint(nextToken());
+            unit->radius = toUint(nextToken());
         else if (token == "rules")
             parseStringArray(todo);
-            // TODO parseRuleArray(unit->m_rules);
+            // TODO parseRuleArray(unit->rules);
         else if (token == "targets")
-            parseStringArray(unit->m_targets);
+            parseStringArray(unit->targets);
         else if (token == "caps")
         {
             parseCapacitiesArray(caps);
-            unit->m_resources.setCapacities(caps);
+            unit->resources.setCapacities(caps);
         }
         else if (token == "resources")
         {
             parseResourcesArray(resources);
-            unit->m_resources.addResources(resources);
+            unit->resources.addResources(resources);
             return ;
         }
         else

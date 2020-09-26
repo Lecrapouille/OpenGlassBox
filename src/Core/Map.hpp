@@ -125,8 +125,8 @@ public:
     // -------------------------------------------------------------------------
     uint32_t const& capacity() const { return m_capacity; }
 
-    uint32_t gridSizeX() const { return m_sizeU; }
-    uint32_t gridSizeY() const { return m_sizeV; }
+    uint32_t gridSizeU() const { return m_sizeU; }
+    uint32_t gridSizeV() const { return m_sizeV; }
 
 private:
 

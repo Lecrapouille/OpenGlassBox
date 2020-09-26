@@ -1,7 +1,6 @@
 #ifndef PATH_HPP
 #  define PATH_HPP
 
-//#  include "Core/Unit.hpp"
 #  include "Core/Vector.hpp"
 #  include "Core/Unique.hpp"
 #  include <deque>
@@ -15,7 +14,6 @@ class Node;
 class Segment;
 class Path;
 class Unit;
-//class City;
 
 // =============================================================================
 //! \brief Class defining the extrimity of a Segment constituing a Path. This
@@ -38,9 +36,8 @@ public:
 
     // -------------------------------------------------------------------------
     //! \brief Initialized internal states.
-    //! \param id: a unique id used to reference the node.
-    //! \param path: the Path owning this node.
-    //! \param position: the world position.
+    //! \param[in] id: a unique id used to reference the node.
+    //! \param[in] position: the world position.
     // -------------------------------------------------------------------------
     Node(uint32_t id, Vector3f const& position/*, Path& path*/);
 
@@ -58,48 +55,66 @@ public:
     //! \brief A Maps are simple uniform size grids. This method return the
     //! indices on the map (maps have all the same pavement).
     // -------------------------------------------------------------------------
-    void getMapPosition(uint32_t gridSizeX, uint32_t gridSizeY, uint32_t& u, uint32_t& v);
+    void getMapPosition(uint32_t gridSizeU, uint32_t gridSizeV, uint32_t& u, uint32_t& v);
 
+    // -------------------------------------------------------------------------
+    //! \brief Helper fonction calling
+    //! getMapPosition(uint32_t, uint32_t, uint32_t&, uint32_t&) from class T
+    //! that implements gridSizeU() and gridSizeV() ie City, Map.
+    // -------------------------------------------------------------------------
     template<class T>
     void getMapPosition(T const& x, uint32_t& u, uint32_t& v)
     {
-        getMapPosition(x.gridSizeX(), x.gridSizeY(), u, v);
+        getMapPosition(x.gridSizeU(), x.gridSizeV(), u, v);
     }
 
     // -------------------------------------------------------------------------
-    //! \brief Return the segment which the given node belongs to.
-    //! \param node: the neighbor node.
+    //! \brief Return the first segment in which the given node belongs to.
+    //! \note to get the full list, call segments().
+    //! \param[in] node: the neighbor node.
     //! \return the address of the segment where extremity points are node and
     //! this instance. Return nullptr if the node was not a neighbor.
     // -------------------------------------------------------------------------
-    Segment* getSegmentToNode(Node& node);
+    Segment* getSegmentToNode(Node const& node);
 
     // -------------------------------------------------------------------------
-    //! \brief
+    //! \brief Return the unique identifier.
     // -------------------------------------------------------------------------
     uint32_t id() const { return m_id; }
 
     // -------------------------------------------------------------------------
-    //! \brief
+    //! \brief Return the world position.
     // -------------------------------------------------------------------------
     Vector3f& position() { return m_position; }
 
     // -------------------------------------------------------------------------
-    //! \brief
+    //! \brief Const getter of Segments hold by this instance.
     // -------------------------------------------------------------------------
     std::vector<Segment*> const& segments() const { return m_segments; }
 
     // -------------------------------------------------------------------------
-    //! \brief
+    //! \brief Getter of Units hold by this instance.
     // -------------------------------------------------------------------------
     std::vector<Unit*>& units() { return m_units; }
+
+    // -------------------------------------------------------------------------
+    //! \brief Getter the nth Unit
+    // -------------------------------------------------------------------------
+    Unit& unit(uint32_t const nth) { return *m_units[nth]; }
+
+    // -------------------------------------------------------------------------
+    //! \brief Getter/Setter of node color (global color)
+    // -------------------------------------------------------------------------
+    uint32_t& color()
+    {
+        static uint32_t c = 0xAAAAAA;
+        return c;
+    }
 
 private:
 
     //! \brief Unique identifier.
     uint32_t              m_id;
-    //! \brief
-    uint32_t              m_color;
     //! \brief World position.
     Vector3f              m_position;
     //! \brief Segments owning this node instance.

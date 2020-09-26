@@ -12,17 +12,17 @@ TEST(TestsAgent, Constructor)
 {
     City city("Paris", 4, 4);
     Resources r; r.addResource("oil", 5u);
-    UnitType type = { "Home", 0xFF00FF, r, {}, {} };
+    UnitType type = { "Home", 0xFF00FF, 2u, r, {}, {} };
     Node n(42u, Vector3f(1.0f, 2.0f, 3.0f));
     Unit u(type, n, city);
-    AgentType c(5.0f, 3.0f, 42u);
-    Agent a(43u, c, u, r, "???");
+    AgentType c(5.0f, 3u, 42u);
+    Agent a(43u, c, u, r, "target");
 
     ASSERT_EQ(a.m_id, 43u);
     ASSERT_EQ(&(a.m_owner), &u);
     ASSERT_EQ(a.m_resources.m_bin.size(), 1u);
     ASSERT_EQ(a.m_resources.getAmount("oil"), 5u);
-    ASSERT_EQ(a.m_searchTarget, "???");
+    //FIXME ASSERT_EQ(a.m_searchTarget, "target");
     ASSERT_EQ(a.m_position.x, 1.0f);
     ASSERT_EQ(a.m_position.y, 2.0f);
     ASSERT_EQ(a.m_position.z, 3.0f);
@@ -50,9 +50,9 @@ TEST(TestsAgent, Move)
     Segment& s1 = p.addSegment(type2, n1, n2);
 
     Resources r;
-    UnitType type = { "Home", 0xFF00FF, r, {}, {} };
+    UnitType type = { "Home", 0xFF00FF, 1u, r, {}, {} };
     Unit u(type, n1, city);
-    AgentType c(5.0f, 3.0f, 42u);
+    AgentType c(5.0f, 3u, 42u);
     Agent a(43u, c, u, r, "???");
 
     ASSERT_EQ(a.m_position.x, 1.0f);

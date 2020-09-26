@@ -1,31 +1,40 @@
 #include "Core/Unit.hpp"
 #include "Core/City.hpp"
 
-Unit::Unit(UnitType const& type, Node& node, City& city)
-    : UnitType(type),
-      m_node(node)
+// -----------------------------------------------------------------------------
+Unit::Unit(UnitType& type, Node& node, City& city)
+    : m_type(type), m_node(node)
 {
     m_node.addUnit(*this);
+
+    // References states needed for running Rules
     m_context.unit = this;
-    m_context.city = &city;//&(m_node.path().city());
+    m_context.city = &city;
     m_context.globals = &(city.globalResources());
-    m_context.locals = &m_resources;
+    m_context.locals = &(type.resources);
+    m_context.radius = type.radius;
+    m_node.getMapPosition(city, m_context.u, m_context.v);
 }
 
+// -----------------------------------------------------------------------------
 void Unit::executeRules()
 {
-    /*    m_ticks += 1u;
+    m_ticks += 1u;
 
-    m_context.city->world2mapPosition(m_node.position(), m_context.u, m_context.v);
-    for (size_t i = 0u; i < m_rules.size(); ++i)
+    size_t i = m_type.rules.size();
+    while (i--)
     {
-        if (m_ticks % m_rules[i]->rate() == 0)
-            m_rules[i]->execute(m_context);
-            }*/
+        if (m_ticks % m_type.rules[i]->rate() == 0u)
+        {
+            m_type.rules[i]->execute(m_context);
+        }
+    }
 }
 
+// -----------------------------------------------------------------------------
 bool Unit::accepts(std::string const& searchTarget, Resources const& resourcesToTryToAdd)
 {
-    return find(m_targets.begin(), m_targets.end(), searchTarget) != m_targets.end()
-            && m_resources.canAddSomeResources(resourcesToTryToAdd);
+    return (m_type.resources.canAddSomeResources(resourcesToTryToAdd)) &&
+            ((find(m_type.targets.begin(), m_type.targets.end(), searchTarget)
+              != m_type.targets.end()));
 }

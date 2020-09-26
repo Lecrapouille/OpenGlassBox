@@ -16,7 +16,7 @@ void Resources::addResources(Resources const& resourcesToAdd)
         return ;
 
     for (auto const& it: resourcesToAdd.m_bin)
-        addResource(it.type(), it.amount());
+        addResource(it.type(), it.getAmount());
 }
 
 // -----------------------------------------------------------------------------
@@ -30,7 +30,7 @@ bool Resources::canAddSomeResources(Resources const& resourcesToTryAdd)
         if (it.hasAmount())
         {
             Resource* res = findResource(it.type());
-            if ((res != nullptr) && (res->amount() < res->capacity()))
+            if ((res != nullptr) && (res->getAmount() < res->getCapacity()))
                 return true;
         }
     }
@@ -66,15 +66,14 @@ void Resources::removeResources(Resources const& resourcesToReduce)
         return ;
 
     for (auto const& it: resourcesToReduce.m_bin)
-        removeResource(it.type(), it.amount());
+        removeResource(it.type(), it.getAmount());
 }
 
 // -----------------------------------------------------------------------------
 uint32_t Resources::getAmount(ResourceType const& type) const
 {
     const Resource* res = findResource(type);
-
-    return (res != nullptr) ? res->amount() : 0u;
+    return (res != nullptr) ? res->getAmount() : 0u;
 }
 
 // -----------------------------------------------------------------------------
@@ -88,14 +87,14 @@ void Resources::setCapacity(ResourceType const& type, uint32_t const capacity)
 void Resources::setCapacities(Resources const& resourcesCapacities)
 {
     for (auto& it: resourcesCapacities.m_bin)
-        setCapacity(it.type(), it.capacity());
+        setCapacity(it.type(), it.getCapacity());
 }
 
 // -----------------------------------------------------------------------------
 uint32_t Resources::getCapacity(ResourceType const& type) const
 {
     const Resource* b = findResource(type);
-    return (b != nullptr) ? b->capacity() : 0u; // Resource::MAX_CAPACITY;
+    return (b != nullptr) ? b->getCapacity() : 0u; // Resource::MAX_CAPACITY;
 }
 
 // -----------------------------------------------------------------------------

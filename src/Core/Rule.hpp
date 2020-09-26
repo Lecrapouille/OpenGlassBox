@@ -92,7 +92,7 @@ public:
     IRule(std::string const& name, uint32_t rate, std::vector<IRuleCommand*> const& commands);
     virtual ~IRule() = default;
     virtual bool execute(RuleContext& context);
-    virtual void setOption(std::string const& option, std::string const& value);
+    //virtual void setOption(std::string const& option, std::string const& value);
     std::string const& id() const { return m_id; }
     uint32_t rate() const { return m_rate; }
     std::vector<IRuleCommand*> const& commands() const { return m_commands; }

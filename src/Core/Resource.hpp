@@ -69,7 +69,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief Return how many resources can be hold.
     // -------------------------------------------------------------------------
-    inline uint32_t capacity() const
+    inline uint32_t getCapacity() const
     {
         return m_capacity;
     }
@@ -77,7 +77,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief Return the current quantity of resource.
     // -------------------------------------------------------------------------
-    inline uint32_t amount() const
+    inline uint32_t getAmount() const
     {
         return m_amount;
     }

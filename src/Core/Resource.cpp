@@ -33,8 +33,7 @@ void Resource::remove(uint32_t const toRemove)
 // -----------------------------------------------------------------------------
 void Resource::transferTo(Resource& target)
 {
-    uint32_t toTransfer =
-            std::min(m_amount, target.m_capacity - target.m_amount);
+    uint32_t toTransfer = std::min(m_amount, target.m_capacity - target.m_amount);
 
     remove(toTransfer);
     target.add(toTransfer);

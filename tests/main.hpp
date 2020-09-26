@@ -24,6 +24,8 @@
 #  include <gmock/gmock.h>
 #  include <gtest/gtest.h>
 
+using namespace ::testing;
+
 // Set interpreter quiet
 #  define QUIET(interpreter) \
      forth::Options opt; \

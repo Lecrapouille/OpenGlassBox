@@ -4,10 +4,11 @@
 #include <iostream>
 
 //------------------------------------------------------------------------------
-Agent::Agent(uint32_t id, AgentType const& type, Unit& owner, Resources const& resources)
-    : AgentType(type),
-      m_id(id),
-      m_owner(owner),
+Agent::Agent(uint32_t id, AgentType const& type, Unit& owner,
+             Resources const& resources, std::string const& searchTarget)
+    : m_id(id),
+      m_type(type),
+      m_searchTarget(searchTarget),
       m_resources(resources),
       m_lastNode(&(owner.node())) // FIXME should be linked at least one segment
 {
@@ -66,7 +67,7 @@ void Agent::moveTowardsNextNode()
         }
 
         m_offset += direction
-                    * (m_speed / config::TICKS_PER_SECOND)
+                    * (m_type.speed / config::TICKS_PER_SECOND)
                     / m_currentSegment->length();
 
         // Reached node1 ?
