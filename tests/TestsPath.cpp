@@ -41,14 +41,17 @@ TEST(TestsNode, AddUnit)
     Resources r;
     r.setCapacity("people", 10);
     r.addResource("people", 10);
-    UnitType unit_type = { "maison", 0xFF00FF, 2u, r, {}, {} };
+    UnitType unit_type("maison");
+    unit_type.color = 0xFF00FF;
+    unit_type.radius = 2u;
+    unit_type.resources = r;
     Unit u1(unit_type, n1, city);
     ASSERT_EQ(n1.units().size(), 1u);
     ASSERT_EQ(n1.m_units[0], &u1);
     ASSERT_EQ(n1.units()[0], &u1);
     ASSERT_EQ(&(n1.unit(0)), &u1);
     ASSERT_EQ(&(n1.unit(0).m_node), &n1);
-    ASSERT_STREQ(n1.unit(0).name().c_str(), "maison");
+    ASSERT_STREQ(n1.unit(0).type().c_str(), "maison");
 
     // Add Unit u1 to Node n1. Check if the Unit has been attached.
     n2.addUnit(u1);
@@ -127,7 +130,7 @@ TEST(TestsSegment, Constuctor)
     SegmentType type("Dirt", 0xAAAAAA);
     Segment s1(55u, type, n1, n2);
     ASSERT_EQ(s1.id(), 55u);
-    ASSERT_STREQ(s1.name().c_str(), "Dirt");
+    ASSERT_STREQ(s1.type().c_str(), "Dirt");
     ASSERT_EQ(s1.color(), 0xAAAAAA);
     ASSERT_EQ(s1.m_node1, &n1);
     ASSERT_EQ(s1.m_node2, &n2);
@@ -184,7 +187,7 @@ TEST(TestsSegment, PathchangeNode2)
 {
     PathType type1("route");
     Path p(type1);
-    ASSERT_STREQ(p.name().c_str(), "route");
+    ASSERT_STREQ(p.type().c_str(), "route");
 
     Node& n1 = p.addNode(Vector3f(1.0f, 1.0f, 0.0f));
     Node& n2 = p.addNode(Vector3f(2.0f, 2.0f, 0.0f));
@@ -294,7 +297,7 @@ TEST(TestsPath, Constructor)
     PathType type("route");
     Path p(type);
 
-    ASSERT_STREQ(p.name().c_str(), "route");
+    ASSERT_STREQ(p.type().c_str(), "route");
     ASSERT_EQ(p.m_nodes.size(), 0u);
     ASSERT_EQ(p.m_segments.size(), 0u);
     ASSERT_EQ(p.m_nextNodeId, 0u);

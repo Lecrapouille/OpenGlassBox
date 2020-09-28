@@ -38,7 +38,7 @@ TEST(TestsCity, addMap)
     Map& m2 = c.getMap("map1");
     ASSERT_EQ(&m1, &m2);
     ASSERT_STREQ(m1.type().c_str(), "map1");
-    ASSERT_EQ(m1.capacity(), MapType::MAX_CAPACITY);
+    ASSERT_EQ(m1.getCapacity(), Resource::MAX_CAPACITY);
     ASSERT_EQ(m1.color(), 0xFFFFFF);
 
     // Add Map2.
@@ -48,7 +48,7 @@ TEST(TestsCity, addMap)
     ASSERT_EQ(&m1, &m2);
     ASSERT_EQ(&m3, &m4);
     ASSERT_STREQ(m4.type().c_str(), "map2");
-    ASSERT_EQ(m4.capacity(), 10u);
+    ASSERT_EQ(m4.getCapacity(), 10u);
     ASSERT_EQ(m4.color(), 0x00);
 
    // Add again Map2. Check previous map disapeared
@@ -66,7 +66,10 @@ TEST(TestsCity, addMap)
 
     // Add units
     Resources r;
-    UnitType type4 = { "unit1", 0xFF00FF, 2u, r, {}, {} };
+    UnitType type4("unit1");
+    type4.color = 0xFF00FF;
+    type4.radius = 2u;
+    type4.resources = r;
     Node n1(42u, Vector3f(1.0f, 2.0f, 3.0f)/*, p1*/);
     Unit& u1 = c.addUnit(type4, n1);
     ASSERT_EQ(c.getUnits().size(), 1u);
@@ -79,11 +82,11 @@ TEST(TestsCity, addMap)
     Agent& a1 = c.addAgent(t, u2, r, "???");
     Agent& a2 = *(c.getAgents()[0]);
     ASSERT_EQ(&a1, &a2);
-    ASSERT_STREQ(a1.speed.c_str(), "Worker");
-    ASSERT_EQ(a1.speed, t.m_speed);
-    ASSERT_EQ(a1.m_type.color, t.m_color);
-    ASSERT_EQ(a1.speed, t.m_speed);
-    ASSERT_EQ(&(a1.m_owner), &u1);
+    ASSERT_STREQ(a1.m_type.name.c_str(), "Worker");
+    ASSERT_EQ(a1.m_type.speed, t.speed);
+    ASSERT_EQ(a1.m_type.color, t.color);
+    ASSERT_EQ(a1.m_type.radius, t.radius);
+    //ASSERT_EQ(&(a1.m_owner), &u1);
 }
 
 TEST(TestsCity, CreateCity)
@@ -97,7 +100,7 @@ TEST(TestsCity, CreateCity)
     Node& n2 = p.addNode(Vector3f(3.0f, 3.0f, 3.0f));
     SegmentType type2("Dirt", 0xAAAAAA);
     Segment& s1 = p.addSegment(type2, n1, n2);
-    ASSERT_STREQ(s1.name().c_str(), "Dirt");
+    ASSERT_STREQ(s1.type().c_str(), "Dirt");
     ASSERT_EQ(s1.color(), 0xAAAAAA);
 
 // TODO a finir

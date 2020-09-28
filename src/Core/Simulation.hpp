@@ -2,11 +2,6 @@
 #define SIMULATION_HPP
 
 #  include "Core/City.hpp"
-#  include "Core/Path.hpp"
-#  include "Core/Unique.hpp"
-#  include <string>
-#  include <map>
-#  include <memory>
 
 //==============================================================================
 //! \brief Entry point class managing (add, get, remove) a collection of Cities

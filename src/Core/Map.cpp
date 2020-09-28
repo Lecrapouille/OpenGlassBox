@@ -1,7 +1,4 @@
 #include "Core/Map.hpp"
-#include "Core/Config.hpp"
-
-const uint32_t MapType::MAX_CAPACITY = std::numeric_limits<uint32_t>::max();
 
 template<typename T>
 static inline T clamp(T const value, T const lower, T const upper)
@@ -16,15 +13,15 @@ static inline T clamp(T const value, T const lower, T const upper)
 }
 
 Map::Map(MapType const& type, uint32_t sizeU, uint32_t sizeV)
-    : MapType(type),
+    : m_type(type),
       m_sizeU(sizeU), m_sizeV(sizeV),
       m_resources(sizeU * sizeV, 0u)
 {}
 
 void Map::setResource(uint32_t const u, uint32_t const v, uint32_t amount)
 {
-    if (amount > m_capacity)
-        amount = m_capacity;
+    if (amount > m_type.capacity)
+        amount = m_type.capacity;
 
     uint32_t& res = m_resources[v * m_sizeU + u];
     if (res != amount)
@@ -53,8 +50,8 @@ void Map::addResource(uint32_t const u, uint32_t const v, uint32_t toAdd)
     uint32_t amount = getResource(u, v);
 
     // Avoid integer overflow
-    if (amount >= Map::MAX_CAPACITY - toAdd)
-        amount = Map::MAX_CAPACITY;
+    if (amount >= Resource::MAX_CAPACITY - toAdd)
+        amount = Resource::MAX_CAPACITY;
     else
         amount += toAdd;
 
@@ -70,7 +67,7 @@ void Map::addResource(uint32_t const u, uint32_t const v, uint32_t const radius,
     while ((remainingToAdd > 0u) && m_coordinates.next(x, y))
     {
         uint32_t amount = getResource(u, v);
-        toAdd = std::min(m_capacity - amount, remainingToAdd);
+        toAdd = std::min(m_type.capacity - amount, remainingToAdd);
         if (toAdd > 0u)
         {
             amount += toAdd;

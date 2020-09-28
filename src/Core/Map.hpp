@@ -1,48 +1,11 @@
 #ifndef MAP_HPP
 #  define MAP_HPP
 
-#  include "Core/Vector.hpp"
 #  include "Core/Unique.hpp"
 #  include "Core/Config.hpp"
 #  include "Core/Rule.hpp"
 #  include "Core/MapCoordinatesInsideRadius.hpp"
-#  include <string>
-#  include <vector>
-#  include <limits>
-#  include <map>
-
-//==========================================================================
-//! \brief Type of Map (water, grass ...).
-//! Class constructed during the parsing of simulation scripts.
-//! Examples:
-//!  - map Water color 0x0000FF capacity 100 rules [ ]
-//!  - map Grass color 0x00FF00 capacity 10 rules [ CreateGrass ]
-//==========================================================================
-class MapType
-{
-public:
-
-    MapType() = default;
-    MapType(MapType const&) = default;
-
-    MapType(std::string const& type)
-        : m_type(type), m_color(0xFFFFFF), m_capacity(MapType::MAX_CAPACITY)
-    {}
-
-    MapType(std::string const& type, uint32_t color, uint32_t capacity,
-         std::initializer_list<RuleMap> list = {})
-        : m_type(type), m_color(color), m_capacity(capacity), m_rules(list)
-    {}
-
-    std::string          m_type;
-    uint32_t             m_color;
-    uint32_t             m_capacity;
-    std::vector<RuleMap> m_rules;
-
-public:
-
-    static const uint32_t MAX_CAPACITY;
-};
+#  include "Core/Vector.hpp"
 
 //==============================================================================
 //! \brief Maps are simple uniform size grids. A Map represents a single type of
@@ -50,7 +13,7 @@ public:
 //! value, desirability ...). Each cell of a Map is a Resource. Units interact
 //! with maps through their footprint. Resources are limited.
 //==============================================================================
-class Map: private MapType
+class Map
 {
 public:
 
@@ -78,7 +41,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    uint32_t getCapacity() const { return m_capacity; }
+    uint32_t getCapacity() const { return m_type.capacity; }
 
     // -------------------------------------------------------------------------
     //! \brief
@@ -111,25 +74,21 @@ public:
     void executeRules();
 
     // -------------------------------------------------------------------------
-    //! \brief
+    //! \brief Getter: return the type of Map.
     // -------------------------------------------------------------------------
-    std::string const& type() const { return m_type; }
+    std::string const& type() const { return m_type.name; }
 
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    uint32_t const& color() const { return m_color; }
-
-    // -------------------------------------------------------------------------
-    //! \brief
-    // -------------------------------------------------------------------------
-    uint32_t const& capacity() const { return m_capacity; }
+    uint32_t const& color() const { return m_type.color; }
 
     uint32_t gridSizeU() const { return m_sizeU; }
     uint32_t gridSizeV() const { return m_sizeV; }
 
 private:
 
+    MapType          const& m_type;
     uint32_t                m_sizeU;
     uint32_t                m_sizeV;
     uint32_t                m_ticks = 0u;

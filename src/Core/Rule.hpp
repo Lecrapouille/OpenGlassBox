@@ -1,7 +1,7 @@
 #ifndef RULE_HPP
 #define RULE_HPP
 
-#include "Core/Resources.hpp"
+#include "Core/Types.hpp"
 
 class City;
 class Unit;
@@ -105,27 +105,6 @@ private:
     std::vector<IRuleCommand*> m_commands;
 };
 
-//==========================================================================
-//! \brief Type of RuleMap. Class constructed during the parsing of simulation
-//! scripts. Examples:
-//!  - map Water remove 10
-//!  - map Grass add 1
-//==========================================================================
-class RuleMapType
-{
-public:
-
-   RuleMapType(std::string const& name)
-        : m_name(name)
-   {}
-
-   std::string m_name;
-   uint32_t m_rate = 1u;
-   bool m_randomTiles = false;
-   uint32_t m_randomTilesPercent = 10u;
-   std::vector<IRuleCommand*> m_commands;
-};
-
 //==============================================================================
 //! \brief
 //==============================================================================
@@ -134,9 +113,9 @@ class RuleMap: public IRule
 public:
 
     RuleMap(RuleMapType const& type)
-        : IRule(type.m_name, type.m_rate, type.m_commands),
-          m_randomTiles(type.m_randomTiles),
-          m_randomTilesPercent(std::min(100u, type.m_randomTilesPercent))
+        : IRule(type.name, type.rate, type.commands),
+          m_randomTiles(type.randomTiles),
+          m_randomTilesPercent(std::min(100u, type.randomTilesPercent))
     {}
 
     //--------------------------------------------------------------------------
@@ -162,28 +141,6 @@ private:
     uint32_t m_randomTilesPercent;
 };
 
-class RuleUnit;
-
-//==========================================================================
-//! \brief Type of RuleMap. Class constructed during the parsing of simulation
-//! scripts. Examples:
-//!  - map Water remove 10
-//!  - map Grass add 1
-//==========================================================================
-class RuleUnitType
-{
-public:
-
-    RuleUnitType(std::string const& name)
-        : m_name(name)
-    {}
-
-    std::string m_name;
-    uint32_t m_rate = 1u;
-    RuleUnit* m_onFail = nullptr;
-    std::vector<IRuleCommand*> m_commands;
-};
-
 //==============================================================================
 //! \brief
 //==============================================================================
@@ -192,8 +149,8 @@ class RuleUnit: public IRule
 public:
 
     RuleUnit(RuleUnitType const& type)
-        : IRule(type.m_name, type.m_rate, type.m_commands),
-          m_onFail(type.m_onFail)
+        : IRule(type.name, type.rate, type.commands),
+          m_onFail(type.onFail)
     {}
 
     virtual bool execute(RuleContext& context) override

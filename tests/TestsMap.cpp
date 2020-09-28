@@ -6,9 +6,11 @@
 #undef protected
 #undef private
 
+#  include "src/Core/Types.hpp"
+
 TEST(TestsCity, Constants)
 {
-    ASSERT_GE(Map::MAX_CAPACITY, 65535);
+    ASSERT_GE(Resource::MAX_CAPACITY, 65535);
     ASSERT_GT(config::GRID_SIZE, 0.0f);
 }
 
@@ -20,9 +22,9 @@ TEST(TestsMap, Constructor)
     Map map(type, GRILL, GRILL + 1u);
 
     ASSERT_STREQ(map.type().c_str(), "petrol");
-    ASSERT_EQ(map.m_color, 0xFFFFAA);
-    ASSERT_EQ(map.m_capacity, 40u);
-    ASSERT_EQ(map.m_rules.size(), 0u);
+    ASSERT_EQ(map.m_type.color, 0xFFFFAA);
+    ASSERT_EQ(map.m_type.capacity, 40u);
+    ASSERT_EQ(map.m_type.rules.size(), 0u);
     ASSERT_EQ(map.m_sizeU, GRILL);
     ASSERT_EQ(map.m_sizeV, GRILL + 1u);
     ASSERT_EQ(map.m_ticks, 0u);
@@ -35,7 +37,7 @@ TEST(TestsMap, setResource)
 
     MapType type("map");
     Map map(type, GRILL, GRILL);
-    ASSERT_EQ(map.m_capacity, Map::MAX_CAPACITY);
+    ASSERT_EQ(map.m_type.capacity, Resource::MAX_CAPACITY);
 
     map.setResource(0u, 0u, 42u);
     ASSERT_EQ(map.getResource(0u, 0u), 42u);
@@ -52,16 +54,16 @@ TEST(TestsMap, setResource)
     map.addResource(0u, 0u, 42u);
     ASSERT_EQ(map.getResource(0u, 0u), 84u);
 
-    map.addResource(0u, 0u, Map::MAX_CAPACITY);
-    ASSERT_EQ(map.getResource(0u, 0u), Map::MAX_CAPACITY);
+    map.addResource(0u, 0u, Resource::MAX_CAPACITY);
+    ASSERT_EQ(map.getResource(0u, 0u), Resource::MAX_CAPACITY);
 
     map.addResource(0u, 0u, 42u);
-    ASSERT_EQ(map.getResource(0u, 0u), Map::MAX_CAPACITY);
+    ASSERT_EQ(map.getResource(0u, 0u), Resource::MAX_CAPACITY);
 
-    map.removeResource(0u, 0u, Map::MAX_CAPACITY);
+    map.removeResource(0u, 0u, Resource::MAX_CAPACITY);
     ASSERT_EQ(map.getResource(0u, 0u), 0u);
 
-    map.removeResource(0u, 0u, Map::MAX_CAPACITY);
+    map.removeResource(0u, 0u, Resource::MAX_CAPACITY);
     ASSERT_EQ(map.getResource(0u, 0u), 0u);
 }
 

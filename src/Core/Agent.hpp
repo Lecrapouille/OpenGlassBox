@@ -1,54 +1,10 @@
 #ifndef AGENT_HPP
 #define AGENT_HPP
 
-#include "Core/Vector.hpp"
-#include "Core/Unit.hpp"
 #include "Core/Path.hpp"
-#include <string>
 
 class City;
-
-//==============================================================================
-//! \brief Type of Agents (people, worker ...).
-//! Class constructed during the parsing of simulation scripts. This class is
-//! shared as read only by several Agent and therefore used as const reference.
-//!
-//! Examples:
-//!  - agent People color 0xFFFF00 speed 10.5
-//!  - agent Worker color 0xFFFFFF speed 10 radius 3
-//==============================================================================
-class AgentType
-{
-public:
-
-    //--------------------------------------------------------------------------
-    //! \brief Copy constructor.
-    //--------------------------------------------------------------------------
-    AgentType(AgentType const&) = default;
-
-    //--------------------------------------------------------------------------
-    //! \brief Empty constructor with default parameters.
-    //--------------------------------------------------------------------------
-    AgentType(std::string const& name_)
-        : name(name_), speed(1.0f), radius(1u), color(0xFFFF00)
-    {}
-
-    //--------------------------------------------------------------------------
-    //! \brief Constructor with the full values to set.
-    //--------------------------------------------------------------------------
-    AgentType(std::string const& name_, float speed_, uint32_t radius_, uint32_t color_)
-        : name(name_), speed(speed_), radius(radius_), color(color_)
-    {}
-
-    //! \brief Name of the Agent (ie. People, Worker ...)
-    std::string name;
-    //! \brief Max velocity on Segments of Path.
-    float       speed;
-    //! \brief Radius action on Maps.
-    uint32_t    radius;
-    //! \brief For Rendering agents.
-    uint32_t    color;
-};
+class Unit;
 
 //==============================================================================
 //! \brief Created by UnitRules. Each Agent has a set of resources and carry
@@ -92,6 +48,12 @@ public:
     //! \brief Return the world position
     //--------------------------------------------------------------------------
     Vector3f const& position() const { return m_position; }
+
+    // -------------------------------------------------------------------------
+    //! \brief Getter: return the type of Agent.
+    // -------------------------------------------------------------------------
+    std::string const& type() const { return m_type.name; }
+
 
 private:
 

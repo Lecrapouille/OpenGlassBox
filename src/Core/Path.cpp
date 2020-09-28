@@ -1,8 +1,6 @@
 #include "Core/Path.hpp"
 #include "Core/Config.hpp"
 #include "Core/Unit.hpp"
-#include "Core/Unique.hpp"
-#include <algorithm>
 
 // =============================================================================
 // NODE
@@ -63,8 +61,8 @@ Segment* Node::getSegmentToNode(Node const& node)
 
 // -----------------------------------------------------------------------------
 Segment::Segment(uint32_t id, SegmentType const& type, Node& node1, Node& node2)
-    : SegmentType(type),
-      m_id(id),
+    : m_id(id),
+      m_type(type),
       m_node1(&node1),
       m_node2(&node2)
 {
@@ -94,8 +92,8 @@ void Segment::changeNode2(Node& newNode2)
 // =============================================================================
 
 // -----------------------------------------------------------------------------
-Path::Path(PathType const& type/*, City& city*/)
-    : PathType(type)
+Path::Path(PathType const& type)
+    : m_type(type)
 {}
 
 // -----------------------------------------------------------------------------
@@ -125,7 +123,7 @@ Node& Path::splitSegment(Segment& segment, float offset)
            + (segment.position2() - segment.position1()) * offset;
     Node& newNode = addNode(wordPosition);
 
-    addSegment(segment, newNode, segment.node2());
+    addSegment(segment.m_type, newNode, segment.node2());
     segment.changeNode2(newNode);
 
     return newNode;

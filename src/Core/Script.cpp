@@ -169,15 +169,14 @@ void Script::parsePaths()
 void Script::parsePath()
 {
     PathType* path = new PathType(nextToken());
-    m_pathTypes[path->m_name] = path;
+    m_pathTypes[path->name] = path;
 
     while (true)
     {
         std::string const& token = nextToken();
         if (token == "color")
         {
-            //path->m_color = toColor(nextToken());
-            nextToken();
+            path->color = toColor(nextToken());
             return ;
         }
         else
@@ -204,14 +203,14 @@ void Script::parseSegments()
 void Script::parseSegment()
 {
     SegmentType* seg = new SegmentType(nextToken());
-    m_segmentTypes[seg->m_name] = seg;
+    m_segmentTypes[seg->name] = seg;
 
     while (true)
     {
         std::string const& token = nextToken();
         if (token == "color")
         {
-            seg->m_color = toColor(nextToken());
+            seg->color = toColor(nextToken());
             return ;
         }
         else
@@ -285,16 +284,16 @@ void Script::parseRuleMap()
             return ;
         }
         else if (token == "rate")
-            type.m_rate = toUint(nextToken());
+            type.rate = toUint(nextToken());
         else if (token == "randomTiles")
-            type.m_randomTiles = toBool(nextToken());
+            type.randomTiles = toBool(nextToken());
         else if (token == "randomTilesPercent")
         {
-            type.m_randomTiles = true;
-            type.m_randomTilesPercent = toUint(nextToken());
+            type.randomTiles = true;
+            type.randomTilesPercent = toUint(nextToken());
         }
         else
-            type.m_commands.push_back(parseCommand(token));
+            type.commands.push_back(parseCommand(token));
     }
 }
 
@@ -312,11 +311,11 @@ void Script::parseRuleUnit()
             return ;
         }
         else if (token == "rate")
-            type.m_rate = toUint(nextToken());
+            type.rate = toUint(nextToken());
         //else if (token == "onFail") // TODO
         //{}
         else
-            type.m_commands.push_back(parseCommand(token));
+            type.commands.push_back(parseCommand(token));
     }
 }
 
@@ -378,16 +377,16 @@ IRuleCommand* Script::parseCommand(std::string const& token)
         {
             //TODO
             //command = new RuleCommandAdd();
-            //command->m_target = target;
-            //command->m_amount =
+            //command->target = target;
+            //command->amount =
             toUint(nextToken());
         }
         else if (cmd == "remove")
         {
             //TODO
             //command = new RuleCommandRemove();
-            //command->m_target = target;
-            //command->m_amount =
+            //command->target = target;
+            //command->amount =
             toUint(nextToken());
         }
         else if (cmd == "greater")
@@ -431,18 +430,18 @@ void Script::parseMaps()
 void Script::parseMap()
 {
     MapType* map = new MapType(nextToken());
-    m_mapTypes[map->m_type] = map;
+    m_mapTypes[map->name] = map;
 
     while (true)
     {
         std::string const& token = nextToken();
         if (token == "color")
-            map->m_color = toColor(nextToken());
+            map->color = toColor(nextToken());
         else if (token == "capacity")
-            map->m_capacity = toUint(nextToken());
+            map->capacity = toUint(nextToken());
         else if (token == "rules")
         {
-            parseRuleArray(map->m_rules);
+            parseRuleArray(map->rules);
             return ;
         }
     }
@@ -465,7 +464,7 @@ void Script::parseStringArray(std::vector<std::string>& vec)
     }
 }
 
-void Script::parseRuleArray(std::vector<RuleMap>& rules)
+void Script::parseRuleArray(std::vector<RuleMap*>& rules)
 {
     while (true)
     {

@@ -1,18 +1,13 @@
 #ifndef CITY_HPP
 #  define CITY_HPP
 
-#  include "Core/Resources.hpp"
-#  include "Core/Vector.hpp"
 #  include "Core/Unit.hpp"
 #  include "Core/Agent.hpp"
 #  include "Core/Map.hpp"
-#  include <map>
-#  include <string>
-#  include <vector>
+#  include "Core/Path.hpp"
 
 class Path;
 class Node;
-class Resources;
 
 //==============================================================================
 //! \brief Class holding everything that makes up a city.

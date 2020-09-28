@@ -1,16 +1,12 @@
 #ifndef PATH_HPP
 #  define PATH_HPP
 
+#  include "Core/Types.hpp"
 #  include "Core/Vector.hpp"
 #  include "Core/Unique.hpp"
 #  include <deque>
-#  include <vector>
-#  include <cstdint>
-#  include <string>
-#  include <memory>
 #  include <map>
 
-class Node;
 class Segment;
 class Path;
 class Unit;
@@ -126,36 +122,12 @@ private:
 using NodePtr = std::unique_ptr<Node>;
 using Nodes = std::deque<NodePtr>;
 
-//==========================================================================
-//! \brief Type of Segments (people, worker ...).
-//! Class constructed during the parsing of simulation scripts.
-//! Examples:
-//!  - segment Dirt color 0xAAAAAA
-//==========================================================================
-class SegmentType
-{
-public:
-
-    SegmentType(SegmentType const&) = default;
-
-    SegmentType(std::string const& name, uint32_t color)
-        : m_name(name), m_color(color)
-    {}
-
-    SegmentType(std::string const& name)
-        : m_name(name), m_color(0xFFFFFF)
-    {}
-
-    std::string m_name;
-    uint32_t    m_color;
-};
-
 // =============================================================================
 //! \brief Class defining the segment of a Path. A segment is defined by two
 //! Nodes and the Path owning it. Segment is the locomotion for Agents carrying
 //! Resources.
 // =============================================================================
-class Segment: private SegmentType
+class Segment
 {
     friend Node;
     friend Path;
@@ -208,14 +180,14 @@ public:
     float length() const { return m_length; }
 
     // -------------------------------------------------------------------------
-    //! \brief
+    //! \brief Getter: return the type of Segment.
     // -------------------------------------------------------------------------
-    std::string const& name() const { return m_name; }
+    std::string const& type() const { return m_type.name; }
 
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    uint32_t color() const { return m_color; }
+    uint32_t color() const { return m_type.color; }
 
 private:
 
@@ -224,48 +196,26 @@ private:
 private:
 
     //! \brief Unique identifier
-    uint32_t             m_id;
+    uint32_t           m_id;
+    //! \brief
+    SegmentType const& m_type;
     //! \brief First vertex
-    Node                *m_node1 = nullptr;
+    Node              *m_node1 = nullptr;
     //! \brief Second vertex
-    Node                *m_node2 = nullptr;
+    Node              *m_node2 = nullptr;
     //! \brief Cache the computation of the length
-    float                m_length = 0.0f;
+    float              m_length = 0.0f;
 };
 
 using SegmentPtr = std::unique_ptr<Segment>;
 using Segments = std::deque<SegmentPtr>;
-
-//==========================================================================
-//! \brief Type of Segments (people, worker ...).
-//! Class constructed during the parsing of simulation scripts.
-//! Examples:
-//!  - path Road color 0xAAAAAA
-//==========================================================================
-class PathType
-{
-public:
-
-    PathType(PathType const&) = default;
-
-    //PathType(std::string const& name, uint32_t color)
-    //    : m_name(name), m_color(color)
-    //{}
-
-    PathType(std::string const& name)
-        : m_name(name)
-    {}
-
-    std::string m_name;
-    //uint32_t  m_color;
-};
 
 // =============================================================================
 //! \brief Nodes connected by Segments make up Paths make up Path Sets.
 //! Curvy roads, power lines, water pipes, flight paths ...
 //! Typically player created.
 // =============================================================================
-class Path: private PathType
+class Path
 {
 public:
 
@@ -273,7 +223,7 @@ public:
     //! \brief Empty Path: no nodes, no segments.
     //! \param
     // -------------------------------------------------------------------------
-    Path(PathType const& type/*, City& city*/);
+    Path(PathType const& type);
 
     // -------------------------------------------------------------------------
     //! \brief Create and store a new node given its world position.
@@ -304,14 +254,9 @@ public:
     Node& splitSegment(Segment& segment, float offset);
 
     // -------------------------------------------------------------------------
-    //! \brief Return the unique identifier
+    //! \brief Getter: return the type of Path.
     // -------------------------------------------------------------------------
-    std::string const& name() const { return m_name; }
-
-    // -------------------------------------------------------------------------
-    //! \brief Return the owner city.
-    // -------------------------------------------------------------------------
-    //City& city() const { return m_city; }
+    std::string const& type() const { return m_type.name; }
 
     // -------------------------------------------------------------------------
     //! \brief Return the list of nodes.
@@ -325,18 +270,17 @@ public:
 
 private:
 
-    //! \brief The reference to the City owning this Path instance.
-    //City &m_city;
+    PathType const& m_type;
     //! \brief Holde nodes. Do not use vector<> to avoid references to be
     //! invalidated.
-    Nodes m_nodes;
+    Nodes           m_nodes;
     //! \brief Holde segments. Do not use vector<> to avoid references to be
     //! invalidated.
-    Segments m_segments;
+    Segments       m_segments;
     //! \brief
-    uint32_t m_nextNodeId = 0u;
+    uint32_t       m_nextNodeId = 0u;
     //! \brief
-    uint32_t m_nextSegmentId = 0u;
+    uint32_t       m_nextSegmentId = 0u;
 };
 
 using Paths = std::map<std::string, std::unique_ptr<Path>>;

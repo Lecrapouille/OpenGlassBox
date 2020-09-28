@@ -1,6 +1,5 @@
 #include "Core/Agent.hpp"
 #include "Core/City.hpp"
-#include "Core/Config.hpp"
 #include <iostream>
 
 //------------------------------------------------------------------------------

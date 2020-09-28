@@ -2,11 +2,9 @@
 #  define SCRIPT_HPP
 
 #  include "Core/City.hpp"
-#  include "Core/Path.hpp"
 #  include "Core/RuleValue.hpp"
 #  include "Core/RuleCommand.hpp"
 #  include <fstream>
-#  include <string>
 
 class Script
 {
@@ -78,7 +76,7 @@ private:
     void parseRuleMap();
     void parseRuleUnit();
     void parseStringArray(std::vector<std::string>& vec);
-    void parseRuleArray(std::vector<RuleMap>& rules);
+    void parseRuleArray(std::vector<RuleMap*>& rules);
     IRuleCommand* parseCommand(std::string const& token);
 
     template<class T>

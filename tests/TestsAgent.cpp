@@ -12,14 +12,18 @@ TEST(TestsAgent, Constructor)
 {
     City city("Paris", 4, 4);
     Resources r; r.addResource("oil", 5u);
-    UnitType type = { "Home", 0xFF00FF, 2u, r, {}, {} };
+    UnitType type("Home");
+    type.color = 0xFF00FF;
+    type.radius = 2u;
+    type.resources = r;
     Node n(42u, Vector3f(1.0f, 2.0f, 3.0f));
     Unit u(type, n, city);
-    AgentType c(5.0f, 3u, 42u);
+    AgentType c("Agent", 5.0f, 3u, 42u);
     Agent a(43u, c, u, r, "target");
 
     ASSERT_EQ(a.m_id, 43u);
-    ASSERT_EQ(&(a.m_owner), &u);
+    ASSERT_STREQ(a.m_type.name.c_str(), "Agent");
+    //ASSERT_EQ(&(a.m_owner), &u);
     ASSERT_EQ(a.m_resources.m_bin.size(), 1u);
     ASSERT_EQ(a.m_resources.getAmount("oil"), 5u);
     //FIXME ASSERT_EQ(a.m_searchTarget, "target");
@@ -32,9 +36,9 @@ TEST(TestsAgent, Constructor)
     ASSERT_EQ(a.m_lastNode, &(u.m_node));
     ASSERT_EQ(&n, &(u.m_node));
     ASSERT_EQ(a.m_nextNode, nullptr);
-    ASSERT_EQ(a.m_speed, 5.0f);
-    ASSERT_EQ(a.m_radius, 3.0f);
-    ASSERT_EQ(a.m_color, 42u);
+    ASSERT_EQ(a.m_type.speed, 5.0f);
+    ASSERT_EQ(a.m_type.radius, 3.0f);
+    ASSERT_EQ(a.m_type.color, 42u);
 }
 
 TEST(TestsAgent, Move)
@@ -42,7 +46,7 @@ TEST(TestsAgent, Move)
     const uint32_t GRILL_SIZE = 32u;
     City city("Paris", GRILL_SIZE, GRILL_SIZE);
 
-    PathType type1("route"/*, 0xAAAAAA*/);
+    PathType type1("route", 0xAAAAAA);
     Path& p = city.addPath(type1);
     Node& n1 = p.addNode(Vector3f(1.0f, 2.0f, 3.0f));
     Node& n2 = p.addNode(Vector3f(3.0f, 2.0f, 3.0f));
@@ -50,9 +54,12 @@ TEST(TestsAgent, Move)
     Segment& s1 = p.addSegment(type2, n1, n2);
 
     Resources r;
-    UnitType type = { "Home", 0xFF00FF, 1u, r, {}, {} };
+    UnitType type("Home");
+    type.color = 0xFF00FF;
+    type.radius = 1u;
+    type.resources = r;
     Unit u(type, n1, city);
-    AgentType c(5.0f, 3u, 42u);
+    AgentType c("Worker", 5.0f, 3u, 42u);
     Agent a(43u, c, u, r, "???");
 
     ASSERT_EQ(a.m_position.x, 1.0f);

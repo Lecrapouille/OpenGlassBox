@@ -1,9 +1,4 @@
 #include "Core/City.hpp"
-#include "Core/Map.hpp"
-#include "Core/Unit.hpp"
-#include "Core/Path.hpp"
-#include "Core/Agent.hpp"
-#include "Core/Config.hpp"
 
 City::City(std::string const& name, uint32_t gridSizeU, uint32_t gridSizeV)
     : m_name(name),
@@ -52,7 +47,7 @@ Map& City::addMap(MapType& type)
 {
     auto ptr = std::make_unique<Map>(type, m_gridSizeU, m_gridSizeV);
     Map& map = *ptr;
-    m_maps[type.m_type] = std::move(ptr);
+    m_maps[type.name] = std::move(ptr);
     return map;
 }
 
@@ -63,8 +58,8 @@ Map& City::getMap(std::string const& id)
 
 Path& City::addPath(PathType& type)
 {
-    m_paths[type.m_name] = std::make_unique<Path>(type);
-    return *m_paths[type.m_name];
+    m_paths[type.name] = std::make_unique<Path>(type);
+    return *m_paths[type.name];
 }
 
 Path& City::getPath(std::string const& id)
