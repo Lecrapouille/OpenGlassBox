@@ -22,7 +22,7 @@ public:
     //! \brief
     //! TODO const& type ?
     // -------------------------------------------------------------------------
-    Unit(UnitType& type, Node& node, City& city);
+    Unit(UnitType const& type, Node& node, City& city);
 
     // -------------------------------------------------------------------------
     //! \brief
@@ -43,7 +43,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    inline Resources& resources() { return m_type.resources; }
+    inline Resources& resources() { return m_resources; }
 
     // -------------------------------------------------------------------------
     //! \brief
@@ -67,8 +67,9 @@ public:
 
 private:
 
-    UnitType       &m_type;
-    Node           &m_node;
+    UnitType const& m_type;
+    Node          & m_node;
+    Resources       m_resources;
     RuleContext     m_context;
     uint32_t        m_ticks = 0u;
 };

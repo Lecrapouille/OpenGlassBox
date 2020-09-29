@@ -11,34 +11,36 @@
 TEST(TestsAgent, Constructor)
 {
     City city("Paris", 4, 4);
-    Resources r; r.addResource("oil", 5u);
-    UnitType type("Home");
-    type.color = 0xFF00FF;
-    type.radius = 2u;
-    type.resources = r;
+    UnitType unit_type("Home");
+    unit_type.color = 0xFF00FF;
+    unit_type.radius = 2u;
+    unit_type.resources.addResource("oil", 5u);
     Node n(42u, Vector3f(1.0f, 2.0f, 3.0f));
-    Unit u(type, n, city);
-    AgentType c("Agent", 5.0f, 3u, 42u);
-    Agent a(43u, c, u, r, "target");
+    Unit u(unit_type, n, city);
+    ASSERT_EQ(&n, &(u.m_node));
 
+    // Create a new Agent
+    AgentType agent_type("Agent", 5.0f, 3u, 42u);
+    Resources r; r.addResource("oil", 5u);
+    Agent a(43u, agent_type, u, r, "target");
+
+    // Check initial values (member variables).
     ASSERT_EQ(a.m_id, 43u);
     ASSERT_STREQ(a.m_type.name.c_str(), "Agent");
-    //ASSERT_EQ(&(a.m_owner), &u);
+    ASSERT_EQ(a.m_type.speed, 5.0f);
+    ASSERT_EQ(a.m_type.radius, 3.0f);
+    ASSERT_EQ(a.m_type.color, 42u);
+    ASSERT_STREQ(a.m_searchTarget.c_str(), "target");
     ASSERT_EQ(a.m_resources.m_bin.size(), 1u);
     ASSERT_EQ(a.m_resources.getAmount("oil"), 5u);
-    //FIXME ASSERT_EQ(a.m_searchTarget, "target");
-    ASSERT_EQ(a.m_position.x, 1.0f);
-    ASSERT_EQ(a.m_position.y, 2.0f);
-    ASSERT_EQ(a.m_position.z, 3.0f);
+    ASSERT_EQ(int32_t(a.m_position.x), 1);
+    ASSERT_EQ(int32_t(a.m_position.y), 2);
+    ASSERT_EQ(int32_t(a.m_position.z), 3);
     ASSERT_EQ(a.m_offset, 0.0f);
     ASSERT_EQ(a.m_currentWay, nullptr); // FIXME temporary
     ASSERT_EQ(a.m_lastNode, &n);
     ASSERT_EQ(a.m_lastNode, &(u.m_node));
-    ASSERT_EQ(&n, &(u.m_node));
     ASSERT_EQ(a.m_nextNode, nullptr);
-    ASSERT_EQ(a.m_type.speed, 5.0f);
-    ASSERT_EQ(a.m_type.radius, 3.0f);
-    ASSERT_EQ(a.m_type.color, 42u);
 }
 
 TEST(TestsAgent, Move)

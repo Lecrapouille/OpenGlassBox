@@ -9,7 +9,7 @@ Agent::Agent(uint32_t id, AgentType const& type, Unit& owner,
       m_type(type),
       m_searchTarget(searchTarget),
       m_resources(resources),
-      m_lastNode(&(owner.node())) // FIXME should be linked at least one segment
+      m_lastNode(&(owner.node())) // FIXME Unit's node should be linked at least one segment
 {
     findNextNode();
     updatePosition();
@@ -109,10 +109,17 @@ void Agent::findNextNode()
 {
     // Ill formed agent: abord
     if ((m_lastNode == nullptr) || (m_lastNode->ways().size() == 0u))
+    {
+        std::cerr << "Ill formed agent " << m_id << std::endl;
         return ;
+    }
 
-    m_nextNode = &(m_lastNode->ways()[0]->to());
-    //nullptr; // TODO m_lastNode->path().findNextNode(m_lastNode, m_searchTarget, m_resources);
+    // TODO Original call m_lastNode->path().findNextNode(m_lastNode,
+    // m_searchTarget, m_resources); but this is method shall not be placed
+    // inside Node but in Dijkstra class.  And Agent on creation should have a
+    // target path (set of nodes) for going to the destination (short path) and
+    // only adapt the path on Nodes depending on the traffic jam.
+    m_nextNode = &(m_lastNode->ways()[rand() % m_lastNode->ways().size()]->to());
 
     if (m_nextNode != nullptr)
     {
@@ -134,23 +141,18 @@ void Agent::findNextNode()
 //------------------------------------------------------------------------------
 bool Agent::unloadResources()
 {
-    std::vector<Unit*>& units = m_lastNode->units();
-    size_t i = units.size();
-    while (i--)
-    {
-        if (units[i]->accepts(m_searchTarget, m_resources))
-        {
-            m_resources.transferResourcesTo(units[i]->resources());
-        }
-    }
-
+    Unit* unit = searchUnit();
+    if (unit != nullptr)
+        m_resources.transferResourcesTo(unit->resources());
     return m_resources.isEmpty();
 }
 
 //------------------------------------------------------------------------------
-// TODO
-/*Unit* Agent::searchUnit()
+Unit* Agent::searchUnit()
 {
+    if (m_lastNode == nullptr)
+        return nullptr;
+
     std::vector<Unit*>& units = m_lastNode->units();
     size_t i = units.size();
     while (i--)
@@ -163,4 +165,3 @@ bool Agent::unloadResources()
 
     return nullptr;
 }
-*/

@@ -15,7 +15,7 @@ public:
     Simulation(uint32_t gridSizeX = 32u, uint32_t gridSizeY = 32u);
     void load(std::string const& file);
     void update(float const deltaTime);
-    City& addCity(std::string const& id);
+    City& addCity(std::string const& id, Vector3f position);
     City& getCity(std::string const& id);
 
 private:

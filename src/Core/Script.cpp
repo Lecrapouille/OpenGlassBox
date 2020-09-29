@@ -1,6 +1,7 @@
 #include "Script.hpp"
 #include <iostream>
 #include <stdexcept>
+#include <cstring>
 
 static uint32_t toUint(std::string const& word)
 {
@@ -29,8 +30,11 @@ static bool toBool(std::string const& word)
 Script::Script(std::string const& filename)
     : m_file(filename)
 {
+    std::cout << "Parsing script '" << filename << "'" << std::endl;
     if (!m_file)
     {
+        std::cerr << "Failed opening '" << filename << "' Reason '"
+                  << strerror(errno) << "'" << std::endl;
         m_success = false;
         return ;
     }
@@ -39,6 +43,7 @@ Script::Script(std::string const& filename)
     {
         parseScript();
         m_success = true;
+        std::cout << "  done" << std::endl;
     }
     catch (std::exception &e)
     {
@@ -55,7 +60,8 @@ std::string const& Script::nextToken()
 {
     if (m_file >> m_token)
     {
-        std::cout << "I read '" << m_token << "'" << std::endl;
+        // Uncomment for debug
+        // std::cout << "I read '" << m_token << "'" << std::endl;
     }
     else
     {
@@ -106,7 +112,6 @@ void Script::parseResources()
 
 void Script::parseResource()
 {
-    std::cout << "parseResource\n";
     std::string const& name = nextToken();
     m_resources[name] = new Resource(name);
 }

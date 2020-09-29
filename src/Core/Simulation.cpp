@@ -24,9 +24,9 @@ void Simulation::update(float const deltaTime)
     }
 }
 
-City& Simulation::addCity(std::string const& id)
+City& Simulation::addCity(std::string const& id, Vector3f position)
 {
-    auto ptr = std::make_unique<City>(id, m_gridSizeX, m_gridSizeY);
+    auto ptr = std::make_unique<City>(id, position, m_gridSizeX, m_gridSizeY);
     City& city = *ptr;
     m_cities[id] = std::move(ptr);
     return city;

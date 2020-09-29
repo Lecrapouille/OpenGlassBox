@@ -20,7 +20,9 @@ public:
     // -------------------------------------------------------------------------
     //! \brief Create a empty city of a grid of gridSizeU x gridSizeV cells.
     // -------------------------------------------------------------------------
+    City(std::string const& name, Vector3f position, uint32_t gridSizeU, uint32_t gridSizeV);
     City(std::string const& name, uint32_t gridSizeU, uint32_t gridSizeV);
+    City(std::string const& name);
 
     // -------------------------------------------------------------------------
     //! \brief Move agents, execute rule scripts of maps, execute rule scripts
@@ -32,7 +34,7 @@ public:
     //! \brief Create and store a new Map.
     //! \note Remove the map of the same name if the identifier is already known.
     // -------------------------------------------------------------------------
-    Map& addMap(MapType& type);
+    Map& addMap(MapType const& type);
 
     // -------------------------------------------------------------------------
     //! \brief Get the reference of the Map or throw an exception if the Map
@@ -44,7 +46,7 @@ public:
     //! \brief Create and store a new Path. Remove the map of the same name if
     //! the identifier is already known.
     // -------------------------------------------------------------------------
-    Path& addPath(PathType& type);
+    Path& addPath(PathType const& type);
 
     // -------------------------------------------------------------------------
     //! \brief Get the reference of the Path or throw an exception if the Path
@@ -55,7 +57,13 @@ public:
     // -------------------------------------------------------------------------
     //! \brief Create and store a new Unit.
     // -------------------------------------------------------------------------
-    Unit& addUnit(UnitType& type, Node& node);
+    Unit& addUnit(UnitType const& type, Node& node);
+
+    // -------------------------------------------------------------------------
+    //! \brief Create a new node splitting a Way into two ways and attach an
+    //! Unit to this new node.
+    // -------------------------------------------------------------------------
+    Unit& addUnit(UnitType const& type, Path& path, Way& way, float offset);
 
     // -------------------------------------------------------------------------
     //! \brief
@@ -70,7 +78,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    Agent& addAgent(AgentType& type, Unit& owner, Resources const& resources,
+    Agent& addAgent(AgentType const& type, Unit& owner, Resources const& resources,
                     std::string const& searchTarget);
 
     // -------------------------------------------------------------------------
