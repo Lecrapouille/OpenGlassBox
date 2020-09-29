@@ -47,10 +47,10 @@ TEST(TestsScript, Constructor)
         ASSERT_STREQ(p1.name.c_str(), "Road");
     }
 
-    // -- Path Segment types
+    // -- Path Way types
     {
         ASSERT_EQ(script.m_segmentTypes.size(), 1u);
-        SegmentType const& s1 = script.getSegmentType("Dirt");
+        WayType const& s1 = script.getWayType("Dirt");
         ASSERT_STREQ(s1.name.c_str(), "Dirt");
         ASSERT_EQ(s1.color, 0xAAAAAA);
     }

@@ -78,7 +78,7 @@ void Script::parseScript()
         else if (token == "paths")
             parsePaths();
         else if (token == "segments")
-            parseSegments();
+            parseWays();
         else if (token == "agents")
             parseAgents();
         else if (token == "units")
@@ -186,7 +186,7 @@ void Script::parsePath()
     }
 }
 
-void Script::parseSegments()
+void Script::parseWays()
 {
     while (true)
     {
@@ -194,15 +194,15 @@ void Script::parseSegments()
         if (token == "end")
             return ;
         else if (token == "segment")
-            parseSegment();
+            parseWay();
         else
-            throw std::runtime_error("parseSegments()");
+            throw std::runtime_error("parseWays()");
     }
 }
 
-void Script::parseSegment()
+void Script::parseWay()
 {
-    SegmentType* seg = new SegmentType(nextToken());
+    WayType* seg = new WayType(nextToken());
     m_segmentTypes[seg->name] = seg;
 
     while (true)
@@ -215,7 +215,7 @@ void Script::parseSegment()
         }
         else
         {
-            throw std::runtime_error("parseSegment()");
+            throw std::runtime_error("parseWay()");
         }
     }
 }

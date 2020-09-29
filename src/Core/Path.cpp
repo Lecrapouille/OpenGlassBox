@@ -39,16 +39,26 @@ void Node::getMapPosition(uint32_t gridSizeU, uint32_t gridSizeV, uint32_t& u, u
 }
 
 // -----------------------------------------------------------------------------
-// FIXME: raw pointer from unique_ptr
-Segment* Node::getSegmentToNode(Node const& node)
+void Node::setPosition(Vector3f const position)
 {
-    size_t i = m_segments.size();
+    m_position = position;
+    for (auto& it: m_ways)
+    {
+        it->updateLength();
+    }
+}
+
+// -----------------------------------------------------------------------------
+// FIXME: raw pointer from unique_ptr
+Way* Node::getWayToNode(Node const& node)
+{
+    size_t i = m_ways.size();
     while (i--)
     {
-        if (((m_segments[i]->m_node1 == &node) && (m_segments[i]->m_node2 == this)) ||
-            ((m_segments[i]->m_node2 == &node) && (m_segments[i]->m_node1 == this)))
+        if (((m_ways[i]->m_from == &node) && (m_ways[i]->m_to == this)) ||
+            ((m_ways[i]->m_to == &node) && (m_ways[i]->m_from == this)))
         {
-            return m_segments[i];
+            return m_ways[i];
         }
     }
 
@@ -60,30 +70,30 @@ Segment* Node::getSegmentToNode(Node const& node)
 // =============================================================================
 
 // -----------------------------------------------------------------------------
-Segment::Segment(uint32_t id, SegmentType const& type, Node& node1, Node& node2)
+Way::Way(uint32_t id, WayType const& type, Node& node1, Node& node2)
     : m_id(id),
       m_type(type),
-      m_node1(&node1),
-      m_node2(&node2)
+      m_from(&node1),
+      m_to(&node2)
 {
-    m_node1->m_segments.push_back(this);
-    m_node2->m_segments.push_back(this);
+    m_from->m_ways.push_back(this);
+    m_to->m_ways.push_back(this);
     updateLength();
 }
 
 // -----------------------------------------------------------------------------
-void Segment::updateLength()
+void Way::updateLength()
 {
-    m_length = (m_node2->position() - m_node1->position()).length();
+    m_length = (m_to->position() - m_from->position()).length();
 }
 
 // -----------------------------------------------------------------------------
-void Segment::changeNode2(Node& newNode2)
+void Way::changeNode2(Node& newNode2)
 {
-    auto& segs = m_node2->m_segments;
+    auto& segs = m_to->m_ways;
     segs.erase(std::remove(segs.begin(), segs.end(), this));
-    m_node2 = &newNode2;
-    m_node2->m_segments.push_back(this);
+    m_to = &newNode2;
+    m_to->m_ways.push_back(this);
     updateLength();
 }
 
@@ -105,25 +115,25 @@ Node& Path::addNode(Vector3f const& position)
 
 // -----------------------------------------------------------------------------
 // TODO: replace existing segment or allow multi-graph (== speedway)
-Segment& Path::addSegment(SegmentType const& type, Node& p1, Node& p2)
+Way& Path::addWay(WayType const& type, Node& p1, Node& p2)
 {
-    m_segments.push_back(std::make_unique<Segment>(m_nextSegmentId++, type, p1, p2/*, *this*/));
-    return *m_segments.back();
+    m_ways.push_back(std::make_unique<Way>(m_nextWayId++, type, p1, p2/*, *this*/));
+    return *m_ways.back();
 }
 
 // -----------------------------------------------------------------------------
-Node& Path::splitSegment(Segment& segment, float offset)
+Node& Path::splitWay(Way& segment, float offset)
 {
     if (offset <= 0.0f)
-        return segment.node1();
+        return segment.from();
     else if (offset >= 1.0f)
-        return segment.node2();
+        return segment.to();
 
     Vector3f wordPosition = segment.position1()
            + (segment.position2() - segment.position1()) * offset;
     Node& newNode = addNode(wordPosition);
 
-    addSegment(segment.m_type, newNode, segment.node2());
+    addWay(segment.m_type, newNode, segment.to());
     segment.changeNode2(newNode);
 
     return newNode;

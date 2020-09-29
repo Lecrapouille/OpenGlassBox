@@ -10,10 +10,10 @@ bool GlassBox::onInit()
 
 #if 0
     // TODO m_simulation.load("simulation.fth");
-    // TODO m_simulation.getSegmentType("Dirt")
+    // TODO m_simulation.getWayType("Dirt")
     ResourceType resource_type[3] = { "Water", "Grass", "People" };
     PathType path_type("Road"/*, 0xAAAAAA*/);
-    SegmentType segment_type("Dirt", 0xAAAAAA);
+    WayType segment_type("Dirt", 0xAAAAAA);
     AgentType agent_type[2] = { { "Worker", 0xFFFF00, 10 }, { "People", 0xFFFF00, 10 } };
     Resources r; r.addResource("Water", 10); r.addResource("People", 10);
     UnitType unit_type[2] = { { "Home", 0xFF00FF, r, {}, {} },
@@ -24,11 +24,11 @@ bool GlassBox::onInit()
     Node& n1 = road.addNode(Vector3f(20.0f, 20.0f, 0.0f));
     Node& n2 = road.addNode(Vector3f(50.0f, 50.0f, 0.0f));
     Node& n3 = road.addNode(Vector3f(20.0f, 50.0f, 0.0f));
-    Segment& s1 = road.addSegment(segment_type, n1, n2);
-    Segment& s2 = road.addSegment(segment_type, n2, n3);
-    Segment& s3 = road.addSegment(segment_type, n3, n1);
+    Way& s1 = road.addWay(segment_type, n1, n2);
+    Way& s2 = road.addWay(segment_type, n2, n3);
+    Way& s3 = road.addWay(segment_type, n3, n1);
 
-    // TODO city.AddUnit/*OnSegment*/(m_simulation.getUnitType("Home"), { s1, off=0.66f });
+    // TODO city.AddUnit/*OnWay*/(m_simulation.getUnitType("Home"), { s1, off=0.66f });
     Unit& u1 = city.addUnit(unit_type[0], n1);
     city.addAgent(agent_type[0], u1, r, "work");
 #endif
@@ -61,7 +61,7 @@ void GlassBox::onPaint(SDL_Renderer& renderer, float dt)
     for (auto& path: city.getPaths())
     {
         // Draw roads
-        for (auto& it: path.second->segments()) // TODO rename to getSegments ?
+        for (auto& it: path.second->ways()) // TODO rename to getWays ?
         {
             SDL_SetRenderDrawColor(&renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
             SDL_RenderDrawLine(&renderer,

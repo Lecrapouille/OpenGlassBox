@@ -13,7 +13,7 @@ Agent::Agent(uint32_t id, AgentType const& type, Unit& owner,
 {
     findNextNode();
     updatePosition();
-    if (m_currentSegment == nullptr)
+    if (m_currentWay == nullptr)
     {
         std::cerr << "Ill formed Agent " << id << ": does not belong to any segment"
                   << std::endl;
@@ -42,7 +42,7 @@ void Agent::move(City& city)
     }
     else
     {
-        // Driving on the Segment
+        // Driving on the Way
         moveTowardsNextNode();
     }
 }
@@ -52,9 +52,9 @@ void Agent::moveTowardsNextNode()
 {
     float direction;
 
-    if (m_currentSegment != nullptr)
+    if (m_currentWay != nullptr)
     {
-        if (m_nextNode == &(m_currentSegment->node2()))
+        if (m_nextNode == &(m_currentWay->to()))
         {
             // Moving from node1 to node2
             direction = 1.0f;
@@ -67,13 +67,13 @@ void Agent::moveTowardsNextNode()
 
         m_offset += direction
                     * (m_type.speed / config::TICKS_PER_SECOND)
-                    / m_currentSegment->length();
+                    / m_currentWay->length();
 
         // Reached node1 ?
         if (m_offset < 0.0f)
         {
             m_offset = 0.0f;
-            m_lastNode = &m_currentSegment->node1();
+            m_lastNode = &m_currentWay->from();
             m_nextNode = nullptr;
         }
 
@@ -81,7 +81,7 @@ void Agent::moveTowardsNextNode()
         else if (m_offset > 1.0f)
         {
             m_offset = 1.0f;
-            m_lastNode = &m_currentSegment->node2();
+            m_lastNode = &m_currentWay->to();
             m_nextNode = nullptr;
         }
     }
@@ -92,10 +92,10 @@ void Agent::moveTowardsNextNode()
 //------------------------------------------------------------------------------
 void Agent::updatePosition()
 {
-    if (m_currentSegment != nullptr)
+    if (m_currentWay != nullptr)
     {
-        m_position = m_currentSegment->position1() +
-                     (m_currentSegment->position2() - m_currentSegment->position1())
+        m_position = m_currentWay->position1() +
+                     (m_currentWay->position2() - m_currentWay->position1())
                      * m_offset;
     }
     else
@@ -108,25 +108,25 @@ void Agent::updatePosition()
 void Agent::findNextNode()
 {
     // Ill formed agent: abord
-    if ((m_lastNode == nullptr) || (m_lastNode->segments().size() == 0u))
+    if ((m_lastNode == nullptr) || (m_lastNode->ways().size() == 0u))
         return ;
 
-    m_nextNode = &(m_lastNode->segments()[0]->node2());
+    m_nextNode = &(m_lastNode->ways()[0]->to());
     //nullptr; // TODO m_lastNode->path().findNextNode(m_lastNode, m_searchTarget, m_resources);
 
     if (m_nextNode != nullptr)
     {
-        m_currentSegment = m_lastNode->getSegmentToNode(*m_nextNode);
-        if (m_currentSegment != nullptr)
+        m_currentWay = m_lastNode->getWayToNode(*m_nextNode);
+        if (m_currentWay != nullptr)
         {
-            if (m_lastNode == &m_currentSegment->node1())
+            if (m_lastNode == &m_currentWay->from())
                 m_offset = 0.0f;
             else
                 m_offset = 1.0f;
         }
         else
         {
-            std::cout << "failure: getSegmentToNode" << std::endl;
+            std::cout << "failure: getWayToNode" << std::endl;
         }
     }
 }

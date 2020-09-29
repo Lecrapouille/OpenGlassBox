@@ -7,19 +7,21 @@
 #  include <deque>
 #  include <map>
 
-class Segment;
+class Way;
 class Path;
 class Unit;
 
 // =============================================================================
-//! \brief Class defining the extrimity of a Segment constituing a Path. This
-//! class is not a basic structure holding a vertex position but it holds other
-//! information such as which Path it belongs to, the list of Segments (graph
-//! arcs) and Units refering to it (needed for Agents).
+//! \brief Class defining the extremity of arcs constituing a path. This
+//! class can be seen as nodes of a graph (named Path). This class is not a
+//! basic structure holding position but it holds more information such the list
+//! of neighbor Ways (graph arcs) and Units (houses, buildings) refering to it.
+//! Units consumn and output Agent carrying Resources along a Path and Node are
+//! origin and destination for Agents.
 // =============================================================================
 class Node
 {
-    friend Segment;
+    friend Way;
     friend Path;
 
 public:
@@ -33,9 +35,9 @@ public:
     // -------------------------------------------------------------------------
     //! \brief Initialized internal states.
     //! \param[in] id: a unique id used to reference the node.
-    //! \param[in] position: the world position.
+    //! \param[in] position: the position in the world.
     // -------------------------------------------------------------------------
-    Node(uint32_t id, Vector3f const& position/*, Path& path*/);
+    Node(uint32_t id, Vector3f const& position);
 
     // -------------------------------------------------------------------------
     //! \brief Constructor by copy.
@@ -48,15 +50,9 @@ public:
     void addUnit(Unit& unit);
 
     // -------------------------------------------------------------------------
-    //! \brief A Maps are simple uniform size grids. This method return the
-    //! indices on the map (maps have all the same pavement).
-    // -------------------------------------------------------------------------
-    void getMapPosition(uint32_t gridSizeU, uint32_t gridSizeV, uint32_t& u, uint32_t& v);
-
-    // -------------------------------------------------------------------------
     //! \brief Helper fonction calling
     //! getMapPosition(uint32_t, uint32_t, uint32_t&, uint32_t&) from class T
-    //! that implements gridSizeU() and gridSizeV() ie City, Map.
+    //! that implements gridSizeU() and gridSizeV() ie T can be City or Map.
     // -------------------------------------------------------------------------
     template<class T>
     void getMapPosition(T const& x, uint32_t& u, uint32_t& v)
@@ -66,12 +62,12 @@ public:
 
     // -------------------------------------------------------------------------
     //! \brief Return the first segment in which the given node belongs to.
-    //! \note to get the full list, call segments().
+    //! \note to get the full list, call ways().
     //! \param[in] node: the neighbor node.
     //! \return the address of the segment where extremity points are node and
     //! this instance. Return nullptr if the node was not a neighbor.
     // -------------------------------------------------------------------------
-    Segment* getSegmentToNode(Node const& node);
+    Way* getWayToNode(Node const& node);
 
     // -------------------------------------------------------------------------
     //! \brief Return the unique identifier.
@@ -81,12 +77,17 @@ public:
     // -------------------------------------------------------------------------
     //! \brief Return the world position.
     // -------------------------------------------------------------------------
-    Vector3f& position() { return m_position; }
+    Vector3f const& position() const { return m_position; }
 
     // -------------------------------------------------------------------------
-    //! \brief Const getter of Segments hold by this instance.
+    //! \brief Change the position of the Node.
     // -------------------------------------------------------------------------
-    std::vector<Segment*> const& segments() const { return m_segments; }
+    void setPosition(Vector3f const position);
+
+    // -------------------------------------------------------------------------
+    //! \brief Const getter of Ways hold by this instance.
+    // -------------------------------------------------------------------------
+    std::vector<Way*>& ways() { return m_ways; }
 
     // -------------------------------------------------------------------------
     //! \brief Getter of Units hold by this instance.
@@ -109,12 +110,20 @@ public:
 
 private:
 
+    // -------------------------------------------------------------------------
+    //! \brief A Maps are simple uniform size grids. This method return the
+    //! indices on the map (maps have all the same pavement).
+    // -------------------------------------------------------------------------
+    void getMapPosition(uint32_t gridSizeU, uint32_t gridSizeV, uint32_t& u, uint32_t& v);
+
+private:
+
     //! \brief Unique identifier.
     uint32_t              m_id;
     //! \brief World position.
     Vector3f              m_position;
-    //! \brief Segments owning this node instance.
-    std::vector<Segment*> m_segments;
+    //! \brief Ways owning this node instance.
+    std::vector<Way*>     m_ways;
     //! \brief Units owning this node instance.
     std::vector<Unit*>    m_units;
 };
@@ -123,11 +132,12 @@ using NodePtr = std::unique_ptr<Node>;
 using Nodes = std::deque<NodePtr>;
 
 // =============================================================================
-//! \brief Class defining the segment of a Path. A segment is defined by two
-//! Nodes and the Path owning it. Segment is the locomotion for Agents carrying
-//! Resources.
+//! \brief Class defining a segment inside a Path. An Way can been seen as an
+//! arc on an undirected graph. An Way is the locomotion for Agents carrying
+//! Resources. A way is defined by two Nodes. Arcs have no
+//! direction because we (currently) do not manage one-way traffic.
 // =============================================================================
-class Segment
+class Way
 {
     friend Node;
     friend Path;
@@ -135,93 +145,106 @@ class Segment
 public:
 
     // -------------------------------------------------------------------------
-    //! \brief
+    //! \brief Initialized the state of the Way.
+    //! \param[in] id: unique identifier.
+    //! \param[in] type: const reference of a given type of Way also refered
+    //! internally. The refered instance shall not be deleted before this Way
+    //! instance is destroyed.
+    //! \param[in] from: The node of origin.
+    //! \param[in] to: The node of destination.
     // -------------------------------------------------------------------------
-    Segment(uint32_t id, SegmentType const& type, Node& node1, Node& node2);
+    Way(uint32_t id, WayType const& type, Node& from, Node& to);
 
     // -------------------------------------------------------------------------
-    //! \brief
-    // -------------------------------------------------------------------------
-    Segment() = default;
-
-    // -------------------------------------------------------------------------
-    //! \brief Used by Path::splitSegment()
+    //! \brief Used by Path::splitWay()
     // -------------------------------------------------------------------------
     void changeNode2(Node& newNode2);
 
     // -------------------------------------------------------------------------
-    //! \brief
+    //! \brief Return the unique identifier.
     // -------------------------------------------------------------------------
     uint32_t id() const { return m_id; }
 
     // -------------------------------------------------------------------------
-    //! \brief
+    //! \brief Return the origin node.
     // -------------------------------------------------------------------------
-    Node& node1() { return *m_node1; }
+    Node& from() { return *m_from; }
 
     // -------------------------------------------------------------------------
-    //! \brief
+    //! \brief Return the destination node.
     // -------------------------------------------------------------------------
-    Node& node2() { return *m_node2; }
+    Node& to() { return *m_to; }
 
     // -------------------------------------------------------------------------
-    //! \brief
+    //! \brief Return the position of the origin node.
     // -------------------------------------------------------------------------
-    Vector3f const& position1() const { return m_node1->position(); }
+    Vector3f const& position1() const { return m_from->position(); }
 
     // -------------------------------------------------------------------------
-    //! \brief
+    //! \brief Return the position of the destination node.
     // -------------------------------------------------------------------------
-    Vector3f const& position2() const { return m_node2->position(); }
+    Vector3f const& position2() const { return m_to->position(); }
 
     // -------------------------------------------------------------------------
-    //! \brief
+    //! \brief Return the length of the segment that has been computed by
+    //! updateLength().
     // -------------------------------------------------------------------------
     float length() const { return m_length; }
 
     // -------------------------------------------------------------------------
-    //! \brief Getter: return the type of Segment.
+    //! \brief Getter: return the type of Way.
     // -------------------------------------------------------------------------
     std::string const& type() const { return m_type.name; }
 
     // -------------------------------------------------------------------------
-    //! \brief
+    //! \briefG etter: return the color of the Way.
     // -------------------------------------------------------------------------
     uint32_t color() const { return m_type.color; }
 
 private:
 
+    // -------------------------------------------------------------------------
+    //! \brief Constructor that can only be called by friend class.
+    // -------------------------------------------------------------------------
+    Way() = default;
+
+    // -------------------------------------------------------------------------
+    //! \brief Compute the length of the segment.
+    // -------------------------------------------------------------------------
     void updateLength();
 
 private:
 
-    //! \brief Unique identifier
+    //! \brief Unique identifier.
     uint32_t           m_id;
-    //! \brief
-    SegmentType const& m_type;
-    //! \brief First vertex
-    Node              *m_node1 = nullptr;
-    //! \brief Second vertex
-    Node              *m_node2 = nullptr;
-    //! \brief Cache the computation of the length
+    //! \brief Reference to the type of Way.
+    WayType const&     m_type;
+    //! \brief Node of origin.
+    Node              *m_from = nullptr;
+    //! \brief Node of destination.
+    Node              *m_to = nullptr;
+    //! \brief Cache the computation of the segment length.
     float              m_length = 0.0f;
 };
 
-using SegmentPtr = std::unique_ptr<Segment>;
-using Segments = std::deque<SegmentPtr>;
+using WayPtr = std::unique_ptr<Way>;
+using Ways = std::deque<WayPtr>;
 
 // =============================================================================
-//! \brief Nodes connected by Segments make up Paths make up Path Sets.
-//! Curvy roads, power lines, water pipes, flight paths ...
-//! Typically player created.
+//! \brief Is a Graph, typically player created, holding nodes (Node) and arcs
+//! (Way). Ways, connecting Nodes, make up Path sets in which Agent can carry
+//! Resources along from an Unit to another Unit. Example of Paths: Dirt roads,
+//! highway, one-way road, power lines, water pipes, flight paths ...
 // =============================================================================
 class Path
 {
 public:
 
     // -------------------------------------------------------------------------
-    //! \brief Empty Path: no nodes, no segments.
-    //! \param
+    //! \brief Empty Path: no nodes, no arcs.
+    //! \param[in] type: const reference of a given type of Path also refered
+    //! internally. The refered instance shall not be deleted before this Path
+    //! instance is destroyed.
     // -------------------------------------------------------------------------
     Path(PathType const& type);
 
@@ -237,21 +260,21 @@ public:
     //! \brief Create and store a new segment given two existing nodes.
     //! \return the newly created segment.
     // -------------------------------------------------------------------------
-    Segment& addSegment(SegmentType const& type, Node& p1, Node& p2);
+    Way& addWay(WayType const& type, Node& p1, Node& p2);
 
-    //TODO void RemoveSegment(SimSegment segment)
+    //TODO void RemoveWay(SimWay segment)
 
     // -------------------------------------------------------------------------
-    //! \brief Split a segment into two sub segments linked by a newly created
+    //! \brief Split a segment into two sub arcs linked by a newly created
     //! node (execept if the offset is set to one of the segment extremity)
     //!
     //! \param segment: the segment to split.
-    //! \param offset: [0..1] the normalized length from node1 where to split
+    //! \param offset: [0..1] the normalized length from from where to split
     //! the segment.
     //! \return the newly created position if offset = ]0..1[ or return the
     //! segment vertex if offset is 0 or 1.
     // -------------------------------------------------------------------------
-    Node& splitSegment(Segment& segment, float offset);
+    Node& splitWay(Way& segment, float offset);
 
     // -------------------------------------------------------------------------
     //! \brief Getter: return the type of Path.
@@ -264,9 +287,9 @@ public:
     Nodes const& nodes() const { return m_nodes; }
 
     // -------------------------------------------------------------------------
-    //! \brief Return the list of Segments.
+    //! \brief Return the list of Ways.
     // -------------------------------------------------------------------------
-    Segments const& segments() const { return m_segments; }
+    Ways const& ways() const { return m_ways; }
 
 private:
 
@@ -274,13 +297,13 @@ private:
     //! \brief Holde nodes. Do not use vector<> to avoid references to be
     //! invalidated.
     Nodes           m_nodes;
-    //! \brief Holde segments. Do not use vector<> to avoid references to be
+    //! \brief Hold arcs. Do not use vector<> to avoid references to be
     //! invalidated.
-    Segments       m_segments;
+    Ways           m_ways;
     //! \brief
     uint32_t       m_nextNodeId = 0u;
     //! \brief
-    uint32_t       m_nextSegmentId = 0u;
+    uint32_t       m_nextWayId = 0u;
 };
 
 using Paths = std::map<std::string, std::unique_ptr<Path>>;

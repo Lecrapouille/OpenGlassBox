@@ -24,9 +24,9 @@ public:
         return getT<PathType>(m_pathTypes, id);
     }
 
-    SegmentType const& getSegmentType(std::string const& id) const
+    WayType const& getWayType(std::string const& id) const
     {
-        return getT<SegmentType>(m_segmentTypes, id);
+        return getT<WayType>(m_segmentTypes, id);
     }
 
     AgentType const& getAgentType(std::string const& id) const
@@ -67,8 +67,8 @@ private:
     void parseMap();
     void parsePaths();
     void parsePath();
-    void parseSegments();
-    void parseSegment();
+    void parseWays();
+    void parseWay();
     void parseAgents();
     void parseAgent();
     void parseUnits();
@@ -88,7 +88,7 @@ private:
 private:
     std::map<std::string, Resource*> m_resources;
     std::map<std::string, PathType*> m_pathTypes;
-    std::map<std::string, SegmentType*> m_segmentTypes;
+    std::map<std::string, WayType*> m_segmentTypes;
     std::map<std::string, AgentType*> m_agentTypes;
     std::map<std::string, RuleMap*> m_ruleMaps;
     std::map<std::string, RuleUnit*> m_ruleUnits;

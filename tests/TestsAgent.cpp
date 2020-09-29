@@ -31,7 +31,7 @@ TEST(TestsAgent, Constructor)
     ASSERT_EQ(a.m_position.y, 2.0f);
     ASSERT_EQ(a.m_position.z, 3.0f);
     ASSERT_EQ(a.m_offset, 0.0f);
-    ASSERT_EQ(a.m_currentSegment, nullptr); // FIXME temporary
+    ASSERT_EQ(a.m_currentWay, nullptr); // FIXME temporary
     ASSERT_EQ(a.m_lastNode, &n);
     ASSERT_EQ(a.m_lastNode, &(u.m_node));
     ASSERT_EQ(&n, &(u.m_node));
@@ -50,8 +50,8 @@ TEST(TestsAgent, Move)
     Path& p = city.addPath(type1);
     Node& n1 = p.addNode(Vector3f(1.0f, 2.0f, 3.0f));
     Node& n2 = p.addNode(Vector3f(3.0f, 2.0f, 3.0f));
-    SegmentType type2("Dirt", 0xAAAAAA);
-    Segment& s1 = p.addSegment(type2, n1, n2);
+    WayType type2("Dirt", 0xAAAAAA);
+    Way& s1 = p.addWay(type2, n1, n2);
 
     Resources r;
     UnitType type("Home");
@@ -66,7 +66,7 @@ TEST(TestsAgent, Move)
     ASSERT_EQ(a.m_position.y, 2.0f);
     ASSERT_EQ(a.m_position.z, 3.0f);
     ASSERT_EQ(a.m_offset, 0.0f);
-    ASSERT_EQ(a.m_currentSegment, &s1);
+    ASSERT_EQ(a.m_currentWay, &s1);
     ASSERT_EQ(a.m_lastNode, &n1);
     ASSERT_EQ(a.m_lastNode, &(u.m_node));
     ASSERT_EQ(&n1, &(u.m_node));
@@ -77,7 +77,7 @@ TEST(TestsAgent, Move)
     ASSERT_EQ(a.m_position.y, 2.0f);
     ASSERT_EQ(a.m_position.z, 3.0f);
     ASSERT_GT(a.m_offset, 0.0f);
-    ASSERT_EQ(a.m_currentSegment, &s1);
+    ASSERT_EQ(a.m_currentWay, &s1);
     ASSERT_EQ(a.m_lastNode, &n1);
     ASSERT_EQ(a.m_nextNode, &n2);
 }

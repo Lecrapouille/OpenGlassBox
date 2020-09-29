@@ -98,8 +98,8 @@ TEST(TestsCity, CreateCity)
     Path& p = c.addPath(type1);
     Node& n1 = p.addNode(Vector3f(1.0f, 2.0f, 3.0f));
     Node& n2 = p.addNode(Vector3f(3.0f, 3.0f, 3.0f));
-    SegmentType type2("Dirt", 0xAAAAAA);
-    Segment& s1 = p.addSegment(type2, n1, n2);
+    WayType type2("Dirt", 0xAAAAAA);
+    Way& s1 = p.addWay(type2, n1, n2);
     ASSERT_STREQ(s1.type().c_str(), "Dirt");
     ASSERT_EQ(s1.color(), 0xAAAAAA);
 

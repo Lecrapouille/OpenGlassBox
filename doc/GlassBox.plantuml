@@ -11,8 +11,8 @@ Box -> "*" Map
 Box -> "*" Path
 Box -> "*" Agent
 
-Path --> "*" Segment
-Segment --> "*" Node
+Path --> "*" Way
+Way --> "*" Node
 
 Unit --> "*" Resource
 Unit --> "*" Rule

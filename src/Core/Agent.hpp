@@ -23,7 +23,7 @@ public:
     //! internally. The refered instance shall not be deleted before this Agent
     //! instance is destroyed.
     //! \param[in] owner: Unit owning this agent. This param is used to place
-    //! the Agent on the Node affected by the Unit. FIXME Unit split Segment
+    //! the Agent on the Node affected by the Unit. FIXME Unit split Way
     //! into two sub-segment.
     //! \param[in] resources: Resources that the Agent is carrying.
     //! \param[in] searchTarget: the Unit target (type of destination).
@@ -32,7 +32,7 @@ public:
           std::string const& searchTarget);
 
     //--------------------------------------------------------------------------
-    //! \brief Driving on Segments, transporting resources and unloading them on
+    //! \brief Driving on Ways, transporting resources and unloading them on
     //! destination.
     //--------------------------------------------------------------------------
     void move(City& city);
@@ -85,7 +85,7 @@ private:
     Resources          m_resources;
     Vector3f           m_position;
     float              m_offset = 0.0f;
-    Segment           *m_currentSegment = nullptr;
+    Way           *m_currentWay = nullptr;
     Node              *m_lastNode = nullptr;
     Node              *m_nextNode = nullptr;
 };

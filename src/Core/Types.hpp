@@ -147,7 +147,7 @@ public:
 
     //! \brief Name of the Agent (ie. People, Worker ...)
     std::string name;
-    //! \brief Max velocity on Segments of Path.
+    //! \brief Max velocity on Ways of Path.
     float       speed ;
     //! \brief Radius action on Maps.
     uint32_t    radius;
@@ -156,22 +156,22 @@ public:
 };
 
 //==========================================================================
-//! \brief Type of Segments (people, worker ...).
+//! \brief Type of Ways (people, worker ...).
 //! Class constructed during the parsing of simulation scripts.
 //! Examples:
 //!  - segment Dirt color 0xAAAAAA
 //==========================================================================
-class SegmentType
+class WayType
 {
 public:
 
-    SegmentType(SegmentType const&) = default;
+    WayType(WayType const&) = default;
 
-    SegmentType(std::string const& name_)
+    WayType(std::string const& name_)
         : name(name_), color(0xFFFFFF)
     {}
 
-    SegmentType(std::string const& name, uint32_t color)
+    WayType(std::string const& name, uint32_t color)
         : name(name), color(color)
     {}
 
@@ -180,7 +180,7 @@ public:
 };
 
 //==========================================================================
-//! \brief Type of Segments (people, worker ...).
+//! \brief Type of Ways (people, worker ...).
 //! Class constructed during the parsing of simulation scripts.
 //! Examples:
 //!  - path Road color 0xAAAAAA

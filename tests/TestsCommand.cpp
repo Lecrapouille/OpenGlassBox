@@ -54,7 +54,7 @@ TEST(TestsCommand, Constructor)
     ASSERT_EQ(a.m_position.y, 2.0f);
     ASSERT_EQ(a.m_position.z, 3.0f);
     ASSERT_EQ(a.m_offset, 0.0f);
-    ASSERT_EQ(a.m_currentSegment, nullptr); // FIXME temporary
+    ASSERT_EQ(a.m_currentWay, nullptr); // FIXME temporary
     ASSERT_EQ(a.m_lastNode, &n);
     ASSERT_EQ(a.m_nextNode, nullptr);
 
