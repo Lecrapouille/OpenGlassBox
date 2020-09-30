@@ -1,4 +1,5 @@
-#include "Script.hpp"
+#include "Core/Script.hpp"
+#include "Core/RuleCommand.hpp"
 #include <iostream>
 #include <stdexcept>
 #include <cstring>
@@ -380,34 +381,26 @@ IRuleCommand* Script::parseCommand(std::string const& token)
         std::string const& cmd = nextToken();
         if (cmd == "add")
         {
-            //TODO
-            //command = new RuleCommandAdd();
-            //command->target = target;
-            //command->amount =
-            toUint(nextToken());
+            command = new RuleCommandAdd(*target, toUint(nextToken()));
         }
         else if (cmd == "remove")
         {
-            //TODO
-            //command = new RuleCommandRemove();
-            //command->target = target;
-            //command->amount =
-            toUint(nextToken());
+            command = new RuleCommandRemove(*target, toUint(nextToken()));
         }
         else if (cmd == "greater")
         {
-            //TODO
-            toUint(nextToken());
+            command = new RuleCommandTest(*target, RuleCommandTest::Comparison::GREATER,
+                                          toUint(nextToken()));
         }
         else if (cmd == "less")
         {
-            //TODO
-            toUint(nextToken());
+            command = new RuleCommandTest(*target, RuleCommandTest::Comparison::LESS,
+                                          toUint(nextToken()));
         }
         else if (cmd == "equals")
         {
-            //TODO
-            toUint(nextToken());
+            command = new RuleCommandTest(*target, RuleCommandTest::Comparison::EQUALS,
+                                          toUint(nextToken()));
         }
         else
         {
@@ -446,37 +439,9 @@ void Script::parseMap()
             map->capacity = toUint(nextToken());
         else if (token == "rules")
         {
-            parseRuleArray(map->rules);
+            parseRuleMapArray(map->rules);
             return ;
         }
-    }
-}
-
-void Script::parseStringArray(std::vector<std::string>& vec)
-{
-    {
-        std::string const& token = nextToken();
-        if (token != "[")
-            throw std::runtime_error("parseStringArray()");
-    }
-
-    while (true)
-    {
-        std::string const& token = nextToken();
-        if (token == "]")
-            return ;
-        vec.push_back(token);
-    }
-}
-
-void Script::parseRuleArray(std::vector<RuleMap*>& rules)
-{
-    while (true)
-    {
-        std::string const& token = nextToken();
-        if (token == "]")
-            return ;
-        //TODO unitType
     }
 }
 
@@ -510,8 +475,7 @@ void Script::parseUnit()
         else if (token == "mapRadius")
             unit->radius = toUint(nextToken());
         else if (token == "rules")
-            parseStringArray(todo);
-            // TODO parseRuleArray(unit->rules);
+            parseRuleUnitArray(unit->rules);
         else if (token == "targets")
             parseStringArray(unit->targets);
         else if (token == "caps")
@@ -527,5 +491,56 @@ void Script::parseUnit()
         }
         else
             throw std::runtime_error("parseUnit()");
+    }
+}
+
+void Script::parseStringArray(std::vector<std::string>& vec)
+{
+    {
+        std::string const& token = nextToken();
+        if (token != "[")
+            throw std::runtime_error("parseStringArray()");
+    }
+
+    while (true)
+    {
+        std::string const& token = nextToken();
+        if (token == "]")
+            return ;
+        vec.push_back(token);
+    }
+}
+
+void Script::parseRuleMapArray(std::vector<RuleMap*>& rules)
+{
+    {
+        std::string const& token = nextToken();
+        if (token != "[")
+            throw std::runtime_error("parseRuleMapArray()");
+    }
+
+    while (true)
+    {
+        std::string const& token = nextToken();
+        if (token == "]")
+            return ;
+        rules.push_back(m_ruleMaps[token]);
+    }
+}
+
+void Script::parseRuleUnitArray(std::vector<RuleUnit*>& rules)
+{
+    {
+        std::string const& token = nextToken();
+        if (token != "[")
+            throw std::runtime_error("parseRuleUnitArray()");
+    }
+
+    while (true)
+    {
+        std::string const& token = nextToken();
+        if (token == "]")
+            return ;
+        rules.push_back(m_ruleUnits[token]);
     }
 }

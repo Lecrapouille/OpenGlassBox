@@ -3,8 +3,8 @@
 
 #include "Core/Rule.hpp"
 #include "Core/Agent.hpp"
+#include "Core/RuleValue.hpp"
 
-#if 0
 //==============================================================================
 //! \brief
 //!
@@ -20,7 +20,7 @@ public:
     //--------------------------------------------------------------------------
     //! \brief
     //--------------------------------------------------------------------------
-    RuleCommandAdd(RuleValue const& target, uint32_t amount)
+    RuleCommandAdd(IRuleValue& target, uint32_t amount)
         : m_target(target), m_amount(amount)
     {}
 
@@ -28,7 +28,7 @@ public:
     //! \brief Can be applied if the amount of resource has not reached the
     //! capacity.
     //--------------------------------------------------------------------------
-    virtual bool validate(RuleContext const& context) const override;
+    virtual bool validate(RuleContext& context) override;
 
     //--------------------------------------------------------------------------
     //! \brief Increase the amount of resource of the target.
@@ -37,7 +37,7 @@ public:
 
 private:
 
-    RuleValue m_target;
+    IRuleValue& m_target;
     uint32_t  m_amount;
 };
 
@@ -56,26 +56,63 @@ public:
     //--------------------------------------------------------------------------
     //! \brief
     //--------------------------------------------------------------------------
-    RuleCommandRemove(RuleValue const& target, uint32_t amount)
+    RuleCommandRemove(IRuleValue& target, uint32_t amount)
         : m_target(target), m_amount(amount)
     {}
 
     //--------------------------------------------------------------------------
     //! \brief Can be applied if the amount of resource is enough.
     //--------------------------------------------------------------------------
-    virtual bool validate(RuleContext const& context) const override;
+    virtual bool validate(RuleContext& context) override;
 
     //--------------------------------------------------------------------------
     //! \brief Decrease the amount of resource of the target.
     //--------------------------------------------------------------------------
     virtual void execute(RuleContext& context) override;
 
+private:
+
+    IRuleValue& m_target;
+    uint32_t  m_amount;
+};
+
+//==============================================================================
+//! \brief
+//!
+//! Example:
+//! \code
+//! map Water greater 300
+//! \endcode
+//==============================================================================
+class RuleCommandTest: public IRuleCommand
+{
 public:
 
-    RuleValue target;
-    uint32_t  amount;
+    enum Comparison { EQUALS, GREATER, LESS };
+
+    //--------------------------------------------------------------------------
+    //! \brief
+    //--------------------------------------------------------------------------
+    RuleCommandTest(IRuleValue& target, Comparison comparison, uint32_t amount)
+        : m_target(target), m_amount(amount), m_comparison(comparison)
+    {}
+
+    //--------------------------------------------------------------------------
+    //! \brief Can be applied if the amount of resource is enough.
+    //--------------------------------------------------------------------------
+    virtual bool validate(RuleContext& context) override;
+
+    //--------------------------------------------------------------------------
+    //! \brief Decrease the amount of resource of the target.
+    //--------------------------------------------------------------------------
+    virtual void execute(RuleContext& context) override;
+
+private:
+
+    IRuleValue& m_target;
+    uint32_t  m_amount;
+    Comparison m_comparison;
 };
-#endif
 
 //==============================================================================
 //! \brief Class holding Agent information from a simulation script
@@ -96,7 +133,7 @@ public:
     //--------------------------------------------------------------------------
     //! \brief Always true
     //--------------------------------------------------------------------------
-    virtual bool validate(RuleContext const& context) const override;
+    virtual bool validate(RuleContext& context) override;
 
     //--------------------------------------------------------------------------
     //! \brief Add a new agent in the city

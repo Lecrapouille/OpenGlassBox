@@ -6,7 +6,7 @@ GlassBox::GlassBox()
 
 bool GlassBox::onInit()
 {
-    Script script("/home/qq/MyGitHub/GlassBox/src/Simulation/TestCity2.txt");
+    Script script("data/Simulations/TestCity.txt");
     if (!script)
         return false;
 
@@ -22,6 +22,8 @@ bool GlassBox::onInit()
     Unit& u2 = city.addUnit(script.getUnitType("Home"), road, w1, 0.5f);
     Unit& u3 = city.addUnit(script.getUnitType("Work"), road, w2, 0.5f);
     Unit& u4 = city.addUnit(script.getUnitType("Work"), road, w3, 0.5f);
+    Map& m1 = city.addMap(script.getMapType("Grass"));
+    Map& m2 = city.addMap(script.getMapType("Water"));
 
     return true;
 }

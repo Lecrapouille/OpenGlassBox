@@ -2,6 +2,8 @@
 #define RULE_HPP
 
 #include "Core/Types.hpp"
+#include <cstdlib>
+#include <stdexcept>
 
 class City;
 class Unit;
@@ -41,7 +43,7 @@ public:
     //--------------------------------------------------------------------------
     //! \brief Return true if this command can be applied in the current context.
     //--------------------------------------------------------------------------
-    virtual bool validate(RuleContext const& context) const = 0;
+    virtual bool validate(RuleContext& context) = 0;
 
     //--------------------------------------------------------------------------
     //! \brief Apply the command on the current context.
@@ -69,7 +71,7 @@ public:
     //--------------------------------------------------------------------------
     //! \brief
     //--------------------------------------------------------------------------
-    virtual uint32_t capacity(RuleContext& context)  = 0;
+    virtual uint32_t capacity(RuleContext& context) = 0;
 
     //--------------------------------------------------------------------------
     //! \brief
@@ -89,14 +91,53 @@ class IRule
 {
 public:
 
-    IRule(std::string const& name, uint32_t rate, std::vector<IRuleCommand*> const& commands);
-    virtual ~IRule() = default;
-    virtual bool execute(RuleContext& context);
-    //virtual void setOption(std::string const& option, std::string const& value);
-    std::string const& id() const { return m_id; }
-    uint32_t rate() const { return m_rate; }
-    std::vector<IRuleCommand*> const& commands() const { return m_commands; }
+    //--------------------------------------------------------------------------
+    //! \brief
+    //--------------------------------------------------------------------------
+    IRule(std::string const& name, uint32_t rate, std::vector<IRuleCommand*> const& commands)
+        : m_id(name), m_rate(rate), m_commands(commands)
+    {}
 
+    //--------------------------------------------------------------------------
+    //! \brief
+    //--------------------------------------------------------------------------
+    virtual ~IRule() = default;
+
+    //--------------------------------------------------------------------------
+    //! \brief
+    //--------------------------------------------------------------------------
+    virtual bool execute(RuleContext& context)
+    {
+        size_t i = m_commands.size();
+        while (i--)
+        {
+            if (!m_commands[i]->validate(context))
+                return false;
+        }
+
+        i = m_commands.size();
+        while (i--)
+        {
+            m_commands[i]->execute(context);
+        }
+
+        return true;
+    }
+
+    //--------------------------------------------------------------------------
+    //! \brief
+    //--------------------------------------------------------------------------
+    std::string const& id() const { return m_id; }
+
+    //--------------------------------------------------------------------------
+    //! \brief
+    //--------------------------------------------------------------------------
+    uint32_t rate() const { return m_rate; }
+
+    //--------------------------------------------------------------------------
+    //! \brief
+    //--------------------------------------------------------------------------
+    std::vector<IRuleCommand*> const& commands() const { return m_commands; }
 
 private:
 
@@ -149,8 +190,7 @@ class RuleUnit: public IRule
 public:
 
     RuleUnit(RuleUnitType const& type)
-        : IRule(type.name, type.rate, type.commands),
-          m_onFail(type.onFail)
+        : IRule(type.name, type.rate, type.commands), m_onFail(type.onFail)
     {}
 
     virtual bool execute(RuleContext& context) override

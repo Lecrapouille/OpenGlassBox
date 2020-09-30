@@ -76,7 +76,8 @@ private:
     void parseRuleMap();
     void parseRuleUnit();
     void parseStringArray(std::vector<std::string>& vec);
-    void parseRuleArray(std::vector<RuleMap*>& rules);
+    void parseRuleMapArray(std::vector<RuleMap*>& rules);
+    void parseRuleUnitArray(std::vector<RuleUnit*>& rules);
     IRuleCommand* parseCommand(std::string const& token);
 
     template<class T>

@@ -16,7 +16,7 @@ TEST(TestsScript, DoesNotExist)
 TEST(TestsScript, Constructor)
 {
     // Load a script.
-    Script script("../src/Simulation/TestCity2.txt");
+    Script script("../src/data/Simulations/TestCity.txt");
     ASSERT_EQ(script, true);
 
     // Check states content:

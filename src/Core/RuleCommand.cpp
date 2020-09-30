@@ -1,34 +1,53 @@
 #include "Core/RuleCommand.hpp"
 #include "Core/City.hpp"
 
-#if 0
 //------------------------------------------------------------------------------
-bool RuleCommandAdd::validate(RuleContext const& context) const
+bool RuleCommandAdd::validate(RuleContext& context)
 {
-    return target.get(context) < target.capacity(context);
+    return m_target.get(context) < m_target.capacity(context);
 }
 
 //------------------------------------------------------------------------------
 void RuleCommandAdd::execute(RuleContext& context)
 {
-    target.add(context, amount);
+    m_target.add(context, m_amount);
 }
 
 //------------------------------------------------------------------------------
-bool RuleCommandRemove::validate(RuleContext const& context) const
+bool RuleCommandRemove::validate(RuleContext& context)
 {
-    return target.get(context) >= amount;
+    return m_target.get(context) >= m_amount;
 }
 
 //------------------------------------------------------------------------------
 void RuleCommandRemove::execute(RuleContext& context)
 {
-    target.remove(context, amount);
+    m_target.remove(context, m_amount);
 }
-#endif
 
 //------------------------------------------------------------------------------
-bool RuleCommandAgent::validate(RuleContext const& /*context*/) const
+bool RuleCommandTest::validate(RuleContext& context)
+{
+    switch (m_comparison)
+    {
+    case Comparison::EQUALS:
+        return m_target.get(context) == m_amount;
+    case Comparison::GREATER:
+        return m_target.get(context) > m_amount;
+    case Comparison::LESS:
+    default:
+        return m_target.get(context) < m_amount;
+    }
+}
+
+//------------------------------------------------------------------------------
+void RuleCommandTest::execute(RuleContext& context)
+{
+    // Do nothing
+}
+
+//------------------------------------------------------------------------------
+bool RuleCommandAgent::validate(RuleContext& /*context*/)
 {
     return true;
 }
