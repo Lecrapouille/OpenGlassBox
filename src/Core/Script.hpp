@@ -1,11 +1,22 @@
-#ifndef SCRIPT_HPP
-#  define SCRIPT_HPP
+//-----------------------------------------------------------------------------
+// Copyright (c) 2020 Quentin Quadrat.
+// https://github.com/Lecrapouille/OpenGlassBox
+// Based on https://github.com/federicodangelo/MultiAgentSimulation
+// Distributed under MIT License.
+//-----------------------------------------------------------------------------
+
+#ifndef OPEN_GLASSBOX_SCRIPT_HPP
+#  define OPEN_GLASSBOX_SCRIPT_HPP
 
 #  include "Core/City.hpp"
 #  include "Core/RuleValue.hpp"
 #  include "Core/RuleCommand.hpp"
 #  include <fstream>
 
+//==============================================================================
+//! \brief Parse a simulation script and store internally all types (Unit,
+//! Resource, Map, Path) and simulation rules.
+//==============================================================================
 class Script
 {
 public:

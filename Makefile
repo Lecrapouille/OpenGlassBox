@@ -1,6 +1,6 @@
-PROJECT = GlassBox
+PROJECT = OpenGlassBox
 TARGET = $(PROJECT)
-DESCRIPTION = An Interpretation of SimCity2013 Game Engine
+DESCRIPTION = An Open Source Implementation of the SimCity 2013 Simulation Engine GlassBox
 BUILD_TYPE = release
 
 P := .

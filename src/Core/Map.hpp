@@ -1,5 +1,12 @@
-#ifndef MAP_HPP
-#  define MAP_HPP
+//-----------------------------------------------------------------------------
+// Copyright (c) 2020 Quentin Quadrat.
+// https://github.com/Lecrapouille/OpenGlassBox
+// Based on https://github.com/federicodangelo/MultiAgentSimulation
+// Distributed under MIT License.
+//-----------------------------------------------------------------------------
+
+#ifndef OPEN_GLASSBOX_MAP_HPP
+#  define OPEN_GLASSBOX_MAP_HPP
 
 #  include "Core/Unique.hpp"
 #  include "Core/Config.hpp"

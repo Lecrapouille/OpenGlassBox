@@ -1,7 +1,14 @@
-#ifndef RULEVALUE_HPP
-#define RULEVALUE_HPP
+//-----------------------------------------------------------------------------
+// Copyright (c) 2020 Quentin Quadrat.
+// https://github.com/Lecrapouille/OpenGlassBox
+// Based on https://github.com/federicodangelo/MultiAgentSimulation
+// Distributed under MIT License.
+//-----------------------------------------------------------------------------
 
-#include "Core/Rule.hpp"
+#ifndef OPEN_GLASSBOX_RULE_VALUE_HPP
+#  define OPEN_GLASSBOX_RULE_VALUE_HPP
+
+#  include "Core/Rule.hpp"
 
 //==============================================================================
 //! \brief

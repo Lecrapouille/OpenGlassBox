@@ -1,7 +1,19 @@
+//-----------------------------------------------------------------------------
+// Copyright (c) 2020 Quentin Quadrat.
+// https://github.com/Lecrapouille/OpenGlassBox
+// Based on https://github.com/federicodangelo/MultiAgentSimulation
+// Distributed under MIT License.
+//-----------------------------------------------------------------------------
+
 #ifndef TYPES_HPP
 #  define TYPES_HPP
 
 #  include "Core/Resources.hpp"
+
+//==========================================================================
+//! This file defines all types holding information after the parsing of a
+//! simulation script.
+//==========================================================================
 
 class RuleUnit;
 class RuleMap;

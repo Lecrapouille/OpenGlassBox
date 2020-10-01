@@ -1,7 +1,14 @@
-#ifndef AGENT_HPP
-#define AGENT_HPP
+//-----------------------------------------------------------------------------
+// Copyright (c) 2020 Quentin Quadrat.
+// https://github.com/Lecrapouille/OpenGlassBox
+// Based on https://github.com/federicodangelo/MultiAgentSimulation
+// Distributed under MIT License.
+//-----------------------------------------------------------------------------
 
-#include "Core/Path.hpp"
+#ifndef OPEN_GLASSBOX_AGENT_HPP
+#  define OPEN_GLASSBOX_AGENT_HPP
+
+#  include "Core/Path.hpp"
 
 class City;
 class Unit;

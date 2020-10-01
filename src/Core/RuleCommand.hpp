@@ -1,9 +1,16 @@
-#ifndef RULE_COMMAND_HPP
-#define RULE_COMMAND_HPP
+//-----------------------------------------------------------------------------
+// Copyright (c) 2020 Quentin Quadrat.
+// https://github.com/Lecrapouille/OpenGlassBox
+// Based on https://github.com/federicodangelo/MultiAgentSimulation
+// Distributed under MIT License.
+//-----------------------------------------------------------------------------
 
-#include "Core/Rule.hpp"
-#include "Core/Agent.hpp"
-#include "Core/RuleValue.hpp"
+#ifndef OPEN_GLASSBOX_RULE_COMMAND_HPP
+#  define OPEN_GLASSBOX_RULE_COMMAND_HPP
+
+#  include "Core/Rule.hpp"
+#  include "Core/Agent.hpp"
+#  include "Core/RuleValue.hpp"
 
 //==============================================================================
 //! \brief

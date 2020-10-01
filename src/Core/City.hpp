@@ -1,5 +1,12 @@
-#ifndef CITY_HPP
-#  define CITY_HPP
+//-----------------------------------------------------------------------------
+// Copyright (c) 2020 Quentin Quadrat.
+// https://github.com/Lecrapouille/OpenGlassBox
+// Based on https://github.com/federicodangelo/MultiAgentSimulation
+// Distributed under MIT License.
+//-----------------------------------------------------------------------------
+
+#ifndef OPEN_GLASSBOX_CITY_HPP
+#  define OPEN_GLASSBOX_CITY_HPP
 
 #  include "Core/Unit.hpp"
 #  include "Core/Agent.hpp"

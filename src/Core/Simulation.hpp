@@ -1,12 +1,19 @@
-#ifndef SIMULATION_HPP
-#define SIMULATION_HPP
+//-----------------------------------------------------------------------------
+// Copyright (c) 2020 Quentin Quadrat.
+// https://github.com/Lecrapouille/OpenGlassBox
+// Based on https://github.com/federicodangelo/MultiAgentSimulation
+// Distributed under MIT License.
+//-----------------------------------------------------------------------------
+
+#ifndef OPEN_GLASSBOX_SIMULATION_HPP
+#define OPEN_GLASSBOX_SIMULATION_HPP
 
 #  include "Core/City.hpp"
 
 //==============================================================================
 //! \brief Entry point class managing (add, get, remove) a collection of Cities
 //! and running simulation on them.
-//! In this implementation Cities are not connected.
+//! In this current phase of developement Cities are not connected between them.
 //==============================================================================
 class Simulation
 {

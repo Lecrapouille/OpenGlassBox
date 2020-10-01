@@ -1,5 +1,12 @@
-#ifndef PATH_HPP
-#  define PATH_HPP
+//-----------------------------------------------------------------------------
+// Copyright (c) 2020 Quentin Quadrat.
+// https://github.com/Lecrapouille/OpenGlassBox
+// Based on https://github.com/federicodangelo/MultiAgentSimulation
+// Distributed under MIT License.
+//-----------------------------------------------------------------------------
+
+#ifndef OPEN_GLASSBOX_PATH_HPP
+#  define OPEN_GLASSBOX_PATH_HPP
 
 #  include "Core/Types.hpp"
 #  include "Core/Vector.hpp"

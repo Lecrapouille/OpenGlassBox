@@ -1,9 +1,16 @@
-#ifndef MAIN_HPP
-#define MAIN_HPP
+//-----------------------------------------------------------------------------
+// Copyright (c) 2020 Quentin Quadrat.
+// https://github.com/Lecrapouille/OpenGlassBox
+// Based on https://github.com/federicodangelo/MultiAgentSimulation
+// Distributed under MIT License.
+//-----------------------------------------------------------------------------
 
-#include "Display/Window.hpp"
-#include "Core/Simulation.hpp"
-#include "Core/Script.hpp"
+#ifndef MAIN_HPP
+#  define MAIN_HPP
+
+#  include "Display/Window.hpp"
+#  include "Core/Simulation.hpp"
+#  include "Core/Script.hpp"
 
 class GlassBox: public IGame
 {

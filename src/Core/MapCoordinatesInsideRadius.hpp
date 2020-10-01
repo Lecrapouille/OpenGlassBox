@@ -1,9 +1,20 @@
-#ifndef MAPCOORDINATESINSIDERADIUS_HPP
-#define MAPCOORDINATESINSIDERADIUS_HPP
+//-----------------------------------------------------------------------------
+// Copyright (c) 2020 Quentin Quadrat.
+// https://github.com/Lecrapouille/OpenGlassBox
+// Based on https://github.com/federicodangelo/MultiAgentSimulation
+// Distributed under MIT License.
+//-----------------------------------------------------------------------------
 
-#include <vector>
-#include <map>
+#ifndef OPEN_GLASSBOX_MAPCOORDINATESINSIDERADIUS_HPP
+#  define OPEN_GLASSBOX_MAPCOORDINATESINSIDERADIUS_HPP
 
+#  include <vector>
+#  include <map>
+
+//==============================================================================
+//! \brief Utility class computing cell indices of a Map given a position and a
+//! radius.
+//==============================================================================
 class MapCoordinatesInsideRadius
 {
 public:

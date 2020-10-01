@@ -1,5 +1,12 @@
-#ifndef RESOURCEBIN_HPP
-#  define RESOURCEBIN_HPP
+//-----------------------------------------------------------------------------
+// Copyright (c) 2020 Quentin Quadrat.
+// https://github.com/Lecrapouille/OpenGlassBox
+// Based on https://github.com/federicodangelo/MultiAgentSimulation
+// Distributed under MIT License.
+//-----------------------------------------------------------------------------
+
+#ifndef OPEN_GLASSBOX_RESOURCES_HPP
+#  define OPEN_GLASSBOX_RESOURCES_HPP
 
 #  include "Core/Resource.hpp"
 

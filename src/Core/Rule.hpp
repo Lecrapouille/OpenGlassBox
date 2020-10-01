@@ -1,30 +1,37 @@
-#ifndef RULE_HPP
-#define RULE_HPP
+//-----------------------------------------------------------------------------
+// Copyright (c) 2020 Quentin Quadrat.
+// https://github.com/Lecrapouille/OpenGlassBox
+// Based on https://github.com/federicodangelo/MultiAgentSimulation
+// Distributed under MIT License.
+//-----------------------------------------------------------------------------
 
-#include "Core/Types.hpp"
-#include <cstdlib>
-#include <stdexcept>
+#ifndef OPEN_GLASSBOX_RULE_HPP
+#  define OPEN_GLASSBOX_RULE_HPP
+
+#  include "Core/Types.hpp"
+#  include <cstdlib>
+#  include <stdexcept>
 
 class City;
 class Unit;
 class Resources;
 
 //==============================================================================
-//! \brief
+//! \brief Structure holding all information needed to execute simulation rules.
 //==============================================================================
 struct RuleContext
 {
-    //! \brief
+    //! \brief Non null pointer on the City.
     City* city;
-    //! \brief
+    //! \brief Non null pointer on the Unit.
     Unit* unit;
-    //! \brief Local resources
+    //! \brief Local resources (of Map or Unit).
     Resources* locals;
-    //! \brief Global resources
+    //! \brief Global resources.
     Resources* globals;
-    //! \brief Position on the grid
+    //! \brief Position on the grid of the Map.
     uint32_t u, v;
-    //! \brief Radius action of Map resources
+    //! \brief Radius action on Map resources.
     uint32_t radius;
 };
 

@@ -1,5 +1,12 @@
-#ifndef UNIQUE_HPP
-#  define UNIQUE_HPP
+//-----------------------------------------------------------------------------
+// Copyright (c) 2020 Quentin Quadrat.
+// https://github.com/Lecrapouille/OpenGlassBox
+// Based on https://github.com/federicodangelo/MultiAgentSimulation
+// Distributed under MIT License.
+//-----------------------------------------------------------------------------
+
+#ifndef OPEN_GLASSBOX_UNIQUE_HPP
+#  define OPEN_GLASSBOX_UNIQUE_HPP
 
 #  include <memory>
 
