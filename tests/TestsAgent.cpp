@@ -74,7 +74,7 @@ TEST(TestsAgent, Move)
     ASSERT_EQ(&n1, &(u.m_node));
     ASSERT_EQ(a.m_nextNode, &n2);
 
-    a.move(city);
+    ASSERT_EQ(a.update(city), false); // TODO tester true
     ASSERT_GT(a.m_position.x, 1.0f);
     ASSERT_EQ(a.m_position.y, 2.0f);
     ASSERT_EQ(a.m_position.z, 3.0f);

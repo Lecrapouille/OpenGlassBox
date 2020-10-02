@@ -14,6 +14,8 @@
 #  include "Core/MapCoordinatesInsideRadius.hpp"
 #  include "Core/Vector.hpp"
 
+class City;
+
 //==============================================================================
 //! \brief Maps are simple uniform size grids. A Map represents a single type of
 //! resource in the environment (coal, oil, forest but also air pollution, land
@@ -28,7 +30,8 @@ public:
     //! \brief Create a sizeU x sizeV grid where each cell has no resource but
     //! where the map capacity and rules are defined by the type of map.
     // -------------------------------------------------------------------------
-    Map(MapType const& type, uint32_t sizeU, uint32_t sizeV);
+    Map(MapType const& type, City& city);
+    VIRTUAL ~Map() = default;
 
     // -------------------------------------------------------------------------
     //! \brief Change the amount of resource at the cell index U,V.
@@ -76,9 +79,15 @@ public:
     Vector3f getWorldPosition(uint32_t const u, uint32_t const v);
 
     // -------------------------------------------------------------------------
+    //! \brief Change the position of the Map in the world.
+    //! This also change the position of Path, Unit, Agent ... hold by the City.
+    // -------------------------------------------------------------------------
+    void translate(Vector3f const direction);
+
+    // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    void executeRules();
+    VIRTUAL void executeRules();
 
     // -------------------------------------------------------------------------
     //! \brief Getter: return the type of Map.
@@ -86,22 +95,46 @@ public:
     std::string const& type() const { return m_type.name; }
 
     // -------------------------------------------------------------------------
-    //! \brief
+    //! \brief Return the world position of the city (top-left corner).
+    // -------------------------------------------------------------------------
+    Vector3f const& position() const { return m_position; }
+
+    // -------------------------------------------------------------------------
+    //! \brief Return the number of graduations along the U-axis
+    // -------------------------------------------------------------------------
+    uint32_t gridSizeU() const { return m_gridSizeU; }
+
+    // -------------------------------------------------------------------------
+    //! \brief Return the number of graduations along the V-axis
+    // -------------------------------------------------------------------------
+    uint32_t gridSizeV() const { return m_gridSizeV; }
+
+    // -------------------------------------------------------------------------
+    //! \brief Return the color for the renderer.
     // -------------------------------------------------------------------------
     uint32_t const& color() const { return m_type.color; }
-
-    uint32_t gridSizeU() const { return m_sizeU; }
-    uint32_t gridSizeV() const { return m_sizeV; }
 
 private:
 
     MapType          const& m_type;
-    uint32_t                m_sizeU;
-    uint32_t                m_sizeV;
+    //! \brief Position of the top-left corner.
+    Vector3f                m_position;
+    //! \brief The size of the grid along the U-axis.
+    uint32_t                m_gridSizeU;
+    //! \brief The size of the grid along the V-axis.
+    uint32_t                m_gridSizeV;
+    //! \brief Structure holding all information needed to execute simulation
+    //! rules.
+    RuleContext             m_context;
+    //! \brief Frenquency for running rules.
     uint32_t                m_ticks = 0u;
-    std::vector<RuleMap>    m_rules;
+    //! \brief Amount of resource for each cell of the grid. The capacity is
+    //! stired inside MapType.
     std::vector<uint32_t>   m_resources;
+    //! \brief Cache coordinates within a position and radius.
     MapCoordinatesInsideRadius m_coordinates;
+    // TODO
+    //RandomCoordinates       m_randomCoordinate;
 };
 
 using Maps = std::map<std::string, std::unique_ptr<Map>>;

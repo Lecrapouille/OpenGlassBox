@@ -7,6 +7,7 @@
 
 #include "Core/RuleCommand.hpp"
 #include "Core/City.hpp"
+#include <cassert>
 
 //------------------------------------------------------------------------------
 bool RuleCommandAdd::validate(RuleContext& context)
@@ -42,8 +43,10 @@ bool RuleCommandTest::validate(RuleContext& context)
     case Comparison::GREATER:
         return m_target.get(context) > m_amount;
     case Comparison::LESS:
-    default:
         return m_target.get(context) < m_amount;
+    default:
+        assert(0 && "Unhandled special enum constant in RuleCommandTest::validate");
+        return false;
     }
 }
 

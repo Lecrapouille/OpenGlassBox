@@ -6,6 +6,7 @@
 #undef protected
 #undef private
 
+#  include "src/Core/City.hpp"
 #  include "src/Core/Types.hpp"
 
 TEST(TestsCity, Constants)
@@ -17,16 +18,20 @@ TEST(TestsCity, Constants)
 TEST(TestsMap, Constructor)
 {
     const uint32_t GRILL = 4u;
+    City city("Paris", Vector3f(1.0f, 2.0f, 3.0f), GRILL, GRILL + 1u);
 
     MapType type = { "petrol", 0xFFFFAA, 40u, {} };
-    Map map(type, GRILL, GRILL + 1u);
+    Map map(type, city);
 
     ASSERT_STREQ(map.type().c_str(), "petrol");
     ASSERT_EQ(map.m_type.color, 0xFFFFAA);
     ASSERT_EQ(map.m_type.capacity, 40u);
     ASSERT_EQ(map.m_type.rules.size(), 0u);
-    ASSERT_EQ(map.m_sizeU, GRILL);
-    ASSERT_EQ(map.m_sizeV, GRILL + 1u);
+    ASSERT_EQ(int32_t(map.m_position.x), 1);
+    ASSERT_EQ(int32_t(map.m_position.y), 2);
+    ASSERT_EQ(int32_t(map.m_position.z), 3);
+    ASSERT_EQ(map.m_gridSizeU, GRILL);
+    ASSERT_EQ(map.m_gridSizeV, GRILL + 1u);
     ASSERT_EQ(map.m_ticks, 0u);
     ASSERT_EQ(map.m_resources.size(), GRILL * (GRILL + 1u));
 }
@@ -34,9 +39,10 @@ TEST(TestsMap, Constructor)
 TEST(TestsMap, setResource)
 {
     const uint32_t GRILL = 4u;
+    City city("Paris", Vector3f(1.0f, 2.0f, 3.0f), GRILL, GRILL + 1u);
 
     MapType type("map");
-    Map map(type, GRILL, GRILL);
+    Map map(type, city);
     ASSERT_EQ(map.m_type.capacity, Resource::MAX_CAPACITY);
 
     map.setResource(0u, 0u, 42u);
@@ -70,9 +76,10 @@ TEST(TestsMap, setResource)
 TEST(TestsMap, setCapacity)
 {
     const uint32_t GRILL = 4u;
+    City city("Paris", Vector3f(1.0f, 2.0f, 3.0f), GRILL, GRILL + 1u);
 
     MapType type("map", 0xFFFFFF, 42u);
-    Map map(type, GRILL, GRILL);
+    Map map(type, city);
 
     map.addResource(0u, 0u, 41u);
     ASSERT_EQ(map.getResource(0u, 0u), 41u);
@@ -87,9 +94,10 @@ TEST(TestsMap, setCapacity)
 TEST(TestsMap, getWorldPosition)
 {
     const uint32_t GRILL = 4u;
+    City city("Paris", Vector3f(1.0f, 2.0f, 3.0f), GRILL, GRILL + 1u);
 
     MapType type("map");
-    Map map(type, GRILL, GRILL + 1u);
+    Map map(type, city);
 
     Vector3f v;
 

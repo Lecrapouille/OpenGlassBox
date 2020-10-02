@@ -1,4 +1,4 @@
-PROJECT = GlassBox
+PROJECT = OpenGlassBox
 TARGET = $(PROJECT)-UnitTest
 DESCRIPTION = Unit tests for $(PROJECT)
 BUILD_TYPE = debug
@@ -15,9 +15,10 @@ OBJS += Simulation.o Map.o City.o Unit.o Path.o Agent.o Resource.o Resources.o R
 OBJS += MapCoordinatesInsideRadius.o RuleCommand.o RuleValue.o Script.o
 OBJS += TestsResource.o TestsResources.o TestsUnit.o TestsPath.o TestsMap.o TestsCity.o
 OBJS += TestsAgent.o TestsCoordInsideRadius.o TestsCommand.o TestsRule.o TestsScript.o
-OBJS += main.o
+OBJS += TestsSimulation.o TestsValue.o main.o
 
-DEFINES += -Wno-unused-function -Wno-undef -Wno-keyword-macro -Wno-float-equal
+DEFINES += -DVIRTUAL=virtual
+DEFINES += -Wno-unused-function -Wno-undef -Wno-keyword-macro -Wno-float-equal -Wno-gnu-zero-variadic-macro-arguments
 PKG_LIBS += gtest gmock
 
 all: $(TARGET)

@@ -22,17 +22,17 @@ class Resources;
 struct RuleContext
 {
     //! \brief Non null pointer on the City.
-    City* city;
+    City* city = nullptr;
     //! \brief Non null pointer on the Unit.
-    Unit* unit;
+    Unit* unit = nullptr;
     //! \brief Local resources (of Map or Unit).
-    Resources* locals;
+    Resources* locals = nullptr;
     //! \brief Global resources.
-    Resources* globals;
+    Resources* globals = nullptr;
     //! \brief Position on the grid of the Map.
     uint32_t u, v;
     //! \brief Radius action on Map resources.
-    uint32_t radius;
+    uint32_t radius = 0u;
 };
 
 //==============================================================================
@@ -169,7 +169,7 @@ public:
     //--------------------------------------------------------------------------
     //! \brief Use randomized values ?
     //--------------------------------------------------------------------------
-    bool IsRandom() const
+    bool isRandom() const
     {
         return m_randomTiles;
     }

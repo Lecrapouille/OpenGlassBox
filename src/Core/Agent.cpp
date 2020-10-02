@@ -29,7 +29,13 @@ Agent::Agent(uint32_t id, AgentType const& type, Unit& owner,
 }
 
 //------------------------------------------------------------------------------
-void Agent::move(City& city)
+void Agent::translate(Vector3f const direction)
+{
+    m_position += direction;
+}
+
+//------------------------------------------------------------------------------
+bool Agent::update(City& /*city*/)
 {
     // Reached the destination node ?
     if (m_nextNode == nullptr)
@@ -38,8 +44,8 @@ void Agent::move(City& city)
         // Has Agent no more resource ?
         if (unloadResources())
         {
-            // Yes ! Remove it !
-            city.removeAgent(*this);
+            // Yes ! Return true to remove it !
+            return true;
         }
         else
         {
@@ -52,6 +58,8 @@ void Agent::move(City& city)
         // Driving on the Way
         moveTowardsNextNode();
     }
+
+    return false;
 }
 
 //------------------------------------------------------------------------------

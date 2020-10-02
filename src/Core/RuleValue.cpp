@@ -10,64 +10,64 @@
 
 uint32_t RuleValueGlobal::get(RuleContext& context)
 {
-    return context.globals->getAmount(resource.type());
+    return context.globals->getAmount(m_resource.type());
 }
 
 uint32_t RuleValueGlobal::capacity(RuleContext& context)
 {
-    return context.globals->getCapacity(resource.type());
+    return context.globals->getCapacity(m_resource.type());
 }
 
 void RuleValueGlobal::add(RuleContext& context, uint32_t toAdd)
 {
-    context.globals->addResource(resource.type(), toAdd);
+    context.globals->addResource(m_resource.type(), toAdd);
 }
 
 void RuleValueGlobal::remove(RuleContext& context, uint32_t toRemove)
 {
-    context.globals->removeResource(resource.type(), toRemove);
+    context.globals->removeResource(m_resource.type(), toRemove);
 }
 
 // ----
 
 uint32_t RuleValueLocal::get(RuleContext& context)
 {
-    return context.locals->getAmount(resource.type());
+    return context.locals->getAmount(m_resource.type());
 }
 
 uint32_t RuleValueLocal::capacity(RuleContext& context)
 {
-    return context.locals->getCapacity(resource.type());
+    return context.locals->getCapacity(m_resource.type());
 }
 
 void RuleValueLocal::add(RuleContext& context, uint32_t toAdd)
 {
-    context.locals->addResource(resource.type(), toAdd);
+    context.locals->addResource(m_resource.type(), toAdd);
 }
 
 void RuleValueLocal::remove(RuleContext& context, uint32_t toRemove)
 {
-    context.locals->removeResource(resource.type(), toRemove);
+    context.locals->removeResource(m_resource.type(), toRemove);
 }
 
 // ----
 
 uint32_t RuleValueMap::get(RuleContext& context)
 {
-    return context.city->getMap(mapId).getResource(context.u, context.v, context.radius);
+    return context.city->getMap(m_mapId).getResource(context.u, context.v, context.radius);
 }
 
 uint32_t RuleValueMap::capacity(RuleContext& context)
 {
-    return context.city->getMap(mapId).getCapacity();
+    return context.city->getMap(m_mapId).getCapacity();
 }
 
 void RuleValueMap::add(RuleContext& context, uint32_t toAdd)
 {
-    context.city->getMap(mapId).addResource(context.u, context.v, context.radius, toAdd);
+    context.city->getMap(m_mapId).addResource(context.u, context.v, context.radius, toAdd);
 }
 
 void RuleValueMap::remove(RuleContext& context, uint32_t toRemove)
 {
-    context.city->getMap(mapId).removeResource(context.u, context.v, context.radius, toRemove);
+    context.city->getMap(m_mapId).removeResource(context.u, context.v, context.radius, toRemove);
 }

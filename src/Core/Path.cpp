@@ -25,30 +25,9 @@ void Node::addUnit(Unit& unit)
 }
 
 // -----------------------------------------------------------------------------
-void Node::getMapPosition(uint32_t gridSizeU, uint32_t gridSizeV, uint32_t& u, uint32_t& v)
+void Node::translate(Vector3f const direction)
 {
-    uint32_t x = uint32_t(m_position.x / config::GRID_SIZE);
-    uint32_t y = uint32_t(m_position.y / config::GRID_SIZE);
-
-    if (m_position.x <= 0.0f)
-        u = 0u;
-    else if (x >= gridSizeU)
-        u = gridSizeU - 1u;
-    else
-        u = x;
-
-    if (m_position.y <= 0.0f)
-        v = 0u;
-    else if (y >= gridSizeV)
-        v = gridSizeV - 1u;
-    else
-        v = y;
-}
-
-// -----------------------------------------------------------------------------
-void Node::setPosition(Vector3f const position)
-{
-    m_position = position;
+    m_position += direction;
     for (auto& it: m_ways)
     {
         it->updateLength();
@@ -144,4 +123,13 @@ Node& Path::splitWay(Way& segment, float offset)
     segment.changeNode2(newNode);
 
     return newNode;
+}
+
+// -----------------------------------------------------------------------------
+void Path::translate(Vector3f const direction)
+{
+    for (auto& it: m_nodes)
+    {
+        it->m_position += direction;
+    }
 }

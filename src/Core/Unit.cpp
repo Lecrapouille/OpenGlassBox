@@ -17,10 +17,10 @@ Unit::Unit(UnitType const& type, Node& node, City& city)
     // References states needed for running Rules
     m_context.unit = this;
     m_context.city = &city;
-    m_context.globals = &(city.globalResources());
+    m_context.globals = &(city.globals());
     m_context.locals = &m_resources;
     m_context.radius = type.radius;
-    m_node.getMapPosition(city, m_context.u, m_context.v);
+    city.world2mapPosition(m_node.position(), m_context.u, m_context.v);
 }
 
 // -----------------------------------------------------------------------------

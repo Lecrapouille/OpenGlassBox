@@ -95,7 +95,7 @@ class RuleCommandTest: public IRuleCommand
 {
 public:
 
-    enum Comparison { EQUALS, GREATER, LESS };
+    enum class Comparison { EQUALS, GREATER, LESS };
 
     //--------------------------------------------------------------------------
     //! \brief

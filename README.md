@@ -8,10 +8,12 @@ This current project is a sandbox, a preliminary work for an integration in my p
 ## Axe of Developement
 
 Done / wishes / work in progress:
-- No dependency with the game enine Unity.
-- Class coupling simplification from the initial code.
-- Replacement of the home-made script by Forth script.
-- SimCity spreadsheet: insert/edit cells to add simulation rules.
+- No dependency with the game enine Unity. Is currently replaced by SDL but ca be replaced by OpenGL or something else.
+- Rename Class with less generic name: Box is now City, Segment is now Way, Unit to xxx.
+- Class coupling simplification from the initial code. Still in progress but Agent in the original code known by Node but not by Ways this can more difficult to compute flow. Still in progress D* algorithm is made inside the Node class will be made by a separated class. Unit are linked to a Node on a Path this is not great since that force splitting Ways to add Node and makes the graph grows up too much.
+- Todo: Area class (aka Zone) is not made.
+- Currently I made a quick & dirty script parser. I wish to replace it by Forth parser.
+- Wish to Show SimCity as a spreadsheet: insert/edit cells to add simulation rules.
 
 ## Download, compilation and run
 

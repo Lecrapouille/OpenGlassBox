@@ -30,11 +30,12 @@ public:
     //! TODO const& type ?
     // -------------------------------------------------------------------------
     Unit(UnitType const& type, Node& node, City& city);
+    VIRTUAL ~Unit() = default;
 
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    void executeRules();
+    VIRTUAL void executeRules();
 
     // -------------------------------------------------------------------------
     //! \brief
@@ -53,7 +54,7 @@ public:
     inline Resources& resources() { return m_resources; }
 
     // -------------------------------------------------------------------------
-    //! \brief
+    //! \brief Return the world position of the Unit.
     // -------------------------------------------------------------------------
     inline Vector3f const& position() const { return m_node.position(); }
 

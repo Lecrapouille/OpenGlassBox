@@ -14,6 +14,7 @@ OBJS += Script.o
 OBJS += MapCoordinatesInsideRadius.o Rule.o RuleCommand.o RuleValue.o
 OBJS += Window.o main.o
 
+DEFINES += -DVIRTUAL=
 PKG_LIBS = sdl2
 
 all: $(TARGET)

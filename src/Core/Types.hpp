@@ -114,9 +114,9 @@ public:
         : name(name_), color(0xFFFFFF), capacity(Resource::MAX_CAPACITY)
     {}
 
-    MapType(std::string const& name, uint32_t color, uint32_t capacity,
+    MapType(std::string const& name_, uint32_t color_, uint32_t capacity_,
             std::initializer_list<RuleMap*> list = {})
-        : name(name), color(color), capacity(capacity), rules(list)
+        : name(name_), color(color_), capacity(capacity_), rules(list)
     {}
 
     std::string           name;
@@ -183,8 +183,8 @@ public:
         : name(name_), color(0xFFFFFF)
     {}
 
-    WayType(std::string const& name, uint32_t color)
-        : name(name), color(color)
+    WayType(std::string const& name_, uint32_t color_)
+        : name(name_), color(color_)
     {}
 
     std::string name;
@@ -207,8 +207,8 @@ public:
         : name(name_), color(0xFFFFFF)
     {}
 
-    PathType(std::string const& name, uint32_t color)
-        : name(name), color(color)
+    PathType(std::string const& name_, uint32_t color_)
+        : name(name_), color(color_)
     {}
 
     std::string name;

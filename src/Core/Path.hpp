@@ -87,9 +87,9 @@ public:
     Vector3f const& position() const { return m_position; }
 
     // -------------------------------------------------------------------------
-    //! \brief Change the position of the Node.
+    //! \brief Translate the Node position of a given direction.
     // -------------------------------------------------------------------------
-    void setPosition(Vector3f const position);
+    void translate(Vector3f const direction);
 
     // -------------------------------------------------------------------------
     //! \brief Const getter of Ways hold by this instance.
@@ -114,14 +114,6 @@ public:
         static uint32_t c = 0xAAAAAA;
         return c;
     }
-
-private:
-
-    // -------------------------------------------------------------------------
-    //! \brief A Maps are simple uniform size grids. This method return the
-    //! indices on the map (maps have all the same pavement).
-    // -------------------------------------------------------------------------
-    void getMapPosition(uint32_t gridSizeU, uint32_t gridSizeV, uint32_t& u, uint32_t& v);
 
 private:
 
@@ -282,6 +274,11 @@ public:
     //! segment vertex if offset is 0 or 1.
     // -------------------------------------------------------------------------
     Node& splitWay(Way& segment, float offset);
+
+    // -------------------------------------------------------------------------
+    //! \brief Translate Node positions of a given direction.
+    // -------------------------------------------------------------------------
+    void translate(Vector3f const direction);
 
     // -------------------------------------------------------------------------
     //! \brief Getter: return the type of Path.

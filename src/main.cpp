@@ -13,8 +13,8 @@ GlassBox::GlassBox()
 
 bool GlassBox::onInit()
 {
-    Script script("data/Simulations/TestCity.txt");
-    if (!script)
+    Script script; // TODO: a cacher dans Simulation
+    if (!script.parse("data/Simulations/TestCity.txt"))
         return false;
 
     City& city = m_simulation.addCity("Paris", Vector3f(0.0f, 0.0f, 0.0f));
@@ -47,7 +47,7 @@ void GlassBox::onPaint(SDL_Renderer& renderer, float dt)
     // Draw Areas
 
     // Draw Units
-    for (auto& it: city.getUnits())
+    for (auto& it: city.units())
     {
         SDL_SetRenderDrawColor(&renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
         SDL_Rect rect;
@@ -58,7 +58,7 @@ void GlassBox::onPaint(SDL_Renderer& renderer, float dt)
         SDL_RenderFillRect(&renderer, &rect);
     }
 
-    for (auto& path: city.getPaths())
+    for (auto& path: city.paths())
     {
         // Draw roads
         for (auto& it: path.second->ways()) // TODO rename to getWays ?
@@ -83,7 +83,7 @@ void GlassBox::onPaint(SDL_Renderer& renderer, float dt)
     }
 
     // Draw agents
-    for (auto& it: city.getAgents())
+    for (auto& it: city.agents())
     {
         SDL_SetRenderDrawColor(&renderer, 0, 255, 0, SDL_ALPHA_OPAQUE);
         SDL_Rect rect;

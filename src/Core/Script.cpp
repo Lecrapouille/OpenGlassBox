@@ -35,40 +35,44 @@ static bool toBool(std::string const& word)
     return !!toUint(word);
 }
 
-Script::Script(std::string const& filename)
-    : m_file(filename)
+bool Script::parse(std::string const& filename)
 {
     std::cout << "Parsing script '" << filename << "'" << std::endl;
+
+    m_file.open(filename);
     if (!m_file)
     {
         std::cerr << "Failed opening '" << filename << "' Reason '"
                   << strerror(errno) << "'" << std::endl;
         m_success = false;
-        return ;
+    }
+    else
+    {
+        try
+        {
+            parseScript();
+            m_success = true;
+            std::cout << "  done" << std::endl;
+        }
+        catch (std::exception &e)
+        {
+            std::cerr << "Failed parsing script '"
+                      << filename << "' at token '"
+                      << m_token << "' Reason was '"
+                      << e.what() << "'"
+                      << std::endl;
+            m_success = false;
+        }
     }
 
-    try
-    {
-        parseScript();
-        m_success = true;
-        std::cout << "  done" << std::endl;
-    }
-    catch (std::exception &e)
-    {
-        std::cerr << "Failed parsing script '"
-                  << filename << "' at token '"
-                  << m_token << "' Reason was '"
-                  << e.what() << "'"
-                  << std::endl;
-        m_success = false;
-    }
+    return m_success;
 }
 
 std::string const& Script::nextToken()
 {
     if (m_file >> m_token)
     {
-        // Uncomment for debug
+        // Uncomment for debuging
         // std::cout << "I read '" << m_token << "'" << std::endl;
     }
     else
@@ -82,6 +86,7 @@ void Script::parseScript()
 {
     while (true)
     {
+        bool empty = (m_token.size() == 0u);
         std::string const& token = nextToken();
         if (token == "resources")
             parseResources();
@@ -98,7 +103,12 @@ void Script::parseScript()
         else if (token == "units")
             parseUnits();
         else if (token == "")
-            return ;
+        {
+            if (!empty)
+                return ;
+            // Empty file detection
+            throw std::runtime_error("parseScript()");
+        }
         else
             throw std::runtime_error("parseScript()");
     }
@@ -354,7 +364,7 @@ IRuleCommand* Script::parseCommand(std::string const& token)
     else if (token == "agent")
     {
         std::string name = nextToken();
-        std::string target;
+        std::string searchTarget;
         Resources resources;
 
         while (true)
@@ -362,7 +372,7 @@ IRuleCommand* Script::parseCommand(std::string const& token)
             std::string const& cmd = nextToken();
             if (cmd == "to")
             {
-                target = nextToken();
+                searchTarget = nextToken();
             }
             else if (cmd == "add")
             {
@@ -376,7 +386,7 @@ IRuleCommand* Script::parseCommand(std::string const& token)
         }
 
         command = new RuleCommandAgent(getAgentType(name),
-                                       target, resources);
+                                       searchTarget, resources);
     }
     else
     {

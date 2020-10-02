@@ -37,12 +37,14 @@ public:
     //--------------------------------------------------------------------------
     Agent(uint32_t id, AgentType const& type, Unit& owner, Resources const& resources,
           std::string const& searchTarget);
+    VIRTUAL ~Agent() = default;
 
     //--------------------------------------------------------------------------
-    //! \brief Driving on Ways, transporting resources and unloading them on
-    //! destination.
+    //! \brief Make the Agent transporting resources on the current Way and
+    //! make unloading resource when the Agent has reached its destination.
+    //! \return true when the Agent has reached its destination.
     //--------------------------------------------------------------------------
-    void move(City& city);
+    VIRTUAL bool update(City& city);
 
     //--------------------------------------------------------------------------
     //! \brief Transfert the amount of resource to the target Unit.
@@ -61,6 +63,11 @@ public:
     // -------------------------------------------------------------------------
     std::string const& type() const { return m_type.name; }
 
+    // -------------------------------------------------------------------------
+    //! \brief Change the position of the Agent in the world.
+    //! This also change the position of Path, Unit, Agent ... hold by the City.
+    // -------------------------------------------------------------------------
+    void translate(Vector3f const direction);
 
 private:
 
@@ -90,10 +97,10 @@ private:
     AgentType const&   m_type;
     std::string        m_searchTarget;
     Resources          m_resources;
-    Vector3f           m_position;
+    Vector3f           m_position; // idee Vector3f& pointe sur un tableau de Positions qui lui sera utilise pour le renderer
     float              m_offset = 0.0f;
     Way           *m_currentWay = nullptr;
-    Node              *m_lastNode = nullptr;
+    Node              *m_lastNode = nullptr; // pourrait etre supprime car m_currentWay->from() et ->to()
     Node              *m_nextNode = nullptr;
 };
 

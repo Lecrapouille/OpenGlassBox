@@ -25,6 +25,14 @@ struct Vector3f
         return sqrtf(x * x + y * y + z * z);
     }
 
+    Vector3f& operator +=(const Vector3f& direction)
+    {
+        x += direction.x;
+        y += direction.y;
+        z += direction.z;
+        return *this;
+    }
+
     float x, y, z;
 };
 

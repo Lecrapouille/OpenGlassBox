@@ -77,49 +77,6 @@ TEST(TestsNode, AddUnit)
     ASSERT_EQ(&(n1.m_units[1]->m_node), &n2);
 }
 
-TEST(TestsNode, getMapPosition)
-{
-    const uint32_t GRILL_SIZE = 32u;
-
-    City c("Paris", GRILL_SIZE, GRILL_SIZE);
-    Node n(42u, Vector3f(1.0f, 1.0f, 0.0f));
-
-    uint32_t u, v;
-    n.getMapPosition(c, u, v);
-    ASSERT_EQ(u, 0u);
-    ASSERT_EQ(v, 0u);
-
-    // Position 1
-    n.m_position = Vector3f(2.0f, 2.0f, 0.0f);
-    n.getMapPosition(c, u, v);
-    ASSERT_EQ(u, 1u);
-    ASSERT_EQ(v, 1u);
-
-    // Position 2
-    n.m_position = Vector3f(4.0f, 2.0f, 0.0f);
-    n.getMapPosition(c, u, v);
-    ASSERT_EQ(u, 2u);
-    ASSERT_EQ(v, 1u);
-
-    // Position 3
-    n.m_position = Vector3f(2.0f, 4.0f, 0.0f);
-    n.getMapPosition(c, u, v);
-    ASSERT_EQ(u, 1u);
-    ASSERT_EQ(v, 2u);
-
-    // //Pathological case: out of the map
-    n.m_position = Vector3f(-2.0f, -2.0f, 0.0f);
-    n.getMapPosition(c, u, v);
-    ASSERT_EQ(u, 0u);
-    ASSERT_EQ(v, 0u);
-
-    // //Pathological case: out of the map
-    n.m_position = Vector3f(2000.0f, 2000.0f, 0.0f);
-    n.getMapPosition(c, u, v);
-    ASSERT_EQ(u, GRILL_SIZE - 1u);
-    ASSERT_EQ(v, GRILL_SIZE - 1u);
-}
-
 TEST(TestsWay, Constuctor)
 {
     // Create two Nodes.
@@ -441,8 +398,8 @@ TEST(TestsPath, MoveNode)
     ASSERT_EQ(s2.length(), 0.0f);
 
     // Move nodes
-    n2.setPosition(Vector3f(1.0f, 1.0f, 0.0f));
-    n3.setPosition(Vector3f(-1.0f, -1.0f, 0.0f));
+    n2.translate(Vector3f(1.0f, 1.0f, 0.0f));
+    n3.translate(Vector3f(-1.0f, -1.0f, 0.0f));
 
     // Check segments they length updated.
     ASSERT_EQ(s1.length(), std::sqrt(2.0f));

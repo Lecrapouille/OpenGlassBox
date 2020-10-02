@@ -7,20 +7,42 @@
 #undef protected
 #undef private
 
+// -----------------------------------------------------------------------------
+// For testing City::update()
+class MockIRuleValue: public IRuleValue
+{
+public:
+
+    MockIRuleValue() : IRuleValue() {}
+    MOCK_METHOD(uint32_t, get,(RuleContext&), (override));
+    MOCK_METHOD(uint32_t, capacity,(RuleContext&), (override));
+    MOCK_METHOD(void, add,(RuleContext&, uint32_t), (override));
+    MOCK_METHOD(void, remove,(RuleContext&, uint32_t), (override));
+};
+
+// -----------------------------------------------------------------------------
 TEST(TestsCommand, Constructor)
 {
-    City city("Paris", 2u, 2u);
-    Node n(42u, Vector3f(1.0f, 2.0f, 3.0f));
-    Resources r; r.addResource("oil", 5u);
-    UnitType unit_type("unit");
-    unit_type.color = 0xFF00FF;
-    unit_type.radius = 2u;
-    unit_type.resources = r;
-    Unit unit(unit_type, n, city);
-    Resources locals, globals;
+    //
+    MockIRuleValue target;
+    RuleCommandAdd rca(target, 5u);
+    ASSERT_EQ(&rca.m_target, &target);
+    ASSERT_EQ(rca.m_amount, 5u);
 
-    AgentType agent_type("Worker", 1.0f, 2u, 0xFFFFFF);
-    RuleCommandAgent ra(agent_type, "home", r);
+    //
+    RuleCommandRemove rcr(target, 5u);
+    ASSERT_EQ(&rcr.m_target, &target);
+    ASSERT_EQ(rcr.m_amount, 5u);
+
+    //
+    RuleCommandTest rct(target, RuleCommandTest::Comparison::EQUALS, 5u);
+    ASSERT_EQ(&rct.m_target, &target);
+    ASSERT_EQ(rct.m_amount, 5u);
+    ASSERT_EQ(rct.m_comparison, RuleCommandTest::Comparison::EQUALS);
+
+    //
+    Resources r; r.addResource("oil", 5u);
+    RuleCommandAgent ra(AgentType("Worker", 1.0f, 2u, 0xFFFFFF), "home", r);
     ASSERT_STREQ(ra.name.c_str(), "Worker");
     ASSERT_EQ(ra.speed, 1.0f);
     ASSERT_EQ(ra.radius, 2u);
@@ -28,8 +50,175 @@ TEST(TestsCommand, Constructor)
     ASSERT_STREQ(ra.m_target.c_str(), "home");
     ASSERT_EQ(ra.m_resources.m_bin.size(), 1u);
     ASSERT_STREQ(ra.m_resources.m_bin[0].m_type.c_str(), "oil");
+    ASSERT_EQ(ra.m_resources.m_bin[0].m_amount, 5u);
+}
 
+// -----------------------------------------------------------------------------
+TEST(TestsCommand, RuleCommandAdd)
+{
     RuleContext context;
+    MockIRuleValue target;
+    RuleCommandAdd cmd(target, 5u);
+
+    //
+    EXPECT_CALL(target, add(_,_)).Times(0);
+    EXPECT_CALL(target, remove(_,_)).Times(0);
+    EXPECT_CALL(target, get(_)).Times(1).WillOnce(Return(5u));
+    EXPECT_CALL(target, capacity(_)).Times(1).WillOnce(Return(10u));
+    ASSERT_EQ(cmd.validate(context), true);
+
+    //
+    EXPECT_CALL(target, add(_,_)).Times(0);
+    EXPECT_CALL(target, remove(_,_)).Times(0);
+    EXPECT_CALL(target, get(_)).Times(1).WillOnce(Return(10u));
+    EXPECT_CALL(target, capacity(_)).Times(1).WillOnce(Return(5u));
+    ASSERT_EQ(cmd.validate(context), false);
+
+    //
+    EXPECT_CALL(target, add(_,_)).Times(1);
+    EXPECT_CALL(target, remove(_,_)).Times(0);
+    EXPECT_CALL(target, get(_)).Times(0);
+    EXPECT_CALL(target, capacity(_)).Times(0);
+    cmd.execute(context);
+}
+
+// -----------------------------------------------------------------------------
+TEST(TestsCommand, RuleCommandRemove)
+{
+    RuleContext context;
+    MockIRuleValue target;
+    RuleCommandRemove cmd(target, 5u);
+
+    //
+    EXPECT_CALL(target, add(_,_)).Times(0);
+    EXPECT_CALL(target, remove(_,_)).Times(0);
+    EXPECT_CALL(target, get(_)).Times(1).WillOnce(Return(10u));
+    EXPECT_CALL(target, capacity(_)).Times(0);
+    ASSERT_EQ(cmd.validate(context), true);
+
+    //
+    EXPECT_CALL(target, add(_,_)).Times(0);
+    EXPECT_CALL(target, remove(_,_)).Times(0);
+    EXPECT_CALL(target, get(_)).Times(1).WillOnce(Return(2u));
+    EXPECT_CALL(target, capacity(_)).Times(0);
+    ASSERT_EQ(cmd.validate(context), false);
+
+    //
+    EXPECT_CALL(target, add(_,_)).Times(0);
+    EXPECT_CALL(target, remove(_,_)).Times(1);
+    EXPECT_CALL(target, get(_)).Times(0);
+    EXPECT_CALL(target, capacity(_)).Times(0);
+    cmd.execute(context);
+}
+
+// -----------------------------------------------------------------------------
+TEST(TestsCommand, RuleCommandTestEqual)
+{
+    RuleContext context;
+    MockIRuleValue target;
+    RuleCommandTest cmd(target, RuleCommandTest::Comparison::EQUALS, 5u);
+    ASSERT_EQ(cmd.m_comparison, RuleCommandTest::Comparison::EQUALS);
+
+    //
+    EXPECT_CALL(target, add(_,_)).Times(0);
+    EXPECT_CALL(target, remove(_,_)).Times(0);
+    EXPECT_CALL(target, get(_)).Times(1).WillOnce(Return(5u));
+    EXPECT_CALL(target, capacity(_)).Times(0);
+    ASSERT_EQ(cmd.validate(context), true);
+
+    //
+    EXPECT_CALL(target, add(_,_)).Times(0);
+    EXPECT_CALL(target, remove(_,_)).Times(0);
+    EXPECT_CALL(target, get(_)).Times(1).WillOnce(Return(2u));
+    EXPECT_CALL(target, capacity(_)).Times(0);
+    ASSERT_EQ(cmd.validate(context), false);
+
+    //
+    EXPECT_CALL(target, add(_,_)).Times(0);
+    EXPECT_CALL(target, remove(_,_)).Times(0);
+    EXPECT_CALL(target, get(_)).Times(0);
+    EXPECT_CALL(target, capacity(_)).Times(0);
+    cmd.execute(context);
+}
+
+// -----------------------------------------------------------------------------
+TEST(TestsCommand, RuleCommandTestGreater)
+{
+    RuleContext context;
+    MockIRuleValue target;
+    RuleCommandTest cmd(target, RuleCommandTest::Comparison::GREATER, 5u);
+    ASSERT_EQ(cmd.m_comparison, RuleCommandTest::Comparison::GREATER);
+
+    //
+    EXPECT_CALL(target, add(_,_)).Times(0);
+    EXPECT_CALL(target, remove(_,_)).Times(0);
+    EXPECT_CALL(target, get(_)).Times(1).WillOnce(Return(10u));
+    EXPECT_CALL(target, capacity(_)).Times(0);
+    ASSERT_EQ(cmd.validate(context), true);
+
+    //
+    EXPECT_CALL(target, add(_,_)).Times(0);
+    EXPECT_CALL(target, remove(_,_)).Times(0);
+    EXPECT_CALL(target, get(_)).Times(1).WillOnce(Return(2u));
+    EXPECT_CALL(target, capacity(_)).Times(0);
+    ASSERT_EQ(cmd.validate(context), false);
+
+    //
+    EXPECT_CALL(target, add(_,_)).Times(0);
+    EXPECT_CALL(target, remove(_,_)).Times(0);
+    EXPECT_CALL(target, get(_)).Times(0);
+    EXPECT_CALL(target, capacity(_)).Times(0);
+    cmd.execute(context);
+}
+
+// -----------------------------------------------------------------------------
+TEST(TestsCommand, RuleCommandTestLess)
+{
+    RuleContext context;
+    MockIRuleValue target;
+    RuleCommandTest cmd(target, RuleCommandTest::Comparison::LESS, 5u);
+    ASSERT_EQ(cmd.m_comparison, RuleCommandTest::Comparison::LESS);
+
+    //
+    EXPECT_CALL(target, add(_,_)).Times(0);
+    EXPECT_CALL(target, remove(_,_)).Times(0);
+    EXPECT_CALL(target, get(_)).Times(1).WillOnce(Return(2u));
+    EXPECT_CALL(target, capacity(_)).Times(0);
+    ASSERT_EQ(cmd.validate(context), true);
+
+    //
+    EXPECT_CALL(target, add(_,_)).Times(0);
+    EXPECT_CALL(target, remove(_,_)).Times(0);
+    EXPECT_CALL(target, get(_)).Times(1).WillOnce(Return(10u));
+    EXPECT_CALL(target, capacity(_)).Times(0);
+    ASSERT_EQ(cmd.validate(context), false);
+
+    //
+    EXPECT_CALL(target, add(_,_)).Times(0);
+    EXPECT_CALL(target, remove(_,_)).Times(0);
+    EXPECT_CALL(target, get(_)).Times(0);
+    EXPECT_CALL(target, capacity(_)).Times(0);
+    cmd.execute(context);
+}
+
+// -----------------------------------------------------------------------------
+TEST(TestsCommand, RuleCommandAgent)
+{
+    RuleContext context;
+    MockIRuleValue target;
+    Resources r; r.addResource("oil", 5u);
+    RuleCommandAgent cmd(AgentType("Worker", 1.0f, 2u, 0xFFFFFF), "home", r);
+
+    EXPECT_CALL(target, add(_,_)).Times(0);
+    EXPECT_CALL(target, remove(_,_)).Times(0);
+    EXPECT_CALL(target, get(_)).Times(0);
+    EXPECT_CALL(target, capacity(_)).Times(0);
+    ASSERT_EQ(cmd.validate(context), true);
+
+    Resources locals, globals;
+    City city("Paris", 2u, 2u);
+    Node n(42u, Vector3f(1.0f, 2.0f, 3.0f));
+    Unit unit(UnitType("unit"), n, city);
     context.city = &city;
     context.unit = &unit;
     context.locals = &locals;
@@ -37,29 +226,13 @@ TEST(TestsCommand, Constructor)
     context.u = context.v = 0u;
     context.radius = 1.0;
 
-    // Execute. Check new agent created
-    EXPECT_EQ(ra.validate(context), true);
-    EXPECT_EQ(city.getAgents().size(), 0u);
-    ra.execute(context);
-
-    // See TestsAgent.cpp TEST(TestsAgent, Constructor)
-    EXPECT_EQ(city.getAgents().size(), 1u);
-    Agent& a = *(city.getAgents()[0]);
-    ASSERT_EQ(a.m_id, 0u);
-    //ASSERT_EQ(&(a.m_owner), &unit);
-    ASSERT_EQ(a.m_resources.m_bin.size(), 1u);
-    ASSERT_EQ(a.m_resources.getAmount("oil"), 5u);
-    //FIXME ASSERT_EQ(a.m_searchTarget, "home");
-    ASSERT_EQ(a.m_position.x, 1.0f);
-    ASSERT_EQ(a.m_position.y, 2.0f);
-    ASSERT_EQ(a.m_position.z, 3.0f);
-    ASSERT_EQ(a.m_offset, 0.0f);
-    ASSERT_EQ(a.m_currentWay, nullptr); // FIXME temporary
-    ASSERT_EQ(a.m_lastNode, &n);
-    ASSERT_EQ(a.m_nextNode, nullptr);
-
-    // Default Agent values // FIXME
-    ASSERT_EQ(a.m_type.speed, 1.0f);
-    ASSERT_EQ(a.m_type.radius, 2u);
-    ASSERT_EQ(a.m_type.color, 0xFFFFFF);
+    EXPECT_CALL(target, add(_,_)).Times(0);
+    EXPECT_CALL(target, remove(_,_)).Times(0);
+    EXPECT_CALL(target, get(_)).Times(0);
+    EXPECT_CALL(target, capacity(_)).Times(0);
+    EXPECT_EQ(city.agents().size(), 0u);
+    cmd.execute(context);
+    EXPECT_EQ(city.agents().size(), 1u);
+    cmd.execute(context);
+    EXPECT_EQ(city.agents().size(), 2u);
 }

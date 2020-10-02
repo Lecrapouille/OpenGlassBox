@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------------
 
 #include "Core/Map.hpp"
+#include "Core/City.hpp"
 
 template<typename T>
 static inline T clamp(T const value, T const lower, T const upper)
@@ -19,32 +20,36 @@ static inline T clamp(T const value, T const lower, T const upper)
     return value;
 }
 
-Map::Map(MapType const& type, uint32_t sizeU, uint32_t sizeV)
+Map::Map(MapType const& type, City& city)
     : m_type(type),
-      m_sizeU(sizeU), m_sizeV(sizeV),
-      m_resources(sizeU * sizeV, 0u)
-{}
+      m_position(city.position()),
+      m_gridSizeU(city.gridSizeU()),
+      m_gridSizeV(city.gridSizeV()),
+      m_resources(m_gridSizeU * m_gridSizeV, 0u)
+{
+    m_context.city = &city;
+}
 
 void Map::setResource(uint32_t const u, uint32_t const v, uint32_t amount)
 {
     if (amount > m_type.capacity)
         amount = m_type.capacity;
 
-    uint32_t& res = m_resources[v * m_sizeU + u];
+    uint32_t& res = m_resources[v * m_gridSizeU + u];
     if (res != amount)
         res = amount;
 }
 
 uint32_t Map::getResource(uint32_t const u, uint32_t const v)
 {
-    return m_resources[v * m_sizeU + u];
+    return m_resources[v * m_gridSizeU + u];
 }
 
 uint32_t Map::getResource(uint32_t const u, uint32_t const v, uint32_t radius)
 {
     uint32_t totalInsideRadius = 0u;
     uint32_t x = u; uint32_t y = v;
-    m_coordinates.init(radius, x, y, 0u, m_sizeU, 0u, m_sizeV, false);
+    m_coordinates.init(radius, x, y, 0u, m_gridSizeU, 0u, m_gridSizeV, false);
 
     while (m_coordinates.next(x, y))
         totalInsideRadius += getResource(x, y);
@@ -70,7 +75,7 @@ void Map::addResource(uint32_t const u, uint32_t const v, uint32_t const radius,
     uint32_t remainingToAdd = toAdd;
     uint32_t x = u; uint32_t y = v;
 
-    m_coordinates.init(radius, x, y, 0, m_sizeU, 0, m_sizeV, true);
+    m_coordinates.init(radius, x, y, 0, m_gridSizeU, 0, m_gridSizeV, true);
     while ((remainingToAdd > 0u) && m_coordinates.next(x, y))
     {
         uint32_t amount = getResource(u, v);
@@ -101,7 +106,7 @@ void Map::removeResource(uint32_t const u, uint32_t const v, uint32_t radius, ui
     uint32_t remainingToRemove = toRemove;
     uint32_t x = u; uint32_t y = v;
 
-    m_coordinates.init(radius, x, y, 0u, m_sizeU, 0u, m_sizeV, true);
+    m_coordinates.init(radius, x, y, 0u, m_gridSizeU, 0u, m_gridSizeV, true);
     while ((remainingToRemove > 0u) && m_coordinates.next(x, y))
     {
         uint32_t amount = getResource(x, y);
@@ -117,48 +122,49 @@ void Map::removeResource(uint32_t const u, uint32_t const v, uint32_t radius, ui
 
 Vector3f Map::getWorldPosition(uint32_t const u, uint32_t const v)
 {
-    return Vector3f(float(clamp(u, 0u, m_sizeU)) * config::GRID_SIZE,
-                    float(clamp(v, 0u, m_sizeV)) * config::GRID_SIZE,
+    return Vector3f(float(clamp(u, 0u, m_gridSizeU)) * config::GRID_SIZE,
+                    float(clamp(v, 0u, m_gridSizeV)) * config::GRID_SIZE,
                     0.0f);
 }
 
-// TODO
+void Map::translate(Vector3f const direction)
+{
+    m_position += direction;
+}
+
 void Map::executeRules()
 {
-#if 0
-    m_ticks++;
+    ++m_ticks;
 
-    size_t i = m_rules.size();
-    while (i--)
+    for (auto& rule: m_type.rules)
     {
-        RuleMap& rule = *(m_rules[i]);
-
-        if (m_ticks % rule.rate == 0u)
+        if (m_ticks % rule->rate() == 0u)
             continue;
 
-        if (rule.randomTiles)
+        if (rule->isRandom())
         {
-            uint32_t tilesAmount = (rule.randomTilesPercent * m_sizeU * m_sizeV) / 100;
-
-            RandomCoordinates r(m_sizeU, m_sizeV);
-
-            for (uint32_t j = 0u; j < tilesAmount; j++)
-                if (r.next(&context.mapPositionX, &context.mapPositionY))
-                    rule.Execute(context);
+#warning "TODO Map::RandomCoordinates"
+            //FIXME RandomCoordinates r(m_gridSizeU, m_gridSizeV);
+            //uint32_t tilesAmount = r.percent(m_gridSizeU * m_gridSizeV);
+            //while (tilesAmount--)
+            //{
+            //    if (r.next(&m_context.u, &m_context.v))
+            //        rule->execute(context);
+            //}
         }
         else
         {
-            for (uint32_t x = 0u; x < m_sizeU; ++x)
+            uint32_t u = m_gridSizeU;
+            while (u--)
             {
-                context.mapPositionX = x;
-
-                for (uint32_t y = 0u; y < m_sizeV; ++y)
+                m_context.u = u;
+                uint32_t v = m_gridSizeV;
+                while (v--)
                 {
-                    context.mapPositionY = y;
-                    rule.Execute(context);
+                    m_context.v = v;
+                    rule->execute(m_context);
                 }
             }
         }
     }
-#endif
 }

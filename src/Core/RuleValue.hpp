@@ -17,8 +17,8 @@ class RuleValueGlobal : public IRuleValue
 {
 public:
 
-    RuleValueGlobal(Resource const& resource_)
-        : resource(resource_)
+    RuleValueGlobal(Resource const& resource)
+        : m_resource(resource)
     {}
 
     virtual uint32_t get(RuleContext& context) override;
@@ -28,7 +28,7 @@ public:
 
 private:
 
-    Resource resource;
+    Resource m_resource;
 };
 
 //==============================================================================
@@ -38,8 +38,8 @@ class RuleValueLocal : public IRuleValue
 {
 public:
 
-    RuleValueLocal(Resource const& resource_)
-        : resource(resource_)
+    RuleValueLocal(Resource const& resource)
+        : m_resource(resource)
     {}
 
     virtual uint32_t get(RuleContext& context) override;
@@ -49,7 +49,7 @@ public:
 
 private:
 
-    Resource resource;
+    Resource m_resource;
 };
 
 //==============================================================================
@@ -59,8 +59,8 @@ class RuleValueMap : public IRuleValue
 {
 public:
 
-    RuleValueMap(std::string const& mapId_)
-        : mapId(mapId_)
+    RuleValueMap(std::string const& mapId)
+        : m_mapId(mapId)
     {}
 
     virtual uint32_t get(RuleContext& context) override;
@@ -70,7 +70,7 @@ public:
 
 private:
 
-    std::string mapId;
+    std::string m_mapId;
 };
 
 #endif
