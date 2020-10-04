@@ -59,9 +59,16 @@ public:
     void addResource(uint32_t const u, uint32_t const v, uint32_t toAdd);
 
     // -------------------------------------------------------------------------
-    //! \brief
+    //! \brief Distribute the amount resource toAdd to Map cells inside a circle.
+    //!
+    //! \param[in] distributed: if set to true cells are randomized and each
+    //! distribution makes toAdd reduced. Therefore maybe not all cells are feed.
+    //! If set to false, each cell gets the same amount of resource.
+    //! \note Amount of resource for each cell are constrained by the gobal capacity
+    //! of the map.
     // -------------------------------------------------------------------------
-    void addResource(uint32_t const u, uint32_t const v, uint32_t const radius, uint32_t const toAdd);
+    void addResource(uint32_t const u, uint32_t const v, uint32_t const radius,
+                     uint32_t const toAdd, bool distributed = true);
 
     // -------------------------------------------------------------------------
     //! \brief
@@ -71,7 +78,8 @@ public:
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    void removeResource(uint32_t const u, uint32_t const v, uint32_t radius, uint32_t toRemove);
+    void removeResource(uint32_t const u, uint32_t const v, uint32_t radius,
+                        uint32_t toRemove, bool distributed = true);
 
     // -------------------------------------------------------------------------
     //! \brief

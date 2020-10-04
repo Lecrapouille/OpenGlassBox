@@ -116,6 +116,7 @@ TEST(TestsScript, Constructor)
          RuleMap const& rm1 = script.getRuleMap("CreateGrass");
          ASSERT_STREQ(rm1.m_id.c_str(), "CreateGrass");
          ASSERT_EQ(rm1.m_rate, 7u);
+         ASSERT_EQ(rm1.isRandom(), true);
          // TODO map
 
     }

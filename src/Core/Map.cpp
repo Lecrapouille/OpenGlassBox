@@ -8,6 +8,7 @@
 #include "Core/Map.hpp"
 #include "Core/City.hpp"
 
+// -----------------------------------------------------------------------------
 template<typename T>
 static inline T clamp(T const value, T const lower, T const upper)
 {
@@ -20,6 +21,7 @@ static inline T clamp(T const value, T const lower, T const upper)
     return value;
 }
 
+// -----------------------------------------------------------------------------
 Map::Map(MapType const& type, City& city)
     : m_type(type),
       m_position(city.position()),
@@ -30,6 +32,7 @@ Map::Map(MapType const& type, City& city)
     m_context.city = &city;
 }
 
+// -----------------------------------------------------------------------------
 void Map::setResource(uint32_t const u, uint32_t const v, uint32_t amount)
 {
     if (amount > m_type.capacity)
@@ -40,11 +43,13 @@ void Map::setResource(uint32_t const u, uint32_t const v, uint32_t amount)
         res = amount;
 }
 
+// -----------------------------------------------------------------------------
 uint32_t Map::getResource(uint32_t const u, uint32_t const v)
 {
     return m_resources[v * m_gridSizeU + u];
 }
 
+// -----------------------------------------------------------------------------
 uint32_t Map::getResource(uint32_t const u, uint32_t const v, uint32_t radius)
 {
     uint32_t totalInsideRadius = 0u;
@@ -57,6 +62,7 @@ uint32_t Map::getResource(uint32_t const u, uint32_t const v, uint32_t radius)
     return totalInsideRadius;
 }
 
+// -----------------------------------------------------------------------------
 void Map::addResource(uint32_t const u, uint32_t const v, uint32_t toAdd)
 {
     uint32_t amount = getResource(u, v);
@@ -70,25 +76,28 @@ void Map::addResource(uint32_t const u, uint32_t const v, uint32_t toAdd)
     setResource(u, v, amount);
 }
 
-void Map::addResource(uint32_t const u, uint32_t const v, uint32_t const radius, uint32_t toAdd)
+// -----------------------------------------------------------------------------
+void Map::addResource(uint32_t const u, uint32_t const v, uint32_t const radius, 
+                      uint32_t toAdd, bool distributed)
 {
     uint32_t remainingToAdd = toAdd;
     uint32_t x = u; uint32_t y = v;
 
-    m_coordinates.init(radius, x, y, 0, m_gridSizeU, 0, m_gridSizeV, true);
+    m_coordinates.init(radius, x, y, 0, m_gridSizeU, 0, m_gridSizeV, distributed);
     while ((remainingToAdd > 0u) && m_coordinates.next(x, y))
     {
-        uint32_t amount = getResource(u, v);
+        uint32_t amount = getResource(x, y);
         toAdd = std::min(m_type.capacity - amount, remainingToAdd);
         if (toAdd > 0u)
         {
             amount += toAdd;
-            remainingToAdd -= toAdd;
+            if (distributed) { remainingToAdd -= toAdd; }
             setResource(x, y, amount);
         }
     }
 }
 
+// -----------------------------------------------------------------------------
 void Map::removeResource(uint32_t const u, uint32_t const v, uint32_t toRemove)
 {
     uint32_t amount = getResource(u, v);
@@ -101,12 +110,14 @@ void Map::removeResource(uint32_t const u, uint32_t const v, uint32_t toRemove)
     setResource(u, v, amount);
 }
 
-void Map::removeResource(uint32_t const u, uint32_t const v, uint32_t radius, uint32_t toRemove)
+// -----------------------------------------------------------------------------
+void Map::removeResource(uint32_t const u, uint32_t const v, uint32_t radius,
+                         uint32_t toRemove, bool distributed)
 {
     uint32_t remainingToRemove = toRemove;
     uint32_t x = u; uint32_t y = v;
 
-    m_coordinates.init(radius, x, y, 0u, m_gridSizeU, 0u, m_gridSizeV, true);
+    m_coordinates.init(radius, x, y, 0u, m_gridSizeU, 0u, m_gridSizeV, distributed);
     while ((remainingToRemove > 0u) && m_coordinates.next(x, y))
     {
         uint32_t amount = getResource(x, y);
@@ -114,12 +125,13 @@ void Map::removeResource(uint32_t const u, uint32_t const v, uint32_t radius, ui
         if (toRemove > 0u)
         {
             amount -= toRemove;
-            remainingToRemove -= toRemove;
+            if (distributed) { remainingToRemove -= toRemove; }
             setResource(x, y, amount);
         }
     }
 }
 
+// -----------------------------------------------------------------------------
 Vector3f Map::getWorldPosition(uint32_t const u, uint32_t const v)
 {
     return Vector3f(float(clamp(u, 0u, m_gridSizeU)) * config::GRID_SIZE,
@@ -127,11 +139,13 @@ Vector3f Map::getWorldPosition(uint32_t const u, uint32_t const v)
                     0.0f);
 }
 
+// -----------------------------------------------------------------------------
 void Map::translate(Vector3f const direction)
 {
     m_position += direction;
 }
 
+// -----------------------------------------------------------------------------
 void Map::executeRules()
 {
     ++m_ticks;
@@ -139,30 +153,30 @@ void Map::executeRules()
     for (auto& rule: m_type.rules)
     {
         if (m_ticks % rule->rate() == 0u)
-            continue;
-
-        if (rule->isRandom())
         {
-#warning "TODO Map::RandomCoordinates"
-            //FIXME RandomCoordinates r(m_gridSizeU, m_gridSizeV);
-            //uint32_t tilesAmount = r.percent(m_gridSizeU * m_gridSizeV);
-            //while (tilesAmount--)
-            //{
-            //    if (r.next(&m_context.u, &m_context.v))
-            //        rule->execute(context);
-            //}
-        }
-        else
-        {
-            uint32_t u = m_gridSizeU;
-            while (u--)
+            if (rule->isRandom())
             {
-                m_context.u = u;
-                uint32_t v = m_gridSizeV;
-                while (v--)
+#warning "TODO Map::RandomCoordinates"
+                //FIXME RandomCoordinates r(m_gridSizeU, m_gridSizeV);
+                //uint32_t tilesAmount = r.percent(m_gridSizeU * m_gridSizeV);
+                //while (tilesAmount--)
+                //{
+                //    if (r.next(&m_context.u, &m_context.v))
+                //        rule->execute(context);
+                //}
+            }
+            else
+            {
+                uint32_t u = m_gridSizeU;
+                while (u--)
                 {
-                    m_context.v = v;
-                    rule->execute(m_context);
+                    m_context.u = u;
+                    uint32_t v = m_gridSizeV;
+                    while (v--)
+                    {
+                        m_context.v = v;
+                        rule->execute(m_context); // FIXME return bool useless ?
+                    }
                 }
             }
         }

@@ -111,7 +111,7 @@ public:
     virtual ~IRule() = default;
 
     //--------------------------------------------------------------------------
-    //! \brief
+    //! \brief FIXME return void not prefered since ignored
     //--------------------------------------------------------------------------
     virtual bool execute(RuleContext& context)
     {

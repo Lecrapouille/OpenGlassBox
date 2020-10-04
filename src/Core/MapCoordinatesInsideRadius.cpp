@@ -46,16 +46,18 @@ void MapCoordinatesInsideRadius::init(uint32_t radius,
     m_minV = minV;
     m_maxV = maxV;
 
-    Coordinates& values = cachedCoordinates(radius);
-    m_values = &values;
-    if (values.size() == 0u)
+    // Create relative coordinates depending on the radius if it has not been
+    // previously been in cache.
+    RelativeCoordinates& relativeCoord = relativeCoordinates(radius);
+    m_relativeCoord = &relativeCoord;
+    if (relativeCoord.size() == 0u)
     {
-        createCoordinates(int32_t(radius), values);
+        createRelativeCoordinates(int32_t(radius), relativeCoord);
     }
 
     if (random)
     {
-        std::uniform_int_distribution<uint32_t> randomIndex(0u, uint32_t(values.size()));
+        std::uniform_int_distribution<uint32_t> randomIndex(0u, uint32_t(relativeCoord.size()));
         m_startingIndex = randomIndex(generator);
     }
     else
@@ -65,11 +67,9 @@ void MapCoordinatesInsideRadius::init(uint32_t radius,
 }
 
 //------------------------------------------------------------------------------
-void MapCoordinatesInsideRadius::createCoordinates(int32_t radius, Coordinates &res)
+void MapCoordinatesInsideRadius::createRelativeCoordinates(int32_t radius, RelativeCoordinates &res)
 {
     res.clear();
-    //res.reserve(radius * radius);
-
     for (int32_t u = -radius; u <= radius; ++u)
     {
         for (int32_t v = -radius; v <= radius; ++v)
@@ -85,13 +85,12 @@ void MapCoordinatesInsideRadius::createCoordinates(int32_t radius, Coordinates &
 //------------------------------------------------------------------------------
 bool MapCoordinatesInsideRadius::next(uint32_t& u, uint32_t& v)
 {
-    size_t const size = m_values->size();
+    RelativeCoordinates& coord = *m_relativeCoord;
+    size_t const size = coord.size();
     while (m_offset < size)
     {
-        int32_t val = (*m_values)[(m_startingIndex + m_offset++) % size];
         int32_t iu; int32_t iv;
-
-        uncompress(val, iu, iv);
+        uncompress(coord[(m_startingIndex + m_offset++) % size], iu, iv);
         u = uint32_t(iu) + m_centerU;
         v = uint32_t(iv) + m_centerV;
 
@@ -99,7 +98,6 @@ bool MapCoordinatesInsideRadius::next(uint32_t& u, uint32_t& v)
             return true;
     }
 
-    u = 0u;
-    v = 0u;
+    u = v = 0u;
     return false;
 }
