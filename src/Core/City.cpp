@@ -32,7 +32,7 @@ void City::update()
     size_t i = m_agents.size();
     while (i--)
     {
-        if (m_agents[i]->update(*this))
+        if (m_agents[i]->update(m_dijkstra))
         {
             // Swap the position of the Agent with the last in the vector and
             // remove the last element of the vector.

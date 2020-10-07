@@ -20,11 +20,6 @@ struct Vector3f
         : x(_x), y(_y), z(_z)
     {}
 
-    float length()
-    {
-        return sqrtf(x * x + y * y + z * z);
-    }
-
     Vector3f& operator +=(const Vector3f& direction)
     {
         x += direction.x;
@@ -49,6 +44,16 @@ static inline Vector3f operator-(Vector3f const& v1, Vector3f const& v2)
 static inline Vector3f operator*(Vector3f const& v1, float scalar)
 {
     return Vector3f(v1.x * scalar, v1.y * scalar, v1.z * scalar);
+}
+
+static inline float squaredMagnitude(Vector3f const& v)
+{
+    return v.x * v.x + v.y * v.y + v.z * v.z;
+}
+
+static inline float magnitude(Vector3f const& v)
+{
+    return sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
 }
 
 #endif

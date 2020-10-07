@@ -6,7 +6,9 @@
 //-----------------------------------------------------------------------------
 
 #include "Core/Agent.hpp"
-#include "Core/City.hpp"
+#include "Core/Dijkstra.hpp"
+#include "Core/Unit.hpp"
+#include "Core/Config.hpp"
 #include <iostream>
 
 //------------------------------------------------------------------------------
@@ -18,14 +20,14 @@ Agent::Agent(uint32_t id, AgentType const& type, Unit& owner,
       m_resources(resources),
       m_lastNode(&(owner.node())) // FIXME Unit's node should be linked at least one segment
 {
-    findNextNode();
+    #warning "findNextNode();"
+    //findNextNode();
     updatePosition();
     if (m_currentWay == nullptr)
     {
         std::cerr << "Ill formed Agent " << id << ": does not belong to any segment"
                   << std::endl;
     }
-
 }
 
 //------------------------------------------------------------------------------
@@ -35,7 +37,7 @@ void Agent::translate(Vector3f const direction)
 }
 
 //------------------------------------------------------------------------------
-bool Agent::update(City& /*city*/)
+bool Agent::update(Dijkstra& dijkstra)
 {
     // Reached the destination node ?
     if (m_nextNode == nullptr)
@@ -50,7 +52,7 @@ bool Agent::update(City& /*city*/)
         else
         {
             // No ! Keep finding another destination to unload resources.
-            findNextNode();
+            findNextNode(dijkstra);
         }
     }
     else
@@ -82,7 +84,7 @@ void Agent::moveTowardsNextNode()
 
         m_offset += direction
                     * (m_type.speed / config::TICKS_PER_SECOND)
-                    / m_currentWay->length();
+                    / m_currentWay->magnitude();
 
         // Reached node1 ?
         if (m_offset < 0.0f)
@@ -120,22 +122,12 @@ void Agent::updatePosition()
 }
 
 //------------------------------------------------------------------------------
-void Agent::findNextNode()
+void Agent::findNextNode(Dijkstra& dijkstra)
 {
-    // Ill formed agent: abord
-    if ((m_lastNode == nullptr) || (m_lastNode->ways().size() == 0u))
-    {
-        std::cerr << "Ill formed agent " << m_id << std::endl;
+    if (m_lastNode == nullptr)
         return ;
-    }
 
-    // TODO Original call m_lastNode->path().findNextNode(m_lastNode,
-    // m_searchTarget, m_resources); but this is method shall not be placed
-    // inside Node but in Dijkstra class.  And Agent on creation should have a
-    // target path (set of nodes) for going to the destination (short path) and
-    // only adapt the path on Nodes depending on the traffic jam.
-    m_nextNode = &(m_lastNode->ways()[rand() % m_lastNode->ways().size()]->to());
-
+    m_nextNode = dijkstra.findNextPoint(*m_lastNode, m_searchTarget, m_resources);
     if (m_nextNode != nullptr)
     {
         m_currentWay = m_lastNode->getWayToNode(*m_nextNode);

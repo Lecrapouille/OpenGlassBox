@@ -5,7 +5,7 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
-#include "Core/Script.hpp"
+#include "Core/ScriptParser.hpp"
 #include "Core/RuleCommand.hpp"
 #include <iostream>
 #include <stdexcept>

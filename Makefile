@@ -9,10 +9,15 @@ include $(M)/Makefile.header
 
 VPATH += $(P)/src $(P)/src/Core $(P)/src/Display
 INCLUDES += -I$(P)/src
+
+# Core
 OBJS += Simulation.o Map.o City.o Unit.o Path.o Agent.o Resource.o Resources.o
-OBJS += Script.o
-OBJS += MapCoordinatesInsideRadius.o Rule.o RuleCommand.o RuleValue.o
-OBJS += Window.o main.o
+OBJS += ScriptParser.o MapCoordinatesInsideRadius.o Rule.o RuleCommand.o RuleValue.o
+OBJS += Dijkstra.o
+# Renderer
+OBJS += Window.o
+# Game
+OBJS += main.o
 
 DEFINES += -DVIRTUAL=
 PKG_LIBS = sdl2

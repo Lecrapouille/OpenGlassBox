@@ -10,7 +10,7 @@
 
 #  include "Core/Path.hpp"
 
-class City;
+class Dijkstra;
 class Unit;
 
 //==============================================================================
@@ -44,7 +44,7 @@ public:
     //! make unloading resource when the Agent has reached its destination.
     //! \return true when the Agent has reached its destination.
     //--------------------------------------------------------------------------
-    VIRTUAL bool update(City& city);
+    VIRTUAL bool update(Dijkstra& dijkstra);
 
     //--------------------------------------------------------------------------
     //! \brief Transfert the amount of resource to the target Unit.
@@ -64,6 +64,11 @@ public:
     std::string const& type() const { return m_type.name; }
 
     // -------------------------------------------------------------------------
+    //! \brief
+    // -------------------------------------------------------------------------
+    uint32_t color() const { return m_type.color; }
+
+    // -------------------------------------------------------------------------
     //! \brief Change the position of the Agent in the world.
     //! This also change the position of Path, Unit, Agent ... hold by the City.
     // -------------------------------------------------------------------------
@@ -79,7 +84,7 @@ private:
     //--------------------------------------------------------------------------
     //! \brief
     //--------------------------------------------------------------------------
-    void findNextNode();
+    void findNextNode(Dijkstra& dijkstra);
 
     //--------------------------------------------------------------------------
     //! \brief Update the position of the Agent along the segment.

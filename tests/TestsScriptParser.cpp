@@ -2,7 +2,7 @@
 
 #define protected public
 #define private public
-#  include "src/Core/Script.hpp"
+#  include "src/Core/ScriptParser.hpp"
 #undef protected
 #undef private
 

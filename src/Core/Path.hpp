@@ -188,7 +188,7 @@ public:
     //! \brief Return the length of the segment that has been computed by
     //! updateLength().
     // -------------------------------------------------------------------------
-    float length() const { return m_length; }
+    float magnitude() const { return m_magnitude; }
 
     // -------------------------------------------------------------------------
     //! \brief Getter: return the type of Way.
@@ -210,7 +210,7 @@ private:
     // -------------------------------------------------------------------------
     //! \brief Compute the length of the segment.
     // -------------------------------------------------------------------------
-    void updateLength();
+    void updateMagnitude();
 
 private:
 
@@ -223,7 +223,7 @@ private:
     //! \brief Node of destination.
     Node              *m_to = nullptr;
     //! \brief Cache the computation of the segment length.
-    float              m_length = 0.0f;
+    float              m_magnitude = 0.0f;
 };
 
 using WayPtr = std::unique_ptr<Way>;

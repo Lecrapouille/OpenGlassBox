@@ -1,24 +1,12 @@
 # OpenGlassBox
 
-[OpenGlassBox](https://github.com/Lecrapouille/OpenGlassBox) is an open source implementation of the Maxis' SimCity 2013 simulation engine named GlassBox. Note: this project is not affiliated to Maxis Software but is a portage of
-https://github.com/federicodangelo/MultiAgentSimulation from C#/Unity to C++11/SDL. The original
-project was inspired by the [GDC presentation given by Maxis](http://www.andrewwillmott.com/talks/inside-glassbox).
-This current project is a sandbox, a preliminary work for an integration in my project SimTaDyn.
-
-## Axe of Developement
-
-Done / wishes / work in progress:
-- No dependency with the game enine Unity. Is currently replaced by SDL but ca be replaced by OpenGL or something else.
-- Original project did not come with unit tests or comments.
-- Rename Class with less generic name: Box is now City, Segment is now Way, Unit to xxx.
-- Class coupling simplification from the initial code. Still in progress but Agent in the original code known by Node but not by Ways this can more difficult to compute flow. Still in progress D* algorithm is made inside the Node class will be made by a separated class. Unit are linked to a Node on a Path this is not great since that force splitting Ways to add Node and makes the graph grows up too much.
-- Todo: Area class (aka Zone) is not made.
-- Currently I made a quick & dirty script parser. I wish to replace it by Forth parser.
-- Wish to Show SimCity as a spreadsheet: insert/edit cells to add simulation rules.
+[OpenGlassBox](https://github.com/Lecrapouille/OpenGlassBox) is a personal implementation from the slides of Maxis' SimCity 2013 simulation engine named GlassBox and shown in at this [GDC conference](http://www.andrewwillmott.com/talks/inside-glassbox). Note: this project is neither Maxis's released code source nor an affiliated project. This project is simply a portage from C#/Unity to C++11/SDL of https://github.com/federicodangelo/MultiAgentSimulation.
+This current project is a sandbox: a preliminary work for its integration in my work-in-progress project SimTaDyn.
 
 ## Download, compilation and run
 
-- Prerequisite: g++ or clang++, makefile, c++11, sdl2. Optional: bc, googletest.
+- Prerequisite: g++ or clang++, makefile, c++11, sdl2, bc (sudo apt-gety install).
+Optionaly: googletest and gcov, if you wish to run unit tests and generate code coverage.
 
 - Download source:
 ```sh
@@ -27,7 +15,7 @@ git clone https://github.com/Lecrapouille/OpenGlassBox.git --recursive
 
 - Compile the project:
 ```sh
-cd OpenGlassBox
+cd OpenGlassBox/
 make CXX=g++
 ```
 
@@ -41,6 +29,24 @@ make CXX=g++
 cd OpenGlassBox/test
 make coverage
 ```
+
+## Notes concerning the portage
+
+- Dependencies to the game engine Unity has been removed. I also removed Listener classes (ie SimBoxListener).
+- Since I'm more interested by the simulation than the game renderer, I'm not using game engine but for the moment SDL2 which is enough to draw lines and dots. SDL2 may be replaced by OpenGL or by SFML.
+- The original project did not come with unit tests or comments. Added !
+- The original project did not implement Area class (aka Zone). This is also has to be added. Currently Units is linked with a Node of the Path.
+- From original project, using the same class names than the GDC conference, I renamed classes:
+  - Box is now named City.
+  - Point is now named Node.
+  - Segment is now named Way.
+  - ResourceBinCollection is now named Resources.
+  - Unit to is now named ???.
+  - SimulationDefinitionLoader is now renamed ScriptParser.
+  - I added class Dstar (for Dynamic A*) instead of the method Path::FindNextPoint.
+- Class coupling simplification from the initial code. Still in progress but Agent in the original code known by Node but not by Ways this can more difficult to compute flow. Still in progress D* algorithm is made inside the Node class will be made by a separated class. Unit are linked to a Node on a Path this is not great since that force splitting Ways to add Node and makes the graph grows up too much.
+- Currently I made a quick & dirty script straightforward parser. I wish to replace it by Forth parser.
+- Wish to Show SimCity as a spreadsheet: insert/edit cells to add simulation rules.
 
 ## References
 

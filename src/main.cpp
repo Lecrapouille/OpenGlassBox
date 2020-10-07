@@ -7,6 +7,10 @@
 
 #include "main.hpp"
 
+#define RED(color)   ((color >> 16) & 0xFF)
+#define GREEN(color) ((color >> 8) & 0xFF)
+#define BLUE(color)  ((color >> 0) & 0xFF)
+
 GlassBox::GlassBox()
     : m_simulation(32u, 32u)
 {}
@@ -49,10 +53,12 @@ void GlassBox::onPaint(SDL_Renderer& renderer, float dt)
     // Draw Units
     for (auto& it: city.units())
     {
-        SDL_SetRenderDrawColor(&renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
+        SDL_SetRenderDrawColor(&renderer,
+                               RED(it->color()), GREEN(it->color()), BLUE(it->color()),
+                               SDL_ALPHA_OPAQUE);
         SDL_Rect rect;
-        rect.x = int(it->position().x);
-        rect.y = int(it->position().y);
+        rect.x = 10 * int(it->position().x);
+        rect.y = 10 * int(it->position().y);
         rect.w = 10; // GRID_SIZE
         rect.h = 10;
         SDL_RenderFillRect(&renderer, &rect);
@@ -63,19 +69,25 @@ void GlassBox::onPaint(SDL_Renderer& renderer, float dt)
         // Draw roads
         for (auto& it: path.second->ways()) // TODO rename to getWays ?
         {
-            SDL_SetRenderDrawColor(&renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
+            SDL_SetRenderDrawColor(&renderer,
+                                   RED(it->color()), GREEN(it->color()), BLUE(it->color()),
+                                   SDL_ALPHA_OPAQUE);
             SDL_RenderDrawLine(&renderer,
-                               int(it->position1().x), int(it->position1().y),
-                               int(it->position2().x), int(it->position2().y));
+                               10 * int(it->position1().x),
+                               10 * int(it->position1().y),
+                               10 * int(it->position2().x),
+                               10 * int(it->position2().y));
         }
 
         // Draw nodes
         for (auto& it: path.second->nodes()) // TODO rename to getNodes ?
         {
-            SDL_SetRenderDrawColor(&renderer, 255, 0, 0, SDL_ALPHA_OPAQUE);
+            SDL_SetRenderDrawColor(&renderer,
+                                   RED(it->color()), GREEN(it->color()), BLUE(it->color()),
+                                   SDL_ALPHA_OPAQUE);
             SDL_Rect rect;
-            rect.x = int(it->position().x);
-            rect.y = int(it->position().y);
+            rect.x = 10 * int(it->position().x);
+            rect.y = 10 * int(it->position().y);
             rect.w = 2;
             rect.h = 2;
             SDL_RenderFillRect(&renderer, &rect);
@@ -85,12 +97,14 @@ void GlassBox::onPaint(SDL_Renderer& renderer, float dt)
     // Draw agents
     for (auto& it: city.agents())
     {
-        SDL_SetRenderDrawColor(&renderer, 0, 255, 0, SDL_ALPHA_OPAQUE);
+        SDL_SetRenderDrawColor(&renderer,
+                               RED(it->color()), GREEN(it->color()), BLUE(it->color()),
+                               SDL_ALPHA_OPAQUE);
         SDL_Rect rect;
-        rect.x = int(it->position().x);
-        rect.y = int(it->position().y);
-        rect.w = 2; // GRID_SIZE
-        rect.h = 2;
+        rect.x = 10 * int(it->position().x);
+        rect.y = 10 * int(it->position().y);
+        rect.w = 5; // GRID_SIZE
+        rect.h = 5;
         SDL_RenderFillRect(&renderer, &rect);
     }
 

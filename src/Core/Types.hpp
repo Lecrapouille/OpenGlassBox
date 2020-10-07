@@ -5,8 +5,8 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
-#ifndef TYPES_HPP
-#  define TYPES_HPP
+#ifndef OPEN_GLASSBOX_TYPES_HPP
+#  define OPEN_GLASSBOX_TYPES_HPP
 
 #  include "Core/Resources.hpp"
 

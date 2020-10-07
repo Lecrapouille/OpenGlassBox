@@ -12,6 +12,7 @@
 #  include "Core/Agent.hpp"
 #  include "Core/Map.hpp"
 #  include "Core/Path.hpp"
+#  include "Core/Dijkstra.hpp"
 
 class Path;
 class Node;
@@ -186,6 +187,8 @@ private:
     Units         m_units;
     //! \brief Collection of resource carrier (cars, citizens ...)
     Agents        m_agents;
+    //! \brief
+    Dijkstra      m_dijkstra;
 };
 
 //==============================================================================

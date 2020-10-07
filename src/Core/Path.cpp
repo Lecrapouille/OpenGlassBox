@@ -30,7 +30,7 @@ void Node::translate(Vector3f const direction)
     m_position += direction;
     for (auto& it: m_ways)
     {
-        it->updateLength();
+        it->updateMagnitude();
     }
 }
 
@@ -64,13 +64,13 @@ Way::Way(uint32_t id, WayType const& type, Node& node1, Node& node2)
 {
     m_from->m_ways.push_back(this);
     m_to->m_ways.push_back(this);
-    updateLength();
+    updateMagnitude();
 }
 
 // -----------------------------------------------------------------------------
-void Way::updateLength()
+void Way::updateMagnitude()
 {
-    m_length = (m_to->position() - m_from->position()).length();
+    m_magnitude = ::magnitude(m_to->position() - m_from->position());
 }
 
 // -----------------------------------------------------------------------------
@@ -80,7 +80,7 @@ void Way::changeNode2(Node& newNode2)
     segs.erase(std::remove(segs.begin(), segs.end(), this));
     m_to = &newNode2;
     m_to->m_ways.push_back(this);
-    updateLength();
+    updateMagnitude();
 }
 
 // =============================================================================

@@ -10,7 +10,7 @@
 
 #  include "Display/Window.hpp"
 #  include "Core/Simulation.hpp"
-#  include "Core/Script.hpp"
+#  include "Core/ScriptParser.hpp"
 
 class GlassBox: public IGame
 {
