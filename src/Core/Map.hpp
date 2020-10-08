@@ -103,7 +103,7 @@ public:
     std::string const& type() const { return m_type.name; }
 
     // -------------------------------------------------------------------------
-    //! \brief Return the world position of the city (top-left corner).
+    //! \brief Return the position inside the World coordinate of the city (top-left corner).
     // -------------------------------------------------------------------------
     Vector3f const& position() const { return m_position; }
 

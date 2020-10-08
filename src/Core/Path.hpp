@@ -57,6 +57,14 @@ public:
     void addUnit(Unit& unit);
 
     // -------------------------------------------------------------------------
+    //! \brief Check if the node is not has ways (aka not orphan).
+    // -------------------------------------------------------------------------
+    bool hasWays() const
+    {
+        return m_ways.size() > 0u;
+    }
+
+    // -------------------------------------------------------------------------
     //! \brief Helper fonction calling
     //! getMapPosition(uint32_t, uint32_t, uint32_t&, uint32_t&) from class T
     //! that implements gridSizeU() and gridSizeV() ie T can be City or Map.
@@ -82,7 +90,7 @@ public:
     uint32_t id() const { return m_id; }
 
     // -------------------------------------------------------------------------
-    //! \brief Return the world position.
+    //! \brief Return the position inside the World coordinate.
     // -------------------------------------------------------------------------
     Vector3f const& position() const { return m_position; }
 
@@ -123,7 +131,7 @@ private:
     Vector3f              m_position;
     //! \brief Ways owning this node instance.
     std::vector<Way*>     m_ways;
-    //! \brief Units owning this node instance.
+    //! \brief Units is affected to a Path Node. Therefore nodes has to kown them.
     std::vector<Unit*>    m_units;
 };
 

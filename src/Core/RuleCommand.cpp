@@ -8,6 +8,7 @@
 #include "Core/RuleCommand.hpp"
 #include "Core/City.hpp"
 #include <cassert>
+#include <iostream>
 
 //------------------------------------------------------------------------------
 bool RuleCommandAdd::validate(RuleContext& context)
@@ -51,7 +52,7 @@ bool RuleCommandTest::validate(RuleContext& context)
 }
 
 //------------------------------------------------------------------------------
-void RuleCommandTest::execute(RuleContext& context)
+void RuleCommandTest::execute(RuleContext& /*context*/)
 {
     // Do nothing
 }
@@ -65,5 +66,16 @@ bool RuleCommandAgent::validate(RuleContext& /*context*/)
 //------------------------------------------------------------------------------
 void RuleCommandAgent::execute(RuleContext& context)
 {
-    context.city->addAgent(*this, *(context.unit), m_resources, m_target);
+    if (context.unit->hasWays())
+    {
+        context.city->addAgent(*this, *(context.unit), m_resources, m_target);
+    }
+#if !defined(NDEBUG)
+    else
+    {
+       std::cerr << "Ill-formed: Unit " << context.unit->id() << " is attached "
+                 << "to a orphan Path Node and its Agent will not be able to "
+                 << "move towards the City." << std::endl;
+    }
+#endif
 }

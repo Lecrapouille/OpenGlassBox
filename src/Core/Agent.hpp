@@ -24,37 +24,53 @@ class Agent
 public:
 
     //--------------------------------------------------------------------------
-    //! \brief Initialized the state of the Agent.
-    //! \param[in] id: unique identifier.
-    //! \param[in] type: const reference of a given type of Agent also refered
-    //! internally. The refered instance shall not be deleted before this Agent
-    //! instance is destroyed.
-    //! \param[in] owner: Unit owning this agent. This param is used to place
-    //! the Agent on the Node affected by the Unit. FIXME Unit split Way
-    //! into two sub-segment.
+    //! \brief Constructor initializing partially internal states of the Agent
+    //! (but internal states will be completed once calling update() method).
+    //!
+    //! \param[in] id: Unique identifier.
+    //!
+    //! \param[in] type: Const reference of a given type of Agent also refered
+    //! internally. The reference shall not be deleted before this Agent
+    //! instance is destroyed. The type of agent is defined by simulation
+    //! scripts.
+    //!
+    //! \param[in] owner: Unit creating this agent, also refered internally. The
+    //! reference shall not be deleted before this Agent instance is destroyed.
+    //! This param is used to place the Agent on the graph node (Node of a Path)
+    //! moving towards arcs. Note that for placing an Unit somewhere along a Way
+    //! you'll have to split it into two ways linked by an Node and this Node
+    //! will be the support for the Unit. Note also Unit's Node should be linked
+    // at least one Way of Path else Agents cannot move towards a Path Way. You
+    // can of course give an orphan Node now and attach to it Ways after (but
+    // before running the game simulation).
+    //!
     //! \param[in] resources: Resources that the Agent is carrying.
     //! \param[in] searchTarget: the Unit target (type of destination).
     //--------------------------------------------------------------------------
     Agent(uint32_t id, AgentType const& type, Unit& owner, Resources const& resources,
           std::string const& searchTarget);
+
+    //--------------------------------------------------------------------------
+    //! \brief Virtual destructor only needed because of the presence of virtual
+    //! methods only needed for unit tests.
+    //--------------------------------------------------------------------------
     VIRTUAL ~Agent() = default;
 
     //--------------------------------------------------------------------------
     //! \brief Make the Agent transporting resources on the current Way and
     //! make unloading resource when the Agent has reached its destination.
     //! \return true when the Agent has reached its destination.
+    //! \note VIRTUAL is only used for unit tests.
     //--------------------------------------------------------------------------
     VIRTUAL bool update(Dijkstra& dijkstra);
 
-    //--------------------------------------------------------------------------
-    //! \brief Transfert the amount of resource to the target Unit.
-    //! \return true if after the transfert the Agent has no more resource to
-    //! carry.
-    //--------------------------------------------------------------------------
-    bool unloadResources();
+    // -------------------------------------------------------------------------
+    //! \brief Return the unique identifier.
+    // -------------------------------------------------------------------------
+    uint32_t id() const { return m_id; }
 
     //--------------------------------------------------------------------------
-    //! \brief Return the world position
+    //! \brief Return the position inside the World coordinate.
     //--------------------------------------------------------------------------
     Vector3f const& position() const { return m_position; }
 
@@ -64,48 +80,67 @@ public:
     std::string const& type() const { return m_type.name; }
 
     // -------------------------------------------------------------------------
-    //! \brief
+    //! \brief Return the color for the Renderer.
     // -------------------------------------------------------------------------
     uint32_t color() const { return m_type.color; }
 
     // -------------------------------------------------------------------------
-    //! \brief Change the position of the Agent in the world.
-    //! This also change the position of Path, Unit, Agent ... hold by the City.
+    //! \brief Translate the position of the Agent relatively from its parent
+    //! (Node). Only use this fonction when moving place of a City (that will
+    //! also affect to its contents).
     // -------------------------------------------------------------------------
     void translate(Vector3f const direction);
 
 private:
 
     //--------------------------------------------------------------------------
-    //! \brief
+    //! \brief Transfert the amount of resource to the target Unit.
+    //! \return true if after if the Agent has no more resource to
+    //! carry.
+    //--------------------------------------------------------------------------
+    bool unloadResources();
+
+    //--------------------------------------------------------------------------
+    //! \brief Move the Agent on the current Way towards the destination Node
+    //! (border of the segment).
     //--------------------------------------------------------------------------
     void moveTowardsNextNode();
 
     //--------------------------------------------------------------------------
-    //! \brief
+    //! \brief Search a new Way to reacht the destination Node/Unit.
     //--------------------------------------------------------------------------
     void findNextNode(Dijkstra& dijkstra);
 
     //--------------------------------------------------------------------------
-    //! \brief Update the position of the Agent along the segment.
-    //--------------------------------------------------------------------------
-    void updatePosition();
-
-    //--------------------------------------------------------------------------
-    //! \brief
+    //! \brief When the Agent reach the Node of destination it has to transfer
+    //! its resource to the good Unit. Indeed several Units can refer to the
+    //! same Node.
     //--------------------------------------------------------------------------
     Unit* searchUnit();
 
 private:
 
+    //! \brief Unique identifier
     uint32_t           m_id;
+    //! \brief Reference to the type of Agent defined in the simulation script.
+    //! The reference shall not be destroyed before this instance.
     AgentType const&   m_type;
+    //! \brief The type of Unit to search as destination.
     std::string        m_searchTarget;
+    //! \brief Carried resource from an Unit to another Unit.
     Resources          m_resources;
-    Vector3f           m_position; // idee Vector3f& pointe sur un tableau de Positions qui lui sera utilise pour le renderer
+    //! \brief Position of the Agent in the world coordinate. TODO idea:
+    //! Vector3f& pointe sur un tableau de Positions qui lui sera utilise pour
+    //! le renderer.
+    Vector3f           m_position;
+    //! \brief Position along m_currentWay from the origin node.
     float              m_offset = 0.0f;
-    Way           *m_currentWay = nullptr;
-    Node              *m_lastNode = nullptr; // pourrait etre supprime car m_currentWay->from() et ->to()
+    //! \brief The way this agent is moving along.
+    Way               *m_currentWay = nullptr;
+    //! \brief Origin node
+    //! TODO pourrait etre supprime car m_currentWay->from() et ->to()
+    Node              *m_lastNode = nullptr;
+    //! \brief Target node
     Node              *m_nextNode = nullptr;
 };
 
