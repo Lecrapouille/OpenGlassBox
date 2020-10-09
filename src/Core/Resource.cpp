@@ -53,3 +53,13 @@ void Resource::setCapacity(uint32_t const capacity)
     if (m_amount > capacity)
         m_amount = capacity;
 }
+
+// -------------------------------------------------------------------------
+//! \brief Pretty print the content of a resource (debug purpose).
+// -------------------------------------------------------------------------
+std::ostream& operator<<(std::ostream& os, Resource const& resource)
+{
+    os << "Resource " << resource.m_type << ": "
+       << resource.m_amount << "/" << resource.m_capacity;
+    return os;
+}

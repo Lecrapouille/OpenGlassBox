@@ -152,6 +152,11 @@ public:
         return findResource(type) != nullptr;
     }
 
+    // -------------------------------------------------------------------------
+    //! \brief
+    // -------------------------------------------------------------------------
+    friend std::ostream& operator<<(std::ostream& os, Resources const& resources);
+
 private:
 
     std::vector<Resource> m_bin;

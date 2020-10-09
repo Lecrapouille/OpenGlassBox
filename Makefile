@@ -20,7 +20,7 @@ OBJS += Window.o
 OBJS += main.o
 
 DEFINES += -DVIRTUAL=
-PKG_LIBS = sdl2
+PKG_LIBS = sdl2 SDL2_image
 
 all: $(TARGET)
 

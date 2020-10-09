@@ -11,6 +11,7 @@
 #  include <string>
 #  include <limits>
 #  include <vector>
+#  include <iostream> // operator<<
 
 //==============================================================================
 //! \brief Type of Resource ("Water", "Oil", "Electricty", "Citizen" ...)
@@ -96,6 +97,11 @@ public:
     {
         return m_amount > 0u;
     }
+
+    // -------------------------------------------------------------------------
+    //! \brief
+    // -------------------------------------------------------------------------
+    friend std::ostream& operator<<(std::ostream& os, Resource const& resource);
 
 public:
 

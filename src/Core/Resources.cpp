@@ -151,3 +151,14 @@ Resource& Resources::findOrAddResource(ResourceType const& type)
     m_bin.push_back(Resource(type));
     return m_bin.back();
 }
+
+// -------------------------------------------------------------------------
+//! \brief Pretty print the content of a resource (debug purpose).
+// -------------------------------------------------------------------------
+std::ostream& operator<<(std::ostream& os, Resources const& resources)
+{
+    os << resources.m_bin.size() << " Resources:\n";
+    for (auto const& it: resources.m_bin)
+        os << "  " << it;
+    return os;
+}

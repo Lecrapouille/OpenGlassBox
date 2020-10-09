@@ -6,7 +6,10 @@
 //-----------------------------------------------------------------------------
 
 #include "main.hpp"
+#include <SDL_image.h>
 
+#define GLYPH_WIDTH  (18)
+#define GLYPH_HEIGHT (29)
 #define RED(color)   ((color >> 16) & 0xFF)
 #define GREEN(color) ((color >> 8) & 0xFF)
 #define BLUE(color)  ((color >> 0) & 0xFF)
@@ -15,11 +18,88 @@ GlassBox::GlassBox()
     : m_simulation(32u, 32u)
 {}
 
-bool GlassBox::onInit()
+void GlassBox::onRelease(SDL_Renderer&)
+{
+    SDL_DestroyTexture(m_fontTexture);
+}
+
+void GlassBox::blitRect(SDL_Texture *texture, SDL_Rect *src, int x, int y)
+{
+    SDL_Rect dest;
+
+    dest.x = x;
+    dest.y = y;
+    dest.w = src->w;
+    dest.h = src->h;
+
+    SDL_RenderCopy(m_renderer, texture, src, &dest);
+}
+
+void GlassBox::drawText(int x, int y, Uint8 r, Uint8 g, Uint8 b,
+                        TextAlignement align, const char *format, ...)
+{
+    SDL_Rect rect;
+    va_list args;
+
+    memset(&m_drawTextBuffer, '\0', sizeof(m_drawTextBuffer));
+
+    va_start(args, format);
+    vsprintf(m_drawTextBuffer, format, args);
+    va_end(args);
+
+    int len = int(strlen(m_drawTextBuffer));
+
+    switch (align)
+    {
+    case TEXT_RIGHT:
+        x -= (len * GLYPH_WIDTH);
+        break;
+    case TEXT_CENTER:
+        x -= (len * GLYPH_WIDTH) / 2;
+        break;
+    case TEXT_LEFT:
+    default:
+        break;
+    }
+
+    rect.w = GLYPH_WIDTH;
+    rect.h = GLYPH_HEIGHT;
+    rect.y = 0;
+
+    SDL_SetTextureColorMod(m_fontTexture, r, g, b);
+
+    for (int i = 0 ; i < len ; i++)
+    {
+        int c = m_drawTextBuffer[i];
+        if (c >= ' ' && c <= 'Z')
+        {
+            rect.x = (c - ' ') * GLYPH_WIDTH;
+            blitRect(m_fontTexture, &rect, x, y);
+            x += GLYPH_WIDTH;
+        }
+    }
+}
+
+bool GlassBox::initSDL(SDL_Renderer& renderer)
+{
+    m_renderer = &renderer;
+    const char *file = "data/Fonts/font.png";
+    m_fontTexture = IMG_LoadTexture(m_renderer, file);
+    if (m_fontTexture == nullptr) {
+        std::cerr << "Failed loading texture " << file << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+bool GlassBox::initSimulation()
 {
     Script script; // TODO: a cacher dans Simulation
-    if (!script.parse("data/Simulations/TestCity.txt"))
+    if (!script.parse("data/Simulations/TestCity.txt")) {
+        std::cerr << "Failed loading simulation scripts" << std::endl;
         return false;
+    }
 
     City& city = m_simulation.addCity("Paris", Vector3f(0.0f, 0.0f, 0.0f));
     Path& road = city.addPath(script.getPathType("Road"));
@@ -39,9 +119,19 @@ bool GlassBox::onInit()
     return true;
 }
 
+bool GlassBox::onInit(SDL_Renderer& renderer)
+{
+    if (!initSimulation())
+        return false;
+    return initSDL(renderer);
+}
+
 // TODO use SDL_RenderDrawLines to draw a batch of segments
 void GlassBox::onPaint(SDL_Renderer& renderer, float dt)
 {
+    // Update states of the simulation
+    m_simulation.update(dt);
+
     City& city = m_simulation.getCity("Paris");
 
     // Draw the grid
@@ -49,20 +139,6 @@ void GlassBox::onPaint(SDL_Renderer& renderer, float dt)
     // Draw the 1st map (todo rectangle * capacity/amount)
 
     // Draw Areas
-
-    // Draw Units
-    for (auto& it: city.units())
-    {
-        SDL_SetRenderDrawColor(&renderer,
-                               RED(it->color()), GREEN(it->color()), BLUE(it->color()),
-                               SDL_ALPHA_OPAQUE);
-        SDL_Rect rect;
-        rect.x = 10 * int(it->position().x);
-        rect.y = 10 * int(it->position().y);
-        rect.w = 10; // GRID_SIZE
-        rect.h = 10;
-        SDL_RenderFillRect(&renderer, &rect);
-    }
 
     for (auto& path: city.paths())
     {
@@ -88,10 +164,24 @@ void GlassBox::onPaint(SDL_Renderer& renderer, float dt)
             SDL_Rect rect;
             rect.x = 10 * int(it->position().x);
             rect.y = 10 * int(it->position().y);
-            rect.w = 2;
-            rect.h = 2;
+            rect.w = 5;
+            rect.h = 5;
             SDL_RenderFillRect(&renderer, &rect);
         }
+    }
+
+    // Draw Units
+    for (auto& it: city.units())
+    {
+        SDL_SetRenderDrawColor(&renderer,
+                               RED(it->color()), GREEN(it->color()), BLUE(it->color()),
+                               SDL_ALPHA_OPAQUE);
+        SDL_Rect rect;
+        rect.x = 10 * int(it->position().x);
+        rect.y = 10 * int(it->position().y);
+        rect.w = 10; // GRID_SIZE
+        rect.h = 10;
+        SDL_RenderFillRect(&renderer, &rect);
     }
 
     // Draw agents
@@ -106,15 +196,12 @@ void GlassBox::onPaint(SDL_Renderer& renderer, float dt)
         rect.w = 5; // GRID_SIZE
         rect.h = 5;
         SDL_RenderFillRect(&renderer, &rect);
+
+        drawText(rect.x, rect.y,
+                 RED(it->color()), GREEN(it->color()), BLUE(it->color()),
+                 TEXT_LEFT,
+                 "%u", it->id());
     }
-
-    // Update states of the simulation
-    m_simulation.update(dt);
-}
-
-void GlassBox::onRelease()
-{
-    // Do nothing
 }
 
 void GlassBox::onKeyDown(int key)

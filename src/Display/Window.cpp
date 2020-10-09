@@ -42,7 +42,7 @@ bool Window::run(IGame& game)
     if (!m_success)
         return false;
 
-    if (!game.onInit())
+    if (!game.onInit(*m_renderer))
         return false;
 
     while (!quit)
@@ -70,6 +70,6 @@ bool Window::run(IGame& game)
         SDL_Delay(100); // ms
     }
 
-    game.onRelease();
+    game.onRelease(*m_renderer);
     return true;
 }

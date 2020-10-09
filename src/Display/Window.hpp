@@ -14,8 +14,8 @@ public:
 
 private:
 
-    virtual bool onInit() = 0;
-    virtual void onRelease() = 0;
+    virtual bool onInit(SDL_Renderer& renderer) = 0;
+    virtual void onRelease(SDL_Renderer& renderer) = 0;
     virtual void onPaint(SDL_Renderer& renderer, float dt) = 0;
     virtual void onKeyDown(int key) = 0;
 };
