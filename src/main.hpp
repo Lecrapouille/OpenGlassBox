@@ -9,6 +9,8 @@
 #  define MAIN_HPP
 
 #  include "Display/Window.hpp"
+#  include "Display/DearImGui.hpp"
+#  include "Display/Debug.hpp"
 #  include "Core/Simulation.hpp"
 #  include "Core/ScriptParser.hpp"
 

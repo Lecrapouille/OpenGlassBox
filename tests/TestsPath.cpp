@@ -61,7 +61,7 @@ TEST(TestsNode, AddUnit)
     ASSERT_EQ(n2.m_units[0], &u1);
     ASSERT_EQ(n2.units()[0], &u1);
     ASSERT_EQ(&(n2.m_units[0]->m_node), &n1);
-    ASSERT_STREQ(n2.m_units[0]->name().c_str(), "house");
+    ASSERT_STREQ(n2.m_units[0]->type().c_str(), "house");
 
     // Add Unit2 to Node1. Check if the Unit has been attached.
     Unit u2(unit_type, n2, city);
@@ -71,8 +71,8 @@ TEST(TestsNode, AddUnit)
     ASSERT_EQ(n1.m_units[1], &u2);
     ASSERT_EQ(n1.units()[0], &u1);
     ASSERT_EQ(n1.units()[1], &u2);
-    ASSERT_STREQ(n1.m_units[0]->name().c_str(), "house");
-    ASSERT_STREQ(n1.m_units[1]->name().c_str(), "house");
+    ASSERT_STREQ(n1.m_units[0]->type().c_str(), "house");
+    ASSERT_STREQ(n1.m_units[1]->type().c_str(), "house");
     ASSERT_EQ(&(n1.m_units[0]->m_node), &n1);
     ASSERT_EQ(&(n1.m_units[1]->m_node), &n2);
 }
@@ -95,7 +95,7 @@ TEST(TestsWay, Constuctor)
     ASSERT_EQ(s1.m_to, &n2);
     ASSERT_EQ(&s1.from(), &n1);
     ASSERT_EQ(&s1.to(), &n2);
-    ASSERT_EQ(s1.length(), std::sqrt(2.0f));
+    ASSERT_EQ(s1.magnitude(), std::sqrt(2.0f));
 }
 
 // Test changeNode2 without using Path
@@ -394,14 +394,14 @@ TEST(TestsPath, MoveNode)
     Way& s2 = p.addWay(type2, n1, n3);
 
     // Check segments have dummy size.
-    ASSERT_EQ(s1.length(), 0.0f);
-    ASSERT_EQ(s2.length(), 0.0f);
+    ASSERT_EQ(s1.magnitude(), 0.0f);
+    ASSERT_EQ(s2.magnitude(), 0.0f);
 
     // Move nodes
     n2.translate(Vector3f(1.0f, 1.0f, 0.0f));
     n3.translate(Vector3f(-1.0f, -1.0f, 0.0f));
 
-    // Check segments they length updated.
-    ASSERT_EQ(s1.length(), std::sqrt(2.0f));
-    ASSERT_EQ(s2.length(), std::sqrt(2.0f));
+    // Check segments they magnitude updated.
+    ASSERT_EQ(s1.magnitude(), std::sqrt(2.0f));
+    ASSERT_EQ(s2.magnitude(), std::sqrt(2.0f));
 }

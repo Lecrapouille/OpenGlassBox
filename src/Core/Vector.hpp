@@ -31,6 +31,12 @@ struct Vector3f
     float x, y, z;
 };
 
+static inline std::ostream& operator<<(std::ostream& os, Vector3f const& v)
+{
+    os << "(" << v.x << ", " << v.y << ", " << v.z << ")";
+    return os;
+}
+
 static inline Vector3f operator+(Vector3f const& v1, Vector3f const& v2)
 {
     return Vector3f(v1.x + v2.x, v1.y + v2.y, v1.z + v2.z);

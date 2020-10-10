@@ -4,7 +4,7 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64:/usr/local/lib64:/usr/local/l
 sudo apt-get -qq update
 
 ### Install global packages
-sudo apt-get install -y git cmake make libdw-dev pkg-config bc libsdl2-dev
+sudo apt-get install -y git cmake make libdw-dev pkg-config bc libsdl2-dev libsdl2-image-dev
 
 ### Install the code coverage reporter (GitHub service coveralls)
 sudo gem install coveralls-lcov

@@ -153,6 +153,11 @@ public:
     }
 
     // -------------------------------------------------------------------------
+    //! \brief Return in read only access resources (for debug purpose).
+    // -------------------------------------------------------------------------
+    std::vector<Resource> const& container() const { return m_bin; }
+
+    // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
     friend std::ostream& operator<<(std::ostream& os, Resources const& resources);

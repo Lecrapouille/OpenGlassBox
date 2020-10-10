@@ -10,9 +10,6 @@
 
 #define GLYPH_WIDTH  (18)
 #define GLYPH_HEIGHT (29)
-#define RED(color)   ((color >> 16) & 0xFF)
-#define GREEN(color) ((color >> 8) & 0xFF)
-#define BLUE(color)  ((color >> 0) & 0xFF)
 
 GlassBox::GlassBox()
     : m_simulation(32u, 32u)
@@ -74,7 +71,7 @@ void GlassBox::drawText(int x, int y, Uint8 r, Uint8 g, Uint8 b,
         if (c >= ' ' && c <= 'Z')
         {
             rect.x = (c - ' ') * GLYPH_WIDTH;
-            blitRect(m_fontTexture, &rect, x, y);
+            blitRect(m_fontTexture, &rect, x, y - GLYPH_HEIGHT);
             x += GLYPH_WIDTH;
         }
     }
@@ -167,6 +164,11 @@ void GlassBox::onPaint(SDL_Renderer& renderer, float dt)
             rect.w = 5;
             rect.h = 5;
             SDL_RenderFillRect(&renderer, &rect);
+
+            drawText(rect.x, rect.y,
+                 RED(it->color()), GREEN(it->color()), BLUE(it->color()),
+                 TEXT_LEFT,
+                 "%u", it->id());
         }
     }
 
@@ -182,6 +184,11 @@ void GlassBox::onPaint(SDL_Renderer& renderer, float dt)
         rect.w = 10; // GRID_SIZE
         rect.h = 10;
         SDL_RenderFillRect(&renderer, &rect);
+
+        drawText(rect.x, rect.y,
+                 RED(it->color()), GREEN(it->color()), BLUE(it->color()),
+                 TEXT_LEFT,
+                 "%u", it->id());
     }
 
     // Draw agents
@@ -202,6 +209,8 @@ void GlassBox::onPaint(SDL_Renderer& renderer, float dt)
                  TEXT_LEFT,
                  "%u", it->id());
     }
+
+    debugCity(city);
 }
 
 void GlassBox::onKeyDown(int key)
@@ -212,6 +221,7 @@ void GlassBox::onKeyDown(int key)
     case SDL_SCANCODE_UP:
         printf("Touche appuyee\n");
         break;
+    default: break;
     }
 }
 
@@ -220,6 +230,5 @@ int main()
     Window w;
     GlassBox game;
 
-    w.color(100, 100, 100);
     return w.run(game) ? EXIT_SUCCESS : EXIT_FAILURE;
 }

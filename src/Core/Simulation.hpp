@@ -25,6 +25,8 @@ public:
     City& addCity(std::string const& id, Vector3f position);
     City& getCity(std::string const& id);
 
+    Cities const& cities() const { return m_cities; }
+
 private:
 
     uint32_t      m_gridSizeU;

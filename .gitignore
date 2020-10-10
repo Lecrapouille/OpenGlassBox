@@ -6,6 +6,8 @@ src/*.tar.bz2
 src/build
 tests/build
 external/.downloaded
+external/imgui
+external/imgui_sdl
 doc/html
 doc/coverage
 doc/gprof

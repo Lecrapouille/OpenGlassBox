@@ -307,7 +307,7 @@ public:
               std::string const& searchTarget)
         : Agent(id, type, owner, resources, searchTarget)
     {}
-    MOCK_METHOD(bool, update, (City&), (override));
+    MOCK_METHOD(bool, update, (Dijkstra&), (override));
 };
 
 // -----------------------------------------------------------------------------

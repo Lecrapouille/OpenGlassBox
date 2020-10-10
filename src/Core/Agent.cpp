@@ -18,6 +18,7 @@ Agent::Agent(uint32_t id, AgentType const& type, Unit& owner,
       m_type(type),
       m_searchTarget(searchTarget),
       m_resources(resources),
+      m_position(owner.position()),
       m_lastNode(&(owner.node()))
 {
     // Unit's Node should be linked at least one arc (Way) of the graph (Path)

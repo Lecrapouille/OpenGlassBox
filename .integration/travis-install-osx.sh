@@ -8,8 +8,8 @@ function brew_install
 }
 
 brew update
-#brew_install xxx yyy
-#brew link --force xxx yyy
+brew_install sdl2_image
+brew link --force sdl2_image
 
 ### Install google test and google mock
 wget https://github.com/google/googletest/archive/release-1.10.0.tar.gz

@@ -85,6 +85,11 @@ public:
     uint32_t color() const { return m_type.color; }
 
     // -------------------------------------------------------------------------
+    //! \brief Return in read only access resources (for debug purpose).
+    // -------------------------------------------------------------------------
+    std::vector<Resource> const& resources() const { return m_resources.container(); }
+
+    // -------------------------------------------------------------------------
     //! \brief Translate the position of the Agent relatively from its parent
     //! (Node). Only use this fonction when moving place of a City (that will
     //! also affect to its contents).

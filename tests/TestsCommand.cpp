@@ -217,8 +217,10 @@ TEST(TestsCommand, RuleCommandAgent)
 
     Resources locals, globals;
     City city("Paris", 2u, 2u);
-    Node n(42u, Vector3f(1.0f, 2.0f, 3.0f));
-    Unit unit(UnitType("unit"), n, city);
+    Path& p1 = city.addPath(PathType("Road"));
+    Node& n1 = p1.addNode(Vector3f(0.0f, 0.0f, 3.0f));
+    Node& n2 = p1.addNode(Vector3f(2.0f, 0.0f, 3.0f));
+    Unit unit(UnitType("unit"), n1, city);
     context.city = &city;
     context.unit = &unit;
     context.locals = &locals;
@@ -226,11 +228,24 @@ TEST(TestsCommand, RuleCommandAgent)
     context.u = context.v = 0u;
     context.radius = 1.0;
 
+    // No ways linked to the node => no agent created (else ill-formed
+    // simulation since Agents cannot travel).
     EXPECT_CALL(target, add(_,_)).Times(0);
     EXPECT_CALL(target, remove(_,_)).Times(0);
     EXPECT_CALL(target, get(_)).Times(0);
     EXPECT_CALL(target, capacity(_)).Times(0);
     EXPECT_EQ(city.agents().size(), 0u);
+    cmd.execute(context);
+    EXPECT_EQ(city.agents().size(), 0u);
+    cmd.execute(context);
+    EXPECT_EQ(city.agents().size(), 0u);
+
+    // Add ways => can execute command => agents created
+    p1.addWay(WayType("Dirt", 0xAAAAAA), n1, n2);
+    EXPECT_CALL(target, add(_,_)).Times(0);
+    EXPECT_CALL(target, remove(_,_)).Times(0);
+    EXPECT_CALL(target, get(_)).Times(0);
+    EXPECT_CALL(target, capacity(_)).Times(0);
     cmd.execute(context);
     EXPECT_EQ(city.agents().size(), 1u);
     cmd.execute(context);

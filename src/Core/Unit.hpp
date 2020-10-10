@@ -66,7 +66,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief Getter: return the type of Unit.
     // -------------------------------------------------------------------------
-    std::string const& type() const { return m_type.name; }
+    inline std::string const& type() const { return m_type.name; }
 
     // -------------------------------------------------------------------------
     //! \brief Return current resources.
@@ -81,7 +81,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief Return the color for the Renderer.
     // -------------------------------------------------------------------------
-    uint32_t color() const { return m_type.color; }
+    inline uint32_t color() const { return m_type.color; }
 
     // -------------------------------------------------------------------------
     //! \brief Return the associated Path Node.
@@ -91,13 +91,13 @@ public:
     // -------------------------------------------------------------------------
     //! \brief Return the unique identifier.
     // -------------------------------------------------------------------------
-    uint32_t id() const { return m_node.id(); }
+    inline uint32_t id() const { return m_node.id(); }
 
     // -------------------------------------------------------------------------
     //! \brief Check if can access to at least one Way. And Unit shall refer to
     //! a Node with neighbors else Agents cannot move towards Path.
     // -------------------------------------------------------------------------
-    bool hasWays() const { return m_node.hasWays(); }
+    inline bool hasWays() const { return m_node.hasWays(); }
 
 private:
 

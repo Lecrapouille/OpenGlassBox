@@ -12,7 +12,7 @@ VPATH += $(P):$(P)/src:$(P)/src/Core
 INCLUDES += -I$(P) -I$(P)/src
 
 OBJS += Simulation.o Map.o City.o Unit.o Path.o Agent.o Resource.o Resources.o Rule.o
-OBJS += MapCoordinatesInsideRadius.o RuleCommand.o RuleValue.o ScriptParser.o
+OBJS += MapCoordinatesInsideRadius.o RuleCommand.o RuleValue.o ScriptParser.o Dijkstra.o
 OBJS += TestsResource.o TestsResources.o TestsUnit.o TestsPath.o TestsMap.o TestsCity.o
 OBJS += TestsAgent.o TestsCoordInsideRadius.o TestsValue.o TestsCommand.o TestsScriptParser.o
 OBJS += TestsSimulation.o
