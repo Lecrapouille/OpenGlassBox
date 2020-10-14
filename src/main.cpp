@@ -98,20 +98,25 @@ bool GlassBox::initSimulation()
         return false;
     }
 
-    City& city = m_simulation.addCity("Paris", Vector3f(0.0f, 0.0f, 0.0f));
-    Path& road = city.addPath(script.getPathType("Road"));
+    City& paris = m_simulation.addCity("Paris", Vector3f(0.0f, 0.0f, 0.0f));
+    Path& road = paris.addPath(script.getPathType("Road"));
     Node& n1 = road.addNode(Vector3f(20.0f, 20.0f, 0.0f));
     Node& n2 = road.addNode(Vector3f(50.0f, 50.0f, 0.0f));
     Node& n3 = road.addNode(Vector3f(20.0f, 50.0f, 0.0f));
     Way& w1 = road.addWay(script.getWayType("Dirt"), n1, n2);
     Way& w2 = road.addWay(script.getWayType("Dirt"), n2, n3);
     Way& w3 = road.addWay(script.getWayType("Dirt"), n3, n1);
-    Unit& u1 = city.addUnit(script.getUnitType("Home"), road, w1, 0.66f);
-    Unit& u2 = city.addUnit(script.getUnitType("Home"), road, w1, 0.5f);
-    Unit& u3 = city.addUnit(script.getUnitType("Work"), road, w2, 0.5f);
-    Unit& u4 = city.addUnit(script.getUnitType("Work"), road, w3, 0.5f);
-    Map& m1 = city.addMap(script.getMapType("Grass"));
-    Map& m2 = city.addMap(script.getMapType("Water"));
+    Unit& u1 = paris.addUnit(script.getUnitType("Home"), road, w1, 0.66f);
+    Unit& u2 = paris.addUnit(script.getUnitType("Home"), road, w1, 0.5f);
+    Unit& u3 = paris.addUnit(script.getUnitType("Work"), road, w2, 0.5f);
+    Unit& u4 = paris.addUnit(script.getUnitType("Work"), road, w3, 0.5f);
+    Map& m1 = paris.addMap(script.getMapType("Grass"));
+    Map& m2 = paris.addMap(script.getMapType("Water"));
+
+    City& versailles = m_simulation.addCity("Versailles", Vector3f(1.0f, 0.0f, 0.0f));
+    Path& road2 = versailles.addPath(script.getPathType("Road"));
+    Node& n4 = road2.addNode(Vector3f(40.0f, 20.0f, 0.0f));
+    Way& w4 = road2.addWay(script.getWayType("Dirt"), n1, n4);
 
     return true;
 }
@@ -129,31 +134,53 @@ void GlassBox::onPaint(SDL_Renderer& renderer, float dt)
     // Update states of the simulation
     m_simulation.update(dt);
 
-    City& city = m_simulation.getCity("Paris");
-
-    // Draw the grid
-
-    // Draw the 1st map (todo rectangle * capacity/amount)
-
-    // Draw Areas
-
-    for (auto& path: city.paths())
+    for (auto& it: m_simulation.cities())
     {
-        // Draw roads
-        for (auto& it: path.second->ways()) // TODO rename to getWays ?
+        City& city = *(it.second);
+
+        // Draw the grid
+
+        // Draw the 1st map (todo rectangle * capacity/amount)
+
+        // Draw Areas
+
+        for (auto& path: city.paths())
         {
-            SDL_SetRenderDrawColor(&renderer,
-                                   RED(it->color()), GREEN(it->color()), BLUE(it->color()),
-                                   SDL_ALPHA_OPAQUE);
-            SDL_RenderDrawLine(&renderer,
-                               10 * int(it->position1().x),
-                               10 * int(it->position1().y),
-                               10 * int(it->position2().x),
-                               10 * int(it->position2().y));
+            // Draw roads
+            for (auto& it: path.second->ways()) // TODO rename to getWays ?
+            {
+                SDL_SetRenderDrawColor(&renderer,
+                                       RED(it->color()), GREEN(it->color()), BLUE(it->color()),
+                                       SDL_ALPHA_OPAQUE);
+                SDL_RenderDrawLine(&renderer,
+                                   10 * int(it->position1().x),
+                                   10 * int(it->position1().y),
+                                   10 * int(it->position2().x),
+                                   10 * int(it->position2().y));
+            }
+
+            // Draw nodes
+            for (auto& it: path.second->nodes()) // TODO rename to getNodes ?
+            {
+                SDL_SetRenderDrawColor(&renderer,
+                                       RED(it->color()), GREEN(it->color()), BLUE(it->color()),
+                                       SDL_ALPHA_OPAQUE);
+                SDL_Rect rect;
+                rect.x = 10 * int(it->position().x);
+                rect.y = 10 * int(it->position().y);
+                rect.w = 5;
+                rect.h = 5;
+                SDL_RenderFillRect(&renderer, &rect);
+
+                drawText(rect.x, rect.y,
+                         RED(it->color()), GREEN(it->color()), BLUE(it->color()),
+                         TEXT_LEFT,
+                         "%u", it->id());
+            }
         }
 
-        // Draw nodes
-        for (auto& it: path.second->nodes()) // TODO rename to getNodes ?
+        // Draw Units
+        for (auto& it: city.units())
         {
             SDL_SetRenderDrawColor(&renderer,
                                    RED(it->color()), GREEN(it->color()), BLUE(it->color()),
@@ -161,56 +188,36 @@ void GlassBox::onPaint(SDL_Renderer& renderer, float dt)
             SDL_Rect rect;
             rect.x = 10 * int(it->position().x);
             rect.y = 10 * int(it->position().y);
-            rect.w = 5;
+            rect.w = 10; // GRID_SIZE
+            rect.h = 10;
+            SDL_RenderFillRect(&renderer, &rect);
+
+            drawText(rect.x, rect.y,
+                     RED(it->color()), GREEN(it->color()), BLUE(it->color()),
+                     TEXT_LEFT,
+                     "%u", it->id());
+        }
+
+        // Draw agents
+        for (auto& it: city.agents())
+        {
+            SDL_SetRenderDrawColor(&renderer,
+                                   RED(it->color()), GREEN(it->color()), BLUE(it->color()),
+                                   SDL_ALPHA_OPAQUE);
+            SDL_Rect rect;
+            rect.x = 10 * int(it->position().x);
+            rect.y = 10 * int(it->position().y);
+            rect.w = 5; // GRID_SIZE
             rect.h = 5;
             SDL_RenderFillRect(&renderer, &rect);
 
             drawText(rect.x, rect.y,
-                 RED(it->color()), GREEN(it->color()), BLUE(it->color()),
-                 TEXT_LEFT,
-                 "%u", it->id());
+                     RED(it->color()), GREEN(it->color()), BLUE(it->color()),
+                     TEXT_LEFT,
+                     "%u", it->id());
         }
     }
-
-    // Draw Units
-    for (auto& it: city.units())
-    {
-        SDL_SetRenderDrawColor(&renderer,
-                               RED(it->color()), GREEN(it->color()), BLUE(it->color()),
-                               SDL_ALPHA_OPAQUE);
-        SDL_Rect rect;
-        rect.x = 10 * int(it->position().x);
-        rect.y = 10 * int(it->position().y);
-        rect.w = 10; // GRID_SIZE
-        rect.h = 10;
-        SDL_RenderFillRect(&renderer, &rect);
-
-        drawText(rect.x, rect.y,
-                 RED(it->color()), GREEN(it->color()), BLUE(it->color()),
-                 TEXT_LEFT,
-                 "%u", it->id());
-    }
-
-    // Draw agents
-    for (auto& it: city.agents())
-    {
-        SDL_SetRenderDrawColor(&renderer,
-                               RED(it->color()), GREEN(it->color()), BLUE(it->color()),
-                               SDL_ALPHA_OPAQUE);
-        SDL_Rect rect;
-        rect.x = 10 * int(it->position().x);
-        rect.y = 10 * int(it->position().y);
-        rect.w = 5; // GRID_SIZE
-        rect.h = 5;
-        SDL_RenderFillRect(&renderer, &rect);
-
-        drawText(rect.x, rect.y,
-                 RED(it->color()), GREEN(it->color()), BLUE(it->color()),
-                 TEXT_LEFT,
-                 "%u", it->id());
-    }
-
-    debugCity(city);
+    debugCities(m_simulation);
 }
 
 void GlassBox::onKeyDown(int key)

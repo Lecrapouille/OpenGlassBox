@@ -114,7 +114,7 @@ TEST(TestsScript, Constructor)
     {
          ASSERT_EQ(script.m_ruleMaps.size(), 1u);
          RuleMap const& rm1 = script.getRuleMap("CreateGrass");
-         ASSERT_STREQ(rm1.m_id.c_str(), "CreateGrass");
+         ASSERT_STREQ(rm1.m_type.c_str(), "CreateGrass");
          ASSERT_EQ(rm1.m_rate, 7u);
          ASSERT_EQ(rm1.isRandom(), true);
          // TODO map
@@ -125,15 +125,15 @@ TEST(TestsScript, Constructor)
     {
         ASSERT_EQ(script.m_ruleUnits.size(), 3u);
         RuleUnit const& ru1 = script.getRuleUnit("SendPeopleToWork");
-        ASSERT_STREQ(ru1.m_id.c_str(), "SendPeopleToWork");
+        ASSERT_STREQ(ru1.m_type.c_str(), "SendPeopleToWork");
         ASSERT_EQ(ru1.m_rate, 20u);
 
         RuleUnit const& ru2 = script.getRuleUnit("SendPeopleToHome");
-        ASSERT_STREQ(ru2.m_id.c_str(), "SendPeopleToHome");
+        ASSERT_STREQ(ru2.m_type.c_str(), "SendPeopleToHome");
         ASSERT_EQ(ru2.m_rate, 100u);
 
         RuleUnit const& ru3 = script.getRuleUnit("UsePeopleToWater");
-        ASSERT_STREQ(ru3.m_id.c_str(), "UsePeopleToWater");
+        ASSERT_STREQ(ru3.m_type.c_str(), "UsePeopleToWater");
         ASSERT_EQ(ru3.m_rate, 5u);
 
         // TODO local

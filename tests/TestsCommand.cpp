@@ -18,6 +18,7 @@ public:
     MOCK_METHOD(uint32_t, capacity,(RuleContext&), (override));
     MOCK_METHOD(void, add,(RuleContext&, uint32_t), (override));
     MOCK_METHOD(void, remove,(RuleContext&, uint32_t), (override));
+    MOCK_METHOD(std::string const&, type, (), (const override));
 };
 
 // -----------------------------------------------------------------------------

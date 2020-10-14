@@ -24,6 +24,7 @@ public:
     void update(float const deltaTime);
     City& addCity(std::string const& id, Vector3f position);
     City& getCity(std::string const& id);
+    City const& getCity(std::string const& id) const;
 
     Cities const& cities() const { return m_cities; }
 

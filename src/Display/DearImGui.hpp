@@ -35,4 +35,15 @@
 #    include "external/imgui/imgui_sdl.h"
 # pragma GCC diagnostic pop
 
+#  include <vector>
+#  include <string>
+
+namespace ImGui
+{
+
+bool Combo(const char* label, int* currIndex, std::vector<std::string>& values);
+bool ListBox(const char* label, int* currIndex, std::vector<std::string>& values);
+
+} // namespace ImGui
+
 #endif // OPENGLCPPWRAPPER_DEARIMGUI_HPP

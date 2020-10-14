@@ -103,6 +103,11 @@ public:
     std::string const& type() const { return m_type.name; }
 
     // -------------------------------------------------------------------------
+    //! \brief Getter: return the type of Map.
+    // -------------------------------------------------------------------------
+    MapType const& getMapType() const { return m_type; }
+
+    // -------------------------------------------------------------------------
     //! \brief Return the position inside the World coordinate of the city (top-left corner).
     // -------------------------------------------------------------------------
     Vector3f const& position() const { return m_position; }

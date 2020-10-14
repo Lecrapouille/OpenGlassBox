@@ -303,7 +303,7 @@ void Script::parseRuleMap()
         if (token == "end")
         {
             RuleMap* rule = new RuleMap(type);
-            m_ruleMaps[rule->id()] = rule;
+            m_ruleMaps[rule->type()] = rule;
             return ;
         }
         else if (token == "rate")
@@ -330,7 +330,7 @@ void Script::parseRuleUnit()
         if (token == "end")
         {
             RuleUnit* rule = new RuleUnit(type);
-            m_ruleUnits[rule->id()] = rule;
+            m_ruleUnits[rule->type()] = rule;
             return ;
         }
         else if (token == "rate")

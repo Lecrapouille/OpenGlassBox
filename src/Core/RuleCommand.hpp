@@ -42,6 +42,11 @@ public:
     //--------------------------------------------------------------------------
     virtual void execute(RuleContext& context) override;
 
+    // -------------------------------------------------------------------------
+    //! \brief
+    // -------------------------------------------------------------------------
+    virtual std::string type() override;
+
 private:
 
     IRuleValue& m_target;
@@ -76,6 +81,11 @@ public:
     //! \brief Decrease the amount of resource of the target.
     //--------------------------------------------------------------------------
     virtual void execute(RuleContext& context) override;
+
+    // -------------------------------------------------------------------------
+    //! \brief
+    // -------------------------------------------------------------------------
+    virtual std::string type() override;
 
 private:
 
@@ -114,6 +124,11 @@ public:
     //--------------------------------------------------------------------------
     virtual void execute(RuleContext& context) override;
 
+    // -------------------------------------------------------------------------
+    //! \brief
+    // -------------------------------------------------------------------------
+    virtual std::string type() override;
+
 private:
 
     IRuleValue& m_target;
@@ -146,6 +161,11 @@ public:
     //! \brief Add a new agent in the city
     //--------------------------------------------------------------------------
     virtual void execute(RuleContext& context) override;
+
+    // -------------------------------------------------------------------------
+    //! \brief
+    // -------------------------------------------------------------------------
+    virtual std::string type() override;
 
 public:
 

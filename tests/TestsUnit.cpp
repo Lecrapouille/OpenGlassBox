@@ -89,6 +89,7 @@ public:
     ~MockIRuleCommand() = default;
     MOCK_METHOD(bool, validate, (RuleContext&), (override));
     MOCK_METHOD(void, execute, (RuleContext&), (override));
+    MOCK_METHOD(std::string, type, (), (override));
 };
 
 class MockRuleUnit: public RuleUnit

@@ -25,6 +25,7 @@ public:
     virtual uint32_t capacity(RuleContext& context) override;
     virtual void add(RuleContext& context, uint32_t toAdd) override;
     virtual void remove(RuleContext& context, uint32_t toRemove) override;
+    virtual std::string const& type() const override;
 
 private:
 
@@ -46,6 +47,7 @@ public:
     virtual uint32_t capacity(RuleContext& context) override;
     virtual void add(RuleContext& context, uint32_t toAdd) override;
     virtual void remove(RuleContext& context, uint32_t toRemove) override;
+    virtual std::string const& type() const override;
 
 private:
 
@@ -67,6 +69,7 @@ public:
     virtual uint32_t capacity(RuleContext& context) override;
     virtual void add(RuleContext& context, uint32_t toAdd) override;
     virtual void remove(RuleContext& context, uint32_t toRemove) override;
+    virtual std::string const& type() const override;
 
 private:
 

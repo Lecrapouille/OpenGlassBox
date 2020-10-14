@@ -41,3 +41,8 @@ City& Simulation::getCity(std::string const& name)
 {
     return *m_cities.at(name);
 }
+
+City const& Simulation::getCity(std::string const& name) const
+{
+    return *m_cities.at(name);
+}

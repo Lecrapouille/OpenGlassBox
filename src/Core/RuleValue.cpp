@@ -28,6 +28,11 @@ void RuleValueGlobal::remove(RuleContext& context, uint32_t toRemove)
     context.globals->removeResource(m_resource.type(), toRemove);
 }
 
+std::string const& RuleValueGlobal::type() const
+{
+    return m_resource.type();
+}
+
 // ----
 
 uint32_t RuleValueLocal::get(RuleContext& context)
@@ -50,6 +55,11 @@ void RuleValueLocal::remove(RuleContext& context, uint32_t toRemove)
     context.locals->removeResource(m_resource.type(), toRemove);
 }
 
+std::string const& RuleValueLocal::type() const
+{
+    return m_resource.type();
+}
+
 // ----
 
 uint32_t RuleValueMap::get(RuleContext& context)
@@ -70,4 +80,9 @@ void RuleValueMap::add(RuleContext& context, uint32_t toAdd)
 void RuleValueMap::remove(RuleContext& context, uint32_t toRemove)
 {
     context.city->getMap(m_mapId).removeResource(context.u, context.v, context.radius, toRemove);
+}
+
+std::string const& RuleValueMap::type() const
+{
+    return m_mapId;
 }
