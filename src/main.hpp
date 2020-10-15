@@ -9,6 +9,7 @@
 #  define MAIN_HPP
 
 #  include "Display/IGame.hpp"
+#  include "Display/Window.hpp"
 #  include "Core/Simulation.hpp"
 
 //==============================================================================
@@ -19,6 +20,7 @@ class GlassBox: public IGame
 public:
 
     GlassBox();
+    bool run() { return m_window.run(*this); }
 
 private:
 
@@ -38,9 +40,10 @@ private:
 
 private:
 
-    Simulation m_simulation;
+    Window       m_window;
+    Simulation   m_simulation;
     SDL_Texture *m_fontTexture = nullptr;
-    bool m_debug_activated = false;
+    bool         m_debug_activated = false;
 };
 
 #endif

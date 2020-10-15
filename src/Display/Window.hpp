@@ -1,7 +1,7 @@
 #ifndef WINDOW_HPP
-#define WINDOW_HPP
+#  define WINDOW_HPP
 
-#include "Display/IGame.hpp"
+#  include "Display/IGame.hpp"
 
 //==============================================================================
 //! \brief Create and manage a window made in SDL. This class is made to run a

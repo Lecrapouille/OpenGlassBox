@@ -18,7 +18,7 @@ OBJS += TestsAgent.o TestsCoordInsideRadius.o TestsValue.o TestsCommand.o TestsS
 OBJS += TestsSimulation.o
 OBJS += main.o
 
-DEFINES += -DVIRTUAL=virtual
+DEFINES += -DVIRTUAL=virtual -DDESIRED_GRID_SIZE=2u
 DEFINES += -Wno-unused-function -Wno-undef -Wno-keyword-macro -Wno-float-equal -Wno-gnu-zero-variadic-macro-arguments
 PKG_LIBS += gtest gmock
 

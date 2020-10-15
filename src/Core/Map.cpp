@@ -7,6 +7,7 @@
 
 #include "Core/Map.hpp"
 #include "Core/City.hpp"
+#include "Config.hpp"
 
 // -----------------------------------------------------------------------------
 template<typename T>
@@ -77,7 +78,7 @@ void Map::addResource(uint32_t const u, uint32_t const v, uint32_t toAdd)
 }
 
 // -----------------------------------------------------------------------------
-void Map::addResource(uint32_t const u, uint32_t const v, uint32_t const radius, 
+void Map::addResource(uint32_t const u, uint32_t const v, uint32_t const radius,
                       uint32_t toAdd, bool distributed)
 {
     uint32_t remainingToAdd = toAdd;

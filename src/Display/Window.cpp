@@ -1,9 +1,7 @@
 #include "Display/Window.hpp"
 #include "Display/DearImGui.hpp"
+#include "Config.hpp"
 #include <stdio.h>
-
-#  define SCREEN_WIDTH 800
-#  define SCREEN_HEIGHT 600
 
 Window::Window()
 {
@@ -19,7 +17,8 @@ Window::Window()
 
     m_window = SDL_CreateWindow("OpenGlassBox",
                                 SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                                SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_RESIZABLE);
+                                config::SCREEN_WIDTH, config::SCREEN_HEIGHT,
+                                SDL_WINDOW_RESIZABLE);
     if (m_window == nullptr)
     {
         printf("Window could not be created! SDL_Error: %s\n", SDL_GetError());
@@ -33,7 +32,7 @@ Window::Window()
     }
 
     ImGui::CreateContext();
-    ImGuiSDL::Initialize(m_renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
+    ImGuiSDL::Initialize(m_renderer, config::SCREEN_WIDTH, config::SCREEN_HEIGHT);
 
     m_success = true;
 }

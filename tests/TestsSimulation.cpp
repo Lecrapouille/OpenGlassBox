@@ -6,6 +6,15 @@
 #undef protected
 #undef private
 
+#  include "src/Config.hpp"
+
+// -----------------------------------------------------------------------------
+TEST(TestsSimulation, Constants)
+{
+    ASSERT_GT(config::TICKS_PER_SECOND, 0u);
+}
+
+// -----------------------------------------------------------------------------
 TEST(TestsSimulation, Constructor)
 {
     Simulation sim(4u, 5u);

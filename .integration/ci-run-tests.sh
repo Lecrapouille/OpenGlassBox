@@ -26,7 +26,7 @@ export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/local/opt/libffi/lib/pkgconfig:$CI_
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/:$CI_DESTDIR/usr/lib/
 export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$CI_DESTDIR/usr/lib/
 
-# Clone and compile 3thpart librairies that SimTaDyn depends on.
+# Clone and compile 3thpart librairies that project depends on.
 make download-external-libs || exit 1
 #make compile-external-libs || exit 1
 

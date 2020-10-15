@@ -7,6 +7,7 @@
 
 #include "main.hpp"
 #include "Display/SDLHelper.hpp"
+#include "Config.hpp"
 
 //------------------------------------------------------------------------------
 #define RED(color)   ((color >> 16) & 0xFF)
@@ -24,9 +25,9 @@ void GlassBox::drawAgents(City const& city, SDL_Renderer& renderer)
                                BLUE(it->color()),
                                SDL_ALPHA_OPAQUE);
         SDL_Rect rect;
-        rect.x = 10 * int(it->position().x);
-        rect.y = 10 * int(it->position().y);
-        rect.w = 5; // GRID_SIZE
+        rect.x = int(config::GRID_SIZE * it->position().x);
+        rect.y = int(config::GRID_SIZE * it->position().y);
+        rect.w = 5;
         rect.h = 5;
         SDL_RenderFillRect(&renderer, &rect);
 
@@ -47,9 +48,9 @@ void GlassBox::drawUnits(City const& city, SDL_Renderer& renderer)
                                BLUE(it->color()),
                                SDL_ALPHA_OPAQUE);
         SDL_Rect rect;
-        rect.x = 10 * int(it->position().x);
-        rect.y = 10 * int(it->position().y);
-        rect.w = 10; // GRID_SIZE
+        rect.x = int(config::GRID_SIZE * it->position().x);
+        rect.y = int(config::GRID_SIZE * it->position().y);
+        rect.w = 10;
         rect.h = 10;
         SDL_RenderFillRect(&renderer, &rect);
 
@@ -60,9 +61,55 @@ void GlassBox::drawUnits(City const& city, SDL_Renderer& renderer)
 }
 
 //------------------------------------------------------------------------------
-void GlassBox::drawMaps(City const& /*city*/, SDL_Renderer& /*renderer*/)
+void GlassBox::drawMaps(City const& city, SDL_Renderer& renderer)
 {
-    // TODO
+    for (auto& it: city.maps())
+    {
+        Map& map = (*it.second);
+
+        // Display a filled rectangle with a ratio amount / capacity of resources
+        SDL_SetRenderDrawColor(&renderer,
+                               RED(map.color()),
+                               GREEN(map.color()),
+                               BLUE(map.color()),
+                               SDL_ALPHA_OPAQUE);
+
+        uint32_t capacity = map.getCapacity();
+        for (uint32_t u = 0; u < map.gridSizeU(); ++u)
+        {
+            for (uint32_t v = 0; v < map.gridSizeV(); ++v)
+            {
+                SDL_Rect rect;
+                rect.x = int(config::GRID_SIZE * u) + int(map.position().x);
+                rect.y = int(config::GRID_SIZE * v) + int(map.position().y);
+                rect.w = int(config::GRID_SIZE * map.getResource(u, v) / capacity);
+                rect.h = rect.w;
+                SDL_RenderFillRect(&renderer, &rect);
+            }
+        }
+
+        // Display a grid
+        SDL_SetRenderDrawColor(&renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
+
+        uint32_t u = map.gridSizeU();
+        uint32_t v = map.gridSizeV();
+        int32_t max_x = int32_t(map.position().x) + int32_t(map.gridSizeU() * config::GRID_SIZE);
+        int32_t max_y = int32_t(map.position().y) + int32_t(map.gridSizeV() * config::GRID_SIZE);
+        int32_t x = max_x;
+        int32_t y = max_y;
+
+        while (u--)
+        {
+            SDL_RenderDrawLine(&renderer, x, 0, x, max_y);
+            x -= int32_t(config::GRID_SIZE);
+        }
+
+        while (v--)
+        {
+            SDL_RenderDrawLine(&renderer, 0, y, max_x, y);
+            y -= int32_t(config::GRID_SIZE);
+        }
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -80,10 +127,10 @@ void GlassBox::drawPaths(City const& city, SDL_Renderer& renderer)
                                    BLUE(it->color()),
                                    SDL_ALPHA_OPAQUE);
             SDL_RenderDrawLine(&renderer,
-                               10 * int(it->position1().x),
-                               10 * int(it->position1().y),
-                               10 * int(it->position2().x),
-                               10 * int(it->position2().y));
+                               int(config::GRID_SIZE * it->position1().x),
+                               int(config::GRID_SIZE * it->position1().y),
+                               int(config::GRID_SIZE * it->position2().x),
+                               int(config::GRID_SIZE * it->position2().y));
         }
 
         // Draw nodes
@@ -95,8 +142,8 @@ void GlassBox::drawPaths(City const& city, SDL_Renderer& renderer)
                                    BLUE(it->color()),
                                    SDL_ALPHA_OPAQUE);
             SDL_Rect rect;
-            rect.x = 10 * int(it->position().x);
-            rect.y = 10 * int(it->position().y);
+            rect.x = int(config::GRID_SIZE * it->position().x);
+            rect.y = int(config::GRID_SIZE * it->position().y);
             rect.w = 5;
             rect.h = 5;
             SDL_RenderFillRect(&renderer, &rect);

@@ -6,13 +6,14 @@
 //-----------------------------------------------------------------------------
 
 #include "main.hpp"
-#include "Display/Window.hpp"
 #include "Display/SDLHelper.hpp"
 #include "Display/DearImGui.hpp"
+#include "Config.hpp"
 
 //------------------------------------------------------------------------------
 GlassBox::GlassBox()
-    : m_simulation(32u, 32u)
+    : m_simulation(config::SCREEN_WIDTH / config::GRID_SIZE,
+                   config::SCREEN_HEIGHT / config::GRID_SIZE)
 {}
 
 //------------------------------------------------------------------------------
@@ -30,6 +31,8 @@ bool GlassBox::setupGraphics(SDL_Renderer& renderer)
         std::cerr << "Failed loading texture " << file << std::endl;
         return false;
     }
+
+    m_window.setBackgroundColor(128, 128, 128);
 
     return true;
 }
@@ -99,10 +102,9 @@ void GlassBox::onKeyDown(int key)
 //------------------------------------------------------------------------------
 int main()
 {
-    Window w;
     GlassBox game;
 
     std::cout << "Press the key 'D' to show simulation debug" << std::endl;
 
-    return w.run(game) ? EXIT_SUCCESS : EXIT_FAILURE;
+    return game.run() ? EXIT_SUCCESS : EXIT_FAILURE;
 }

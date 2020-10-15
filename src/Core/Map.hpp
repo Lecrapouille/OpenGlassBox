@@ -9,7 +9,6 @@
 #  define OPEN_GLASSBOX_MAP_HPP
 
 #  include "Core/Unique.hpp"
-#  include "Core/Config.hpp"
 #  include "Core/Rule.hpp"
 #  include "Core/MapCoordinatesInsideRadius.hpp"
 #  include "Core/Vector.hpp"

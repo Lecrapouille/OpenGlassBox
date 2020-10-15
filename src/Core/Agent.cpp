@@ -8,7 +8,7 @@
 #include "Core/Agent.hpp"
 #include "Core/Dijkstra.hpp"
 #include "Core/Unit.hpp"
-#include "Core/Config.hpp"
+#include "Config.hpp"
 #include <iostream>
 
 //------------------------------------------------------------------------------

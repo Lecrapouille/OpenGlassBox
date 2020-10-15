@@ -8,6 +8,8 @@
 #undef protected
 #undef private
 
+#  include "src/Config.hpp"
+
 // -----------------------------------------------------------------------------
 TEST(TestsCity, Constructors)
 {

@@ -8,12 +8,12 @@
 
 #  include "src/Core/City.hpp"
 #  include "src/Core/Types.hpp"
+#  include "src/Config.hpp"
 
 // -----------------------------------------------------------------------------
-TEST(TestsCity, Constants)
+TEST(TestsMap, Constants)
 {
-    ASSERT_GE(Resource::MAX_CAPACITY, 65535);
-    ASSERT_GT(config::GRID_SIZE, 0.0f);
+    ASSERT_GT(config::GRID_SIZE, 0u);
 }
 
 // -----------------------------------------------------------------------------

@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------------
 
 #include "Core/City.hpp"
+#include "Config.hpp"
 
 // -----------------------------------------------------------------------------
 City::City(std::string const& name, Vector3f position, uint32_t gridSizeU, uint32_t gridSizeV)

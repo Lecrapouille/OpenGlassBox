@@ -39,8 +39,8 @@ TEST(TestsUnit, Constructor)
     ASSERT_EQ(u.m_context.unit, &u);
     ASSERT_EQ(u.m_context.locals, &u.m_resources);
     ASSERT_EQ(u.m_context.globals, &city.globals());
-    ASSERT_EQ(u.m_context.u, 1u);
-    ASSERT_EQ(u.m_context.v, 2u);
+    ASSERT_EQ(u.m_context.u, 1u); // node.position.x / config::GRID_SIZE
+    ASSERT_EQ(u.m_context.v, 2u); // node.position.y / config::GRID_SIZE
     ASSERT_EQ(u.m_context.radius, 2u);
     ASSERT_EQ(u.m_ticks, 0u);
 
