@@ -1,16 +1,19 @@
-#include "Display/Debug.hpp"
+#include "main.hpp"
 #include "Display/DearImGui.hpp"
 #include "Core/Simulation.hpp"
 #include <sstream>
 
+//------------------------------------------------------------------------------
 #define COLOR(a) ImVec4(                                \
         float(((a)->color() >> 16) & 0xFF),             \
         float(((a)->color() >> 8) & 0xFF),              \
         float(((a)->color() >> 0) & 0xFF),              \
         1.0f)
 
+//------------------------------------------------------------------------------
 static char buffer[1024];
 
+//------------------------------------------------------------------------------
 static void debugAgents(City const& city)
 {
     if (!ImGui::CollapsingHeader("Agents"))
@@ -36,6 +39,7 @@ static void debugAgents(City const& city)
     }
 }
 
+//------------------------------------------------------------------------------
 static void debugUnits(City const& city)
 {
     if (!ImGui::CollapsingHeader("Units"))
@@ -66,6 +70,7 @@ static void debugUnits(City const& city)
     }
 }
 
+//------------------------------------------------------------------------------
 static void debugMaps(City const& city)
 {
     if (!ImGui::CollapsingHeader("Maps"))
@@ -129,6 +134,7 @@ static void debugMaps(City const& city)
     }
 }
 
+//------------------------------------------------------------------------------
 static void debugPaths(City const& city)
 {
     if (!ImGui::CollapsingHeader("Paths"))
@@ -190,7 +196,8 @@ static void debugPaths(City const& city)
     }
 }
 
-void debugCity(City const& city)
+//------------------------------------------------------------------------------
+static void debugCity(City const& city)
 {
     debugAgents(city);
     debugUnits(city);
@@ -198,17 +205,18 @@ void debugCity(City const& city)
     debugPaths(city);
 }
 
-void debugCities(Simulation const& simulation)
+//------------------------------------------------------------------------------
+void GlassBox::debugSimulation()
 {
     static int item = 0;
     std::vector<std::string> city_list;
 
-    city_list.reserve(simulation.cities().size());
-    for (auto const& city: simulation.cities())
+    city_list.reserve(m_simulation.cities().size());
+    for (auto const& city: m_simulation.cities())
     {
         city_list.push_back(city.second->name());
     }
 
     ImGui::Combo("City", &item, city_list);
-    debugCity(simulation.getCity(city_list[size_t(item)]));
+    debugCity(m_simulation.getCity(city_list[size_t(item)]));
 }

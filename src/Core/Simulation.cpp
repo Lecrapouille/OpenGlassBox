@@ -10,11 +10,13 @@
 #define MAX_ITERATIONS_PER_UPDATE 20u
 #define TICKS_PER_SECOND 200.0f
 
+//------------------------------------------------------------------------------
 Simulation::Simulation(uint32_t gridSizeU, uint32_t gridSizeV)
     : m_gridSizeU(gridSizeU),
       m_gridSizeV(gridSizeV)
 {}
 
+//------------------------------------------------------------------------------
 void Simulation::update(float const deltaTime)
 {
     m_time += deltaTime;
@@ -31,17 +33,20 @@ void Simulation::update(float const deltaTime)
     }
 }
 
+//------------------------------------------------------------------------------
 City& Simulation::addCity(std::string const& name, Vector3f position)
 {
     m_cities[name] = std::make_unique<City>(name, position, m_gridSizeU, m_gridSizeV);
     return *m_cities[name];
 }
 
+//------------------------------------------------------------------------------
 City& Simulation::getCity(std::string const& name)
 {
     return *m_cities.at(name);
 }
 
+//------------------------------------------------------------------------------
 City const& Simulation::getCity(std::string const& name) const
 {
     return *m_cities.at(name);

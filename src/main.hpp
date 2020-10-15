@@ -8,19 +8,12 @@
 #ifndef MAIN_HPP
 #  define MAIN_HPP
 
-#  include "Display/Window.hpp"
-#  include "Display/DearImGui.hpp"
-#  include "Display/Debug.hpp"
+#  include "Display/IGame.hpp"
 #  include "Core/Simulation.hpp"
-#  include "Core/ScriptParser.hpp"
 
-enum TextAlignement
-{
-    TEXT_LEFT,
-    TEXT_CENTER,
-    TEXT_RIGHT
-};
-
+//==============================================================================
+//! \brief Entry point of the SimCity game.
+//==============================================================================
 class GlassBox: public IGame
 {
 public:
@@ -29,10 +22,15 @@ public:
 
 private:
 
-    void blitRect(SDL_Texture *texture, SDL_Rect *src, int x, int y);
-    void drawText(int x, int y, Uint8 r, Uint8 g, Uint8 b, TextAlignement align, const char *format, ...);
-    bool initSDL(SDL_Renderer& renderer);
     bool initSimulation();
+    bool setupGraphics(SDL_Renderer& renderer);
+    void renderSimulation(SDL_Renderer& renderer);
+    void debugSimulation();
+    void drawCity(City const& city, SDL_Renderer& renderer);
+    void drawPaths(City const& city, SDL_Renderer& renderer);
+    void drawMaps(City const& city, SDL_Renderer& renderer);
+    void drawUnits(City const& city, SDL_Renderer& renderer);
+    void drawAgents(City const& city, SDL_Renderer& renderer);
     virtual bool onInit(SDL_Renderer& renderer) override;
     virtual void onRelease(SDL_Renderer& renderer) override;
     virtual void onPaint(SDL_Renderer& renderer, float dt) override;
@@ -41,9 +39,8 @@ private:
 private:
 
     Simulation m_simulation;
-    SDL_Renderer* m_renderer = nullptr;
     SDL_Texture *m_fontTexture = nullptr;
-    char m_drawTextBuffer[1024];
+    bool m_debug_activated = false;
 };
 
 #endif

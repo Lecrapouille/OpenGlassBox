@@ -38,11 +38,20 @@
 #  pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 #  pragma GCC diagnostic ignored "-Wunused-function"
 
+#if defined __clang__
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wunused-member-function"
+#endif
+
 #include "Core/Unique.hpp"
 #include "external/imgui/imgui_draw.cpp"
 #include "external/imgui/imgui_widgets.cpp"
 #include "external/imgui/imgui.cpp"
 #include "external/imgui/imgui_sdl.cpp"
+
+#if defined __clang__
+#  pragma clang diagnostic pop
+#endif
 
 # pragma GCC diagnostic pop
 
@@ -56,7 +65,7 @@ static auto vector_getter = [](void* vec, int idx, const char** out_text)
 {
     auto& vector = *static_cast<std::vector<std::string>*>(vec);
     if (idx < 0 || idx >= static_cast<int>(vector.size())) { return false; }
-    *out_text = vector.at(idx).c_str();
+    *out_text = vector.at(size_t(idx)).c_str();
     return true;
 };
 
@@ -64,14 +73,14 @@ bool Combo(const char* label, int* currIndex, std::vector<std::string>& values)
 {
     if (values.empty()) { return false; }
     return Combo(label, currIndex, vector_getter,
-                 static_cast<void*>(&values), values.size());
+                 static_cast<void*>(&values), static_cast<int>(values.size()));
 }
 
 bool ListBox(const char* label, int* currIndex, std::vector<std::string>& values)
 {
     if (values.empty()) { return false; }
     return ListBox(label, currIndex, vector_getter,
-                   static_cast<void*>(&values), values.size());
+                   static_cast<void*>(&values), static_cast<int>(values.size()));
 }
 
 } // namespace ImGui

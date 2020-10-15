@@ -35,11 +35,6 @@ public:
     bool parse(std::string const& filename);
 
     //--------------------------------------------------------------------------
-    //! \brief Return true if parse() ended with success.
-    //--------------------------------------------------------------------------
-    operator bool() const { return m_success; }
-
-    //--------------------------------------------------------------------------
     //! \brief Search the Resource given by its identifier and return the const
     //! reference to the Resource given. Throw an exception if not found.
     //--------------------------------------------------------------------------

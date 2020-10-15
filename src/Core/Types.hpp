@@ -39,7 +39,7 @@ public:
     uint32_t                   rate = 1u;
     bool                       randomTiles = false;
     uint32_t                   randomTilesPercent = 10u;
-    std::vector<IRuleCommand*> commands;
+    std::vector<IRuleCommand*> commands; // Shall not be free and pointer stay valid.
 };
 
 //==========================================================================
@@ -61,7 +61,7 @@ public:
     std::string                name;
     uint32_t                   rate = 1u;
     RuleUnit*                  onFail = nullptr;
-    std::vector<IRuleCommand*> commands;
+    std::vector<IRuleCommand*> commands; // Shall not be free and pointer stay valid.
 };
 
 //==========================================================================
@@ -81,19 +81,11 @@ public:
         : name(name_), color(0xFFFFFF), radius(1u)
     {}
 
-    //UnitType(std::string const& name_, uint32_t const color_, uint32_t const radius_,
-    //         Resources const& resources_,
-    //         std::vector<RuleUnit*> const& rules_, // TODO reflexion lazy search: vec<string> puis rules(getRuleUnit(string))
-    //         std::vector<std::string> const& targets_)
-    //    : name(name_), color(color_), radius(radius_),
-    //      resources(resources_), rules(rules_), targets(targets_)
-    //{}
-
     std::string              name;
     uint32_t                 color;
     uint32_t                 radius;
     Resources                resources;
-    std::vector<RuleUnit*>   rules;
+    std::vector<RuleUnit*>   rules; // Shall not be free and pointer stay valid.
     std::vector<std::string> targets;
 };
 
@@ -122,7 +114,7 @@ public:
     std::string           name;
     uint32_t              color;
     uint32_t              capacity;
-    std::vector<RuleMap*> rules;
+    std::vector<RuleMap*> rules; // Shall not be free and pointer stay valid.
 };
 
 //==============================================================================

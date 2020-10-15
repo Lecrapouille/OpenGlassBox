@@ -11,12 +11,8 @@ TEST(TestsScript, Constructor)
     // Load a script.
     Script script;
 
-    // Check bool() operator
-    ASSERT_EQ(script, false);
-
     // Load a script.
     ASSERT_EQ(script.parse("../data/Simulations/TestCity.txt"), true);
-    ASSERT_EQ(script, true);
 
     // Check states content:
 
@@ -147,7 +143,6 @@ TEST(TestsScript, DoesNotExist)
 
     // Load a script that does not exist.
     ASSERT_EQ(script.parse("fdsfhsdfgsdfdsf"), false);
-    ASSERT_EQ(script, false);
 }
 
 TEST(TestsScript, BadSyntax)
@@ -157,7 +152,6 @@ TEST(TestsScript, BadSyntax)
     // Load a script that contains error syntax.
     (void)system("echo \"foo\" > /tmp/foo");
     ASSERT_EQ(script.parse("/tmp/foo"), false);
-    ASSERT_EQ(script, false);
 }
 
 TEST(TestsScript, EmptyFile)
@@ -167,5 +161,4 @@ TEST(TestsScript, EmptyFile)
     // Load a script that contains error syntax.
     (void)system("echo \"\" > /tmp/foo");
     ASSERT_EQ(script.parse("/tmp/foo"), false);
-    ASSERT_EQ(script, false);
 }

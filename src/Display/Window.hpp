@@ -3,12 +3,9 @@
 
 #include "Display/IGame.hpp"
 
-#define RED(color)   ((color >> 16) & 0xFF)
-#define GREEN(color) ((color >> 8) & 0xFF)
-#define BLUE(color)  ((color >> 0) & 0xFF)
-
 //==============================================================================
-//! \brief
+//! \brief Create and manage a window made in SDL. This class is made to run a
+//!  IGame which is the interface for your game.
 //==============================================================================
 class Window
 {
@@ -35,9 +32,9 @@ public:
     // -------------------------------------------------------------------------
     //! \brief Change the background color of the Windows.
     // -------------------------------------------------------------------------
-    void setBackgroundColor(uint8_t r, uint8_t g, uint8_t b)
+    void setBackgroundColor(uint8_t red, uint8_t green, uint8_t blue)
     {
-        this->r = r; this->g = g; this->b = b;
+        this->r = red; this->g = green; this->b = blue;
     }
 
     // -------------------------------------------------------------------------
@@ -48,7 +45,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief Getter: return the windows.
     // -------------------------------------------------------------------------
-    SDL_Window* window() { return m_window; }
+    SDL_Window* operator()() { return m_window; }
 
 private:
 
@@ -56,8 +53,6 @@ private:
     SDL_Window* m_window = nullptr;
     //! \brief SDL renderer
     SDL_Renderer* m_renderer = nullptr;
-    //! \brief
-    SDL_Surface* m_screenSurface = nullptr;
     //! \brief
     bool m_success = false;
     //! \brief background color (red)
