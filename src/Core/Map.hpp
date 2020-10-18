@@ -11,6 +11,7 @@
 #  include "Core/Unique.hpp"
 #  include "Core/Rule.hpp"
 #  include "Core/MapCoordinatesInsideRadius.hpp"
+#  include "Core/MapRandomCoordinates.hpp"
 #  include "Core/Vector.hpp"
 
 class City;
@@ -128,25 +129,25 @@ public:
 
 private:
 
-    MapType          const& m_type;
+    MapType const& m_type;
     //! \brief Position of the top-left corner.
-    Vector3f                m_position;
+    Vector3f       m_position;
     //! \brief The size of the grid along the U-axis.
-    uint32_t                m_gridSizeU;
+    uint32_t       m_gridSizeU;
     //! \brief The size of the grid along the V-axis.
-    uint32_t                m_gridSizeV;
+    uint32_t       m_gridSizeV;
     //! \brief Structure holding all information needed to execute simulation
     //! rules.
-    RuleContext             m_context;
+    RuleContext    m_context;
     //! \brief Frenquency for running rules.
-    uint32_t                m_ticks = 0u;
+    uint32_t       m_ticks = 0u;
     //! \brief Amount of resource for each cell of the grid. The capacity is
     //! stired inside MapType.
-    std::vector<uint32_t>   m_resources;
+    std::vector<uint32_t>      m_resources;
     //! \brief Cache coordinates within a position and radius.
     MapCoordinatesInsideRadius m_coordinates;
-    // TODO
-    //RandomCoordinates       m_randomCoordinate;
+    //! \brief Cache random coordinates.
+    MapRandomCoordinates       m_randomCoordinates;
 };
 
 using Maps = std::map<std::string, std::unique_ptr<Map>>;

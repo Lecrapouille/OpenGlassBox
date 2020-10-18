@@ -8,11 +8,12 @@ P := ..
 M := $(P)/.makefile
 include $(M)/Makefile.header
 
-VPATH += $(P):$(P)/src:$(P)/src/Core
+VPATH += $(P) $(P)/src/Core
 INCLUDES += -I$(P) -I$(P)/src
 
 OBJS += Simulation.o Map.o City.o Unit.o Path.o Agent.o Resource.o Resources.o Rule.o
-OBJS += MapCoordinatesInsideRadius.o RuleCommand.o RuleValue.o ScriptParser.o Dijkstra.o
+OBJS += MapCoordinatesInsideRadius.o MapRandomCoordinates.o RuleCommand.o RuleValue.o
+OBJS += ScriptParser.o Dijkstra.o
 OBJS += TestsResource.o TestsResources.o TestsUnit.o TestsPath.o TestsMap.o TestsCity.o
 OBJS += TestsAgent.o TestsCoordInsideRadius.o TestsValue.o TestsCommand.o TestsScriptParser.o
 OBJS += TestsSimulation.o

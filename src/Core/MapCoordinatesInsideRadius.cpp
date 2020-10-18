@@ -13,9 +13,9 @@
 //------------------------------------------------------------------------------
 
 // Will be used to obtain a seed for the random number engine
-std::random_device rd;
+static std::random_device rd;
 // Standard mersenne_twister_engine seeded with rd()
-std::mt19937 generator(rd());
+static std::mt19937 generator(rd());
 
 //------------------------------------------------------------------------------
 int32_t MapCoordinatesInsideRadius::compress(int32_t u, int32_t v)
@@ -57,7 +57,7 @@ void MapCoordinatesInsideRadius::init(uint32_t radius,
 
     if (random)
     {
-        std::uniform_int_distribution<uint32_t> randomIndex(0u, uint32_t(relativeCoord.size()));
+        std::uniform_int_distribution<uint32_t> randomIndex(0u, uint32_t(relativeCoord.size() - 1u));
         m_startingIndex = randomIndex(generator);
     }
     else

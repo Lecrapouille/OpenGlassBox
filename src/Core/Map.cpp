@@ -157,14 +157,13 @@ void Map::executeRules()
         {
             if (rule->isRandom())
             {
-#warning "TODO Map::RandomCoordinates"
-                //FIXME RandomCoordinates r(m_gridSizeU, m_gridSizeV);
-                //uint32_t tilesAmount = r.percent(m_gridSizeU * m_gridSizeV);
-                //while (tilesAmount--)
-                //{
-                //    if (r.next(&m_context.u, &m_context.v))
-                //        rule->execute(context);
-                //}
+                m_randomCoordinates.init(m_gridSizeU, m_gridSizeV);
+                uint32_t tilesAmount = rule->percent(m_gridSizeU * m_gridSizeV);
+                while (tilesAmount--)
+                {
+                    if (m_randomCoordinates.next(m_context.u, m_context.v))
+                        rule->execute(m_context);
+                }
             }
             else
             {
