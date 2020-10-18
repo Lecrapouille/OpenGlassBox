@@ -48,7 +48,7 @@ make coverage
 
 ## Notes concerning the portage
 
-- Dependencies to the game engine Unity has been removed. I also removed Listener classes (ie SimBoxListener) since not needed for SDL (they were used to create, in the graphscene, graphical elements in relation of elements created by the simulation (City, Agent, Unit ...).
+- Dependencies to the game engine Unity has been removed.
 - Since I'm more interested by the simulation than the game renderer, I'm not using game engine but, for the moment, SDL2 which is enough to draw lines and dots. SDL2 may be replaced by OpenGL or by SFML in the futur.
 - The original project did not come with unit tests or comments. Added !
 - The original project was using the same names than the GDC conference. I renamed classes:

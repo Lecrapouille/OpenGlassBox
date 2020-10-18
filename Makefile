@@ -12,12 +12,12 @@ INCLUDES += -I$(P)/src -I$(P)/external -I$(P)
 
 # Core
 OBJS += Simulation.o Map.o City.o Unit.o Path.o Agent.o Resource.o Resources.o
-OBJS += ScriptParser.o MapCoordinatesInsideRadius.o Rule.o RuleCommand.o RuleValue.o
-OBJS += Dijkstra.o
+OBJS += ScriptParser.o MapCoordinatesInsideRadius.o MapRandomCoordinates.o
+OBJS += Rule.o RuleCommand.o RuleValue.o Dijkstra.o
 # Renderer
 OBJS += DearImGui.o SDLHelper.o Window.o
 # Game
-OBJS += Debug.o Draw.o main.o
+OBJS += Debug.o Draw.o Listeners.o main.o
 
 DEFINES += -DVIRTUAL= -DDESIRED_GRID_SIZE=10u
 PKG_LIBS = sdl2 SDL2_image

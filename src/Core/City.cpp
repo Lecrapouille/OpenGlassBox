@@ -14,7 +14,10 @@ City::City(std::string const& name, Vector3f position, uint32_t gridSizeU, uint3
       m_position(position),
       m_gridSizeU(gridSizeU),
       m_gridSizeV(gridSizeV)
-{}
+{
+    static City::Listener listener;
+    setListener(listener);
+}
 
 // -----------------------------------------------------------------------------
 City::City(std::string const& name, uint32_t gridSizeU, uint32_t gridSizeV)
@@ -25,6 +28,12 @@ City::City(std::string const& name, uint32_t gridSizeU, uint32_t gridSizeV)
 City::City(std::string const& name)
     : City(name, Vector3f(0.0f, 0.0f, 0.0f), 32u, 32u)
 {}
+
+// -----------------------------------------------------------------------------
+void City::setListener(City::Listener& listener)
+{
+    m_listener = &listener;
+}
 
 // -----------------------------------------------------------------------------
 void City::update()
@@ -99,8 +108,9 @@ void City::world2mapPosition(Vector3f worldPos, uint32_t& u, uint32_t& v)
 // -----------------------------------------------------------------------------
 Map& City::addMap(MapType const& type)
 {
-    m_maps[type.name] = std::make_unique<Map>(type, *this);
-    return *m_maps[type.name];
+    Map& map = *(m_maps[type.name] = std::make_unique<Map>(type, *this));
+    m_listener->onMapAdded(map);
+    return map;
 }
 
 // -----------------------------------------------------------------------------
@@ -112,8 +122,9 @@ Map& City::getMap(std::string const& id)
 // -----------------------------------------------------------------------------
 Path& City::addPath(PathType const& type)
 {
-    m_paths[type.name] = std::make_unique<Path>(type);
-    return *m_paths[type.name];
+    Path& path = *(m_paths[type.name] = std::make_unique<Path>(type));
+    m_listener->onPathAdded(path);
+    return path;
 }
 
 // -----------------------------------------------------------------------------
@@ -126,7 +137,9 @@ Path& City::getPath(std::string const& id)
 Unit& City::addUnit(UnitType const& type, Node& node)
 {
     m_units.push_back(std::make_unique<Unit>(/*m_nextUnitId++,*/ type, node, *this));
-    return *m_units.back();
+    Unit& unit = *(m_units.back());
+    m_listener->onUnitAdded(unit);
+    return unit;
 }
 
 // -----------------------------------------------------------------------------
@@ -140,7 +153,9 @@ Unit& City::addUnit(UnitType const& type, Path& path, Way& way, float offset)
 Agent& City::addAgent(AgentType const& type, Unit& owner, Resources const& resources,
                       std::string const& searchTarget)
 {
-    m_agents.push_back(std::make_unique<Agent>(m_nextAgentId++, type, owner,
-                                               resources, searchTarget));
-    return *m_agents.back();
+    m_agents.push_back(std::make_unique<Agent>(m_nextAgentId++, type, owner, resources,
+                                               searchTarget));
+    Agent& agent = *(m_agents.back());
+    m_listener->onAgentAdded(agent);
+    return agent;
 }

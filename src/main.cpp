@@ -40,10 +40,12 @@ bool GlassBox::setupGraphics(SDL_Renderer& renderer)
 //------------------------------------------------------------------------------
 bool GlassBox::initSimulation()
 {
+    m_simulation.setListener(*this);
     if (!m_simulation.parse("data/Simulations/TestCity.txt"))
         return false;
 
     City& paris = m_simulation.addCity("Paris", Vector3f(0.0f, 0.0f, 0.0f));
+    paris.setListener(*this);
     Path& road = paris.addPath(m_simulation.getPathType("Road"));
     Node& n1 = road.addNode(Vector3f(20.0f, 20.0f, 0.0f));
     Node& n2 = road.addNode(Vector3f(50.0f, 50.0f, 0.0f));
@@ -59,6 +61,7 @@ bool GlassBox::initSimulation()
     Map& m2 = paris.addMap(m_simulation.getMapType("Water"));
 
     City& versailles = m_simulation.addCity("Versailles", Vector3f(1.0f, 0.0f, 0.0f));
+    versailles.setListener(*this);
     Path& road2 = versailles.addPath(m_simulation.getPathType("Road"));
     Node& n4 = road2.addNode(Vector3f(40.0f, 20.0f, 0.0f));
     Way& w4 = road2.addWay(m_simulation.getWayType("Dirt"), n1, n4);

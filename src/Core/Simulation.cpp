@@ -14,7 +14,16 @@
 Simulation::Simulation(uint32_t gridSizeU, uint32_t gridSizeV)
     : m_gridSizeU(gridSizeU),
       m_gridSizeV(gridSizeV)
-{}
+{
+    static Simulation::Listener listener;
+    setListener(listener);
+}
+
+// -----------------------------------------------------------------------------
+void Simulation::setListener(Simulation::Listener& listener)
+{
+    m_listener = &listener;
+}
 
 //------------------------------------------------------------------------------
 void Simulation::update(float const deltaTime)
@@ -36,8 +45,9 @@ void Simulation::update(float const deltaTime)
 //------------------------------------------------------------------------------
 City& Simulation::addCity(std::string const& name, Vector3f position)
 {
-    m_cities[name] = std::make_unique<City>(name, position, m_gridSizeU, m_gridSizeV);
-    return *m_cities[name];
+    City& city = *(m_cities[name] = std::make_unique<City>(name, position, m_gridSizeU, m_gridSizeV));
+    m_listener->onCityAdded(city);
+    return city;
 }
 
 //------------------------------------------------------------------------------

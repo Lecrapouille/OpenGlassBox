@@ -80,6 +80,9 @@ static void debugMaps(City const& city)
     {
         Map& map = *(it.second);
         sprintf(buffer, "Map %s:", map.type().c_str());
+
+        //TODO: checkbox display
+
         if (ImGui::TreeNodeEx(buffer, ImGuiTreeNodeFlags_DefaultOpen))
         {
             ImGui::TextColored(COLOR(&map), "Color");
@@ -208,15 +211,6 @@ static void debugCity(City const& city)
 //------------------------------------------------------------------------------
 void GlassBox::debugSimulation()
 {
-    static int item = 0;
-    std::vector<std::string> city_list;
-
-    city_list.reserve(m_simulation.cities().size());
-    for (auto const& city: m_simulation.cities())
-    {
-        city_list.push_back(city.second->name());
-    }
-
-    ImGui::Combo("City", &item, city_list);
-    debugCity(m_simulation.getCity(city_list[size_t(item)]));
+    ImGui::Combo("City", &m_cityComboItem, m_cityNames);
+    debugCity(m_simulation.getCity(m_cityNames[size_t(m_cityComboItem)]));
 }

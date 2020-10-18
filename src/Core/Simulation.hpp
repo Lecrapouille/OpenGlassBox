@@ -20,12 +20,28 @@ class Simulation: public Script
 {
 public:
 
+    class Listener
+    {
+    public:
+
+        virtual ~Listener() = default;
+        virtual void onCityAdded(City& /*city*/) {};
+        virtual void onCityRemoved(City& /*city*/) {};
+    };
+
+public:
+
     // -------------------------------------------------------------------------
     //! \brief Create a simulation game.
     //! \param[in] gridSizeU: the grid dimension along the U-axis for creating maps.
     //! \param[in] gridSizeV: the grid dimension along the V-axis for creating maps.
     // -------------------------------------------------------------------------
     Simulation(uint32_t gridSizeU = 32u, uint32_t gridSizeV = 32u);
+
+    // -------------------------------------------------------------------------
+    //! \brief
+    // -------------------------------------------------------------------------
+    void setListener(Simulation::Listener& listener);
 
     // -------------------------------------------------------------------------
     //! \brief Update the game simulation.
@@ -61,6 +77,7 @@ private:
     uint32_t      m_gridSizeV;
     float         m_time = 0.0f;
     Cities        m_cities;
+    Simulation::Listener *m_listener;
 };
 
 #endif

@@ -25,6 +25,30 @@ class City
 {
 public:
 
+    //==========================================================================
+    //! \brief
+    //==========================================================================
+    class Listener
+    {
+    public:
+
+        virtual ~Listener() = default;
+
+        virtual void onMapAdded(Map& /*map*/) {}
+        virtual void onMapRemoved(Map& /*map*/) {}
+
+        virtual void onPathAdded(Path& /*path*/) {}
+        virtual void onPathRemoved(Path& /*path*/) {}
+
+        virtual void onUnitAdded(Unit& /*unit*/) {}
+        virtual void onUnitRemoved(Unit& /*unit*/) {}
+
+        virtual void onAgentAdded(Agent& /*agent*/) {}
+        virtual void onAgentRemoved(Agent& /*agent*/) {}
+    };
+
+public:
+
     // -------------------------------------------------------------------------
     //! \brief Create a empty city of a grid of gridSizeU x gridSizeV cells at
     //! the given position in the world coordinate.
@@ -36,6 +60,11 @@ public:
     //! position 0 in the world coordinate.
     // -------------------------------------------------------------------------
     City(std::string const& name, uint32_t gridSizeU, uint32_t gridSizeV);
+
+    // -------------------------------------------------------------------------
+    //! \brief
+    // -------------------------------------------------------------------------
+    void setListener(City::Listener& listener);
 
     // -------------------------------------------------------------------------
     //! \brief Create a empty city of a grid of 32 x 32 cells at position 0 in
@@ -209,6 +238,8 @@ private:
     Agents        m_agents;
     //! \brief
     Dijkstra      m_dijkstra;
+    //!
+    City::Listener *m_listener;
 };
 
 //==============================================================================
