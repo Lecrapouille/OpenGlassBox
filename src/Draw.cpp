@@ -8,6 +8,7 @@
 #include "main.hpp"
 #include "Display/SDLHelper.hpp"
 #include "Config.hpp"
+#include <algorithm>
 
 //------------------------------------------------------------------------------
 #define RED(color)   ((color >> 16) & 0xFF)
@@ -25,8 +26,8 @@ void GlassBox::drawAgents(City const& city, SDL_Renderer& renderer)
                                BLUE(it->color()),
                                SDL_ALPHA_OPAQUE);
         SDL_Rect rect;
-        rect.x = int(config::GRID_SIZE * it->position().x);
-        rect.y = int(config::GRID_SIZE * it->position().y);
+        rect.x = int(/*city.position().x +*/ it->position().x);
+        rect.y = int(/*city.position().y +*/ it->position().y);
         rect.w = 5;
         rect.h = 5;
         SDL_RenderFillRect(&renderer, &rect);
@@ -48,8 +49,8 @@ void GlassBox::drawUnits(City const& city, SDL_Renderer& renderer)
                                BLUE(it->color()),
                                SDL_ALPHA_OPAQUE);
         SDL_Rect rect;
-        rect.x = int(config::GRID_SIZE * it->position().x);
-        rect.y = int(config::GRID_SIZE * it->position().y);
+        rect.x = int(/*city.position().x +*/ it->position().x);
+        rect.y = int(/*city.position().y +*/ it->position().y);
         rect.w = 10;
         rect.h = 10;
         SDL_RenderFillRect(&renderer, &rect);
@@ -59,6 +60,15 @@ void GlassBox::drawUnits(City const& city, SDL_Renderer& renderer)
                  TEXT_LEFT, "%u", it->id());
     }
 }
+
+struct R
+{
+    R(uint32_t c, float r)
+        : color(c), ratio(r)
+    {}
+    uint32_t color;
+    float ratio;
+};
 
 //------------------------------------------------------------------------------
 void GlassBox::drawMaps(City const& city, SDL_Renderer& renderer)
@@ -88,11 +98,13 @@ void GlassBox::drawMaps(City const& city, SDL_Renderer& renderer)
             }
         }
 
-        // Display a grid
+        // Display the grid
+        drawText(&renderer, m_fontTexture, city.position().x, city.position().y,
+             0, 0, 0, TEXT_LEFT, "%s", city.name().c_str());
         SDL_SetRenderDrawColor(&renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
 
-        uint32_t u = map.gridSizeU();
-        uint32_t v = map.gridSizeV();
+        uint32_t u = map.gridSizeU() + 1u;
+        uint32_t v = map.gridSizeV() + 1u;
         int32_t max_x = int32_t(map.position().x) + int32_t(map.gridSizeU() * config::GRID_SIZE);
         int32_t max_y = int32_t(map.position().y) + int32_t(map.gridSizeV() * config::GRID_SIZE);
         int32_t x = max_x;
@@ -100,13 +112,13 @@ void GlassBox::drawMaps(City const& city, SDL_Renderer& renderer)
 
         while (u--)
         {
-            SDL_RenderDrawLine(&renderer, x, 0, x, max_y);
+            SDL_RenderDrawLine(&renderer, x, map.position().y, x, max_y);
             x -= int32_t(config::GRID_SIZE);
         }
 
         while (v--)
         {
-            SDL_RenderDrawLine(&renderer, 0, y, max_x, y);
+            SDL_RenderDrawLine(&renderer, map.position().x, y, max_x, y);
             y -= int32_t(config::GRID_SIZE);
         }
     }
@@ -127,10 +139,10 @@ void GlassBox::drawPaths(City const& city, SDL_Renderer& renderer)
                                    BLUE(it->color()),
                                    SDL_ALPHA_OPAQUE);
             SDL_RenderDrawLine(&renderer,
-                               int(config::GRID_SIZE * it->position1().x),
-                               int(config::GRID_SIZE * it->position1().y),
-                               int(config::GRID_SIZE * it->position2().x),
-                               int(config::GRID_SIZE * it->position2().y));
+                               int(/*city.position().x +*/ it->position1().x),
+                               int(/*city.position().y +*/ it->position1().y),
+                               int(/*city.position().x +*/ it->position2().x),
+                               int(/*city.position().y +*/ it->position2().y));
         }
 
         // Draw nodes
@@ -142,8 +154,8 @@ void GlassBox::drawPaths(City const& city, SDL_Renderer& renderer)
                                    BLUE(it->color()),
                                    SDL_ALPHA_OPAQUE);
             SDL_Rect rect;
-            rect.x = int(config::GRID_SIZE * it->position().x);
-            rect.y = int(config::GRID_SIZE * it->position().y);
+            rect.x = int(/*city.position().x +*/ it->position().x);
+            rect.y = int(/*city.position().y +*/ it->position().y);
             rect.w = 5;
             rect.h = 5;
             SDL_RenderFillRect(&renderer, &rect);
@@ -151,7 +163,7 @@ void GlassBox::drawPaths(City const& city, SDL_Renderer& renderer)
             drawText(&renderer, m_fontTexture, rect.x, rect.y,
                      RED(it->color()), GREEN(it->color()), BLUE(it->color()),
                      TEXT_LEFT, "%u", it->id());
-            }
+        }
     }
 }
 

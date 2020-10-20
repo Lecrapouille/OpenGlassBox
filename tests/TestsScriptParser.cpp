@@ -94,7 +94,7 @@ TEST(TestsScript, Constructor)
         ASSERT_EQ(u1.resources.getAmount("People"), 4u);
 
         UnitType const& u2 = script.getUnitType("Work");
-        ASSERT_EQ(u2.color, 0x00FFFF);
+        ASSERT_EQ(u2.color, 0x00AAFF);
         ASSERT_EQ(u2.radius, 3u);
         //ASSERT_EQ(u2.rules.size(), 2u);
         //ASSERT_STREQ(u2.rules[0]->m_name, "SendPeopleToHome");

@@ -37,7 +37,7 @@ rules
 	unitRule SendPeopleToHome
 		rate 100
 
-		map Water greater 300
+		map Water greater 70
 
 		local People remove 1
 

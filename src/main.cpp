@@ -12,8 +12,7 @@
 
 //------------------------------------------------------------------------------
 GlassBox::GlassBox()
-    : m_simulation(config::SCREEN_WIDTH / config::GRID_SIZE,
-                   config::SCREEN_HEIGHT / config::GRID_SIZE)
+    : m_simulation(12u, 12u)
 {}
 
 //------------------------------------------------------------------------------
@@ -32,7 +31,7 @@ bool GlassBox::setupGraphics(SDL_Renderer& renderer)
         return false;
     }
 
-    m_window.setBackgroundColor(128, 128, 128);
+    m_window.setBackgroundColor(50, 50, 100);
 
     return true;
 }
@@ -44,12 +43,12 @@ bool GlassBox::initSimulation()
     if (!m_simulation.parse("data/Simulations/TestCity.txt"))
         return false;
 
-    City& paris = m_simulation.addCity("Paris", Vector3f(0.0f, 0.0f, 0.0f));
+    City& paris = m_simulation.addCity("Paris", Vector3f(400.0f, 200.0f, 0.0f));
     paris.setListener(*this);
     Path& road = paris.addPath(m_simulation.getPathType("Road"));
-    Node& n1 = road.addNode(Vector3f(20.0f, 20.0f, 0.0f));
-    Node& n2 = road.addNode(Vector3f(50.0f, 50.0f, 0.0f));
-    Node& n3 = road.addNode(Vector3f(20.0f, 50.0f, 0.0f));
+    Node& n1 = road.addNode(Vector3f(60.0f, 60.0f, 0.0f) + paris.position());
+    Node& n2 = road.addNode(Vector3f(300.0f, 300.0f, 0.0f) + paris.position());
+    Node& n3 = road.addNode(Vector3f(60.0f, 300.0f, 0.0f) + paris.position());
     Way& w1 = road.addWay(m_simulation.getWayType("Dirt"), n1, n2);
     Way& w2 = road.addWay(m_simulation.getWayType("Dirt"), n2, n3);
     Way& w3 = road.addWay(m_simulation.getWayType("Dirt"), n3, n1);
@@ -60,11 +59,16 @@ bool GlassBox::initSimulation()
     Map& m1 = paris.addMap(m_simulation.getMapType("Grass"));
     Map& m2 = paris.addMap(m_simulation.getMapType("Water"));
 
-    City& versailles = m_simulation.addCity("Versailles", Vector3f(1.0f, 0.0f, 0.0f));
+    City& versailles = m_simulation.addCity("Versailles", Vector3f(0.0f, 30.0f, 0.0f));
     versailles.setListener(*this);
+    versailles.addMap(m_simulation.getMapType("Grass"));
+    versailles.addMap(m_simulation.getMapType("Water"));
     Path& road2 = versailles.addPath(m_simulation.getPathType("Road"));
-    Node& n4 = road2.addNode(Vector3f(40.0f, 20.0f, 0.0f));
-    Way& w4 = road2.addWay(m_simulation.getWayType("Dirt"), n1, n4);
+    Node& n4 = road2.addNode(Vector3f(40.0f, 20.0f, 0.0f) + versailles.position());
+    Node& n5 = road2.addNode(Vector3f(200.0f, 200.0f, 0.0f) + versailles.position());
+    Way& w4 = road2.addWay(m_simulation.getWayType("Dirt"), n4, n5);
+    Way& w5 = road2.addWay(m_simulation.getWayType("Dirt"), n5, n1);
+    Unit& u5 = versailles.addUnit(m_simulation.getUnitType("Work"), road2, w4, 0.9f);
 
     return true;
 }

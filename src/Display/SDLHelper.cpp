@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------------
 
 #include "Display/SDLHelper.hpp"
+#include <ctype.h>
 
 #define GLYPH_WIDTH  (18)
 #define GLYPH_HEIGHT (29)
@@ -65,7 +66,7 @@ void drawText(SDL_Renderer* renderer, SDL_Texture* fontTexture,
 
     for (int i = 0 ; i < len ; i++)
     {
-        int c = m_drawTextBuffer[i];
+        int c = toupper(m_drawTextBuffer[i]);
         if (c >= ' ' && c <= 'Z')
         {
             rect.x = (c - ' ') * GLYPH_WIDTH;

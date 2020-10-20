@@ -58,20 +58,33 @@ make coverage
   - ResourceBinCollection is simply named Resources (collection of Resource).
   - Unit to is now named ??? (to be defined).
   - SimulationDefinitionLoader is now renamed ScriptParser.
-  - I added class Dijkstra instead of the method Path::FindNextPoint implementing a dynamic A* algorithm.
-- The original project did not implement Area class (aka Zone). This is also has to be added for this project.
-- Currently an Unit shall be coupled to a Node of the Path.
-- (work in progress) Class coupling simplification from the initial code. Still in progress but Agent in the original code known by Node but not by Ways this can more difficult to compute flow. Still in progress D* algorithm is made inside the Node class will be made by a separated class. Unit are linked to a Node on a Path this is not great since that force splitting Ways to add Node and makes the graph grows up too much.
+- The original project did not implement Area class (aka Zone). Area manages Units (creation, upgrade, destruction). This is also has to be added for this project. Currently an Unit shall be coupled to a Node of the Path. This is not particurlaly nice
+since it creates lot of graph nodes.
+- The original project implemented a dynamic A* algorithm in Path::FindNextPoint. I have created a Dijkstra class instead.
+- Work in progress:
+  - Update the dynamic A* algorithm to take into account of the traffic flow instead of shorter path. Make parallel the algorithm (dispatch over all CPU cores).
+- Agent in the original code known by Node this can more difficult to compute flow. Should be better to be directly attached to Ways.
 - Currently I made a quick & dirty script straightforward parser. I wish to replace it by Forth parser.
 - Wish to show SimCity as a spreadsheet: insert/edit cells to add simulation rules.
 
 ## Screenshot
 
+Note: the screenshot may not refer to the current developement state and also depends on smulation script.
 ![alt tag](https://github.com/Lecrapouille/OpenGlassBox/blob/master/doc/OpenGlassBox.png)
+For this particular screenshot:
 - In pink: houses.
-- In cyan: works.
-- In red: People travelling.
+- In cyan: factories.
+- In yellow: People going from houses to factories.
+- In white: People going from factories to houses.
 - In grey: path (nodes and ways).
+- In blue: water (producted by factories).
+- In green: grass (consumes water).
+- Grid: city holding maps (grass, water), paths (ways, nodes) and units.
+
+## How to play?
+
+For the moment, you cannot construct you game interactively. A prebuild game is made in `main.cpp` inside `bool GlassBox::initSimulation()`.
+You can type the `d` key for show a debug window showing intenral states.
 
 ## References
 

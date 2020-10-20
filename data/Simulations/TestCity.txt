@@ -37,7 +37,7 @@ rules
 	unitRule SendPeopleToHome
 		rate 100
 
-		map Water greater 300
+		map Water greater 70
 
 		local People remove 1
 
@@ -58,7 +58,7 @@ units
 
 	unit Home color 0xFF00FF mapRadius 1 rules [ SendPeopleToWork ] targets [ Home ] caps [ People 4 ] resources [ People 4 ]
 
-	unit Work color 0x00FFFF mapRadius 3 rules [ SendPeopleToHome UsePeopleToWater ] targets [ Work ] caps [ People 2 ] resources [ ]
+	unit Work color 0x00AAFF mapRadius 3 rules [ SendPeopleToHome UsePeopleToWater ] targets [ Work ] caps [ People 2 ] resources [ ]
 
 end
 

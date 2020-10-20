@@ -19,7 +19,7 @@ OBJS += DearImGui.o SDLHelper.o Window.o
 # Game
 OBJS += Debug.o Draw.o Listeners.o main.o
 
-DEFINES += -DVIRTUAL= -DDESIRED_GRID_SIZE=10u
+DEFINES += -DVIRTUAL= -DDESIRED_GRID_SIZE=30u
 PKG_LIBS = sdl2 SDL2_image
 
 all: $(TARGET)
