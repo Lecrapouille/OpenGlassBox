@@ -84,6 +84,13 @@ bool GlassBox::onInit(SDL_Renderer& renderer)
 //------------------------------------------------------------------------------
 void GlassBox::onPaint(SDL_Renderer& renderer, float dt)
 {
+    if (m_pause)
+    {
+        drawText(&renderer, m_fontTexture, 100u, 100u, 0u, 0u, 0u, TEXT_LEFT,
+                 "Press P to play!");
+        return ;
+    }
+
     // Update states of the simulation
     // TODO: from a separated thread ?
     m_simulation.update(dt);
@@ -101,6 +108,9 @@ void GlassBox::onKeyDown(int key)
     {
     case SDL_SCANCODE_D:
         m_debug_activated ^= true;
+        break;
+    case SDL_SCANCODE_P:
+        m_pause ^= true;
         break;
     default: break;
     }

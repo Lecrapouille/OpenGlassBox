@@ -69,6 +69,7 @@ private:
     Simulation   m_simulation;
     SDL_Texture *m_fontTexture = nullptr;
     bool         m_debug_activated = false;
+    bool         m_pause = true;
 
     //! \brief Cache the name of Cities when added/removed
     //! to be used for ImGui::Combo.
