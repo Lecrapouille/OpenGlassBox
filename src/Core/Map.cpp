@@ -45,7 +45,7 @@ void Map::setResource(uint32_t const u, uint32_t const v, uint32_t amount)
 }
 
 // -----------------------------------------------------------------------------
-uint32_t Map::getResource(uint32_t const u, uint32_t const v)
+uint32_t Map::getResource(uint32_t const u, uint32_t const v) const
 {
     return m_resources[v * m_gridSizeU + u];
 }

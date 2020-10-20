@@ -41,7 +41,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief Get the amount of resource at the cell index U,V.
     // -------------------------------------------------------------------------
-    uint32_t getResource(uint32_t const u, uint32_t const v);
+    uint32_t getResource(uint32_t const u, uint32_t const v) const;
 
     // -------------------------------------------------------------------------
     //! \brief

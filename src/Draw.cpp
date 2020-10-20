@@ -61,64 +61,85 @@ void GlassBox::drawUnits(City const& city, SDL_Renderer& renderer)
     }
 }
 
-struct R
-{
-    R(uint32_t c, float r)
-        : color(c), ratio(r)
-    {}
-    uint32_t color;
-    float ratio;
-};
-
 //------------------------------------------------------------------------------
 void GlassBox::drawMaps(City const& city, SDL_Renderer& renderer)
 {
-    for (auto& it: city.maps())
+    struct Order
     {
-        Map& map = (*it.second);
+        Order(uint32_t c, float r) : color(c), ratio(r) {}
+        uint32_t color;
+        float  ratio;
+    };
+    std::vector<Order> resources;
 
-        // Display a filled rectangle with a ratio amount / capacity of resources
-        SDL_SetRenderDrawColor(&renderer,
-                               RED(map.color()),
-                               GREEN(map.color()),
-                               BLUE(map.color()),
-                               SDL_ALPHA_OPAQUE);
-
-        uint32_t capacity = map.getCapacity();
-        for (uint32_t u = 0; u < map.gridSizeU(); ++u)
+    // Draw each cell of the city in order depending of their amount of
+    // resources. Like this cell having the most resources are displayed first
+    // avoind to hide cells having less resources.
+    for (uint32_t u = 0; u < city.gridSizeU(); ++u)
+    {
+        for (uint32_t v = 0; v < city.gridSizeV(); ++v)
         {
-            for (uint32_t v = 0; v < map.gridSizeV(); ++v)
+            // Sort resources
             {
+                resources.clear();
+                for (auto const& it: city.maps())
+                {
+                    Map const& map = *(it.second);
+
+                    if (map.getResource(u, v) > 0u)
+                    {
+                        float r = float(map.getResource(u, v)) / float(map.getCapacity());
+                        resources.push_back(Order(map.color(), r));
+                    }
+                }
+
+                std::sort(resources.begin(), resources.end(),
+                          [](Order& a, Order& b) { return a.ratio >= b.ratio; });
+            }
+
+            // Display a filled rectangle with a ratio amount / capacity of resources
+            for (auto& it: resources)
+            {
+                SDL_SetRenderDrawColor(&renderer,
+                                       RED(it.color),
+                                       GREEN(it.color),
+                                       BLUE(it.color),
+                                       SDL_ALPHA_OPAQUE);
+
                 SDL_Rect rect;
-                rect.x = int(config::GRID_SIZE * u) + int(map.position().x);
-                rect.y = int(config::GRID_SIZE * v) + int(map.position().y);
-                rect.w = int(config::GRID_SIZE * map.getResource(u, v) / capacity);
+                rect.x = int(config::GRID_SIZE * u) + int(city.position().x);
+                rect.y = int(config::GRID_SIZE * v) + int(city.position().y);
+                rect.w = int(config::GRID_SIZE * it.ratio);
                 rect.h = rect.w;
                 SDL_RenderFillRect(&renderer, &rect);
             }
         }
+    }
 
-        // Display the grid
-        drawText(&renderer, m_fontTexture, city.position().x, city.position().y,
+    // Display the city name
+    drawText(&renderer, m_fontTexture, int(city.position().x), int(city.position().y),
              0, 0, 0, TEXT_LEFT, "%s", city.name().c_str());
+
+    // Display the grid
+    {
         SDL_SetRenderDrawColor(&renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
 
-        uint32_t u = map.gridSizeU() + 1u;
-        uint32_t v = map.gridSizeV() + 1u;
-        int32_t max_x = int32_t(map.position().x) + int32_t(map.gridSizeU() * config::GRID_SIZE);
-        int32_t max_y = int32_t(map.position().y) + int32_t(map.gridSizeV() * config::GRID_SIZE);
+        uint32_t u = city.gridSizeU() + 1u;
+        uint32_t v = city.gridSizeV() + 1u;
+        int32_t max_x = int32_t(city.position().x) + int32_t(city.gridSizeU() * config::GRID_SIZE);
+        int32_t max_y = int32_t(city.position().y) + int32_t(city.gridSizeV() * config::GRID_SIZE);
         int32_t x = max_x;
         int32_t y = max_y;
 
         while (u--)
         {
-            SDL_RenderDrawLine(&renderer, x, map.position().y, x, max_y);
+            SDL_RenderDrawLine(&renderer, x, int(city.position().y), x, max_y);
             x -= int32_t(config::GRID_SIZE);
         }
 
         while (v--)
         {
-            SDL_RenderDrawLine(&renderer, map.position().x, y, max_x, y);
+            SDL_RenderDrawLine(&renderer, int(city.position().x), y, max_x, y);
             y -= int32_t(config::GRID_SIZE);
         }
     }
