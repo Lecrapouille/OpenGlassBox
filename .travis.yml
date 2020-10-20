@@ -86,4 +86,4 @@ script:
  - ./.integration/travis-run-tests.sh
 
 after_success:
-  - if [[ "$TRAVIS_OS_NAME" == "linux" && "$CXX" == "g++" ]]; then ./.integration/travis-deploy.sh" ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" && "$CXX" == "g++" ]]; then ./.integration/travis-deploy.sh ; fi
