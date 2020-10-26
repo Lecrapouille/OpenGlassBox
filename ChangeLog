@@ -1,0 +1,3 @@
+October 2020: version 0.1
+        * Initial portage version done.
+        * Rendering in SDL2 and debug made with DearIMgui.
