@@ -151,6 +151,8 @@ class Way
 
 public:
 
+    Way() = delete;
+
     // -------------------------------------------------------------------------
     //! \brief Initialized the state of the Way.
     //! \param[in] id: unique identifier.
@@ -209,11 +211,6 @@ public:
     uint32_t color() const { return m_type.color; }
 
 private:
-
-    // -------------------------------------------------------------------------
-    //! \brief Constructor that can only be called by friend class.
-    // -------------------------------------------------------------------------
-    Way() = default;
 
     // -------------------------------------------------------------------------
     //! \brief Compute the length of the segment.

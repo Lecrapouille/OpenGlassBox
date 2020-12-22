@@ -13,10 +13,7 @@
 // *****************************************************************************
 // C++11 Implementation of the C++14 std::make_unique
 // *****************************************************************************
-#if !((defined(_MSC_VER) && (_MSC_VER >= 1800)) ||                                    \
-      (defined(__clang__) && defined(__APPLE__) && (COMPILER_VERSION >= 60000)) ||    \
-      (defined(__clang__) && (!defined(__APPLE__)) && (COMPILER_VERSION >= 30400)) && (__cplusplus > 201103L) || \
-      (defined(__GNUC__) && (COMPILER_VERSION >= 40900) && (__cplusplus > 201103L)))
+#  if __cplusplus == 201103L
 
 // These compilers do not support make_unique so redefine it
 namespace std
@@ -56,6 +53,6 @@ namespace std
   typename _Unique_if<T>::_Known_bound
   make_unique(Args&&...) = delete;
 }
-#  endif
+#  endif // __cplusplus == 201103L
 
 #endif
