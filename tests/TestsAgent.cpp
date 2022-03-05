@@ -53,7 +53,7 @@ TEST(TestsAgent, Move)
     Node& n1 = p.addNode(Vector3f(1.0f, 2.0f, 3.0f));
     Node& n2 = p.addNode(Vector3f(3.0f, 2.0f, 3.0f));
     WayType type2("Dirt", 0xAAAAAA);
-    Way& s1 = p.addWay(type2, n1, n2);
+    /*Way& s1 =*/ p.addWay(type2, n1, n2);
 
     Resources r;
     UnitType type("Home");

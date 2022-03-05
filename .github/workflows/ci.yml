@@ -1,0 +1,109 @@
+name: Non regression tests for OpenGlassBox
+on:
+  workflow_dispatch:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  non_regression_msys:
+    name: Non regression tests on Msys2
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2.4.0
+        with:
+          submodules: true
+      - name: Install Msys2 packages
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          install: mingw-w64-x86_64-toolchain git mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja mingw-w64-x86_64-bc mingw-w64-x86_64-pkg-config mingw-w64-x86_64-SDL mingw-w64-x86_64-SDL2 mingw-w64-x86_64-SDL2_image
+      - name: Download, configure and install Google test
+        run: |
+          wget https://github.com/google/googletest/archive/release-1.11.0.tar.gz
+          tar xf release-1.11.0.tar.gz
+          cd googletest-release-1.11.0
+          cmake -G "MinGW Makefiles" -DBUILD_SHARED_LIBS=OFF .
+          mingw32-make install
+      - name: Remove WSL's Bash
+        run: |
+          rm.exe "C:/WINDOWS/system32/bash.EXE"
+      - name: Compile OpenGlassBox
+        run: |
+          mingw32-make download-external-libs
+          mingw32-make compile-external-libs
+          mingw32-make -j`nproc --all`
+      - name: Do non regression tests
+        run: |
+          export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/C:/Program Files (x86)/googletest-distribution/lib/pkgconfig"
+          cd tests
+          mingw32-make -j`nproc --all`
+          ./build/OpenGlassBox-UnitTest
+
+  non_regression_linux:
+    name: Non regression tests on Linux
+    runs-on: linux-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: true
+      - name: Install packages
+        run: |
+          sudo apt-get install pkg-config libsdl2-dev libsdl2-image-dev lcov
+      - name: Download, configure and install Google test
+        run: |
+          wget https://github.com/google/googletest/archive/release-1.11.0.tar.gz
+          tar xf release-1.11.0.tar.gz
+          cd googletest-release-1.11.0
+          cmake -DBUILD_SHARED_LIBS=OFF .
+          sudo make install
+      - name: Compile OpenGlassBox
+        run: |
+          make download-external-libs
+          make compile-external-libs
+          make -j`nproc --all`
+      - name: Do non regression tests
+        run: |
+          cd tests
+          make -j`nproc --all`
+          ./build/OpenGlassBox-UnitTest
+
+  non_regression_macos:
+    name: Non regression tests on MacOS X
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: true
+      - name: Install packages
+        run: |
+          brew install pkg-config sdl2 sdl2_image lcov
+      - name: Download, configure and install Google test
+        run: |
+          wget https://github.com/google/googletest/archive/release-1.11.0.tar.gz
+          tar xf release-1.11.0.tar.gz
+          cd googletest-release-1.11.0
+          cmake -DBUILD_SHARED_LIBS=OFF .
+          sudo make install
+      - name: Compile OpenGlassBox
+        run: |
+          make download-external-libs
+          make compile-external-libs
+          make -j`sysctl -n hw.logicalcpu`
+      - name: Do non regression tests
+        run: |
+          cd tests
+          make -j`sysctl -n hw.logicalcpu`
+          ./build/OpenGlassBox-UnitTest
+

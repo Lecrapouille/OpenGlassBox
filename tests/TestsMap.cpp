@@ -26,7 +26,7 @@ TEST(TestsMap, Constructor)
     Map map(type, city);
 
     ASSERT_STREQ(map.type().c_str(), "petrol");
-    ASSERT_EQ(map.m_type.color, 0xFFFFAA);
+    ASSERT_EQ(map.m_type.color, 0xFFFFAAu);
     ASSERT_EQ(map.m_type.capacity, 40u);
     ASSERT_EQ(map.m_type.rules.size(), 0u);
     ASSERT_EQ(int32_t(map.m_position.x), 1);

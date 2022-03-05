@@ -90,7 +90,7 @@ TEST(TestsWay, Constuctor)
     // Check if nodes are correctly hold by the Way
     ASSERT_EQ(s1.id(), 55u);
     ASSERT_STREQ(s1.type().c_str(), "Dirt");
-    ASSERT_EQ(s1.color(), 0xAAAAAA);
+    ASSERT_EQ(s1.color(), 0xAAAAAAu);
     ASSERT_EQ(s1.m_from, &n1);
     ASSERT_EQ(s1.m_to, &n2);
     ASSERT_EQ(&s1.from(), &n1);

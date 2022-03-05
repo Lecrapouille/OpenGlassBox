@@ -10,7 +10,7 @@
 TEST(TestsResource, Constants)
 {
     // Check maximal quantity of resource.
-    ASSERT_GE(Resource::MAX_CAPACITY, 65535);
+    ASSERT_GE(Resource::MAX_CAPACITY, 65535u);
 }
 
 TEST(TestsResource, Constructor)

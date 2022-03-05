@@ -112,7 +112,7 @@ TEST(TestsCity, BuildingCity)
     ASSERT_EQ(m1.position().y, city.position().y);
     ASSERT_EQ(m1.position().z, city.position().z);
     ASSERT_EQ(m1.getCapacity(), Resource::MAX_CAPACITY);
-    ASSERT_EQ(m1.color(), 0xFFFFFF);
+    ASSERT_EQ(m1.color(), 0xFFFFFFu);
 
     // Add Map2.
     Map& m3 = city.addMap(MapType("map2", 0x00, 10u));
@@ -126,7 +126,7 @@ TEST(TestsCity, BuildingCity)
     ASSERT_EQ(m4.position().y, city.position().y);
     ASSERT_EQ(m4.position().z, city.position().z);
     ASSERT_EQ(m4.getCapacity(), 10u);
-    ASSERT_EQ(m4.color(), 0x00);
+    ASSERT_EQ(m4.color(), 0x00u);
 
     // Add again Map2. Check previous map has been replaced
     Map& m5 = city.addMap(MapType("map2"));
@@ -136,7 +136,7 @@ TEST(TestsCity, BuildingCity)
     ASSERT_NE(&m6, &m4);
     // No longer cap 10 and no longer black color
     ASSERT_EQ(m6.getCapacity(), Resource::MAX_CAPACITY);
-    ASSERT_EQ(m6.color(), 0xFFFFFF);
+    ASSERT_EQ(m6.color(), 0xFFFFFFu);
 
     // Add a Path
     Path& p1 = city.addPath(PathType("path1"));
@@ -145,7 +145,7 @@ TEST(TestsCity, BuildingCity)
 
     // Check initial values of the newly created Path
     ASSERT_STREQ(p2.type().c_str(), "path1");
-    ASSERT_EQ(p2.m_type.color, 0xFFFFFF);
+    ASSERT_EQ(p2.m_type.color, 0xFFFFFFu);
     ASSERT_EQ(p2.nodes().size(), 0u);
     ASSERT_EQ(p2.ways().size(), 0u);
     ASSERT_EQ(p2.m_nextNodeId, 0u);
@@ -160,7 +160,7 @@ TEST(TestsCity, BuildingCity)
     ASSERT_NE(&p3, &p1);
     ASSERT_NE(&p4, &p2);
     ASSERT_STREQ(p4.type().c_str(), "path1");
-    ASSERT_EQ(p4.m_type.color, 0xAA);
+    ASSERT_EQ(p4.m_type.color, 0xAAu);
 
     // Add units (way 1)
     UnitType type5("unit1");
@@ -171,7 +171,7 @@ TEST(TestsCity, BuildingCity)
     ASSERT_EQ(city.units().size(), 1u);
     Unit& u2 = *(city.units()[0]);
     ASSERT_EQ(&u1, &u2);
-    ASSERT_EQ(u2.color(), 0xFF00FF);
+    ASSERT_EQ(u2.color(), 0xFF00FFu);
 
     // Add agent
     AgentType t("Worker", 1.0f, 2u, 0xFFFFFF);

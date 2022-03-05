@@ -33,7 +33,7 @@ TEST(TestsMapCoordinatesInsideRadius, ConstructorZeroUnitRadius)
     MCIR coord1;
     MCIR coord2;
     uint32_t const RADIUS = 0u;
-    uint32_t const ZERO = uint32_t(MCIR::compress(0, 0));
+    int32_t const ZERO = MCIR::compress(0, 0);
 
     // Static member variable
     ASSERT_EQ(coord1.m_relativeCoord, coord2.m_relativeCoord);

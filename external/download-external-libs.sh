@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 ### This script will git clone some libraries that OpenGlassBox needs and
 ### compile them. To avoid pollution, they are not installed into your

@@ -47,7 +47,7 @@ TEST(TestsCommand, Constructor)
     ASSERT_STREQ(ra.name.c_str(), "Worker");
     ASSERT_EQ(ra.speed, 1.0f);
     ASSERT_EQ(ra.radius, 2u);
-    ASSERT_EQ(ra.color, 0xFFFFFF);
+    ASSERT_EQ(ra.color, 0xFFFFFFu);
     ASSERT_STREQ(ra.m_target.c_str(), "home");
     ASSERT_EQ(ra.m_resources.m_bin.size(), 1u);
     ASSERT_STREQ(ra.m_resources.m_bin[0].m_type.c_str(), "oil");

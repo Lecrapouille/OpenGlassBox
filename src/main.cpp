@@ -117,7 +117,8 @@ void GlassBox::onKeyDown(int key)
 }
 
 //------------------------------------------------------------------------------
-int main()
+// Note: argc and argc are mandatory for Windows !
+int main(int argc, char **argv)
 {
     GlassBox game;
 

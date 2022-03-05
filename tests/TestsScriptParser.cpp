@@ -47,7 +47,7 @@ TEST(TestsScript, Constructor)
         ASSERT_EQ(script.m_segmentTypes.size(), 1u);
         WayType const& s1 = script.getWayType("Dirt");
         ASSERT_STREQ(s1.name.c_str(), "Dirt");
-        ASSERT_EQ(s1.color, 0xAAAAAA);
+        ASSERT_EQ(s1.color, 0xAAAAAAu);
     }
 
     // -- Agent types:
@@ -55,12 +55,12 @@ TEST(TestsScript, Constructor)
         ASSERT_EQ(script.m_agentTypes.size(), 2u);
         AgentType const& a1 = script.getAgentType("People");
         //ASSERT_STREQ(a1.name.c_str(), "People");
-        ASSERT_EQ(a1.color, 0xFFFF00);
+        ASSERT_EQ(a1.color, 0xFFFF00u);
         ASSERT_EQ(a1.speed, 10u);
 
         AgentType const& a2 = script.getAgentType("Worker");
         //ASSERT_STREQ(a2.name.c_str(), "Worker");
-        ASSERT_EQ(a2.color, 0xFFFFFF);
+        ASSERT_EQ(a2.color, 0xFFFFFFu);
         ASSERT_EQ(a2.speed, 10u);
     }
 
@@ -68,12 +68,12 @@ TEST(TestsScript, Constructor)
     {
         ASSERT_EQ(script.m_mapTypes.size(), 2u);
         MapType const& m1 = script.getMapType("Water");
-        ASSERT_EQ(m1.color, 0x0000FF);
+        ASSERT_EQ(m1.color, 0x0000FFu);
         ASSERT_EQ(m1.capacity, 100u);
         ASSERT_EQ(m1.rules.size(), 0u);
 
         MapType const& m2 = script.getMapType("Grass");
-        ASSERT_EQ(m2.color, 0x00FF00);
+        ASSERT_EQ(m2.color, 0x00FF00u);
         ASSERT_EQ(m2.capacity, 10u);
         //TODO ASSERT_EQ(m2.rules.size(), 1u);
         //TODO ASSERT_STREQ(m2.rules[0].m_name, "CreateGrass");
@@ -83,7 +83,7 @@ TEST(TestsScript, Constructor)
     {
         ASSERT_EQ(script.m_mapTypes.size(), 2u);
         UnitType const& u1 = script.getUnitType("Home");
-        ASSERT_EQ(u1.color, 0xFF00FF);
+        ASSERT_EQ(u1.color, 0xFF00FFu);
         ASSERT_EQ(u1.radius, 1u);
         //ASSERT_EQ(u1.rules.size(), 1u);
         // ASSERT_STREQ(u1.rules[0]->m_name, "SendPeopleToWork");
@@ -94,7 +94,7 @@ TEST(TestsScript, Constructor)
         ASSERT_EQ(u1.resources.getAmount("People"), 4u);
 
         UnitType const& u2 = script.getUnitType("Work");
-        ASSERT_EQ(u2.color, 0x00AAFF);
+        ASSERT_EQ(u2.color, 0x00AAFFu);
         ASSERT_EQ(u2.radius, 3u);
         //ASSERT_EQ(u2.rules.size(), 2u);
         //ASSERT_STREQ(u2.rules[0]->m_name, "SendPeopleToHome");
