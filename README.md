@@ -5,9 +5,9 @@
 [![coveralls](https://coveralls.io/repos/github/Lecrapouille/OpenGlassBox/badge.svg?branch=master)](https://coveralls.io/github/Lecrapouille/OpenGlassBox?branch=master)
 
 |Branch     | **`Linux/Mac OS`** | **`Windows`** |
-|-----------|------------------|-------------|
-|master     |[![Build Status](https://travis-ci.org/Lecrapouille/OpenGlassBox.svg?branch=master)](https://travis-ci.org/Lecrapouille/OpenGlassBox)|[![Build status](https://ci.appveyor.com/api/projects/status/github/lecrapouille/OpenGlassBox?svg=true)](https://ci.appveyor.com/project/Lecrapouille/OpenGlassBox)|
-|development|[![Build Status](https://travis-ci.org/Lecrapouille/OpenGlassBox.svg?branch=dev-refacto)](https://travis-ci.org/Lecrapouille/OpenGlassBox)||
+|-----------|--------------------|---------------|
+|master     |                    |               |
+|development|                    |               |
 
 [OpenGlassBox](https://github.com/Lecrapouille/OpenGlassBox) is a personal implementation of Maxis SimCity 2013 simulation engine named GlassBox presented in these GDC conference 2012 [slides](http://www.andrewwillmott.com/talks/inside-glassbox).
 Note this project is neither a Maxis's released code source nor an affiliated project to Maxis but simply a portage from C#/Unity to C++11/SDL of https://github.com/federicodangelo/MultiAgentSimulation that is already aged of more than 8 years.
