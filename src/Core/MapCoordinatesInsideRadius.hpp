@@ -10,6 +10,7 @@
 
 #  include <vector>
 #  include <map>
+#  include <cstdint>
 
 //==============================================================================
 //! \brief Utility class computing cell indices of a Map given a position and a
