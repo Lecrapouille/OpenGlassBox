@@ -24,7 +24,7 @@ TEST(TestsCity, Constructors)
     ASSERT_EQ(city.m_position.z, 0.0f);
     ASSERT_EQ(city.m_gridSizeU, GRILL);
     ASSERT_EQ(city.m_gridSizeV, GRILL + 1u);
-    ASSERT_EQ(city.m_nextUnitId, 0u);
+    //FIXME: not used ASSERT_EQ(city.m_nextUnitId, 0u);
     ASSERT_EQ(city.m_nextAgentId, 0u);
     ASSERT_EQ(city.m_globals.m_bin.size(), 0u);
     ASSERT_EQ(city.m_maps.size(), 0u);

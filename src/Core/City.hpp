@@ -223,7 +223,7 @@ private:
     //! \brief The size of the grid along the V-axis.
     uint32_t      m_gridSizeV;
     //! \brief Counter of Unit to create unique id.
-    uint32_t      m_nextUnitId = 0u;
+    // FIXME Not used: uint32_t      m_nextUnitId = 0u;
     //! \brief Counter of Agent to create unique id.
     uint32_t      m_nextAgentId = 0u;
     //! \brief Globals resources (money, oil, electricity ...)
