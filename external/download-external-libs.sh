@@ -11,7 +11,7 @@ if [ "$1" == "" ]; then
   exit 1
 fi
 ARCHI="$1"
-TARGET=OpenGlassBox
+TARGET="$2"
 
 ### Delete all previous directories to be sure to have and compile
 ### fresh code source.
@@ -27,6 +27,10 @@ function print-clone
 print-clone imgui
 git clone https://github.com/ocornut/imgui.git > /dev/null 2> /dev/null
 (cd imgui && git reset --hard f9b873662baac2388a4ca78c967e53eb5d83d2a1)
+
+### ImGuiSDL: SDL2 based renderer for Dear ImGui
+### License: MIT
+### FIXME: No longer needed since now integrated directly inside imgui
 print-clone imgui_sdl
 git clone https://github.com/Tyyppi77/imgui_sdl.git --depth=1 > /dev/null 2> /dev/null
 cp imgui_sdl/imgui_sdl.cpp imgui/imgui_sdl.cpp
