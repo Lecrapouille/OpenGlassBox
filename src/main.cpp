@@ -86,8 +86,10 @@ void GlassBox::onPaint(SDL_Renderer& renderer, float dt)
 {
     if (m_pause)
     {
-        drawText(&renderer, m_fontTexture, 100u, 100u, 0u, 0u, 0u, TEXT_LEFT,
-                 "Press P to play!");
+        drawText(&renderer, m_fontTexture, 50u, 100u, 0u, 0u, 0u, TEXT_LEFT,
+                 "- Press P to play!");
+        drawText(&renderer, m_fontTexture, 50u, 150u, 0u, 0u, 0u, TEXT_LEFT,
+                 "- Press D to show debug during the play!");
         return ;
     }
 
