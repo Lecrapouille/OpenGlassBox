@@ -2,8 +2,8 @@
 
 #define protected public
 #define private public
-#  include "src/Core/RuleValue.hpp"
-#  include "src/Core/City.hpp"
+#  include "OpenGlassBox/RuleValue.hpp"
+#  include "OpenGlassBox/City.hpp"
 #undef protected
 #undef private
 

@@ -3,7 +3,7 @@
 
 #define protected public
 #define private public
-#  include "src/Core/Resources.hpp"
+#  include "OpenGlassBox/Resources.hpp"
 #undef protected
 #undef private
 

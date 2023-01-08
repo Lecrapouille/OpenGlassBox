@@ -1,14 +1,15 @@
 #include "main.hpp"
 #include <iostream>
+#include <memory>
 
 #define protected public
 #define private public
-#  include "src/Core/City.hpp"
-#  include "src/Core/Path.hpp"
+#  include "OpenGlassBox/City.hpp"
+#  include "OpenGlassBox/Path.hpp"
 #undef protected
 #undef private
 
-#  include "src/Config.hpp"
+#include "OpenGlassBox/Config.hpp"
 
 // -----------------------------------------------------------------------------
 TEST(TestsCity, Constructors)

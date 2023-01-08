@@ -2,7 +2,7 @@
 
 #define protected public
 #define private public
-#  include "src/Core/ScriptParser.hpp"
+#  include "OpenGlassBox/ScriptParser.hpp"
 #undef protected
 #undef private
 

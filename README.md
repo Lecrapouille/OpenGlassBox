@@ -1,7 +1,7 @@
 # OpenGlassBox
 
 [OpenGlassBox](https://github.com/Lecrapouille/OpenGlassBox) is a personal implementation of Maxis SimCity 2013 simulation engine named GlassBox presented in this GDC conference 2012 [slides](http://www.andrewwillmott.com/talks/inside-glassbox).
-Note: this project is neither a Maxis's released code source nor an affiliated project to Maxis but simply a portage from C#/Unity to C++11/SDL of the excellent job https://github.com/federicodangelo/MultiAgentSimulation but aged more than 8 years.
+Note: this project is neither a Maxis's released code source nor an affiliated project to Maxis but simply a portage from C#/Unity to C++14/SDL of the excellent job https://github.com/federicodangelo/MultiAgentSimulation but aged more than 8 years.
 
 ## Screenshot
 
@@ -21,7 +21,7 @@ In this screenshot:
 ## Compilation Prerequisite
 
 - Operating Systems: Linux, Mac OS X.
-- Compilation tools: C++11 (g++ or clang++), Gnu Makefile.
+- Compilation tools: C++14 (g++ or clang++), Gnu Makefile. The C++14 was used to use `std::make_unique`, else the whole code is C++11 compatible.
 - Renderer libraries: SDL2, SDL2_image (You have to install them on your system `sudo apt-get install libsdl2-dev libsdl2-image-dev`).
 - GUI libraries: [DearImGui](https://github.com/ocornut/imgui), [imgui_sdl](https://github.com/Tyyppi77/imgui_sdl) (automatically downloaded and compiled by the Makefile, but not installed).
 - Debug library (if and only if you compile the project in debug mode): [backward-cpp](https://github.com/bombela/backward-cpp) (automatically downloaded and compiled by the Makefile, but not installed).
@@ -46,7 +46,12 @@ Where `-j8` is to adapt to match the number of CPU cores.
 
 - Run OpenGlassBox:
 ```sh
-./build/OpenGlassBox
+./demo/build/OpenGlassBox
+```
+
+- (Optional) To install OpenGlassBox on your operating system:
+```sh
+sudo make install
 ```
 
 - (Optional) Unit test with code coverage:
@@ -58,7 +63,7 @@ make coverage -j8
 ## Notes concerning the portage
 
 Here are the current changes made from the original code source:
-- The original code was made in C#. Since I'm never developing in C# I made a portage into C++11.- Since I was more interested in the simulation than the rendering, dependencies to the game engine Unity and Decorator classes for using it have not been ported. For rendering the simulation, I'm not using the game engine and SDL2 is enough to draw lines and dots. Feel free to use your own rendering engine instead.- The original project did not come with unit tests or comments. Added!- The original project was using the same names as the GDC conference. I renamed classes whose name confused me:
+- The original code was made in C#. Since I'm never developing in C# I made a portage into C++14.- Since I was more interested in the simulation than the rendering, dependencies to the game engine Unity and Decorator classes for using it have not been ported. For rendering the simulation, I'm not using the game engine and SDL2 is enough to draw lines and dots. Feel free to use your own rendering engine instead.- The original project did not come with unit tests or comments. Added!- The original project was using the same names as the GDC conference. I renamed classes whose name confused me:
   - `Box` is now named `City`.
   - `Point` and `Segment` are now named `Node` and `Way` (since will match more graph theory terms).
   - `ResourceBinCollection` is simply named `Resources`.
@@ -67,7 +72,7 @@ Here are the current changes made from the original code source:
 - Currently, I made a quick & dirty script straightforward parser. My code is less good than the original one. It was ok because I wished to replace the script syntax by [Forth](https://esp32.arduino-forth.com/) (which has less footprint than Lua).
 ## How to play?
 
-- For the moment, you cannot construct your game interactively. A prebuild game is made in `main.cpp` inside `bool GlassBox::initSimulation()` you can adapt it to create your own map.
+- For the moment, you cannot construct your game interactively. A prebuild game is made in `demo/main.cpp` inside `bool GlassBox::initSimulation()` you can adapt it to create your own map.
 - Simulation script is located at `OpenGlassBox/data/Simulations/TestCity.txt`.
 - During the simulation, you can type the `d` key to show the debug window showing the internal states of the simulation.
 

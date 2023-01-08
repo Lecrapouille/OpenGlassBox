@@ -3,8 +3,8 @@
 
 #define protected public
 #define private public
-#  include "src/Core/Agent.hpp"
-#  include "src/Core/City.hpp"
+#  include "OpenGlassBox/Agent.hpp"
+#  include "OpenGlassBox/City.hpp"
 #undef protected
 #undef private
 

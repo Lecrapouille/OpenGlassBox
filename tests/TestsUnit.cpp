@@ -2,8 +2,8 @@
 
 #define protected public
 #define private public
-#  include "src/Core/Unit.hpp"
-#  include "src/Core/City.hpp"
+#  include "OpenGlassBox/Unit.hpp"
+#  include "OpenGlassBox/City.hpp"
 #undef protected
 #undef private
 

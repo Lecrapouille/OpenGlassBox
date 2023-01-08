@@ -2,13 +2,13 @@
 
 #define protected public
 #define private public
-#  include "src/Core/Map.hpp"
+#  include "OpenGlassBox/Map.hpp"
 #undef protected
 #undef private
 
-#  include "src/Core/City.hpp"
-#  include "src/Core/Types.hpp"
-#  include "src/Config.hpp"
+#  include "OpenGlassBox/City.hpp"
+#  include "OpenGlassBox/Types.hpp"
+#  include "OpenGlassBox/Config.hpp"
 
 // -----------------------------------------------------------------------------
 TEST(TestsMap, Constants)

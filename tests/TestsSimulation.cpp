@@ -2,11 +2,11 @@
 
 #define protected public
 #define private public
-#  include "src/Core/Simulation.hpp"
+#  include "OpenGlassBox/Simulation.hpp"
 #undef protected
 #undef private
 
-#  include "src/Config.hpp"
+#  include "OpenGlassBox/Config.hpp"
 
 // -----------------------------------------------------------------------------
 TEST(TestsSimulation, Constants)

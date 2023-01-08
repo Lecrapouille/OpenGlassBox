@@ -2,7 +2,7 @@
 
 #define protected public
 #define private public
-#  include "src/Core/MapCoordinatesInsideRadius.hpp"
+#  include "OpenGlassBox/MapCoordinatesInsideRadius.hpp"
 #undef protected
 #undef private
 
