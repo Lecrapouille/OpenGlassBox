@@ -14,35 +14,37 @@ class Dijkstra;
 class Unit;
 
 //==============================================================================
-//! \brief Created by UnitRules. Each Agent has a set of resources and carry
+//! \brief Created by \c UnitRules. Each Agent has a set of resources and carry
 //! these resources from one Unit to another. Agents do not run rules because
-//! there are 10,000s of agents by simulation)
-//! Each agent is given a destination (Home, Work, Fire, Sickness).
+//! they are to many of them created by simulation (ideally 1000 ...) this would
+//! reduce performance.
+//! Each Agent is given a destination (Home, Work, Fire, Sickness).
 //==============================================================================
 class Agent
 {
 public:
 
     //--------------------------------------------------------------------------
-    //! \brief Constructor initializing partially internal states of the Agent
-    //! (but internal states will be completed once calling update() method).
+    //! \brief Default constructor doing partial initialisation of internal
+    //! states.  The complete initialisation of internal states will be done
+    //! once the \c update() method will be called).
     //!
     //! \param[in] id: Unique identifier.
     //!
     //! \param[in] type: Const reference of a given type of Agent also refered
     //! internally. The reference shall not be deleted before this Agent
-    //! instance is destroyed. The type of agent is defined by simulation
+    //! instance is destroyed. The type of Agent is defined by simulation
     //! scripts.
     //!
     //! \param[in] owner: Unit creating this agent, also refered internally. The
     //! reference shall not be deleted before this Agent instance is destroyed.
     //! This param is used to place the Agent on the graph node (Node of a Path)
-    //! moving towards arcs. Note that for placing an Unit somewhere along a Way
+    //! moving towards arcs. Note: that for placing an Unit somewhere along a Way
     //! you'll have to split it into two ways linked by an Node and this Node
     //! will be the support for the Unit. Note also Unit's Node should be linked
-    // at least one Way of Path else Agents cannot move towards a Path Way. You
-    // can of course give an orphan Node now and attach to it Ways after (but
-    // before running the game simulation).
+    //! at least one Way of Path else Agents cannot move towards a Path Way. You
+    //! can of course give an orphan Node now and attach to it Ways after (but
+    //! before running the game simulation).
     //!
     //! \param[in] resources: Resources that the Agent is carrying.
     //! \param[in] searchTarget: the Unit target (type of destination).
