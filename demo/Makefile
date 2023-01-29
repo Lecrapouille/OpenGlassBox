@@ -45,7 +45,7 @@ THIRDPART_LIBS += $(abspath $(P)/$(BUILD)/libopenglassbox.a)
 # Compile the demo as standalone application.
 #
 OBJS += DearImGui.o SDLHelper.o Window.o
-OBJS += Debug.o Draw.o Listeners.o main.o
+OBJS += Debug.o Draw.o Listeners.o Demo.o main.o
 
 ###################################################
 # Compile the demo as standalone application.
