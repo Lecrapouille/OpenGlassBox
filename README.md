@@ -1,12 +1,19 @@
 # OpenGlassBox
 
-[OpenGlassBox](https://github.com/Lecrapouille/OpenGlassBox) is a personal implementation of Maxis SimCity 2013 simulation engine named GlassBox presented in this GDC conference 2012 [slides](http://www.andrewwillmott.com/talks/inside-glassbox).
-Note: this project is neither a Maxis's released code source nor an affiliated project to Maxis but simply a portage from C#/Unity to C++14/SDL of the excellent job https://github.com/federicodangelo/MultiAgentSimulation but aged more than 8 years.
+[OpenGlassBox](https://github.com/Lecrapouille/OpenGlassBox) is an implementation of Maxis SimCity 2013 simulation engine named GlassBox, based on the GDC conference 2012 [slides](http://www.andrewwillmott.com/talks/inside-glassbox). This project is neither a Maxis's released code source nor an affiliated project to Maxis but a portage to C++14 of the nicely written code [MultiAgentSimulation](https://github.com/federicodangelo/MultiAgentSimulation), now aged more than 8 years and written in C# for the Unity game engine.
 
-## Screenshot
+This current project is compiled as:
+- a static/shared libraries of the simulation engine.
+- a standalone demonstration application displayed with SDL2 and DearImgui libraries.
 
-Note: this figure may not refer to the latest development state, which also depends on the loaded simulation script.
-![OpenGlassBox](https://github.com/Lecrapouille/OpenGlassBox/blob/master/doc/OpenGlassBox.png). Since I was more interested in the simulation than the rendering they are separated, and I used SDL2 and DearImGui were used to display the game states for the demonstration. Use your own rendering engine instead.
+I separated things because I was more interested in the simulation engine than the rendering.
+For rendering the demo application states,  I choosed SDL2 and DearImGui because this was
+the easier way for me but please, use your own personal/prefered rendering engine instead :)
+
+## Screenshot of the standalone demo application
+
+Note: this screeenshot may not refer to the latest development state, which also depends on the loaded simulation script.
+![OpenGlassBox](https://github.com/Lecrapouille/OpenGlassBox/blob/master/doc/OpenGlassBox.png).
 
 In this screenshot:
 - In pink: houses (static).
@@ -20,7 +27,7 @@ In this screenshot:
 
 ## Compilation Prerequisite
 
-- Operating Systems: Linux, Mac OS X.
+- Operating Systems: Linux, Mac OS X. Should compile for Windows.
 - Compilation tools: C++14 (g++ or clang++), Gnu Makefile. The C++14 was used to use `std::make_unique`, else the whole code is C++11 compatible.
 - Renderer libraries: SDL2, SDL2_image (You have to install them on your system `sudo apt-get install libsdl2-dev libsdl2-image-dev`).
 - GUI libraries: [DearImGui](https://github.com/ocornut/imgui), [imgui_sdl](https://github.com/Tyyppi77/imgui_sdl) (automatically downloaded and compiled by the Makefile, but not installed).
@@ -36,7 +43,7 @@ Again: the logic and the rendering are separated in the code. SDL2 and DearImGui
 git clone https://github.com/Lecrapouille/OpenGlassBox.git --recursive
 ```
 
-- Compile the project:
+- Compile the project (libs + demo):
 ```sh
 cd OpenGlassBox/
 make download-external-libs
@@ -44,14 +51,9 @@ make CXX=g++ -j8
 ```
 Where `-j8` is to adapt to match the number of CPU cores.
 
-- Run OpenGlassBox:
+- Run the OpenGlassBox demo:
 ```sh
 ./demo/build/OpenGlassBox
-```
-
-- (Optional) To install OpenGlassBox on your operating system:
-```sh
-sudo make install
 ```
 
 - (Optional) Unit test with code coverage:
@@ -60,21 +62,44 @@ cd OpenGlassBox/test
 make coverage -j8
 ```
 
+- (Optional) To install OpenGlassBox on your operating system:
+```sh
+sudo make install
+```
+
+- Example of how to link OpenGlassBox in your project (once OpenGlassBox has been installed on your operating system):
+```sh
+git clone https://github.com/Lecrapouille/LinkAgainstMyLibs.git --recursive
+cd LinkAgainstMyLibs/OpenGlassBox
+make -j8
+./build/OpenGlassBox
+```
+
 ## Notes concerning the portage
 
 Here are the current changes made from the original code source:
-- The original code was made in C#. Since I'm never developing in C# I made a portage into C++14.- Since I was more interested in the simulation than the rendering, dependencies to the game engine Unity and Decorator classes for using it have not been ported. For rendering the simulation, I'm not using the game engine and SDL2 is enough to draw lines and dots. Feel free to use your own rendering engine instead.- The original project did not come with unit tests or comments. Added!- The original project was using the same names as the GDC conference. I renamed classes whose name confused me:
+- The original code was made in C# for Unity engine. Since I'm never developing in C# I made a portage into C++14.
+- The original project was using the same names as the GDC conference. I renamed classes whose name confused me:
   - `Box` is now named `City`.
   - `Point` and `Segment` are now named `Node` and `Way` (since will match more graph theory terms).
   - `ResourceBinCollection` is simply named `Resources`.
   - `SimulationDefinitionLoader` is now renamed `ScriptParser`.
-- The original project did not implement `Area` class (aka `Zone`). `Area` manages `Units` (creation, upgrade, destruction). This also has to be added to this project.- A `Unit` shall be coupled to a `Node` of the `Path`. This is not particularly nice since this will create a lot of unnecessary graph nodes.- The original project implemented a dynamic A* algorithm in `Path::FindNextPoint`. I have created a `Dijkstra` class instead but a real traffic algorithm should have to be developed.
+- The original project did not implement `Area` class (aka `Zone`). `Area` manages `Units` (creation, upgrade, destruction). This also has to be added to this project.
+- A `Unit` shall be coupled to a `Node` of the `Path`. This is not particularly nice since this will create a lot of unnecessary graph nodes.
+- The original project implemented a dynamic A* algorithm in `Path::FindNextPoint`. I have created a `Dijkstra` class instead but a real traffic algorithm should have to be developed.
 - Currently, I made a quick & dirty script straightforward parser. My code is less good than the original one. It was ok because I wished to replace the script syntax by [Forth](https://esp32.arduino-forth.com/) (which has less footprint than Lua).
-## How to play?
+- The original project did not come with unit tests or comments. Added!
+- Since I was more interested in the simulation than the rendering:
+  - dependencies to the game engine Unity and Decorator classes for using it have not been ported.
+  - I have separated the library from the demo application.
+  - For rendering the demo application, I'm not using a game engine such Unity. SDL2 is enough to draw lines and dots.
 
-- For the moment, you cannot construct your game interactively. A prebuild game is made in `demo/main.cpp` inside `bool GlassBox::initSimulation()` you can adapt it to create your own map.
-- Simulation script is located at `OpenGlassBox/data/Simulations/TestCity.txt`.
-- During the simulation, you can type the `d` key to show the debug window showing the internal states of the simulation.
+## How to play to demo application?
+
+- For the moment, you cannot construct your game interactively. A prebuild game is made in `demo/Demo.cpp` inside `bool GlassBox::initSimulation()` you can adapt it to create your own map.
+- Simulation script is located at `data/Simulations/TestCity.txt`.
+- Once the demo started, press the `d` key to see the simulation.
+- During the simulation, you can type the `d` key to show/hide the debug window showing the internal states of the simulation.
 
 ## Ideas for the next?
 
@@ -82,7 +107,10 @@ Here are the current changes made from the original code source:
 - Implement some ideas explained in this video [Exploring SimCity: A Conscious Process of Discovery](https://youtu.be/eZfj7LEFT98).
 - Update the dynamic A* algorithm to take into account the traffic flow instead of a shorter path.
 - Parallelize algorithm: dispatch over all CPU cores (i.e. using OpenMP) or distribute computations (i.e. network, peer to peer).
-- `Agent` should be directly attached to `Ways` and know the distance to the next `Agent`.- I wished to show and manipulate a SimCity city as a spreadsheet: insert/edit cells to add simulation rules.
+- `Agent` should be directly attached to `Ways` and for cars know the distance to the next `Agent`.
+- I wished to show and manipulate a SimCity city as a spreadsheet: insert/edit cells to add simulation rules. This project could be merged
+  with [SimTaDyn](https://github.com/Lecrapouille/SimTaDyn).
+
 ## References
 
 - Slides from the GDC conference can be downloaded here http://www.andrewwillmott.com/talks/inside-glassbox
