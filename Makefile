@@ -6,7 +6,7 @@ PROJECT = OpenGlassBox
 TARGET = $(PROJECT)
 DESCRIPTION = An Open Source Implementation of the SimCity 2013 Simulation Engine GlassBox
 STANDARD = --std=c++14
-BUILD_TYPE = debug
+BUILD_TYPE = release
 
 ###################################################
 # Location of the project directory and Makefiles
