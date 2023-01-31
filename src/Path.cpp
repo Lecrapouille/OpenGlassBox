@@ -72,16 +72,6 @@ void Way::updateMagnitude()
     m_magnitude = ::magnitude(m_to->position() - m_from->position());
 }
 
-// -----------------------------------------------------------------------------
-void Way::changeNode2(Node& newNode2)
-{
-    auto& segs = m_to->m_ways;
-    segs.erase(std::remove(segs.begin(), segs.end(), this));
-    m_to = &newNode2;
-    m_to->m_ways.push_back(this);
-    updateMagnitude();
-}
-
 // =============================================================================
 // PATH
 // =============================================================================
@@ -116,10 +106,15 @@ Node& Path::splitWay(Way& segment, float offset)
 
     Vector3f wordPosition = segment.position1()
            + (segment.position2() - segment.position1()) * offset;
-    Node& newNode = addNode(wordPosition);
 
+    Node& newNode = addNode(wordPosition);
     addWay(segment.m_type, newNode, segment.to());
-    segment.changeNode2(newNode);
+
+    auto& segs = segment.m_to->m_ways;
+    segs.erase(std::remove(segs.begin(), segs.end(), &segment));
+    segment.m_to = &newNode;
+    segment.m_to->m_ways.push_back(&segment);
+    segment.updateMagnitude();
 
     return newNode;
 }
