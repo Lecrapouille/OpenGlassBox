@@ -43,10 +43,11 @@ bool GlassBox::initSimulation()
     versailles.addMap(m_simulation.getMapType("Water"));
     Path& road2 = versailles.addPath(m_simulation.getPathType("Road"));
     Node& n4 = road2.addNode(Vector3f(40.0f, 20.0f, 0.0f) + versailles.position());
-    Node& n5 = road2.addNode(Vector3f(200.0f, 200.0f, 0.0f) + versailles.position());
+    Node& n5 = road2.addNode(Vector3f(300.0f, 300.0f, 0.0f) + versailles.position());
     Way& w4 = road2.addWay(m_simulation.getWayType("Dirt"), n4, n5);
     Way& w5 = road2.addWay(m_simulation.getWayType("Dirt"), n5, n1);
-    Unit& u5 = versailles.addUnit(m_simulation.getUnitType("Work"), road2, w4, 0.9f);
+    Unit& u5 = versailles.addUnit(m_simulation.getUnitType("Home"), road, w5, 0.1f);
+    Unit& u6 = versailles.addUnit(m_simulation.getUnitType("Work"), road2, w4, 0.9f);
 
     return true;
 }
