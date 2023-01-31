@@ -36,7 +36,7 @@ public:
     {}
 
     std::string                name;
-    uint32_t                   rate = 1u;
+    uint32_t                   rate = 1u; // Unit: [simulation ticks]
     bool                       randomTiles = false;
     uint32_t                   randomTilesPercent = 10u;
     std::vector<IRuleCommand*> commands; // Shall not be free and pointer stay valid.
@@ -59,7 +59,7 @@ public:
     {}
 
     std::string                name;
-    uint32_t                   rate = 1u;
+    uint32_t                   rate = 1u; // Unit: [simulation ticks]
     RuleUnit*                  onFail = nullptr;
     std::vector<IRuleCommand*> commands; // Shall not be free and pointer stay valid.
 };
