@@ -98,6 +98,7 @@ TEST(TestsWay, Constuctor)
     ASSERT_EQ(s1.magnitude(), std::sqrt(2.0f));
 }
 
+#if 0 // This method no longer exist and has been merged in its parent method
 // Test changeNode2 without using Path
 TEST(TestsWay, changeNode2)
 {
@@ -237,6 +238,7 @@ TEST(TestsWay, PathchangeNode2)
     ASSERT_EQ(n1.getWayToNode(n2), nullptr);
     ASSERT_EQ(n1.getWayToNode(n3), &s1);
 }
+#endif
 
 TEST(TestsNode, getWayToNode)
 {
