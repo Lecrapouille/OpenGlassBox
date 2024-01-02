@@ -10,6 +10,7 @@
 
 #  include "Display/IGame.hpp"
 #  include "Display/Window.hpp"
+#  include "Display/DataPath.hpp"
 #  include "OpenGlassBox/Simulation.hpp"
 
 //==============================================================================
@@ -26,7 +27,7 @@ public:
 
 private:
 
-    bool initSimulation();
+    bool initSimulation(std::string const& simfile);
     bool setupGraphics(SDL_Renderer& renderer);
     void debugSimulation();
 
@@ -66,6 +67,7 @@ private:
 private:
 
     Window       m_window;
+    DataPath     m_path;
     Simulation   m_simulation;
     SDL_Texture *m_fontTexture = nullptr;
     bool         m_debug_activated = false;

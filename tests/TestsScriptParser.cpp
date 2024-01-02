@@ -12,7 +12,7 @@ TEST(TestsScript, Constructor)
     Script script;
 
     // Load a script.
-    ASSERT_EQ(script.parse("../data/Simulations/TestCity.txt"), true);
+    ASSERT_EQ(script.parse("../demo/data/Simulations/TestCity.txt"), true);
 
     // Check states content:
 

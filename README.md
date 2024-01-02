@@ -76,6 +76,8 @@ make -j8
 ./build/OpenGlassBox
 ```
 
+For Mac OS X users a bundle application is also created inside the build folder.
+
 ## Notes concerning the portage
 
 Here are the current changes made from the original code source:

@@ -11,8 +11,20 @@
 #include "OpenGlassBox/Config.hpp"
 
 //------------------------------------------------------------------------------
+#  ifndef DATADIR
+#    define GET_DATA_PATH project::info::data_path
+#  endif
+#  if defined(__APPLE__)
+#    define GET_DATA_PATH   DATADIR":" + osx_get_resources_dir("")
+#  elif defined(__EMSCRIPTEN__)
+#    define GET_DATA_PATH   "data/"
+#  else
+#    define GET_DATA_PATH   DATADIR
+#  endif
+
+//------------------------------------------------------------------------------
 GlassBox::GlassBox()
-    : m_simulation(12u, 12u)
+    : m_path(GET_DATA_PATH), m_simulation(12u, 12u)
 {}
 
 //------------------------------------------------------------------------------
@@ -24,10 +36,10 @@ void GlassBox::onRelease(SDL_Renderer&)
 //------------------------------------------------------------------------------
 bool GlassBox::setupGraphics(SDL_Renderer& renderer)
 {
-    const char *file = "data/Fonts/font.png";
-    m_fontTexture = IMG_LoadTexture(&renderer, file);
+    std::string fontpath = m_path.expand("Fonts/font.png");
+    m_fontTexture = IMG_LoadTexture(&renderer, fontpath.c_str());
     if (m_fontTexture == nullptr) {
-        std::cerr << "Failed loading texture " << file << std::endl;
+        std::cerr << "Failed loading font " << fontpath << std::endl;
         return false;
     }
 
@@ -39,7 +51,7 @@ bool GlassBox::setupGraphics(SDL_Renderer& renderer)
 //------------------------------------------------------------------------------
 bool GlassBox::onInit(SDL_Renderer& renderer)
 {
-    if (!initSimulation())
+    if (!initSimulation(m_path.expand("Simulations/TestCity.txt")))
         return false;
     return setupGraphics(renderer);
 }
