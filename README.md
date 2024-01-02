@@ -13,7 +13,8 @@ the easier way for me but please, use your own personal/prefered rendering engin
 ## Screenshot of the standalone demo application
 
 Note: this screeenshot may not refer to the latest development state, which also depends on the loaded simulation script.
-![OpenGlassBox](https://github.com/Lecrapouille/OpenGlassBox/blob/master/doc/OpenGlassBox.png).
+Click on the image to watch the video of the simulation.
+[![OpenGlassBox](https://github.com/Lecrapouille/OpenGlassBox/blob/master/doc/OpenGlassBox.png)](https://youtu.be/zyLO9Ls_hME?feature=shared).
 
 In this screenshot:
 - In pink: houses (static).
