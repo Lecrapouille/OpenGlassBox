@@ -71,19 +71,19 @@ jobs:
       - name: Compile OpenGlassBox
         run: |
           make download-external-libs
-          make compile-external-libs
-          make -j`nproc --all`
+          V=1 make compile-external-libs
+          V=1 make -j`nproc --all`
           sudo make install
       - name: Do non regression tests
         run: |
           cd tests
-          make -j`nproc --all`
+          V=1 make -j`nproc --all`
           ./build/OpenGlassBox-UnitTest
       - name: Check if the library can be linked against a project
         run: |
           git clone https://github.com/Lecrapouille/LinkAgainstMyLibs.git --recurse-submodules --depth=1
           cd LinkAgainstMyLibs/OpenGlassBox
-          make -j`nproc --all`
+          V=1 make -j`nproc --all`
 
   non_regression_macos:
     name: Non regression tests on MacOS X
