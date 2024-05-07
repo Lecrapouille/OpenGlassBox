@@ -18,7 +18,7 @@ include $(M)/Makefile.header
 ###################################################
 # Inform Makefile where to find header files
 #
-INCLUDES += -I. -I$(P)/include -I$(P)/Display -I$(P)
+INCLUDES += -I. -I$(P)/include -I$(P)
 
 ###################################################
 # Inform Makefile where to find *.cpp and *.o files
@@ -67,4 +67,6 @@ ifeq ($(ARCHI),Darwin)
 	@cp -r $(BUILD)/$(TARGET)$(EXT) ../$(BUILD)
 endif
 
+###################################################
+# Sharable informations between all Makefiles
 include $(M)/Makefile.footer

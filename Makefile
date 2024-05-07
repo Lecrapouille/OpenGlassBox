@@ -18,12 +18,12 @@ include $(M)/Makefile.header
 ###################################################
 # Inform Makefile where to find header files
 #
-INCLUDES += -I$(P)/include -I$(P)/external -I$(P)
+INCLUDES += -I$(P)/include -I$(P)
 
 ###################################################
 # Inform Makefile where to find *.cpp and *.o files
 #
-VPATH += $(P)/src $(P)/src/Core $(P)/external
+VPATH += $(P)/src $(P)/src/Core
 
 ###################################################
 # Project defines
