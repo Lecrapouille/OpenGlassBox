@@ -31,12 +31,6 @@ VPATH += $(P)/src $(P)/src/Core
 DEFINES += -DVIRTUAL= -DDESIRED_GRID_SIZE=30u
 
 ###################################################
-# Set Libraries. For knowing which libraries
-# is needed please read the external/README.md file.
-#
-PKG_LIBS = sdl2 SDL2_image
-
-###################################################
 # Make the list of compiled files for the library
 #
 LIB_OBJS += Simulation.o Map.o City.o Unit.o Path.o Agent.o Resource.o Resources.o
