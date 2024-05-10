@@ -1,35 +1,32 @@
-PROJECT = OpenGlassBox
-TARGET = $(PROJECT)-UnitTest
-DESCRIPTION = Unit tests for $(PROJECT)
-BUILD_TYPE = debug
-STANDARD = --std=c++14
-USE_COVERAGE = 1
-
+###################################################
+# Location of the project directory and Makefiles
+#
 P := ..
 M := $(P)/.makefile
-include $(M)/Makefile.header
 
-VPATH += $(P) $(P)/src
-INCLUDES += -I$(P) -I$(P)/include
+###################################################
+# Project definition
+#
+include $(P)/Makefile.common
+TARGET_NAME := $(PROJECT_NAME)-tests
+TARGET_DESCRIPTION := Unit tests for $(PROJECT_NAME)
+COMPILATION_MODE := test
+include $(M)/project/Makefile
 
-OBJS += Simulation.o Map.o City.o Unit.o Path.o Agent.o Resource.o Resources.o Rule.o
-OBJS += MapCoordinatesInsideRadius.o MapRandomCoordinates.o RuleCommand.o RuleValue.o
-OBJS += ScriptParser.o Dijkstra.o
-OBJS += TestsResource.o TestsResources.o TestsUnit.o TestsPath.o TestsMap.o TestsCity.o
-OBJS += TestsAgent.o TestsCoordInsideRadius.o TestsValue.o TestsCommand.o TestsScriptParser.o
-OBJS += TestsSimulation.o
-OBJS += main.o
-
+###################################################
+# Compile the unit tests
+#
+SRC_FILES := $(call rwildcard,$(P)/src,*.cpp) \
+    $(call rwildcard,$(P)/tests,*.cpp)
+INCLUDES := $(P)/include
+VPATH := $(P)/src
 DEFINES += -DVIRTUAL=virtual -DDESIRED_GRID_SIZE=2u
-DEFINES += -Wno-unused-function -Wno-undef -Wno-keyword-macro -Wno-float-equal -Wno-gnu-zero-variadic-macro-arguments
+USER_CXX_FLAGS += -Wno-unused-function -Wno-undef \
+  -Wno-keyword-macro -Wno-float-equal \
+  -Wno-gnu-zero-variadic-macro-arguments
 PKG_LIBS += gtest gmock
 
-all: $(TARGET)
-
-.PHONY: unit-tests
-.PHONY: check
-unit-tests check: $(TARGET)
-	@$(call print-to,"Running","$(TARGET)","$(RAPPORT)","")
-	$(SANITIZER) ./$(BUILD)/$(TARGET) $(TU_OPTIONS) || (cat $(TARGET).log; return 1)
-
-include $(M)/Makefile.footer
+###################################################
+# Generic Makefile rules
+#
+include $(M)/rules/Makefile

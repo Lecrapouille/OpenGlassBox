@@ -11,21 +11,19 @@
 #include "OpenGlassBox/Config.hpp"
 
 //------------------------------------------------------------------------------
-#  ifndef DATADIR
-#    define GET_DATA_PATH project::info::data_path
-#  endif
-#  if defined(__APPLE__)
-#    define GET_DATA_PATH   DATADIR":" + osx_get_resources_dir("")
-#  elif defined(__EMSCRIPTEN__)
-#    define GET_DATA_PATH   "data/"
-#  else
-#    define GET_DATA_PATH   DATADIR
-#  endif
+#undef GET_DATA_PATH
+#if defined(__APPLE__)
+#  define GET_DATA_PATH osx_get_resources_dir("")
+#else
+#  define GET_DATA_PATH project::info::data_path
+#endif
 
 //------------------------------------------------------------------------------
 GlassBox::GlassBox()
     : m_path(GET_DATA_PATH), m_simulation(12u, 12u)
-{}
+{
+    std::cout << "Search paths: " << m_path.toString() << std::endl;
+}
 
 //------------------------------------------------------------------------------
 void GlassBox::onRelease(SDL_Renderer&)

@@ -54,7 +54,7 @@ Where `-j8` is to adapt to match the number of CPU cores.
 
 - Run the OpenGlassBox demo:
 ```sh
-./demo/build/OpenGlassBox
+./demo/build-release/Demo/Demo
 ```
 
 - (Optional) Unit test with code coverage:

@@ -1,94 +1,41 @@
-
-###################################################
-# Project definition
-#
-PROJECT = OpenGlassBox
-TARGET = $(PROJECT)
-DESCRIPTION = An Open Source Implementation of the SimCity 2013 Simulation Engine GlassBox
-STANDARD = --std=c++14
-BUILD_TYPE = release
-
 ###################################################
 # Location of the project directory and Makefiles
 #
 P := .
 M := $(P)/.makefile
-include $(M)/Makefile.header
 
 ###################################################
-# Inform Makefile where to find header files
+# Project definition
 #
-INCLUDES += -I$(P)/include -I$(P)
+include $(P)/Makefile.common
+TARGET_NAME := $(PROJECT_NAME)
+TARGET_DESCRIPTION := An open source implementation of the SimCity 2013 simulation engine GlassBox
+include $(M)/project/Makefile
 
 ###################################################
-# Inform Makefile where to find *.cpp and *.o files
+# Compile shared and static libraries
 #
-VPATH += $(P)/src $(P)/src/Core
+LIB_FILES := $(call rwildcard,src,*.cpp)
+INCLUDES := $(P)/include
+VPATH := $(P)/src
+DEFINES := -DVIRTUAL= -DDESIRED_GRID_SIZE=30u
 
 ###################################################
-# Project defines
+# Generic Makefile rules
 #
-DEFINES += -DVIRTUAL= -DDESIRED_GRID_SIZE=30u
+include $(M)/rules/Makefile
 
 ###################################################
-# Make the list of compiled files for the library
+# Extra rules
 #
-LIB_OBJS += Simulation.o Map.o City.o Unit.o Path.o Agent.o Resource.o Resources.o
-LIB_OBJS += ScriptParser.o MapCoordinatesInsideRadius.o MapRandomCoordinates.o
-LIB_OBJS += Rule.o RuleCommand.o RuleValue.o Dijkstra.o
+all:: demo
 
-###################################################
-# Compile the project as static and shared libraries.
-#
-.PHONY: all
-all: $(STATIC_LIB_TARGET) $(SHARED_LIB_TARGET) $(PKG_FILE) demo
-
-###################################################
-# Compile the demo as standalone application.
-#
 .PHONY: demo
-demo: | $(STATIC_LIB_TARGET) $(SHARED_LIB_TARGET)
-	@$(call print-from,"Compiling scenarios",$(PROJECT),demo)
-	$(MAKE) -C demo all
+demo: $(TARGET_STATIC_LIB_NAME)
+	$(Q)$(MAKE) --no-print-directory --directory=demo all
 
-###################################################
-# Install project. You need to be root.
-#
-ifeq ($(ARCHI),Linux)
-.PHONY: install
-install: $(STATIC_LIB_TARGET) $(SHARED_LIB_TARGET) $(PKG_FILE) demo
-	@$(call INSTALL_BINARY)
-	@$(call INSTALL_DOCUMENTATION)
-	@$(call INSTALL_PROJECT_LIBRARIES)
-	@$(call INSTALL_PROJECT_HEADERS)
-endif
+clean::
+	$(Q)$(MAKE) --no-print-directory --directory=demo clean
 
-###################################################
-# Compile and launch unit tests and generate the code coverage html report.
-#
-.PHONY: unit-tests
-unit-tests:
-	@$(call print-simple,"Compiling unit tests")
-	@$(MAKE) -C tests coverage
-
-###################################################
-# Compile and launch unit tests and generate the code coverage html report.
-#
-.PHONY: check
-check: unit-tests
-
-###################################################
-# Clean the whole project.
-#
-.PHONY: veryclean
-veryclean: clean
-	@rm -fr cov-int $(PROJECT).tgz *.log foo 2> /dev/null
-	@(cd tests && $(MAKE) -s clean)
-	@$(call print-simple,"Cleaning","$(PWD)/doc/html")
-	@rm -fr $(THIRDPART)/*/ doc/html 2> /dev/null
-	@$(MAKE) -C demo clean
-
-###################################################
-# Sharable informations between all Makefiles
-
-include $(M)/Makefile.footer
+install::
+	$(Q)$(MAKE) --no-print-directory --directory=demo install

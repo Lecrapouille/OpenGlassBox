@@ -47,7 +47,7 @@ jobs:
 #          export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/C:/Program Files (x86)/googletest-distribution/lib/pkgconfig"
 #          cd tests
 #          mingw32-make -j`nproc --all`
-#          ./build/OpenGlassBox-UnitTest
+#          ../build/OpenGlassBox-tests
 
   non_regression_linux:
     name: Non regression tests on Linux
@@ -78,12 +78,14 @@ jobs:
         run: |
           cd tests
           V=1 make -j`nproc --all`
-          ./build/OpenGlassBox-UnitTest
+          ../build/OpenGlassBox-tests
       - name: Check if the library can be linked against a project
         run: |
+          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/
           git clone https://github.com/Lecrapouille/LinkAgainstMyLibs.git --recurse-submodules --depth=1
           cd LinkAgainstMyLibs/OpenGlassBox
           V=1 make -j`nproc --all`
+          ./build/OpenGlassBox
 
   non_regression_macos:
     name: Non regression tests on MacOS X
@@ -113,9 +115,10 @@ jobs:
         run: |
           cd tests
           make -j`sysctl -n hw.logicalcpu`
-          ./build/OpenGlassBox-UnitTest
+          ../build/OpenGlassBox-tests
 #      - name: Check if the library can be linked against a project
 #        run: |
 #          git clone https://github.com/Lecrapouille/LinkAgainstMyLibs.git --recurse-submodules --depth=1
 #          cd LinkAgainstMyLibs/OpenGlassBox
 #          make -j`sysctl -n hw.logicalcpu`
+#          ./build/OpenGlassBox

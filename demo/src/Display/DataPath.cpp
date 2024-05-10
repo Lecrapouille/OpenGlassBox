@@ -217,15 +217,13 @@ std::string DataPath::toString() const
 {
     std::string string_path;
 
-    string_path += ".";
-    string_path += m_delimiter;
-
     for (auto const& it: m_search_paths)
     {
         string_path += it;
         string_path.pop_back(); // Remove the '/' char
         string_path += m_delimiter;
     }
+    string_path.pop_back();
 
     return string_path;
 }

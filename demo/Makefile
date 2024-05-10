@@ -1,72 +1,40 @@
-
-###################################################
-# Project definition
-#
-PROJECT = OpenGlassBox
-TARGET = $(PROJECT)
-DESCRIPTION = An Open Source Implementation of the SimCity 2013 Simulation Engine GlassBox
-STANDARD = --std=c++14
-BUILD_TYPE = debug
-
 ###################################################
 # Location of the project directory and Makefiles
 #
 P := ..
 M := $(P)/.makefile
-include $(M)/Makefile.header
 
 ###################################################
-# Inform Makefile where to find header files
+# Project definition
 #
-INCLUDES += -I. -I$(P)/include -I$(P)
+include $(P)/Makefile.common
+TARGET_NAME := $(PROJECT_NAME)-demo
+TARGET_DESCRIPTION := A demo using $(PROJECT_NAME)
+include $(M)/project/Makefile
 
 ###################################################
-# Inform Makefile where to find *.cpp and *.o files
+# Compile the standalone application
 #
-VPATH += $(P) Display
+SRC_FILES := $(call rwildcard,src,*.cpp)
+INCLUDES := $(P)/include $(P)/demo/src $(P)
+VPATH := $(P)/demo
+DEFINES := -DVIRTUAL= -DDESIRED_GRID_SIZE=30u
+INTERNAL_LIBS := $(call internal-lib,$(PROJECT_NAME))
+PKG_LIBS := sdl2 SDL2_image
 
 ###################################################
-# Project defines
+# Create MacOS X bundle application.
 #
-DEFINES += -DVIRTUAL= -DDESIRED_GRID_SIZE=30u
-DEFINES += -DDATADIR=\"$(DATADIR):$(abspath data)/:data/\"
-
-###################################################
-# Set Libraries. For knowing which libraries
-# is needed please read the external/README.md file.
-#
-PKG_LIBS = sdl2 SDL2_image
-
-###################################################
-# Compile against the OpenGlassBox shared library
-#
-THIRDPART_LIBS += $(abspath $(P)/$(BUILD)/libopenglassbox.a)
-
-###################################################
-# MacOS X
-#
-ifeq ($(ARCHI),Darwin)
-BUILD_MACOS_APP_BUNDLE = 1
-APPLE_IDENTIFIER = lecrapouille
-MACOS_BUNDLE_ICON = data/$(PROJECT).icns
-LINKER_FLAGS += -framework CoreFoundation
+ifeq ($(OS),Darwin)
+    BUILD_MACOS_APP_BUNDLE = 1
+    APPLE_IDENTIFIER := lecrapouille
+    MACOS_BUNDLE_ICON := data/$(PROJECT_NAME).icns
+    LINKER_FLAGS := -framework CoreFoundation
 endif
 
 ###################################################
-# Compile the demo as standalone application.
+# Generic Makefile rules
 #
-OBJS += DearImGui.o SDLHelper.o Window.o DataPath.o
-OBJS += Debug.o Draw.o Listeners.o Demo.o main.o
+include $(M)/rules/Makefile
 
-###################################################
-# Compile the demo as standalone application.
-#
-all: $(TARGET)
-	@cp $(BUILD)/$(TARGET) ../$(BUILD)
-ifeq ($(ARCHI),Darwin)
-	@cp -r $(BUILD)/$(TARGET)$(EXT) ../$(BUILD)
-endif
-
-###################################################
-# Sharable informations between all Makefiles
-include $(M)/Makefile.footer
+$(INTERNAL_LIBS):
