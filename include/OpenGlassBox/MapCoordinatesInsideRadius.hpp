@@ -35,9 +35,9 @@ public:
 
     //--------------------------------------------------------------------------
     //! \brief Initialize internal states with values from parameters.
-    //! \param[in] radius: the cercle radius in which actions are performed.
-    //! \param[in] centerU: the cercle center Map coordinate along axis-U.
-    //! \param[in] centerU: the cercle center Map coordinate along axis-V.
+    //! \param[in] radius: the circle radius in which actions are performed.
+    //! \param[in] centerU: the circle center Map coordinate along axis-U.
+    //! \param[in] centerU: the circle center Map coordinate along axis-V.
     //! \param[in] minU: minimal coordinate along axis-U clipping coordinates.
     //! \param[in] maxU: maximal coordinate along axis-U clipping coordinates.
     //! \param[in] minV: minimal coordinate along axis-V clipping coordinates.

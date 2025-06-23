@@ -9,6 +9,7 @@
 #  define OPEN_GLASSBOX_VECTOR_HPP
 
 #  include <cmath>
+#  include <iostream>
 
 //==============================================================================
 //! \brief Quick and dirty implementation of 3D vector.

@@ -12,7 +12,7 @@ class Window
 public:
 
     // -------------------------------------------------------------------------
-    //! \brief Create and initalize a SDL windows running DearImGui.
+    //! \brief Create and initialize a SDL window running DearImGui.
     // -------------------------------------------------------------------------
     Window();
 

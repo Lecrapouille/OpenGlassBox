@@ -13,10 +13,10 @@
 #endif
 
 //------------------------------------------------------------------------------
-bool GlassBox::initSimulation(std::string const& simfile)
+bool GlassBox::initSimulation(std::string const& simulation_file)
 {
     m_simulation.setListener(*this);
-    if (!m_simulation.parse(simfile))
+    if (!m_simulation.parse(simulation_file))
         return false;
 
     // --- Paris city

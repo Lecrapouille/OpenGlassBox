@@ -25,36 +25,6 @@
 
 #include "Display/DearImGui.hpp"
 
-#  pragma GCC diagnostic push
-#  pragma GCC diagnostic ignored "-Wold-style-cast"
-#  pragma GCC diagnostic ignored "-Wstrict-overflow"
-#  pragma GCC diagnostic ignored "-Wswitch-default"
-#  pragma GCC diagnostic ignored "-Wcast-qual"
-#  pragma GCC diagnostic ignored "-Waggregate-return"
-#  pragma GCC diagnostic ignored "-Wsign-promo"
-#  pragma GCC diagnostic ignored "-Wfloat-equal"
-#  pragma GCC diagnostic ignored "-Wsign-conversion"
-#  pragma GCC diagnostic ignored "-Wconversion"
-#  pragma GCC diagnostic ignored "-Wmissing-field-initializers"
-#  pragma GCC diagnostic ignored "-Wunused-function"
-
-#if defined __clang__
-#  pragma clang diagnostic push
-#  pragma clang diagnostic ignored "-Wunused-member-function"
-#endif
-
-#include "external/imgui/imgui_draw.cpp"
-#include "external/imgui/imgui_widgets.cpp"
-#include "external/imgui/imgui.cpp"
-#include "external/imgui/imgui_sdl.cpp"
-#include <memory>
-
-#if defined __clang__
-#  pragma clang diagnostic pop
-#endif
-
-# pragma GCC diagnostic pop
-
 //==============================================================================
 // Add some extra helpers
 //==============================================================================

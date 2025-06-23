@@ -140,11 +140,11 @@ public:
     void translate(Vector3f const direction);
 
     // -------------------------------------------------------------------------
-    //! \brief Get the Map indice U and V from a given position inside the world
+    //! \brief Get the Map index U and V from a given position inside the world
     //! coordinate.
     //! \param[in] worldPos: the world position.
-    //! \param[out] u: the grid indice along the U-axis.
-    //! \param[out] v: the grid indice along the V-axis.
+    //! \param[out] u: the grid index along the U-axis.
+    //! \param[out] v: the grid index along the V-axis.
     // -------------------------------------------------------------------------
     void world2mapPosition(Vector3f worldPos, uint32_t& u, uint32_t& v);
 
@@ -159,7 +159,7 @@ public:
     Vector3f const& position() const { return m_position; }
 
     // -------------------------------------------------------------------------
-    //! \brief Return the number of graduations along the U-axis
+    //! \brief Return the number of graduations along the U-axis.
     // -------------------------------------------------------------------------
     uint32_t gridSizeU() const { return m_gridSizeU; }
 
@@ -229,7 +229,7 @@ private:
     uint32_t      m_nextAgentId = 0u;
     //! \brief Globals resources (money, oil, electricity ...)
     Resources     m_globals;
-    //! \brief Collection of resources in the environement
+    //! \brief Collection of resources in the environment.
     Maps          m_maps;
     //! \brief Collection of graphs (roads, power lines, water pipes ...)
     Paths         m_paths;

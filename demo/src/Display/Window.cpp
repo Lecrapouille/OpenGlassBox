@@ -24,22 +24,38 @@ Window::Window()
         printf("Window could not be created! SDL_Error: %s\n", SDL_GetError());
         return ;
     }
-    m_renderer = SDL_CreateRenderer(m_window, -1, SDL_RENDERER_ACCELERATED);
+
+    m_renderer = SDL_CreateRenderer(m_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     if (m_renderer == nullptr)
     {
         printf("Renderer could not be created! SDL_Error: %s\n", SDL_GetError());
         return ;
     }
 
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    ImGuiSDL::Initialize(m_renderer, config::SCREEN_WIDTH, config::SCREEN_HEIGHT);
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+
+    // Setup Platform/Renderer backends
+    ImGui_ImplSDL2_InitForSDLRenderer(m_window, m_renderer);
+    ImGui_ImplSDLRenderer2_Init(m_renderer);
 
     m_success = true;
 }
 
 Window::~Window()
 {
-    ImGuiSDL::Deinitialize();
+    // Cleanup
+    ImGui_ImplSDLRenderer2_Shutdown();
+    ImGui_ImplSDL2_Shutdown();
+    ImGui::DestroyContext();
+
     SDL_DestroyRenderer(m_renderer);
     SDL_DestroyWindow(m_window);
     SDL_Quit();
@@ -58,62 +74,48 @@ bool Window::run(IGame& game)
 
     while (!quit)
     {
-        // Background color
-        SDL_SetRenderDrawColor(m_renderer, r, g, b, SDL_ALPHA_OPAQUE);
-        SDL_RenderClear(m_renderer);
-
-        // ImGuiIO I/O events
-        ImGuiIO& io = ImGui::GetIO();
-        int wheel = 0;
-
-        // SDL I/O events
-        while (SDL_PollEvent(&event) != 0)
+        // Poll and handle events (inputs, window resize, etc.)
+        while (SDL_PollEvent(&event))
         {
+            ImGui_ImplSDL2_ProcessEvent(&event);
+
             switch (event.type)
             {
-            case SDL_WINDOWEVENT:
-                // SDL --> ImGuiIO
-                if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED)
-                {
-                    io.DisplaySize.x = static_cast<float>(event.window.data1);
-                    io.DisplaySize.y = static_cast<float>(event.window.data2);
-                }
-                break;
-
             case SDL_QUIT:
-                quit = 1;
+                quit = true;
                 break;
-
+            case SDL_WINDOWEVENT:
+                if (event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(m_window))
+                    quit = true;
+                break;
             case SDL_KEYDOWN:
                 if (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
-                    quit = 1;
+                    quit = true;
                 } else {
                     game.onKeyDown(event.key.keysym.scancode);
                 }
                 break;
-
-            case SDL_MOUSEWHEEL:
-                wheel = event.wheel.y;
+            default:
                 break;
-
-            default: break;
             }
         }
 
-        // SDL I/O events --> ImGuiIO I/O events
-        int mouseX, mouseY;
-        const uint32_t buttons = SDL_GetMouseState(&mouseX, &mouseY);
-        io.DeltaTime = 1.0f / 60.0f;
-        io.MousePos = ImVec2(static_cast<float>(mouseX), static_cast<float>(mouseY));
-        io.MouseDown[0] = buttons & SDL_BUTTON(SDL_BUTTON_LEFT);
-        io.MouseDown[1] = buttons & SDL_BUTTON(SDL_BUTTON_RIGHT);
-        io.MouseWheel = static_cast<float>(wheel);
-
-        // Painting
+        // Start the Dear ImGui frame
+        ImGui_ImplSDLRenderer2_NewFrame();
+        ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
+
+        // Clear screen
+        SDL_SetRenderDrawColor(m_renderer, r, g, b, SDL_ALPHA_OPAQUE);
+        SDL_RenderClear(m_renderer);
+
+        // Game rendering
         game.onPaint(*m_renderer, 0.01f);// FIXME 0.01f
+
+        // Rendering ImGui
         ImGui::Render();
-        ImGuiSDL::Render(ImGui::GetDrawData());
+        ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(), m_renderer);
+
         SDL_RenderPresent(m_renderer);
 
         // FIXME

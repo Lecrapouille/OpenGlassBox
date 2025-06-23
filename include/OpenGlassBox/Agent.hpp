@@ -31,12 +31,12 @@ public:
     //!
     //! \param[in] id: Unique identifier.
     //!
-    //! \param[in] type: Const reference of a given type of Agent also refered
+    //! \param[in] type: Const reference of a given type of Agent also referred
     //! internally. The reference shall not be deleted before this Agent
     //! instance is destroyed. The type of Agent is defined by simulation
     //! scripts.
     //!
-    //! \param[in] owner: Unit creating this agent, also refered internally. The
+    //! \param[in] owner: Unit creating this agent, also referred internally. The
     //! reference shall not be deleted before this Agent instance is destroyed.
     //! This param is used to place the Agent on the graph node (Node of a Path)
     //! moving towards arcs. Note: that for placing an Unit somewhere along a Way
@@ -93,7 +93,7 @@ public:
 
     // -------------------------------------------------------------------------
     //! \brief Translate the position of the Agent relatively from its parent
-    //! (Node). Only use this fonction when moving place of a City (that will
+    //! (Node). Only use this function when moving place of a City (that will
     //! also affect to its contents).
     // -------------------------------------------------------------------------
     void translate(Vector3f const direction);
@@ -101,7 +101,7 @@ public:
 private:
 
     //--------------------------------------------------------------------------
-    //! \brief Transfert the amount of resource to the target Unit.
+    //! \brief Transfer the amount of resource to the target Unit.
     //! \return true if after if the Agent has no more resource to
     //! carry.
     //--------------------------------------------------------------------------
@@ -114,7 +114,7 @@ private:
     void moveTowardsNextNode();
 
     //--------------------------------------------------------------------------
-    //! \brief Search a new Way to reacht the destination Node/Unit.
+    //! \brief Search a new Way to reach the destination Node/Unit.
     //--------------------------------------------------------------------------
     void findNextNode(Dijkstra& dijkstra);
 
@@ -137,15 +137,15 @@ private:
     //! \brief Carried resource from an Unit to another Unit.
     Resources          m_resources;
     //! \brief Position of the Agent in the world coordinate. TODO idea:
-    //! Vector3f& pointe sur un tableau de Positions qui lui sera utilise pour
-    //! le renderer.
+    //! Vector3f& points to an array of Positions which will be used for
+    //! rendering.
     Vector3f           m_position;
     //! \brief Position along m_currentWay from the origin node.
     float              m_offset = 0.0f;
     //! \brief The way this agent is moving along.
     Way               *m_currentWay = nullptr;
     //! \brief Origin node
-    //! TODO pourrait etre supprime car m_currentWay->from() et ->to()
+    //! TODO could be removed because m_currentWay->from() and ->to()
     Node              *m_lastNode = nullptr;
     //! \brief Target node
     Node              *m_nextNode = nullptr;

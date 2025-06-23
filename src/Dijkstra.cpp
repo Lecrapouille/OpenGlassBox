@@ -9,6 +9,7 @@
 #include "OpenGlassBox/Vector.hpp"
 #include "OpenGlassBox/Unit.hpp"
 #include <algorithm>
+#include <limits>
 
 //------------------------------------------------------------------------------
 template<class T>

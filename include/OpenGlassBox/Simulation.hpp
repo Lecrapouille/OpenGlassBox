@@ -14,7 +14,7 @@
 //==============================================================================
 //! \brief Entry point class managing (add, get, remove) a collection of Cities
 //! and running simulation on them.
-//! In this current phase of developement Cities are not connected between them.
+//! In this current phase of development Cities are not connected between them.
 //==============================================================================
 class Simulation: public Script
 {
@@ -55,13 +55,13 @@ public:
     City& addCity(std::string const& name, Vector3f position);
 
     // -------------------------------------------------------------------------
-    //! \brief Get the City refered by its name or throw an exception if the
+    //! \brief Get the City referred by its name or throw an exception if the
     //! given name does not match any hold cities.
     // -------------------------------------------------------------------------
     City& getCity(std::string const& name);
 
     // -------------------------------------------------------------------------
-    //! \brief Get the City refered by its name or throw an exception if the
+    //! \brief Get the City referred by its name or throw an exception if the
     //! given name does not match any hold cities.
     // -------------------------------------------------------------------------
     City const& getCity(std::string const& name) const;

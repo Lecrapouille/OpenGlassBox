@@ -8,6 +8,8 @@
 #ifndef OPEN_GLASSBOX_CONFIG_HPP
 #  define OPEN_GLASSBOX_CONFIG_HPP
 
+#include <cstdint>
+
 namespace config
 {
     static const uint32_t SCREEN_WIDTH = 800u;

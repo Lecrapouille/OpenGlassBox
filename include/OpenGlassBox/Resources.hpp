@@ -9,6 +9,7 @@
 #  define OPEN_GLASSBOX_RESOURCES_HPP
 
 #  include "OpenGlassBox/Resource.hpp"
+#  include <vector>
 
 //==============================================================================
 //! \brief Resources come in a container. This class manages a collection of
@@ -92,7 +93,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief Check if we can add at least one resource.
     //!
-    //! Conditions are: identitical resource type and shall be the same
+    //! Conditions are: identical resource type and shall be the same
     //! and recipient shall not be full.
     //!
     //! \param[in] resourcesToTryAdd: what resources and what amount to add.
@@ -104,7 +105,7 @@ public:
     //! \brief Transfer all resources to the recipient. For each resource the
     //! amount of resource is limited by the capacity of the recipient.
     //!
-    //! \param[in] resourcesTarget: the receipient.
+    //! \param[in] resourcesTarget: the recipient.
     // -------------------------------------------------------------------------
     void transferResourcesTo(Resources& resourcesTarget);
 

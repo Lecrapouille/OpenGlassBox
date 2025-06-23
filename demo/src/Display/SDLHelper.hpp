@@ -11,7 +11,7 @@
 #  include <SDL2/SDL.h>
 #  include <SDL_image.h>
 
-enum TextAlignement
+enum class TextAlignment
 {
     TEXT_LEFT,
     TEXT_CENTER,
@@ -27,12 +27,12 @@ enum TextAlignement
 //! \param[in] r: red color.
 //! \param[in] g: green color.
 //! \param[in] b: blue color.
-//! \param[in] align: horizontal alignement.
+//! \param[in] align: horizontal alignment.
 //! \param[in] format: printf style to draw text
 //------------------------------------------------------------------------------
 void drawText(SDL_Renderer* renderer, SDL_Texture* fontTexture,
               int x, int y, Uint8 r, Uint8 g, Uint8 b,
-              TextAlignement align, const char *format, ...);
+              TextAlignment align, const char *format, ...);
 
 
 #endif

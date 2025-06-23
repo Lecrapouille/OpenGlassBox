@@ -9,12 +9,11 @@
 #  define OPEN_GLASSBOX_RESOURCE_HPP
 
 #  include <string>
-#  include <limits>
-#  include <vector>
+#  include <cstdint> // uint32_t
 #  include <iostream> // operator<<
 
 //==============================================================================
-//! \brief Type of Resource ("Water", "Oil", "Electricty", "Citizen" ...)
+//! \brief Type of Resource ("Water", "Oil", "Electricity", "Citizen" ...)
 //! Type defined during the parsing of simulation scripts. Example:
 //! \code
 //! resource Water
@@ -57,7 +56,7 @@ public:
 
     // -------------------------------------------------------------------------
     //! \brief Transfer resources to a given recipient. The quantity of
-    //! resources transfered is limited by the capacity of the recipient.
+    //! resources transferred is limited by the capacity of the recipient.
     // -------------------------------------------------------------------------
     void transferTo(Resource& target);
 

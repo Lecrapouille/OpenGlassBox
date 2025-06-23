@@ -7,6 +7,7 @@
 
 #include "OpenGlassBox/Path.hpp"
 #include "OpenGlassBox/Unit.hpp"
+#include <algorithm>
 
 // =============================================================================
 // NODE

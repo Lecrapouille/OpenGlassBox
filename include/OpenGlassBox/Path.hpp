@@ -12,6 +12,7 @@
 #  include "OpenGlassBox/Vector.hpp"
 #  include <deque>
 #  include <map>
+#  include <vector>
 #  include <memory>
 
 class Way;
@@ -19,11 +20,11 @@ class Path;
 class Unit;
 
 // =============================================================================
-//! \brief Class defining the extremity of arcs constituing a path. This
+//! \brief Class defining the extremity of arcs constituting a path. This
 //! class can be seen as nodes of a graph (named Path). This class is not a
 //! basic structure holding position but it holds more information such the list
-//! of neighbor Ways (graph arcs) and Units (houses, buildings) refering to it.
-//! Units consumn and output Agent carrying Resources along a Path and Node are
+//! of neighbor Ways (graph arcs) and Units (houses, buildings) referring to it.
+//! Units consume and output Agent carrying Resources along a Path and Node are
 //! origin and destination for Agents.
 // =============================================================================
 class Node
@@ -35,7 +36,7 @@ public:
 
     // -------------------------------------------------------------------------
     //! \brief Uninitialized internal states. Only friend classes can then
-    //! initialize fileds.
+    //! initialize fields.
     // -------------------------------------------------------------------------
     Node() = default;
 
@@ -65,7 +66,7 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief Helper fonction calling
+    //! \brief Helper function calling
     //! getMapPosition(uint32_t, uint32_t, uint32_t&, uint32_t&) from class T
     //! that implements gridSizeU() and gridSizeV() ie T can be City or Map.
     // -------------------------------------------------------------------------
@@ -131,7 +132,7 @@ private:
     Vector3f              m_position;
     //! \brief Ways owning this node instance.
     std::vector<Way*>     m_ways;
-    //! \brief Units is affected to a Path Node. Therefore nodes has to kown them.
+    //! \brief Units is affected to a Path Node. Therefore nodes has to know them.
     std::vector<Unit*>    m_units;
 };
 
@@ -156,8 +157,8 @@ public:
     // -------------------------------------------------------------------------
     //! \brief Initialized the state of the Way.
     //! \param[in] id: unique identifier.
-    //! \param[in] type: const reference of a given type of Way also refered
-    //! internally. The refered instance shall not be deleted before this Way
+    //! \param[in] type: const reference of a given type of Way also referred
+    //! internally. The referred instance shall not be deleted before this Way
     //! instance is destroyed.
     //! \param[in] from: The node of origin.
     //! \param[in] to: The node of destination.
@@ -201,7 +202,7 @@ public:
     std::string const& type() const { return m_type.name; }
 
     // -------------------------------------------------------------------------
-    //! \briefG etter: return the color of the Way.
+    //! \brief Getter: return the color of the Way.
     // -------------------------------------------------------------------------
     uint32_t color() const { return m_type.color; }
 
@@ -241,8 +242,8 @@ public:
 
     // -------------------------------------------------------------------------
     //! \brief Empty Path: no nodes, no arcs.
-    //! \param[in] type: const reference of a given type of Path also refered
-    //! internally. The refered instance shall not be deleted before this Path
+    //! \param[in] type: const reference of a given type of Path also referred
+    //! internally. The referred instance shall not be deleted before this Path
     //! instance is destroyed.
     // -------------------------------------------------------------------------
     Path(PathType const& type);
@@ -265,7 +266,7 @@ public:
 
     // -------------------------------------------------------------------------
     //! \brief Split a segment into two sub arcs linked by a newly created
-    //! node (execept if the offset is set to one of the segment extremity)
+    //! node (except if the offset is set to one of the segment extremity)
     //!
     //! \param segment: the segment to split.
     //! \param offset: [0..1] the normalized length from from where to split
@@ -298,7 +299,7 @@ public:
 private:
 
     PathType const& m_type;
-    //! \brief Holde nodes. Do not use vector<> to avoid references to be
+    //! \brief Hold nodes. Do not use vector<> to avoid references to be
     //! invalidated.
     Nodes           m_nodes;
     //! \brief Hold arcs. Do not use vector<> to avoid references to be

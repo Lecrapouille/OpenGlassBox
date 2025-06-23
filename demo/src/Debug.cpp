@@ -211,6 +211,6 @@ static void debugCity(City const& city)
 //------------------------------------------------------------------------------
 void GlassBox::debugSimulation()
 {
-    ImGui::Combo("City", &m_cityComboItem, m_cityNames);
-    debugCity(m_simulation.getCity(m_cityNames[size_t(m_cityComboItem)]));
+    ImGui::Combo("City", &m_city_combo_item, m_cityNames);
+    debugCity(m_simulation.getCity(m_cityNames[size_t(m_city_combo_item)]));
 }

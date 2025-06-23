@@ -7,6 +7,7 @@
 
 #include "OpenGlassBox/Unit.hpp"
 #include "OpenGlassBox/City.hpp"
+#include <algorithm>
 
 // -----------------------------------------------------------------------------
 Unit::Unit(UnitType const& type, Node& node, City& city)

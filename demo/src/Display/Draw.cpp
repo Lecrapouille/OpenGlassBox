@@ -34,7 +34,7 @@ void GlassBox::drawAgents(City const& city, SDL_Renderer& renderer)
 
         drawText(&renderer, m_fontTexture, rect.x, rect.y,
                  RED(it->color()), GREEN(it->color()), BLUE(it->color()),
-                 TEXT_LEFT, "%u", it->id());
+                 TextAlignment::TEXT_LEFT, "%u", it->id());
     }
 }
 
@@ -57,7 +57,7 @@ void GlassBox::drawUnits(City const& city, SDL_Renderer& renderer)
 
         drawText(&renderer, m_fontTexture, rect.x, rect.y,
                  RED(it->color()), GREEN(it->color()), BLUE(it->color()),
-                 TEXT_LEFT, "%u", it->id());
+                 TextAlignment::TEXT_LEFT, "%u", it->id());
     }
 }
 
@@ -118,7 +118,7 @@ void GlassBox::drawMaps(City const& city, SDL_Renderer& renderer)
 
     // Display the city name
     drawText(&renderer, m_fontTexture, int(city.position().x), int(city.position().y),
-             0, 0, 0, TEXT_LEFT, "%s", city.name().c_str());
+             0, 0, 0, TextAlignment::TEXT_LEFT, "%s", city.name().c_str());
 
     // Display the grid
     {
@@ -183,7 +183,7 @@ void GlassBox::drawPaths(City const& city, SDL_Renderer& renderer)
 
             drawText(&renderer, m_fontTexture, rect.x, rect.y,
                      RED(it->color()), GREEN(it->color()), BLUE(it->color()),
-                     TEXT_LEFT, "%u", it->id());
+                     TextAlignment::TEXT_LEFT, "%u", it->id());
         }
     }
 }

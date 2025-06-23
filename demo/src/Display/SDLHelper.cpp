@@ -30,7 +30,7 @@ static void blitRect(SDL_Renderer* renderer, SDL_Texture* texture,
 //------------------------------------------------------------------------------
 void drawText(SDL_Renderer* renderer, SDL_Texture* fontTexture,
               int x, int y, Uint8 r, Uint8 g, Uint8 b,
-              TextAlignement align, const char *format, ...)
+              TextAlignment align, const char *format, ...)
 {
     static char m_drawTextBuffer[1024];
 
@@ -47,13 +47,13 @@ void drawText(SDL_Renderer* renderer, SDL_Texture* fontTexture,
 
     switch (align)
     {
-    case TEXT_RIGHT:
+    case TextAlignment::TEXT_RIGHT:
         x -= (len * GLYPH_WIDTH);
         break;
-    case TEXT_CENTER:
+    case TextAlignment::TEXT_CENTER:
         x -= (len * GLYPH_WIDTH) / 2;
         break;
-    case TEXT_LEFT:
+    case TextAlignment::TEXT_LEFT:
     default:
         break;
     }

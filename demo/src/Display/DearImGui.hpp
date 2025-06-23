@@ -21,19 +21,13 @@
 #ifndef OPENGLCPPWRAPPER_DEARIMGUI_HPP
 #  define OPENGLCPPWRAPPER_DEARIMGUI_HPP
 
-#  pragma GCC diagnostic push
-#  pragma GCC diagnostic ignored "-Wold-style-cast"
-#  pragma GCC diagnostic ignored "-Wstrict-overflow"
-#  pragma GCC diagnostic ignored "-Wswitch-default"
-#  pragma GCC diagnostic ignored "-Wcast-qual"
-#  pragma GCC diagnostic ignored "-Waggregate-return"
-#  pragma GCC diagnostic ignored "-Wsign-promo"
-#  pragma GCC diagnostic ignored "-Wfloat-equal"
-#  pragma GCC diagnostic ignored "-Wsign-conversion"
-#  pragma GCC diagnostic ignored "-Wconversion"
-#    include "external/imgui/imgui.h"
-#    include "external/imgui/imgui_sdl.h"
-# pragma GCC diagnostic pop
+#  ifndef IMGUI_DEFINE_MATH_OPERATORS
+#    define IMGUI_DEFINE_MATH_OPERATORS
+#  endif // IMGUI_DEFINE_MATH_OPERATORS
+
+#  include "imgui.h"
+#  include "imgui_impl_sdl2.h"
+#  include "imgui_impl_sdlrenderer2.h"
 
 #  include <vector>
 #  include <string>

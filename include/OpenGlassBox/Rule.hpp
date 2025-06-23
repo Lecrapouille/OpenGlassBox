@@ -10,7 +10,6 @@
 
 #  include "OpenGlassBox/Types.hpp"
 #  include <cstdlib>
-#  include <stdexcept>
 
 class City;
 class Unit;
@@ -121,7 +120,7 @@ public:
     virtual ~IRule() = default;
 
     //--------------------------------------------------------------------------
-    //! \brief FIXME return void not prefered since ignored
+    //! \brief FIXME return void not preferred since ignored
     //--------------------------------------------------------------------------
     virtual bool execute(RuleContext& context)
     {

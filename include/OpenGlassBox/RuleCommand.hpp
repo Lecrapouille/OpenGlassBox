@@ -9,8 +9,6 @@
 #  define OPEN_GLASSBOX_RULE_COMMAND_HPP
 
 #  include "OpenGlassBox/Rule.hpp"
-#  include "OpenGlassBox/Agent.hpp"
-#  include "OpenGlassBox/RuleValue.hpp"
 
 //==============================================================================
 //! \brief

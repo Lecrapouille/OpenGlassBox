@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------------
 
 #include "OpenGlassBox/Resource.hpp"
+#include <limits> // std::numeric_limits<uint32_t>::max()
 
 // -----------------------------------------------------------------------------
 const uint32_t Resource::MAX_CAPACITY = std::numeric_limits<uint32_t>::max();

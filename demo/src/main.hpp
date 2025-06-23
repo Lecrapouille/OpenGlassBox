@@ -27,7 +27,7 @@ public:
 
 private:
 
-    bool initSimulation(std::string const& simfile);
+    bool initSimulation(std::string const& simulation_file);
     bool setupGraphics(SDL_Renderer& renderer);
     void debugSimulation();
 
@@ -78,7 +78,7 @@ private:
     std::vector<std::string> m_cityNames;
 
     //! Selected city on the ImGui::Combo
-    int m_cityComboItem = 0;
+    int m_city_combo_item = 0;
 };
 
 #endif

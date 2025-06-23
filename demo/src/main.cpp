@@ -69,9 +69,11 @@ void GlassBox::onPaint(SDL_Renderer& renderer, float dt)
 {
     if (m_pause)
     {
-        drawText(&renderer, m_fontTexture, 50u, 100u, 0u, 0u, 0u, TEXT_LEFT,
+        drawText(&renderer, m_fontTexture,
+               50u, 100u, 0u, 0u, 0u, TextAlignment::TEXT_LEFT,
                  "- Press P to play!");
-        drawText(&renderer, m_fontTexture, 50u, 150u, 0u, 0u, 0u, TEXT_LEFT,
+        drawText(&renderer, m_fontTexture,
+               50u, 150u, 0u, 0u, 0u, TextAlignment::TEXT_LEFT,
                  "- Press D to show debug during the play!");
         return ;
     }
@@ -81,7 +83,8 @@ void GlassBox::onPaint(SDL_Renderer& renderer, float dt)
     m_simulation.update(dt);
 
     renderSimulation(renderer);
-    if (m_debug_activated) {
+    if (m_debug_activated)
+    {
         debugSimulation();
     }
 }

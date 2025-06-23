@@ -10,7 +10,6 @@
 
 #  include "OpenGlassBox/Path.hpp"
 #  include "OpenGlassBox/Rule.hpp"
-#  include <algorithm>
 
 class RuleUnit;
 class City;
@@ -29,16 +28,16 @@ public:
     // -------------------------------------------------------------------------
     //! \brief Create a new Unit instance placed on an existing Path's Node.
     //!
-    //! \param[in] type: const reference of a given type of Unit also refered
-    //! internally. The refered instance shall not be deleted before this Unit
+    //! \param[in] type: const reference of a given type of Unit also referred
+    //! internally. The referred instance shall not be deleted before this Unit
     //! instance is destroyed.
     //!
     //! \param[in] node: The reference to the Path Node owning this instance
-    //! also refered internally. The refered instance shall not be deleted
+    //! also referred internally. The referred instance shall not be deleted
     //! before this Unit instance is destroyed.
     //!
     //! \param[in] city: The reference to the City owning this instance also
-    //! refered internally. The refered instance shall not be deleted before
+    //! referred internally. The referred instance shall not be deleted before
     //! this Unit instance is destroyed.
     // -------------------------------------------------------------------------
     Unit(UnitType const& type, Node& node, City& city);
@@ -74,7 +73,8 @@ public:
     inline Resources& resources() { return m_resources; }
 
     // -------------------------------------------------------------------------
-    //! \brief Return the position inside the World coordinate of the Path Node that is refering.
+    //! \brief Return the position inside the World coordinate of the Path Node
+    //! that is referring.
     // -------------------------------------------------------------------------
     inline Vector3f const& position() const { return m_node.position(); }
 

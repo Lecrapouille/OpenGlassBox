@@ -64,8 +64,8 @@ public:
     //! \param[in] distributed: if set to true cells are randomized and each
     //! distribution makes toAdd reduced. Therefore maybe not all cells are feed.
     //! If set to false, each cell gets the same amount of resource.
-    //! \note Amount of resource for each cell are constrained by the gobal capacity
-    //! of the map.
+    //! \note Amount of resource for each cell are constrained by the global
+    //! capacity of the map.
     // -------------------------------------------------------------------------
     void addResource(uint32_t const u, uint32_t const v, uint32_t const radius,
                      uint32_t const toAdd, bool distributed = true);
@@ -139,10 +139,10 @@ private:
     //! \brief Structure holding all information needed to execute simulation
     //! rules.
     RuleContext    m_context;
-    //! \brief Frenquency for running rules.
+    //! \brief Frequency for running rules.
     uint32_t       m_ticks = 0u;
     //! \brief Amount of resource for each cell of the grid. The capacity is
-    //! stired inside MapType.
+    //! stored inside MapType.
     std::vector<uint32_t>      m_resources;
     //! \brief Cache coordinates within a position and radius.
     MapCoordinatesInsideRadius m_coordinates;
