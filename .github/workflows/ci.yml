@@ -22,27 +22,27 @@ jobs:
         uses: msys2/setup-msys2@v2
         with:
           msystem: MINGW64
-          install: mingw-w64-x86_64-toolchain git mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja mingw-w64-x86_64-bc mingw-w64-x86_64-pkg-config mingw-w64-x86_64-SDL2 mingw-w64-x86_64-SDL2_image
+          install: mingw-w64-x86_64-toolchain git mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja mingw-w64-x86_64-bc mingw-w64-x86_64-pkg-config mingw-w64-x86_64-SDL2 mingw-w64-x86_64-SDL2_image mingw-w64-x86_64-make
       - name: Download, configure and install Google test
         shell: msys2 {0}
         run: |
-          wget https://github.com/google/googletest/archive/release-1.11.0.tar.gz
-          tar xf release-1.11.0.tar.gz
-          cd googletest-release-1.11.0
+          wget https://github.com/google/googletest/releases/download/v1.17.0/googletest-1.17.0.tar.gz
+          tar xf googletest-1.17.0.tar.gz
+          cd googletest-1.17.0
           cmake -G "MinGW Makefiles" -DBUILD_SHARED_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON .
           mingw32-make install
       - name: Compile OpenGlassBox
         shell: msys2 {0}
         run: |
-          make download-external-libs
-          V=1 make compile-external-libs
-          V=1 make -j$(nproc)
-          make install
+          mingw32-make download-external-libs
+          V=1 mingw32-make compile-external-libs
+          V=1 mingw32-make -j8
+          mingw32-make install
       - name: Do non regression tests
         shell: msys2 {0}
         run: |
           cd tests
-          V=1 make -j$(nproc)
+          V=1 mingw32-make -j8
           ../build/OpenGlassBox-tests
       - name: Check if the library can be linked against a project
         shell: msys2 {0}
@@ -50,7 +50,7 @@ jobs:
           export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/C:/Program Files (x86)/googletest-distribution/lib/pkgconfig"
           git clone https://github.com/Lecrapouille/LinkAgainstMyLibs.git --recurse-submodules --depth=1
           cd LinkAgainstMyLibs/OpenGlassBox
-          V=1 make -j$(nproc)
+          V=1 mingw32-make -j8
           ./build/OpenGlassBox
 
   non_regression_linux:
@@ -67,9 +67,9 @@ jobs:
           sudo apt-get install pkg-config libdw-dev lcov libsdl2-dev libsdl2-image-dev
       - name: Download, configure and install Google test
         run: |
-          wget https://github.com/google/googletest/archive/release-1.11.0.tar.gz
-          tar xf release-1.11.0.tar.gz
-          cd googletest-release-1.11.0
+          wget https://github.com/google/googletest/releases/download/v1.17.0/googletest-1.17.0.tar.gz
+          tar xf googletest-1.17.0.tar.gz
+          cd googletest-1.17.0
           cmake -DBUILD_SHARED_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON .
           sudo make install
       - name: Compile OpenGlassBox
@@ -104,9 +104,9 @@ jobs:
           brew install pkg-config lcov sdl2 sdl2_image
       - name: Download, configure and install Google test
         run: |
-          wget https://github.com/google/googletest/archive/release-1.11.0.tar.gz
-          tar xf release-1.11.0.tar.gz
-          cd googletest-release-1.11.0
+          wget https://github.com/google/googletest/releases/download/v1.17.0/googletest-1.17.0.tar.gz
+          tar xf googletest-1.17.0.tar.gz
+          cd googletest-1.17.0
           cmake -DBUILD_SHARED_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON .
           sudo make install
       - name: Compile OpenGlassBox
