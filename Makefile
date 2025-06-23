@@ -28,14 +28,8 @@ include $(M)/rules/Makefile
 ###################################################
 # Extra rules
 #
-all:: demo
+all:: build-demo
 
-.PHONY: demo
-demo: $(TARGET_STATIC_LIB_NAME)
+.PHONY: build-demo
+build-demo: $(TARGET_STATIC_LIB_NAME)
 	$(Q)$(MAKE) --no-print-directory --directory=demo all
-
-clean::
-	$(Q)$(MAKE) --no-print-directory --directory=demo clean
-
-install::
-	$(Q)$(MAKE) --no-print-directory --directory=demo install
