@@ -32,12 +32,12 @@
 // Add some extra helpers
 namespace ImGui
 {
-static auto vector_getter = [](void* vec, int idx, const char** out_text)
+static auto vector_getter = [](void* vec, int idx) -> const char*
 {
     auto& vector = *static_cast<std::vector<std::string>*>(vec);
-    if (idx < 0 || idx >= static_cast<int>(vector.size())) { return false; }
-    *out_text = vector.at(size_t(idx)).c_str();
-    return true;
+    if (idx < 0 || idx >= static_cast<int>(vector.size()))
+        return nullptr;
+    return vector.at(size_t(idx)).c_str();
 };
 
 bool Combo(const char* label, int* currIndex, std::vector<std::string>& values)
