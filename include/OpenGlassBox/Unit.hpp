@@ -16,104 +16,130 @@ class City;
 
 //==============================================================================
 //! \brief A Unit represents things: houses, factories, even people. A unit has
-//! state: a collection of resource but also a well-defined spatial extent:
-//! bounding volume, simulation footprint. Currently implemented, an Unit shall
-//! refer to an existing Path Node to allow Agent to carry Resources from an
-//! Unit to another Unit.
+//! state: a collection of resource but also a well-defined spatial extent.
+//!
+//! A Unit is no longer forced to sit on a Path Node. It has its own world
+//! position, and optionally an anchor on the road network: a Node (an
+//! intersection) or a Way at a given offset (a building along a street). The
+//! latter is what keeps the graph small: a street of forty houses used to
+//! become forty nodes and forty-one segments.
 //==============================================================================
 class Unit
 {
 public:
 
     // -------------------------------------------------------------------------
-    //! \brief Create a new Unit instance placed on an existing Path's Node.
-    //!
-    //! \param[in] type: const reference of a given type of Unit also referred
-    //! internally. The referred instance shall not be deleted before this Unit
-    //! instance is destroyed.
-    //!
-    //! \param[in] node: The reference to the Path Node owning this instance
-    //! also referred internally. The referred instance shall not be deleted
-    //! before this Unit instance is destroyed.
-    //!
-    //! \param[in] city: The reference to the City owning this instance also
-    //! referred internally. The referred instance shall not be deleted before
-    //! this Unit instance is destroyed.
+    //! \brief Sit on an existing Path Node. The position of the Unit follows
+    //! the Node.
     // -------------------------------------------------------------------------
     Unit(UnitType const& type, Node& node, City& city);
 
     // -------------------------------------------------------------------------
-    //! \brief Virtual destructor only needed because of the presence of virtual
-    //! methods only needed for unit tests.
+    //! \brief Sit on a Way at the given offset, without splitting it. The
+    //! position is interpolated between the two extremities.
     // -------------------------------------------------------------------------
-    VIRTUAL ~Unit() = default;
+    Unit(UnitType const& type, Way& way, float offset, City& city);
 
     // -------------------------------------------------------------------------
-    //! \brief Execute simulation rules given by UnitType (defined by the
-    //! simulation script).
-    //! \note VIRTUAL is only used for unit tests.
+    //! \brief Sit at a free world position, with no attachment to the road
+    //! network. Agents cannot reach it and it cannot produce any.
     // -------------------------------------------------------------------------
+    Unit(UnitType const& type, Vector3f const& position, City& city);
+
+    VIRTUAL ~Unit();
+
     VIRTUAL void executeRules();
 
-    // -------------------------------------------------------------------------
-    //! \brief Check if the current resources \c m_resources of this instance of
-    //! Unit can add external resources \c resourcesToTryToAdd from a matching
-    //! target.
-    // -------------------------------------------------------------------------
     bool accepts(std::string const& searchTarget, Resources const& resourcesToTryToAdd);
 
-    // -------------------------------------------------------------------------
-    //! \brief Getter: return the type of Unit.
-    // -------------------------------------------------------------------------
     inline std::string const& type() const { return m_type.name; }
-
-    // -------------------------------------------------------------------------
-    //! \brief Return current resources.
-    // -------------------------------------------------------------------------
     inline Resources& resources() { return m_resources; }
-
-    // -------------------------------------------------------------------------
-    //! \brief Return the position inside the World coordinate of the Path Node
-    //! that is referring.
-    // -------------------------------------------------------------------------
-    inline Vector3f const& position() const { return m_node.position(); }
-
-    // -------------------------------------------------------------------------
-    //! \brief Return the color for the Renderer.
-    // -------------------------------------------------------------------------
+    inline Vector3f const& position() const { return m_position; }
     inline uint32_t color() const { return m_type.color; }
 
     // -------------------------------------------------------------------------
-    //! \brief Return the associated Path Node.
+    //! \brief The Node this Unit sits on, or nullptr when it sits on a Way or
+    //! at a free position.
     // -------------------------------------------------------------------------
-    inline Node& node() { return m_node; }
+    inline Node* node() const { return m_node; }
 
     // -------------------------------------------------------------------------
-    //! \brief Return the unique identifier.
+    //! \brief The Way this Unit sits on, or nullptr when it sits on a Node or
+    //! at a free position.
     // -------------------------------------------------------------------------
-    inline uint32_t id() const { return m_node.id(); }
+    inline Way* way() const { return m_way; }
 
     // -------------------------------------------------------------------------
-    //! \brief Check if can access to at least one Way. And Unit shall refer to
-    //! a Node with neighbors else Agents cannot move towards Path.
+    //! \brief Offset along way(), in [0..1] from the origin node.
     // -------------------------------------------------------------------------
-    inline bool hasWays() const { return m_node.hasWays(); }
+    inline float wayOffset() const { return m_offset; }
+
+    // -------------------------------------------------------------------------
+    //! \brief Unique identifier, independent of any Node.
+    // -------------------------------------------------------------------------
+    inline uint32_t id() const { return m_id; }
+
+    // -------------------------------------------------------------------------
+    //! \brief Whether Agents can leave this Unit and reach it: it has to be
+    //! attached to a Node with at least one Way, or to a Way itself.
+    // -------------------------------------------------------------------------
+    bool hasWays() const;
+
+    // -------------------------------------------------------------------------
+    //! \brief A Node Agents can start from or aim at: the Node the Unit sits
+    //! on, or the closer extremity of the Way it sits on. Nullptr when the
+    //! Unit is not attached to the network.
+    // -------------------------------------------------------------------------
+    Node* accessNode() const;
+
+    // -------------------------------------------------------------------------
+    //! \brief The Path this Unit is attached to, or nullptr.
+    // -------------------------------------------------------------------------
+    Path* path() const;
+
+    inline uint32_t mapRadius() const { return m_type.radius; }
+    inline int32_t mapU() const { return m_context.u; }
+    inline int32_t mapV() const { return m_context.v; }
+    inline std::vector<RuleUnit*> const& rules() const { return m_type.rules; }
+    inline uint32_t ticks() const { return m_ticks; }
+    inline std::vector<std::string> const& targets() const { return m_type.targets; }
+
+    // -------------------------------------------------------------------------
+    //! \brief Translate the Unit when the City itself is translated. A Unit
+    //! sitting on a Node or a Way follows it instead.
+    // -------------------------------------------------------------------------
+    void translate(Vector3f const& direction);
+
+    // -------------------------------------------------------------------------
+    //! \brief Detach from the Node or Way this Unit sits on. Called by the
+    //! destructor and by City::removeUnit.
+    // -------------------------------------------------------------------------
+    void detach();
+
+    // -------------------------------------------------------------------------
+    //! \brief Identifier assigned by the City, unique inside it.
+    // -------------------------------------------------------------------------
+    void setId(uint32_t id) { m_id = id; }
+
+    // -------------------------------------------------------------------------
+    //! \brief Refresh the cell this Unit acts on after the City has moved.
+    // -------------------------------------------------------------------------
+    void refreshMapPosition();
 
 private:
 
-    //! \brief Reference to the type of Unit defined in the simulation script.
-    //! The reference shall not be destroyed before this instance.
+    void bind(City& city);
+
+private:
+
+    uint32_t        m_id = 0u;
     UnitType const& m_type;
-    //! \brief Reference to Node of a Path.
-    //! The reference shall not be destroyed before this instance.
-    Node          & m_node;
-    //! \brief Unit produce resources has defined by simulation scripts.
+    Vector3f        m_position;
+    Node*           m_node = nullptr;
+    Way*            m_way = nullptr;
+    float           m_offset = 0.0f;
     Resources       m_resources;
-    //! \brief Structure holding usefull information for the good execution of
-    //! UnitRules.
     RuleContext     m_context;
-    //! \brief Discrete time for running UnitRules at the rate time defined by
-    //! simulation scripts (UnitType).
     uint32_t        m_ticks = 0u;
 };
 

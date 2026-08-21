@@ -10,7 +10,9 @@
 
 #  include "OpenGlassBox/Unit.hpp"
 #  include "OpenGlassBox/Agent.hpp"
+#  include "OpenGlassBox/Area.hpp"
 #  include "OpenGlassBox/Map.hpp"
+#  include "OpenGlassBox/MapRegion.hpp"
 #  include "OpenGlassBox/Path.hpp"
 #  include "OpenGlassBox/Dijkstra.hpp"
 #  include "OpenGlassBox/Config.hpp"
@@ -18,10 +20,15 @@
 
 class Path;
 class Node;
+class World;
 
 //==============================================================================
-//! \brief Class holding everything that makes up a city.
-//! Manage maps, global resources, Paths, Agents. Run Unit and Map rule scripts.
+//! \brief An administrative region of the World: a name, a budget, its roads,
+//! its buildings and the agents travelling between them.
+//!
+//! The maps are not its own. They belong to the World and are shared with the
+//! neighbouring cities; what a City owns on the grid is the region it
+//! administers, which is what bounds the rules run on its behalf.
 //==============================================================================
 class City
 {
@@ -47,21 +54,20 @@ public:
 
         virtual void onAgentAdded(Agent& /*agent*/) {}
         virtual void onAgentRemoved(Agent& /*agent*/) {}
+
+        virtual void onAreaAdded(Area& /*area*/) {}
+        virtual void onAreaRemoved(Area& /*area*/) {}
     };
 
 public:
 
     // -------------------------------------------------------------------------
-    //! \brief Create a empty city of a grid of gridSizeU x gridSizeV cells at
-    //! the given position in the world coordinate.
+    //! \brief Found a city administering sizeU x sizeV cells of the world grid,
+    //! starting at the given world position. Prefer World::addCity, which also
+    //! registers the city in the world.
     // -------------------------------------------------------------------------
-    City(std::string const& name, Vector3f position, uint32_t gridSizeU, uint32_t gridSizeV);
-
-    // -------------------------------------------------------------------------
-    //! \brief Create a empty city of a grid of gridSizeU x gridSizeV cells at
-    //! position 0 in the world coordinate.
-    // -------------------------------------------------------------------------
-    City(std::string const& name, uint32_t gridSizeU, uint32_t gridSizeV);
+    City(std::string const& name, Vector3f position, uint32_t sizeU,
+         uint32_t sizeV, World& world);
 
     // -------------------------------------------------------------------------
     //! \brief
@@ -69,22 +75,23 @@ public:
     void setListener(City::Listener& listener);
 
     // -------------------------------------------------------------------------
-    //! \brief Create a empty city of a grid of 32 x 32 cells at position 0 in
-    //! the world coordinate.
+    //! \brief Move the agents and execute the rule scripts of the Units. The
+    //! rules of the maps are run by the World, which owns them.
+    //! \param[in] dt: the duration of the tick, in seconds of game time.
     // -------------------------------------------------------------------------
-    City(std::string const& name);
+    void update(float dt);
 
     // -------------------------------------------------------------------------
-    //! \brief Move agents, execute rule scripts of maps, execute rule scripts
-    //! of Units.
+    //! \brief Run a single tick lasting the duration defined by the
+    //! SimulationConfig of this City.
     // -------------------------------------------------------------------------
-    void update(float dt = 1.0f / config::TICKS_PER_SECOND);
+    void update() { update(config().tickDuration()); }
 
     // -------------------------------------------------------------------------
-    //! \brief Create and store a new Map. Destroy the Map of the same name if
-    //! the identifier is already known.
-    //! \param[in] type: the type of Map parsed from the simulation script.
-    //! \return the newly created Map instance.
+    //! \brief Ask the World for the Map holding this resource type, creating it
+    //! if this is the first city to need it. The Map is shared with the other
+    //! cities.
+    //! \return the Map instance owned by the World.
     // -------------------------------------------------------------------------
     Map& addMap(MapType const& type);
 
@@ -93,7 +100,7 @@ public:
     //! does not exist.
     //! \param[in] name: the unique identifier of the Map.
     //! \throw std::exception if the Map is not found.
-    //! \return the instance of the Map.
+    //! \return the instance of the Map, owned by the World.
     // -------------------------------------------------------------------------
     Map& getMap(std::string const& name);
 
@@ -123,16 +130,50 @@ public:
     Unit& addUnit(UnitType const& type, Node& node);
 
     // -------------------------------------------------------------------------
-    //! \brief Create a new node splitting a Way into two ways and attach an
-    //! Unit to this new node.
+    //! \brief Attach a Unit to a Way at the given offset, without splitting
+    //! the segment. This is how a street of houses stays a single Way.
     // -------------------------------------------------------------------------
     Unit& addUnit(UnitType const& type, Path& path, Way& way, float offset);
 
     // -------------------------------------------------------------------------
-    //! \brief
+    //! \brief Place a Unit at a free world position, with no attachment to the
+    //! road network.
+    // -------------------------------------------------------------------------
+    Unit& addUnit(UnitType const& type, Vector3f const& position);
+
+    // -------------------------------------------------------------------------
+    //! \brief Found an Area administering the given cells.
+    // -------------------------------------------------------------------------
+    Area& addArea(AreaType const& type, MapRegion const& footprint);
+
     // -------------------------------------------------------------------------
     Agent& addAgent(AgentType const& type, Unit& owner, Resources const& resources,
                     std::string const& searchTarget);
+
+    // -------------------------------------------------------------------------
+    //! \brief Destroy a Unit and detach it from the Node it sits on. The Node
+    //! and the Path it belongs to are left untouched.
+    // -------------------------------------------------------------------------
+    void removeUnit(Unit& unit);
+
+    // -------------------------------------------------------------------------
+    //! \brief Destroy an Area. The Units it spawned stay: they now belong to
+    //! the City alone.
+    // -------------------------------------------------------------------------
+    void removeArea(Area& area);
+
+    // -------------------------------------------------------------------------
+    //! \brief Destroy a segment of a Path together with everything that would
+    //! be left dangling: the Agents travelling on it.
+    // -------------------------------------------------------------------------
+    void removeWay(Path& path, Way& way);
+
+    // -------------------------------------------------------------------------
+    //! \brief Destroy a node of a Path together with everything that would be
+    //! left dangling: its incident segments, the Units sitting on it and the
+    //! Agents heading for it.
+    // -------------------------------------------------------------------------
+    void removeNode(Path& path, Node& node);
 
     // -------------------------------------------------------------------------
     //! \brief Translate the position of the City inside the world coordinate.
@@ -141,13 +182,13 @@ public:
     void translate(Vector3f const direction);
 
     // -------------------------------------------------------------------------
-    //! \brief Get the Map index U and V from a given position inside the world
-    //! coordinate.
+    //! \brief Get the cell index U and V from a given position inside the world
+    //! coordinate, clamped to the region of this City.
     //! \param[in] worldPos: the world position.
     //! \param[out] u: the grid index along the U-axis.
     //! \param[out] v: the grid index along the V-axis.
     // -------------------------------------------------------------------------
-    void world2mapPosition(Vector3f worldPos, uint32_t& u, uint32_t& v);
+    void world2mapPosition(Vector3f worldPos, int32_t& u, int32_t& v) const;
 
     // -------------------------------------------------------------------------
     //! \brief Return the name (unique identifier).
@@ -160,14 +201,38 @@ public:
     Vector3f const& position() const { return m_position; }
 
     // -------------------------------------------------------------------------
-    //! \brief Return the number of graduations along the U-axis.
+    //! \brief The cells of the world grid this City administers.
+    // -------------------------------------------------------------------------
+    MapRegion region() const;
+
+    // -------------------------------------------------------------------------
+    //! \brief The World this City belongs to, owner of the maps and of the grid.
+    // -------------------------------------------------------------------------
+    World& world() { return m_world; }
+    World const& world() const { return m_world; }
+
+    // -------------------------------------------------------------------------
+    //! \brief Return the number of cells the region spans along the U-axis.
     // -------------------------------------------------------------------------
     uint32_t gridSizeU() const { return m_gridSizeU; }
 
     // -------------------------------------------------------------------------
-    //! \brief Return the number of graduations along the V-axis
+    //! \brief Return the number of cells the region spans along the V-axis.
     // -------------------------------------------------------------------------
     uint32_t gridSizeV() const { return m_gridSizeV; }
+
+    // -------------------------------------------------------------------------
+    //! \brief Return the runtime settings, held by the World and shared with
+    //! every other City. They can be tuned live: the tick duration and the
+    //! traffic smoothing are read at every tick.
+    // -------------------------------------------------------------------------
+    SimulationConfig const& config() const;
+    SimulationConfig& config();
+
+    // -------------------------------------------------------------------------
+    //! \brief Return the length of the side of a grid cell, in world units.
+    // -------------------------------------------------------------------------
+    float gridCellSize() const;
 
     // -------------------------------------------------------------------------
     //! \brief Return global resources.
@@ -175,9 +240,10 @@ public:
     Resources& globals() { return m_globals; }
 
     // -------------------------------------------------------------------------
-    //! \brief Return the collection of Maps.
+    //! \brief Return the collection of Maps of the World. They are shared with
+    //! the other cities.
     // -------------------------------------------------------------------------
-    Maps& maps() { return m_maps; }
+    Maps& maps();
 
     // -------------------------------------------------------------------------
     //! \brief Return the collection of Paths.
@@ -194,10 +260,13 @@ public:
     // -------------------------------------------------------------------------
     Agents& agents() { return m_agents; }
 
+    Areas& areas() { return m_areas; }
+
     // -------------------------------------------------------------------------
-    //! \brief Return the collection of Maps.
+    //! \brief Return the collection of Maps of the World. They are shared with
+    //! the other cities.
     // -------------------------------------------------------------------------
-    Maps const& maps() const { return m_maps; }
+    Maps const& maps() const;
 
     // -------------------------------------------------------------------------
     //! \brief Return the collection of Paths.
@@ -214,39 +283,40 @@ public:
     // -------------------------------------------------------------------------
     Agents const& agents() const { return m_agents; }
 
+    Areas const& areas() const { return m_areas; }
+
 private:
 
     //! \brief Name of the City, ie. "Paris", "Seattle", "NYC" ...
     std::string   m_name;
+    //! \brief The World holding the grid and the maps.
+    World&        m_world;
     //! \brief Position of the top-left corner.
     Vector3f      m_position;
-    //! \brief The size of the grid along the U-axis.
+    //! \brief The number of administered cells along the U-axis.
     uint32_t      m_gridSizeU;
-    //! \brief The size of the grid along the V-axis.
+    //! \brief The number of administered cells along the V-axis.
     uint32_t      m_gridSizeV;
     //! \brief Counter of Unit to create unique id.
     // FIXME Not used: uint32_t      m_nextUnitId = 0u;
     //! \brief Counter of Agent to create unique id.
     uint32_t      m_nextAgentId = 0u;
+    uint32_t      m_nextUnitId = 0u;
+    uint32_t      m_nextAreaId = 0u;
     //! \brief Globals resources (money, oil, electricity ...)
     Resources     m_globals;
-    //! \brief Collection of resources in the environment.
-    Maps          m_maps;
     //! \brief Collection of graphs (roads, power lines, water pipes ...)
     Paths         m_paths;
     //! \brief Collection of building (house, factory ...)
     Units         m_units;
     //! \brief Collection of resource carrier (cars, citizens ...)
     Agents        m_agents;
+    //! \brief Collection of painted zones.
+    Areas         m_areas;
     //! \brief
     Dijkstra      m_dijkstra;
     //!
     City::Listener *m_listener;
 };
-
-//==============================================================================
-//! \brief Collection of City.
-//==============================================================================
-using Cities = std::map<std::string, std::unique_ptr<City>>;
 
 #endif

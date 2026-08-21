@@ -18,7 +18,7 @@ include $(M)/project/Makefile
 LIB_FILES := $(call rwildcard,src,*.cpp)
 INCLUDES := $(P)/include
 VPATH := $(P)/src
-DEFINES := -DVIRTUAL= -DDESIRED_GRID_SIZE=30u
+DEFINES := -DVIRTUAL=
 
 ###################################################
 # Generic Makefile rules

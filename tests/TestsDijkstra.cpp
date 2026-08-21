@@ -2,6 +2,7 @@
 
 #define protected public
 #define private public
+#  include "TestWorld.hpp"
 #  include "OpenGlassBox/City.hpp"
 #  include "OpenGlassBox/Dijkstra.hpp"
 #  include "OpenGlassBox/Unit.hpp"
@@ -21,7 +22,8 @@ namespace
 
 TEST(TestsDijkstra, DirectPath)
 {
-    City city("Paris", 32u, 32u);
+    TestWorld cityWorld("Paris", 32u, 32u);
+    City& city = cityWorld.city;
     Path& path = city.addPath(PathType("Road"));
     Node& home = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& mid = path.addNode(Vector3f(1.0f, 0.0f, 0.0f));
@@ -45,7 +47,8 @@ TEST(TestsDijkstra, DirectPath)
 
 TEST(TestsDijkstra, ShortestBranch)
 {
-    City city("Paris", 32u, 32u);
+    TestWorld cityWorld("Paris", 32u, 32u);
+    City& city = cityWorld.city;
     Path& path = city.addPath(PathType("Road"));
     Node& start = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& longRoute = path.addNode(Vector3f(10.0f, 0.0f, 0.0f));
@@ -72,7 +75,8 @@ TEST(TestsDijkstra, ShortestBranch)
 
 TEST(TestsDijkstra, AlreadyAtDestination)
 {
-    City city("Paris", 32u, 32u);
+    TestWorld cityWorld("Paris", 32u, 32u);
+    City& city = cityWorld.city;
     Path& path = city.addPath(PathType("Road"));
     Node& factory = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     UnitType factoryType = makeFactoryType();
@@ -90,7 +94,8 @@ TEST(TestsDijkstra, AlreadyAtDestination)
 
 TEST(TestsDijkstra, RandomFallbackWhenNoDestination)
 {
-    City city("Paris", 32u, 32u);
+    TestWorld cityWorld("Paris", 32u, 32u);
+    City& city = cityWorld.city;
     Path& path = city.addPath(PathType("Road"));
     Node& start = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& other = path.addNode(Vector3f(1.0f, 0.0f, 0.0f));
@@ -123,7 +128,8 @@ TEST(TestsDijkstra, DisconnectedGraph)
 
 TEST(TestsDijkstra, PathScopedRouting)
 {
-    City city("Paris", 32u, 32u);
+    TestWorld cityWorld("Paris", 32u, 32u);
+    City& city = cityWorld.city;
     Path& road = city.addPath(PathType("Road"));
     Path& rail = city.addPath(PathType("Rail"));
 

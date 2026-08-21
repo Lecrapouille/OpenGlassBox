@@ -80,7 +80,7 @@ TEST(TestsMapCoordinatesInsideRadius, ConstructorZeroUnitRadius)
 // -----------------------------------------------------------------------------
 TEST(TestsMapCoordinatesInsideRadius, relativeCoordinates)
 {
-    uint32_t u, v;
+    int32_t u, v;
     MCIR coord;
     uint32_t RADIUS = 1u;
     uint32_t centerU = 3u;
@@ -131,7 +131,7 @@ TEST(TestsMapCoordinatesInsideRadius, relativeCoordinates)
 // -----------------------------------------------------------------------------
 TEST(TestsMapCoordinatesInsideRadius, cachedRelativeCoordinatesClipped)
 {
-    uint32_t u, v;
+    int32_t u, v;
     MCIR coord;
     uint32_t RADIUS = 1u;
     uint32_t centerU = 3u;

@@ -17,6 +17,7 @@
 
 class RuleUnit;
 class RuleMap;
+class RuleArea;
 class IRuleCommand;
 
 //==========================================================================
@@ -181,6 +182,17 @@ public:
 
     std::string name;
     uint32_t    color;
+
+    //! \brief Free flow speed, in world units per second of game time. Used to
+    //! derive the zero-flow travel time of a Way from its length.
+    float       speed = 50.0f;
+    //! \brief Number of Agents a Way of this type carries before the travel
+    //! time starts to grow noticeably. This is the practical capacity of the
+    //! BPR function, not a hard limit.
+    float       capacity = 20.0f;
+    //! \brief Exponent of the BPR function. Four is the value published by the
+    //! Bureau of Public Roads and the one used by CiudadSim.
+    float       beta = 4.0f;
 };
 
 //==========================================================================
@@ -205,6 +217,48 @@ public:
 
     std::string name;
     uint32_t    color;
+};
+
+//==========================================================================
+//! \brief Type of AreaRule. Class constructed during the parsing of simulation
+//! scripts. Example:
+//!  - areaRule GrowHomes
+//!        rate 80
+//!        count Home less 12
+//!        spawn Home at nearestWay
+//==========================================================================
+class RuleAreaType
+{
+public:
+
+    RuleAreaType(RuleAreaType const&) = default;
+
+    RuleAreaType(std::string const& name_)
+        : name(name_)
+    {}
+
+    std::string                name;
+    uint32_t                   rate = 1u;
+    std::vector<IRuleCommand*> commands;
+};
+
+//==========================================================================
+//! \brief Type of Area (Residential, Industrial ...). A painted zone that
+//! creates, upgrades and destroys Units according to its rules.
+//==========================================================================
+class AreaType
+{
+public:
+
+    AreaType(AreaType const&) = default;
+
+    AreaType(std::string const& name_)
+        : name(name_), color(0x44AA44)
+    {}
+
+    std::string            name;
+    uint32_t               color;
+    std::vector<RuleArea*> rules;
 };
 
 #endif

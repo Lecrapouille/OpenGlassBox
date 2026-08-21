@@ -26,11 +26,6 @@
 #  include <vector>
 #  include <fstream>
 
-//------------------------------------------------------------------------------
-#  if defined(__APPLE__)
-std::string osx_get_resources_dir(std::string const& file);
-#  endif
-
 // *****************************************************************************
 //! \brief Class manipulating a set of paths for searching files in the same
 //! idea of the Unix environment variable $PATH. Paths are separated by ':' and
@@ -41,11 +36,16 @@ class DataPath
 public:
 
     //--------------------------------------------------------------------------
+    //! \brief Empty search path.
+    //--------------------------------------------------------------------------
+    DataPath() = default;
+
+    //--------------------------------------------------------------------------
     //! \brief Constructor with a given path. Directories shall be separated
     //! by the character given by the param delimiter.
     //! Example: Path("/foo/bar:/usr/lib/", ':').
     //--------------------------------------------------------------------------
-    DataPath(std::string const& path, char const delimiter = ':');
+    explicit DataPath(std::string const& path, char const delimiter = ':');
 
     //--------------------------------------------------------------------------
     //! \brief Destructor.
@@ -53,10 +53,38 @@ public:
     ~DataPath() = default;
 
     //--------------------------------------------------------------------------
-    //! \brief Append a new path. Directories are separated by the delimiter char
-    //! (by default ':'). Example: add("/foo/bar:/usr/lib/").
+    //! \brief Build the search path used by the demo, from the highest to the
+    //! lowest priority:
+    //!  -# the directories given on the command line with --data-path,
+    //!  -# the directories held by the OPENGLASSBOX_DATA_PATH environment
+    //!     variable,
+    //!  -# the data folder shipped next to the executable, which covers both an
+    //!     installed build and a run from the build directory,
+    //!  -# the directories baked in at build time by MyMakefile.
+    //!
+    //! \param[in] commandLinePath: the value of --data-path, may be empty.
+    //--------------------------------------------------------------------------
+    static DataPath makeDefault(std::string const& commandLinePath);
+
+    //--------------------------------------------------------------------------
+    //! \brief Return the absolute path of the directory holding the running
+    //! executable, with a trailing separator, or an empty string when the
+    //! platform does not allow to retrieve it.
+    //--------------------------------------------------------------------------
+    static std::string executableDirectory();
+
+    //--------------------------------------------------------------------------
+    //! \brief Append a new path at the end of the search path, therefore with
+    //! the lowest priority. Directories are separated by the delimiter char (by
+    //! default ':'). Example: add("/foo/bar:/usr/lib/").
     //--------------------------------------------------------------------------
     void add(std::string const& path);
+
+    //--------------------------------------------------------------------------
+    //! \brief Insert a new path at the beginning of the search path, therefore
+    //! with the highest priority.
+    //--------------------------------------------------------------------------
+    void prepend(std::string const& path);
 
     //--------------------------------------------------------------------------
     //! \brief Replace the path state by a new one. Directories are separated by
@@ -98,9 +126,9 @@ public:
     std::vector<std::string> pathes() const;
 
     //--------------------------------------------------------------------------
-    //! \brief Return pathes as string. The first path is always ".:"
+    //! \brief Return pathes as a delimiter separated string.
     //--------------------------------------------------------------------------
-    std::string toString() const;  
+    std::string toString() const;
 
     bool open(std::string& filename, std::ifstream& ifs,
               std::ios_base::openmode mode = std::ios_base::in) const;
@@ -108,12 +136,14 @@ public:
               std::ios_base::openmode mode = std::ios_base::out) const;
     bool open(std::string& filename, std::fstream& ifs,
               std::ios_base::openmode mode = std::ios_base::in | std::ios_base::out) const;
+
 protected:
 
     //--------------------------------------------------------------------------
-    //! \brief Slipt paths separated by delimiter char into std::list
+    //! \brief Split paths separated by delimiter char and insert them either at
+    //! the front or at the back of the search path.
     //--------------------------------------------------------------------------
-    void split(std::string const& path);
+    void split(std::string const& path, bool front);
 
     //--------------------------------------------------------------------------
     //! \brief Return true if the path exists. be careful the file may not
@@ -124,9 +154,9 @@ protected:
 protected:
 
     //! \brief Path separator when several pathes are given as a single string.
-    const char m_delimiter = ':';
+    char m_delimiter = ':';
     //! \brief the list of pathes.
     std::list<std::string> m_search_paths;
 };
 
-#endif // UTILS_PATH_HPP
+#endif // DATA_PATH_HPP

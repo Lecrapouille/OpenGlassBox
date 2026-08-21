@@ -2,6 +2,7 @@
 
 #define protected public
 #define private public
+#  include "TestWorld.hpp"
 #  include "OpenGlassBox/RuleValue.hpp"
 #  include "OpenGlassBox/City.hpp"
 #undef protected
@@ -10,7 +11,8 @@
 // -----------------------------------------------------------------------------
 TEST(TestsValue, TestsValue)
 {
-    City city("Paris", 8u, 8u);
+    TestWorld cityWorld("Paris", 8u, 8u);
+    City& city = cityWorld.city;
     Node n(42u, Vector3f(1.0f, 2.0f, 3.0f));
     Unit unit(UnitType("unit"), n, city);
     Resources locals, globals;

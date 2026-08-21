@@ -58,6 +58,12 @@ public:
     void addUnit(Unit& unit);
 
     // -------------------------------------------------------------------------
+    //! \brief Detach a Unit from this node. Does nothing if the Unit was not
+    //! attached. The Unit itself is not destroyed.
+    // -------------------------------------------------------------------------
+    void removeUnit(Unit& unit);
+
+    // -------------------------------------------------------------------------
     //! \brief Check if the node is not has ways (aka not orphan).
     // -------------------------------------------------------------------------
     bool hasWays() const
@@ -213,10 +219,84 @@ public:
     // -------------------------------------------------------------------------
     uint32_t color() const { return m_type.color; }
 
+    // -------------------------------------------------------------------------
+    //! \brief Position of a point along the segment, with offset in [0..1]
+    //! from the origin node.
+    // -------------------------------------------------------------------------
+    Vector3f positionAt(float offset) const;
+
+    // -------------------------------------------------------------------------
+    //! \brief Attach a Unit sitting on this segment rather than on a Node.
+    // -------------------------------------------------------------------------
+    void addUnit(Unit& unit);
+    void removeUnit(Unit& unit);
+    std::vector<Unit*>& units() { return m_units; }
+    std::vector<Unit*> const& units() const { return m_units; }
+
+    // -------------------------------------------------------------------------
+    //! \brief Travel time of the segment when it carries no traffic, in seconds
+    //! of game time. This is the length divided by the free flow speed.
+    // -------------------------------------------------------------------------
+    float freeFlowTime() const { return m_t0; }
+
+    // -------------------------------------------------------------------------
+    //! \brief Travel time of the segment under the current traffic, in seconds
+    //! of game time, given by the BPR arc performance function
+    //!
+    //!     t = t0 * (1 + 0.15 * (flow / capacity)^beta)
+    //!
+    //! published by the Bureau of Public Roads in 1964. This is the cost the
+    //! router minimizes, which is what makes Agents avoid congested segments.
+    // -------------------------------------------------------------------------
+    float travelTime() const;
+
+    // -------------------------------------------------------------------------
+    //! \brief Ratio of the smoothed flow over the capacity. Above one the
+    //! segment is oversaturated. Used by the renderer to color the segment.
+    // -------------------------------------------------------------------------
+    float saturation() const { return m_flow / m_type.capacity; }
+
+    // -------------------------------------------------------------------------
+    //! \brief Smoothed number of Agents carried by this segment.
+    // -------------------------------------------------------------------------
+    float flow() const { return m_flow; }
+
+    // -------------------------------------------------------------------------
+    //! \brief Number of Agents currently on this segment.
+    // -------------------------------------------------------------------------
+    uint32_t agentCount() const { return m_agentCount; }
+
+    // -------------------------------------------------------------------------
+    //! \brief Practical capacity of the segment, from its type.
+    // -------------------------------------------------------------------------
+    float capacity() const { return m_type.capacity; }
+
+    // -------------------------------------------------------------------------
+    //! \brief Called by Agent when it starts and stops travelling on this
+    //! segment.
+    // -------------------------------------------------------------------------
+    void addAgent();
+    void removeAgent();
+
+    // -------------------------------------------------------------------------
+    //! \brief Move the smoothed flow one step towards the instantaneous agent
+    //! count, following the method of successive averages of CiudadSim:
+    //!
+    //!     F <- (1 - alpha) * F + alpha * Y
+    //!
+    //! Called once per tick. Without this smoothing, routing on the
+    //! instantaneous count makes the whole population swing from one itinerary
+    //! to the other and back, the classic oscillation of day-to-day traffic
+    //! dynamics.
+    //!
+    //! \param[in] alpha: the step, in ]0..1]. Small values damp harder.
+    // -------------------------------------------------------------------------
+    void smoothFlow(float alpha);
+
 private:
 
     // -------------------------------------------------------------------------
-    //! \brief Compute the length of the segment.
+    //! \brief Compute the length of the segment and its free flow travel time.
     // -------------------------------------------------------------------------
     void updateMagnitude();
 
@@ -232,6 +312,14 @@ private:
     Node              *m_to = nullptr;
     //! \brief Cache the computation of the segment length.
     float              m_magnitude = 0.0f;
+    //! \brief Cache of the travel time at zero flow.
+    float              m_t0 = 0.0f;
+    //! \brief Number of Agents currently travelling on this segment.
+    uint32_t           m_agentCount = 0u;
+    //! \brief Time averaged agent count, the flow fed to the BPR function.
+    float              m_flow = 0.0f;
+    //! \brief Units sitting on this segment rather than on a Node.
+    std::vector<Unit*> m_units;
 };
 
 using WayPtr = std::unique_ptr<Way>;
@@ -261,7 +349,27 @@ public:
     // -------------------------------------------------------------------------
     Node& addNode(Vector3f const& position);
 
-    //TODO void removeNode(Node& node);
+    // -------------------------------------------------------------------------
+    //! \brief Recreate a node with the identifier it had before being removed.
+    //! Undoing an edit has to give back the identifier, since that is what the
+    //! commands stacked on top of it refer to.
+    //! \return the newly created node, or the existing one if the identifier is
+    //! still in use.
+    // -------------------------------------------------------------------------
+    Node& addNode(uint32_t id, Vector3f const& position);
+
+    // -------------------------------------------------------------------------
+    //! \brief Find a node by identifier, or nullptr when it no longer exists.
+    // -------------------------------------------------------------------------
+    Node* node(uint32_t id);
+
+    // -------------------------------------------------------------------------
+    //! \brief Destroy a node and every segment it is an extremity of.
+    //! \note Units sitting on the node and Agents travelling towards it keep a
+    //! reference to it, so the caller has to get rid of them first. City does
+    //! that in City::removeNode.
+    // -------------------------------------------------------------------------
+    void removeNode(Node& node);
 
     // -------------------------------------------------------------------------
     //! \brief Create and store a new segment given two existing nodes.
@@ -269,7 +377,26 @@ public:
     // -------------------------------------------------------------------------
     Way& addWay(WayType const& type, Node& p1, Node& p2);
 
-    //TODO void RemoveWay(SimWay segment)
+    // -------------------------------------------------------------------------
+    //! \brief Recreate a segment with the identifier it had before being
+    //! removed. See addNode(uint32_t, Vector3f const&).
+    // -------------------------------------------------------------------------
+    Way& addWay(uint32_t id, WayType const& type, Node& p1, Node& p2);
+
+    // -------------------------------------------------------------------------
+    //! \brief Find a segment by identifier, or nullptr when it no longer
+    //! exists.
+    // -------------------------------------------------------------------------
+    Way* way(uint32_t id);
+
+    // -------------------------------------------------------------------------
+    //! \brief Destroy a segment and detach it from its two extremities. The
+    //! nodes are kept, even when they become orphan: the player may well be
+    //! about to reconnect them.
+    //! \note Agents travelling on the segment keep a reference to it, so the
+    //! caller has to get rid of them first. City does that in City::removeWay.
+    // -------------------------------------------------------------------------
+    void removeWay(Way& way);
 
     // -------------------------------------------------------------------------
     //! \brief Split a segment into two sub arcs linked by a newly created
@@ -303,6 +430,26 @@ public:
     // -------------------------------------------------------------------------
     Ways const& ways() const { return m_ways; }
 
+    // -------------------------------------------------------------------------
+    //! \brief Highest free flow speed among the Ways of this graph. The router
+    //! needs it to turn a distance into a lower bound of a travel time.
+    // -------------------------------------------------------------------------
+    float maxFreeFlowSpeed() const { return m_maxFreeFlowSpeed; }
+
+    // -------------------------------------------------------------------------
+    //! \brief Advance the time averaged flow of every Way of this graph by one
+    //! step. See Way::smoothFlow.
+    // -------------------------------------------------------------------------
+    void smoothFlows(float alpha);
+
+private:
+
+    // -------------------------------------------------------------------------
+    //! \brief Recompute the cache read by maxFreeFlowSpeed() after a removal,
+    //! since a removal can only lower it.
+    // -------------------------------------------------------------------------
+    void updateMaxFreeFlowSpeed();
+
 private:
 
     PathType const& m_type;
@@ -316,6 +463,8 @@ private:
     uint32_t       m_nextNodeId = 0u;
     //! \brief
     uint32_t       m_nextWayId = 0u;
+    //! \brief Cache of the highest free flow speed among m_ways.
+    float          m_maxFreeFlowSpeed = 1.0f;
 };
 
 using Paths = std::map<std::string, std::unique_ptr<Path>>;

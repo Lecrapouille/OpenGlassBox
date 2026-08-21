@@ -64,7 +64,8 @@ std::string const& RuleValueLocal::type() const
 
 uint32_t RuleValueMap::get(RuleContext& context)
 {
-    return context.city->getMap(m_mapId).getResource(context.u, context.v, context.radius);
+    return context.city->getMap(m_mapId).getResource(
+        context.u, context.v, context.radius, context.city->region());
 }
 
 uint32_t RuleValueMap::capacity(RuleContext& context)
@@ -74,12 +75,14 @@ uint32_t RuleValueMap::capacity(RuleContext& context)
 
 void RuleValueMap::add(RuleContext& context, uint32_t toAdd)
 {
-    context.city->getMap(m_mapId).addResource(context.u, context.v, context.radius, toAdd);
+    context.city->getMap(m_mapId).addResource(
+        context.u, context.v, context.radius, context.city->region(), toAdd);
 }
 
 void RuleValueMap::remove(RuleContext& context, uint32_t toRemove)
 {
-    context.city->getMap(m_mapId).removeResource(context.u, context.v, context.radius, toRemove);
+    context.city->getMap(m_mapId).removeResource(
+        context.u, context.v, context.radius, context.city->region(), toRemove);
 }
 
 std::string const& RuleValueMap::type() const

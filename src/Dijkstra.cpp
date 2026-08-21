@@ -27,20 +27,30 @@ namespace
         }
     };
 
-    bool getUnitWithTargetAndCapacity(Node* current,
-                                      std::string& searchTarget,
-                                      Resources& resources)
+    Unit* acceptingUnitOnNode(Node* current, std::string const& searchTarget,
+                              Resources const& resources)
     {
         std::vector<Unit*>& units = current->units();
-
         size_t i = units.size();
         while (i--)
         {
             if (units[i]->accepts(searchTarget, resources))
-                return true;
+                return units[i];
         }
+        return nullptr;
+    }
 
-        return false;
+    Unit* acceptingUnitOnWay(Way* way, std::string const& searchTarget,
+                             Resources const& resources)
+    {
+        std::vector<Unit*>& units = way->units();
+        size_t i = units.size();
+        while (i--)
+        {
+            if (units[i]->accepts(searchTarget, resources))
+                return units[i];
+        }
+        return nullptr;
     }
 }
 
@@ -74,8 +84,38 @@ Node* Dijkstra::randomNeighbor(Node& fromNode)
 }
 
 //------------------------------------------------------------------------------
-Node* Dijkstra::findNextPoint(Node& fromNode, std::string& searchTarget,
-                              Resources& resources)
+Route Dijkstra::reconstruct(Node& fromNode, Node* goalNode, Unit* destination,
+                            Way* approachWay, float approachOffset,
+                            float cost) const
+{
+    Route route;
+    route.found = true;
+    route.destination = destination;
+    route.approachWay = approachWay;
+    route.approachOffset = approachOffset;
+    route.cost = cost;
+
+    if (goalNode == nullptr || goalNode == &fromNode)
+        return route;
+
+    std::vector<Node*> reverse;
+    Node* current = goalNode;
+    while (current != &fromNode)
+    {
+        auto const it = m_cameFrom.find(current);
+        if (it == m_cameFrom.end())
+            break;
+        reverse.push_back(current);
+        current = it->second;
+    }
+
+    route.nodes.assign(reverse.rbegin(), reverse.rend());
+    return route;
+}
+
+//------------------------------------------------------------------------------
+Route Dijkstra::findRoute(Node& fromNode, std::string const& searchTarget,
+                          Resources const& resources)
 {
     m_closedSet.clear();
     m_cameFrom.clear();
@@ -83,9 +123,13 @@ Node* Dijkstra::findNextPoint(Node& fromNode, std::string& searchTarget,
 
     std::priority_queue<QueueEntry, std::vector<QueueEntry>, std::greater<QueueEntry>> open;
     Path* const scope = fromNode.path();
+    float const maxSpeed = (scope != nullptr) ? scope->maxFreeFlowSpeed() : 1.0f;
 
     m_scoreFromStart[&fromNode] = 0.0f;
     open.push({0.0f, 0.0f, &fromNode});
+
+    Route best;
+    float bestCost = std::numeric_limits<float>::infinity();
 
     while (!open.empty())
     {
@@ -97,19 +141,35 @@ Node* Dijkstra::findNextPoint(Node& fromNode, std::string& searchTarget,
 
         if (g > m_scoreFromStart[currentNode])
             continue;
-
         if (m_closedSet.find(currentNode) != m_closedSet.end())
             continue;
+        if (g >= bestCost)
+            continue;
 
-        if (getUnitWithTargetAndCapacity(currentNode, searchTarget, resources))
+        if (Unit* unit = acceptingUnitOnNode(currentNode, searchTarget, resources))
         {
-            if (currentNode == &fromNode)
-                return currentNode;
+            return reconstruct(fromNode, currentNode, unit, nullptr, 0.0f, g);
+        }
 
-            while (m_cameFrom[currentNode] != &fromNode)
-                currentNode = m_cameFrom[currentNode];
+        // A Unit sitting on an incident Way is reached from this Node by
+        // travelling a fraction of the segment. It is a candidate, not an
+        // immediate winner: another Node a hop away may hold a cheaper Unit.
+        for (auto* way: currentNode->ways())
+        {
+            Unit* unit = acceptingUnitOnWay(way, searchTarget, resources);
+            if (unit == nullptr)
+                continue;
 
-            return currentNode;
+            float const extra = way->travelTime() * (
+                (&way->from() == currentNode) ? unit->wayOffset()
+                                              : (1.0f - unit->wayOffset()));
+            float const cost = g + extra;
+            if (cost < bestCost)
+            {
+                best = reconstruct(fromNode, currentNode, unit, way,
+                                   unit->wayOffset(), cost);
+                bestCost = cost;
+            }
         }
 
         m_closedSet.insert(currentNode);
@@ -121,7 +181,7 @@ Node* Dijkstra::findNextPoint(Node& fromNode, std::string& searchTarget,
             if (scope != nullptr && neighbor->path() != scope)
                 continue;
 
-            float const tentativeG = g + way->magnitude();
+            float const tentativeG = g + way->travelTime();
 
             auto const it = m_scoreFromStart.find(neighbor);
             if (it != m_scoreFromStart.end() && tentativeG >= it->second)
@@ -132,15 +192,36 @@ Node* Dijkstra::findNextPoint(Node& fromNode, std::string& searchTarget,
 
             m_cameFrom[neighbor] = currentNode;
             m_scoreFromStart[neighbor] = tentativeG;
-            open.push({tentativeG + heuristic(*neighbor, fromNode), tentativeG, neighbor});
+            open.push({tentativeG + heuristic(*neighbor, fromNode, maxSpeed),
+                       tentativeG, neighbor});
         }
     }
 
-    return randomNeighbor(fromNode);
+    return best;
 }
 
 //------------------------------------------------------------------------------
-float Dijkstra::heuristic(Node& p1, Node& p2)
+Node* Dijkstra::findNextPoint(Node& fromNode, std::string& searchTarget,
+                              Resources& resources)
 {
-    return magnitude(p2.position() - p1.position());
+    Route const route = findRoute(fromNode, searchTarget, resources);
+    if (!route.found)
+        return randomNeighbor(fromNode);
+    if (route.nodes.empty())
+        return &fromNode;
+    return route.nodes.front();
+}
+
+//------------------------------------------------------------------------------
+float Dijkstra::shortestPathCost(Node& fromNode, std::string const& searchTarget,
+                                 Resources const& resources)
+{
+    Route const route = findRoute(fromNode, searchTarget, resources);
+    return route.found ? route.cost : std::numeric_limits<float>::infinity();
+}
+
+//------------------------------------------------------------------------------
+float Dijkstra::heuristic(Node& p1, Node& p2, float maxFreeFlowSpeed) const
+{
+    return magnitude(p2.position() - p1.position()) / maxFreeFlowSpeed;
 }

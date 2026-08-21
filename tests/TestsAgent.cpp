@@ -3,6 +3,7 @@
 
 #define protected public
 #define private public
+#  include "TestWorld.hpp"
 #  include "OpenGlassBox/Agent.hpp"
 #  include "OpenGlassBox/City.hpp"
 #undef protected
@@ -10,14 +11,15 @@
 
 TEST(TestsAgent, Constructor)
 {
-    City city("Paris", 4, 4);
+    TestWorld cityWorld("Paris", 4, 4);
+    City& city = cityWorld.city;
     UnitType unit_type("Home");
     unit_type.color = 0xFF00FF;
     unit_type.radius = 2u;
     unit_type.resources.addResource("oil", 5u);
     Node n(42u, Vector3f(1.0f, 2.0f, 3.0f));
     Unit u(unit_type, n, city);
-    ASSERT_EQ(&n, &(u.m_node));
+    ASSERT_EQ(&n, u.m_node);
 
     // Create a new Agent
     AgentType agent_type("Agent", 5.0f, 3u, 42u);
@@ -39,15 +41,15 @@ TEST(TestsAgent, Constructor)
     ASSERT_EQ(a.m_offset, 0.0f);
     ASSERT_EQ(a.m_currentWay, nullptr);
     ASSERT_EQ(a.m_lastNode, &n);
-    ASSERT_EQ(a.m_lastNode, &(u.m_node));
+    ASSERT_EQ(a.m_lastNode, u.m_node);
     ASSERT_EQ(a.m_nextNode, nullptr);
 }
 
 TEST(TestsAgent, Move)
 {
     const uint32_t GRILL_SIZE = 32u;
-    City city("Paris", GRILL_SIZE, GRILL_SIZE);
-
+    TestWorld cityWorld("Paris", GRILL_SIZE, GRILL_SIZE);
+    City& city = cityWorld.city;
     PathType type1("route", 0xAAAAAA);
     Path& p = city.addPath(type1);
     Node& n1 = p.addNode(Vector3f(1.0f, 2.0f, 3.0f));
@@ -73,7 +75,7 @@ TEST(TestsAgent, Move)
     carried.addResource("People", 1u);
     Agent a(43u, worker, u, carried, "People");
 
-    float const dt = 1.0f / config::TICKS_PER_SECOND;
+    float const dt = 1.0f / config::DEFAULT_TICKS_PER_SECOND;
 
     ASSERT_EQ(a.m_position.x, 1.0f);
     ASSERT_EQ(a.m_position.y, 2.0f);
@@ -100,7 +102,8 @@ TEST(TestsAgent, Move)
 
 TEST(TestsAgent, ZeroLengthWayDoesNotCrash)
 {
-    City city("Paris", 32u, 32u);
+    TestWorld cityWorld("Paris", 32u, 32u);
+    City& city = cityWorld.city;
     Path& path = city.addPath(PathType("Road"));
     Node& n1 = path.addNode(Vector3f(1.0f, 2.0f, 3.0f));
     Node& n2 = path.addNode(Vector3f(1.0f, 2.0f, 3.0f));
@@ -119,7 +122,7 @@ TEST(TestsAgent, ZeroLengthWayDoesNotCrash)
     carried.addResource("People", 1u);
     Agent a(1u, AgentType("Worker", 5.0f, 3u, 42u), u, carried, "People");
 
-    float const dt = 1.0f / config::TICKS_PER_SECOND;
+    float const dt = 1.0f / config::DEFAULT_TICKS_PER_SECOND;
     ASSERT_NO_THROW(a.update(city.m_dijkstra, dt));
     ASSERT_NO_THROW(a.update(city.m_dijkstra, dt));
 }

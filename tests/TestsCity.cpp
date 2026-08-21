@@ -4,6 +4,7 @@
 
 #define protected public
 #define private public
+#  include "TestWorld.hpp"
 #  include "OpenGlassBox/City.hpp"
 #  include "OpenGlassBox/Path.hpp"
 #undef protected
@@ -16,8 +17,8 @@ TEST(TestsCity, Constructors)
 {
     // Constructor 1
     const uint32_t GRILL = 4u;
-    City city("Paris", GRILL, GRILL + 1u);
-
+    TestWorld cityWorld("Paris", GRILL, GRILL + 1u);
+    City& city = cityWorld.city;
     // Check initial values (member variables).
     ASSERT_STREQ(city.m_name.c_str(), "Paris");
     ASSERT_EQ(city.m_position.x, 0.0f);
@@ -28,7 +29,7 @@ TEST(TestsCity, Constructors)
     //FIXME: not used ASSERT_EQ(city.m_nextUnitId, 0u);
     ASSERT_EQ(city.m_nextAgentId, 0u);
     ASSERT_EQ(city.m_globals.m_bin.size(), 0u);
-    ASSERT_EQ(city.m_maps.size(), 0u);
+    ASSERT_EQ(city.maps().size(), 0u);
     ASSERT_EQ(city.m_paths.size(), 0u);
     ASSERT_EQ(city.m_units.size(), 0u);
     ASSERT_EQ(city.m_agents.size(), 0u);
@@ -48,7 +49,8 @@ TEST(TestsCity, Constructors)
     ASSERT_EQ(city.agents().size(), 0u);
 
     // Constructor 3
-    City city2("Marseille", Vector3f(1.0f, 2.0f, 3.0f), GRILL, GRILL);
+    TestWorld city2World("Marseille", GRILL, GRILL, Vector3f(1.0f, 2.0f, 3.0f));
+    City& city2 = city2World.city;
     ASSERT_EQ(int32_t(city2.position().x), 1);
     ASSERT_EQ(int32_t(city2.position().y), 2);
     ASSERT_EQ(int32_t(city2.position().z), 3);
@@ -56,7 +58,8 @@ TEST(TestsCity, Constructors)
     ASSERT_EQ(city2.gridSizeV(), GRILL);
 
     // Constructor 3
-    City city3("Lyon");
+    TestWorld city3World("Lyon");
+    City& city3 = city3World.city;
     ASSERT_EQ(city3.position().x, 0.0f);
     ASSERT_EQ(city3.position().y, 0.0f);
     ASSERT_EQ(city3.position().z, 0.0f);
@@ -67,13 +70,13 @@ TEST(TestsCity, Constructors)
 // -----------------------------------------------------------------------------
 TEST(TestsCity, GridPosition)
 {
-    uint32_t u, v;
+    int32_t u, v;
     const uint32_t GRILL = 4u;
-    City city("Paris", Vector3f(1.0f, 2.0f, 3.0f), GRILL, GRILL);
-
+    TestWorld cityWorld("Paris", GRILL, GRILL, Vector3f(1.0f, 2.0f, 3.0f));
+    City& city = cityWorld.city;
     // Lower bound of the City
     city.world2mapPosition(Vector3f(0.0f, 0.0f, 0.0f), u, v);
-    ASSERT_EQ(u, 0u); ASSERT_EQ(v, 0u);
+    ASSERT_EQ(u, 0); ASSERT_EQ(v, 0);
 
     // Upper bound of the City
     city.world2mapPosition(Vector3f(100.0f, 100.0f, 100.0f), u, v);
@@ -84,14 +87,14 @@ TEST(TestsCity, GridPosition)
     ASSERT_EQ(u, 0u); ASSERT_EQ(v, 0u);
 
     // 1 cell from the origin for each axis
-    city.world2mapPosition(Vector3f(1.0f + config::GRID_SIZE,
-                                    2.0f + config::GRID_SIZE,
+    city.world2mapPosition(Vector3f(1.0f + city.gridCellSize(),
+                                    2.0f + city.gridCellSize(),
                                     3.0f), u, v);
     ASSERT_EQ(u, 1u); ASSERT_EQ(v, 1u);
 
     // A little shift from previous test: still in the same cell
-    city.world2mapPosition(Vector3f(1.0f + config::GRID_SIZE + 0.5f,
-                                    2.0f + config::GRID_SIZE + 0.5f,
+    city.world2mapPosition(Vector3f(1.0f + city.gridCellSize() + 0.5f,
+                                    2.0f + city.gridCellSize() + 0.5f,
                                     3.0f), u, v);
     ASSERT_EQ(u, 1u); ASSERT_EQ(v, 1u);
 }
@@ -101,8 +104,8 @@ TEST(TestsCity, GridPosition)
 TEST(TestsCity, BuildingCity)
 {
     const uint32_t GRILL = 4u;
-    City city("Paris", Vector3f(1.0f, 2.0f, 3.0f), GRILL, GRILL);
-
+    TestWorld cityWorld("Paris", GRILL, GRILL, Vector3f(1.0f, 2.0f, 3.0f));
+    City& city = cityWorld.city;
     // Add Map1.
     Map& m1 = city.addMap(MapType("map1"));
     Map& m2 = city.getMap("map1");
@@ -189,50 +192,32 @@ TEST(TestsCity, BuildingCity)
 #endif
 
 // -----------------------------------------------------------------------------
-TEST(TestsCity, AddUnitSplitRoad)
+TEST(TestsCity, AddUnitOnWayDoesNotSplitRoad)
 {
-    City city("Paris");
+    TestWorld cityWorld("Paris");
+    City& city = cityWorld.city;
     Path& p1 = city.addPath(PathType("Road"));
     Node& n1 = p1.addNode(Vector3f(0.0f, 0.0f, 3.0f));
     Node& n2 = p1.addNode(Vector3f(2.0f, 0.0f, 3.0f));
     Way& w1 = p1.addWay(WayType("Dirt", 0xAAAAAA), n1, n2);
 
-    // Check number of nodes
     ASSERT_EQ(p1.nodes().size(), 2u);
     ASSERT_EQ(p1.ways().size(), 1u);
 
-    // Add Unit splitting the way into two ways and add a new nodes
     Unit& u1 = city.addUnit(UnitType("unit"), p1, w1, 0.5f);
-    ASSERT_EQ(p1.nodes().size(), 3u);
-    ASSERT_EQ(p1.ways().size(), 2u);
-
-    // Newly added Node
-    ASSERT_EQ(p1.nodes()[2]->m_id, 2u);
-    ASSERT_EQ(int32_t(p1.nodes()[2]->position().x), 1);
-    ASSERT_EQ(int32_t(p1.nodes()[2]->position().y), 0);
-    ASSERT_EQ(int32_t(p1.nodes()[2]->position().z), 3);
-
-    // Newly added Way
-    ASSERT_EQ(p1.ways()[1]->m_id, 1u);
-    ASSERT_EQ(int32_t(p1.ways()[0]->position1().x), 0); // Node0
-    ASSERT_EQ(int32_t(p1.ways()[0]->position1().y), 0);
-    ASSERT_EQ(int32_t(p1.ways()[0]->position1().z), 3);
-    ASSERT_EQ(int32_t(p1.ways()[0]->position2().x), 1); // New Node
-    ASSERT_EQ(int32_t(p1.ways()[0]->position2().y), 0);
-    ASSERT_EQ(int32_t(p1.ways()[0]->position2().z), 3);
-    ASSERT_EQ(int32_t(p1.ways()[1]->position1().x), 1); // New Node
-    ASSERT_EQ(int32_t(p1.ways()[1]->position1().y), 0);
-    ASSERT_EQ(int32_t(p1.ways()[1]->position1().z), 3);
-    ASSERT_EQ(int32_t(p1.ways()[1]->position2().x), 2); // Node1
-    ASSERT_EQ(int32_t(p1.ways()[1]->position2().y), 0);
-    ASSERT_EQ(int32_t(p1.ways()[1]->position2().z), 3);
+    ASSERT_EQ(p1.nodes().size(), 2u);
+    ASSERT_EQ(p1.ways().size(), 1u);
+    ASSERT_EQ(u1.way(), &w1);
+    ASSERT_EQ(u1.node(), nullptr);
+    ASSERT_EQ(int32_t(u1.position().x), 1);
+    ASSERT_EQ(w1.units().size(), 1u);
 }
 
 // -----------------------------------------------------------------------------
 TEST(TestsCity, translate)
 {
-    City city("Paris");
-
+    TestWorld cityWorld("Paris");
+    City& city = cityWorld.city;
     Map& m1 = city.addMap(MapType("water"));
     Path& p1 = city.addPath(PathType("Road"));
     Node& n1 = p1.addNode(Vector3f(1.0f, 2.0f, 3.0f));
@@ -251,10 +236,6 @@ TEST(TestsCity, translate)
     ASSERT_EQ(int32_t(city.m_position.x), 1);
     ASSERT_EQ(int32_t(city.m_position.y), 2);
     ASSERT_EQ(int32_t(city.m_position.z), 0);
-
-    ASSERT_EQ(int32_t(m1.m_position.x), 1);
-    ASSERT_EQ(int32_t(m1.m_position.y), 2);
-    ASSERT_EQ(int32_t(m1.m_position.z), 0);
 
     ASSERT_EQ(int32_t(n1.m_position.x), 1+1);
     ASSERT_EQ(int32_t(n1.m_position.y), 2+2);
@@ -286,16 +267,6 @@ TEST(TestsCity, translate)
 
 // -----------------------------------------------------------------------------
 // For testing City::update()
-class MockMap: public Map
-{
-public:
-
-    MockMap(std::string const& name, City& city)
-        : Map(MapType(name), city)
-    {}
-    MOCK_METHOD(void, executeRules, (), (override));
-};
-
 class MockUnit: public Unit
 {
 public:
@@ -320,12 +291,9 @@ public:
 // -----------------------------------------------------------------------------
 TEST(TestsCity, update)
 {
-    City city("Paris");
+    TestWorld cityWorld("Paris");
+    City& city = cityWorld.city;
     Node n1(42u, Vector3f(1.0f, 2.0f, 3.0f));
-
-    // Add two maps
-    city.m_maps["map1"] = std::make_unique<MockMap>("map1", city);
-    city.m_maps["map2"] = std::make_unique<MockMap>("map2", city);
 
     // Add two Units
     city.m_units.push_back(std::make_unique<MockUnit>(n1, city));
@@ -338,12 +306,6 @@ TEST(TestsCity, update)
     city.m_agents.push_back(std::make_unique<MockAgent>(
        1u, AgentType("Worker", 1.0f, 2u, 0xFFFFFF), *(city.m_units[0]), Resources(), "target")
     );
-
-    // Each Map will call executeRules() once
-    EXPECT_CALL(*(static_cast<MockMap*>(city.m_maps["map1"].get())),
-                executeRules()).Times(1);
-    EXPECT_CALL(*(static_cast<MockMap*>(city.m_maps["map2"].get())),
-                executeRules()).Times(1);
 
     // Each Unit will call executeRules() once
     EXPECT_CALL(*(static_cast<MockUnit*>(city.m_units[0].get())),
@@ -362,7 +324,8 @@ TEST(TestsCity, update)
 // -----------------------------------------------------------------------------
 TEST(TestsCity, updateRemoveAgent)
 {
-    City city("Paris");
+    TestWorld cityWorld("Paris");
+    City& city = cityWorld.city;
     Node n1(42u, Vector3f(1.0f, 2.0f, 3.0f));
     Unit u1(UnitType("foo"), n1, city);
 
@@ -397,4 +360,89 @@ TEST(TestsCity, updateRemoveAgent)
 
     ASSERT_EQ(city.m_agents.size(), 1u);
     ASSERT_EQ(city.m_agents[0]->m_id, 1u);
+}
+
+// -----------------------------------------------------------------------------
+TEST(TestsCity, RemoveUnitDetachesItFromItsNode)
+{
+    TestWorld cityWorld("Paris", 8u, 8u);
+    City& city = cityWorld.city;
+    PathType pathType("Road");
+    WayType wayType("Dirt", 0xAAAAAA);
+    UnitType unitType("Home");
+
+    Path& path = city.addPath(pathType);
+    Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
+    Node& n2 = path.addNode(Vector3f(10.0f, 0.0f, 0.0f));
+    path.addWay(wayType, n1, n2);
+
+    Unit& unit = city.addUnit(unitType, n1);
+    ASSERT_EQ(city.units().size(), 1u);
+    ASSERT_EQ(n1.units().size(), 1u);
+
+    city.removeUnit(unit);
+
+    ASSERT_EQ(city.units().size(), 0u);
+    ASSERT_EQ(n1.units().size(), 0u);
+    // The road it stood on is untouched.
+    ASSERT_EQ(path.nodes().size(), 2u);
+    ASSERT_EQ(path.ways().size(), 1u);
+}
+
+// -----------------------------------------------------------------------------
+TEST(TestsCity, RemoveNodeTakesTheUnitsSittingOnIt)
+{
+    TestWorld cityWorld("Paris", 8u, 8u);
+    City& city = cityWorld.city;
+    PathType pathType("Road");
+    WayType wayType("Dirt", 0xAAAAAA);
+    UnitType unitType("Home");
+
+    Path& path = city.addPath(pathType);
+    Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
+    Node& n2 = path.addNode(Vector3f(10.0f, 0.0f, 0.0f));
+    path.addWay(wayType, n1, n2);
+
+    city.addUnit(unitType, n1);
+    city.addUnit(unitType, n2);
+    ASSERT_EQ(city.units().size(), 2u);
+
+    // Demolishing the node has to take the building with it, otherwise the Unit
+    // would be left holding a reference to freed memory.
+    city.removeNode(path, n1);
+
+    ASSERT_EQ(city.units().size(), 1u);
+    ASSERT_EQ(path.nodes().size(), 1u);
+    ASSERT_EQ(path.ways().size(), 0u);
+}
+
+// -----------------------------------------------------------------------------
+TEST(TestsCity, RemoveWayTakesTheAgentsTravellingOnIt)
+{
+    TestWorld cityWorld("Paris", 8u, 8u);
+    City& city = cityWorld.city;
+    PathType pathType("Road");
+    WayType wayType("Dirt", 0xAAAAAA);
+    UnitType unitType("Home");
+    AgentType agentType("Worker", 10.0f, 1u, 0xFFFFFF);
+
+    Path& path = city.addPath(pathType);
+    Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
+    Node& n2 = path.addNode(Vector3f(10.0f, 0.0f, 0.0f));
+    Way& way = path.addWay(wayType, n1, n2);
+
+    Unit& unit = city.addUnit(unitType, n1);
+    Resources resources;
+    city.addAgent(agentType, unit, resources, "Home");
+    ASSERT_EQ(city.agents().size(), 1u);
+
+    // The Agent has not moved yet, so it holds no Way: bulldozing the road
+    // leaves it alone.
+    city.removeWay(path, way);
+    ASSERT_EQ(city.agents().size(), 1u);
+    ASSERT_EQ(path.ways().size(), 0u);
+
+    // But it does hold the node it starts from, so removing that takes it.
+    city.removeNode(path, n1);
+    ASSERT_EQ(city.agents().size(), 0u);
 }

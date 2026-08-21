@@ -8,58 +8,82 @@
 #ifndef OPEN_GLASSBOX_MAP_HPP
 #  define OPEN_GLASSBOX_MAP_HPP
 
-#  include "OpenGlassBox/Rule.hpp"
 #  include "OpenGlassBox/MapCoordinatesInsideRadius.hpp"
 #  include "OpenGlassBox/MapRandomCoordinates.hpp"
+#  include "OpenGlassBox/MapRegion.hpp"
+#  include "OpenGlassBox/Rule.hpp"
 #  include "OpenGlassBox/Vector.hpp"
+
+#  include <array>
+#  include <map>
 #  include <memory>
+#  include <unordered_map>
 
 class City;
+class World;
+
+//! \brief Collection of City, declared here because a Map runs its rules over
+//! the region of each of them.
+using Cities = std::map<std::string, std::unique_ptr<City>>;
 
 //==============================================================================
-//! \brief Maps are simple uniform size grids. A Map represents a single type of
-//! resource in the environment (coal, oil, forest but also air pollution, land
-//! value, desirability ...). Each cell of a Map is a Resource. Units interact
-//! with maps through their footprint. Resources are limited.
+//! \brief A Map represents a single type of resource in the environment (coal,
+//! oil, forest but also air pollution, land value, desirability ...). Each cell
+//! holds an amount of that resource, bounded by the capacity of the map type.
+//! Units interact with maps through their footprint.
+//!
+//! The grid is that of the World, shared by every City and unbounded in the
+//! four directions: cell coordinates are signed. Storage is sparse, by chunks
+//! of CHUNK_SIZE x CHUNK_SIZE cells allocated the first time something is
+//! written into them, so an empty map costs nothing and a city can be founded
+//! anywhere without deciding a size in advance.
 //==============================================================================
 class Map
 {
 public:
 
+    //! \brief Side of an allocation unit, in cells.
+    static constexpr int32_t CHUNK_SIZE = 16;
+
     // -------------------------------------------------------------------------
-    //! \brief Create a sizeU x sizeV grid where each cell has no resource but
-    //! where the map capacity and rules are defined by the type of map.
+    //! \brief Create an empty map. Every cell reads as zero until written to.
     // -------------------------------------------------------------------------
-    Map(MapType const& type, City& city);
+    Map(MapType const& type, World& world);
     VIRTUAL ~Map() = default;
 
     // -------------------------------------------------------------------------
-    //! \brief Change the amount of resource at the cell index U,V.
+    //! \brief Change the amount of resource at the cell (u,v), capped by the
+    //! capacity of the map type. Writing zero into a cell of a chunk that was
+    //! never touched allocates nothing.
     // -------------------------------------------------------------------------
-    void setResource(uint32_t const u, uint32_t const v, uint32_t val);
+    void setResource(int32_t const u, int32_t const v, uint32_t amount);
 
     // -------------------------------------------------------------------------
-    //! \brief Get the amount of resource at the cell index U,V.
+    //! \brief Get the amount of resource at the cell (u,v). Cells that were
+    //! never written to read as zero.
     // -------------------------------------------------------------------------
-    uint32_t getResource(uint32_t const u, uint32_t const v) const;
+    uint32_t getResource(int32_t const u, int32_t const v) const;
 
     // -------------------------------------------------------------------------
-    //! \brief
+    //! \brief Sum of the resource held by the cells within the radius of (u,v)
+    //! and inside the given region.
     // -------------------------------------------------------------------------
-    uint32_t getResource(uint32_t const u, uint32_t const v, uint32_t radius);
+    uint32_t getResource(int32_t const u, int32_t const v, uint32_t radius,
+                         MapRegion const& region);
 
     // -------------------------------------------------------------------------
-    //! \brief
+    //! \brief Maximum amount a single cell may hold.
     // -------------------------------------------------------------------------
     uint32_t getCapacity() const { return m_type.capacity; }
 
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    void addResource(uint32_t const u, uint32_t const v, uint32_t toAdd);
+    void addResource(int32_t const u, int32_t const v, uint32_t toAdd);
 
     // -------------------------------------------------------------------------
-    //! \brief Distribute the amount resource toAdd to Map cells inside a circle.
+    //! \brief Distribute the amount resource toAdd to the cells inside a circle
+    //! and inside the given region.
     //!
     //! \param[in] distributed: if set to true cells are randomized and each
     //! distribution makes toAdd reduced. Therefore maybe not all cells are feed.
@@ -67,35 +91,32 @@ public:
     //! \note Amount of resource for each cell are constrained by the global
     //! capacity of the map.
     // -------------------------------------------------------------------------
-    void addResource(uint32_t const u, uint32_t const v, uint32_t const radius,
-                     uint32_t const toAdd, bool distributed = true);
+    void addResource(int32_t const u, int32_t const v, uint32_t const radius,
+                     MapRegion const& region, uint32_t const toAdd,
+                     bool distributed = true);
 
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    void removeResource(uint32_t const u, uint32_t const v, uint32_t toRemove);
+    void removeResource(int32_t const u, int32_t const v, uint32_t toRemove);
 
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    void removeResource(uint32_t const u, uint32_t const v, uint32_t radius,
-                        uint32_t toRemove, bool distributed = true);
+    void removeResource(int32_t const u, int32_t const v, uint32_t radius,
+                        MapRegion const& region, uint32_t toRemove,
+                        bool distributed = true);
 
     // -------------------------------------------------------------------------
-    //! \brief
+    //! \brief Position, in world units, of the top-left corner of the cell.
     // -------------------------------------------------------------------------
-    Vector3f getWorldPosition(uint32_t const u, uint32_t const v);
+    Vector3f getWorldPosition(int32_t const u, int32_t const v) const;
 
     // -------------------------------------------------------------------------
-    //! \brief Change the position of the Map in the world.
-    //! This also change the position of Path, Unit, Agent ... hold by the City.
+    //! \brief Run the rules of the map type over the region of every City, and
+    //! count one tick. A cell is walked once per City that administers it.
     // -------------------------------------------------------------------------
-    void translate(Vector3f const direction);
-
-    // -------------------------------------------------------------------------
-    //! \brief
-    // -------------------------------------------------------------------------
-    VIRTUAL void executeRules();
+    VIRTUAL void executeRules(Cities const& cities);
 
     // -------------------------------------------------------------------------
     //! \brief Getter: return the type of Map.
@@ -108,42 +129,112 @@ public:
     MapType const& getMapType() const { return m_type; }
 
     // -------------------------------------------------------------------------
-    //! \brief Return the position inside the World coordinate of the city (top-left corner).
-    // -------------------------------------------------------------------------
-    Vector3f const& position() const { return m_position; }
-
-    // -------------------------------------------------------------------------
-    //! \brief Return the number of graduations along the U-axis
-    // -------------------------------------------------------------------------
-    uint32_t gridSizeU() const { return m_gridSizeU; }
-
-    // -------------------------------------------------------------------------
-    //! \brief Return the number of graduations along the V-axis
-    // -------------------------------------------------------------------------
-    uint32_t gridSizeV() const { return m_gridSizeV; }
-
-    // -------------------------------------------------------------------------
     //! \brief Return the color for the renderer.
     // -------------------------------------------------------------------------
     uint32_t const& color() const { return m_type.color; }
 
+    // -------------------------------------------------------------------------
+    //! \brief Return the length of the side of a cell, in world units.
+    // -------------------------------------------------------------------------
+    float cellSize() const;
+
+    // -------------------------------------------------------------------------
+    //! \brief Rules this Map runs, from its type.
+    // -------------------------------------------------------------------------
+    std::vector<RuleMap*> const& rules() const { return m_type.rules; }
+
+    // -------------------------------------------------------------------------
+    //! \brief Number of ticks elapsed, which drives the rate of the rules.
+    // -------------------------------------------------------------------------
+    uint32_t ticks() const { return m_ticks; }
+
+    // -------------------------------------------------------------------------
+    //! \brief Sum of the resource held by every allocated cell.
+    // -------------------------------------------------------------------------
+    uint64_t totalResource() const;
+
+    // -------------------------------------------------------------------------
+    //! \brief Number of chunks currently allocated. Shown by the debugger to
+    //! make the cost of a map visible.
+    // -------------------------------------------------------------------------
+    size_t allocatedChunks() const { return m_chunks.size(); }
+
+    // -------------------------------------------------------------------------
+    //! \brief Call the given function for every cell holding a non zero amount,
+    //! as f(u, v, amount). This is how the renderer draws a map without knowing
+    //! where its cells are.
+    // -------------------------------------------------------------------------
+    template<class Function>
+    void forEachCell(Function function) const
+    {
+        for (auto const& it: m_chunks)
+        {
+            int32_t const baseU = it.second.u0;
+            int32_t const baseV = it.second.v0;
+            for (int32_t dv = 0; dv < CHUNK_SIZE; ++dv)
+            {
+                for (int32_t du = 0; du < CHUNK_SIZE; ++du)
+                {
+                    uint32_t const amount =
+                        it.second.cells[size_t(dv * CHUNK_SIZE + du)];
+                    if (amount != 0u)
+                    {
+                        function(baseU + du, baseV + dv, amount);
+                    }
+                }
+            }
+        }
+    }
+
+private:
+
+    //==========================================================================
+    //! \brief A square block of cells, allocated as a whole.
+    //==========================================================================
+    struct Chunk
+    {
+        //! \brief Coordinates of the cell at the top-left of the chunk.
+        int32_t u0 = 0;
+        int32_t v0 = 0;
+        std::array<uint32_t, size_t(CHUNK_SIZE * CHUNK_SIZE)> cells{};
+    };
+
+    //--------------------------------------------------------------------------
+    //! \brief Pack the coordinates of a chunk into a single key. Division is
+    //! arithmetic, not truncating, so that negative coordinates land in the
+    //! chunk below rather than sharing the one at zero.
+    //--------------------------------------------------------------------------
+    static int64_t chunkKey(int32_t const u, int32_t const v);
+    static int32_t chunkOrigin(int32_t const coordinate);
+    static size_t cellIndex(int32_t const u, int32_t const v);
+
+    //--------------------------------------------------------------------------
+    //! \brief The chunk holding the cell, or nullptr when it was never written.
+    //--------------------------------------------------------------------------
+    Chunk const* findChunk(int32_t const u, int32_t const v) const;
+
+    //--------------------------------------------------------------------------
+    //! \brief The chunk holding the cell, allocated if needed.
+    //--------------------------------------------------------------------------
+    Chunk& chunkFor(int32_t const u, int32_t const v);
+
+    //--------------------------------------------------------------------------
+    //! \brief Run one rule over the region of one city.
+    //--------------------------------------------------------------------------
+    void executeRule(RuleMap& rule, City& city);
+
 private:
 
     MapType const& m_type;
-    //! \brief Position of the top-left corner.
-    Vector3f       m_position;
-    //! \brief The size of the grid along the U-axis.
-    uint32_t       m_gridSizeU;
-    //! \brief The size of the grid along the V-axis.
-    uint32_t       m_gridSizeV;
+    //! \brief The world owning the grid this map is laid on.
+    World&         m_world;
     //! \brief Structure holding all information needed to execute simulation
     //! rules.
     RuleContext    m_context;
     //! \brief Frequency for running rules.
     uint32_t       m_ticks = 0u;
-    //! \brief Amount of resource for each cell of the grid. The capacity is
-    //! stored inside MapType.
-    std::vector<uint32_t>      m_resources;
+    //! \brief Cells, by blocks allocated on demand.
+    std::unordered_map<int64_t, Chunk> m_chunks;
     //! \brief Cache coordinates within a position and radius.
     MapCoordinatesInsideRadius m_coordinates;
     //! \brief Cache random coordinates.

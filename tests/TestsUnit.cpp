@@ -2,15 +2,26 @@
 
 #define protected public
 #define private public
+#  include "TestWorld.hpp"
 #  include "OpenGlassBox/Unit.hpp"
 #  include "OpenGlassBox/City.hpp"
 #undef protected
 #undef private
 
+//! \brief Small cells so that the node at (3, 4) lands on the grid cell (1, 2).
+static SimulationConfig smallCells()
+{
+    SimulationConfig config;
+    config.gridCellSize = 2.0f;
+    return config;
+}
+
 // -----------------------------------------------------------------------------
 TEST(TestsUnit, Constructor)
 {
-    City city("Paris", 4u, 4u);
+    TestWorld cityWorld("Paris", 4u, 4u,
+                       Vector3f(0.0f, 0.0f, 0.0f), smallCells());
+    City& city = cityWorld.city;
     Node node(42u, Vector3f(3.0f, 4.0f, 5.0f));
     UnitType unit_type("unit");
     unit_type.color = 42u;
@@ -31,7 +42,7 @@ TEST(TestsUnit, Constructor)
     ASSERT_EQ(u.m_type.rules.size(), 0u);
     ASSERT_EQ(u.m_type.targets.size(), 1u);
     ASSERT_STREQ(u.m_type.targets[0].c_str(), "foo");
-    ASSERT_EQ(&u.m_node, &node);
+    ASSERT_EQ(u.m_node, &node);
     ASSERT_EQ(u.m_resources.m_bin.size(), 1u);
     ASSERT_STREQ(u.m_resources.m_bin[0].type().c_str(), "car");
     ASSERT_EQ(u.m_resources.m_bin[0].m_amount, 5u);
@@ -39,15 +50,15 @@ TEST(TestsUnit, Constructor)
     ASSERT_EQ(u.m_context.unit, &u);
     ASSERT_EQ(u.m_context.locals, &u.m_resources);
     ASSERT_EQ(u.m_context.globals, &city.globals());
-    ASSERT_EQ(u.m_context.u, 1u); // node.position.x / config::GRID_SIZE
-    ASSERT_EQ(u.m_context.v, 2u); // node.position.y / config::GRID_SIZE
+    ASSERT_EQ(u.m_context.u, 1u); // node.position.x / city.gridCellSize()
+    ASSERT_EQ(u.m_context.v, 2u); // node.position.y / city.gridCellSize()
     ASSERT_EQ(u.m_context.radius, 2u);
     ASSERT_EQ(u.m_ticks, 0u);
 
     // Check initial values (getter methods).
     ASSERT_STREQ(u.type().c_str(), "unit");
     ASSERT_EQ(u.color(), 42u);
-    ASSERT_EQ(&(u.node()), &node);
+    ASSERT_EQ(u.node(), &node);
     ASSERT_EQ(int32_t(u.position().x), int32_t(node.position().x));
     ASSERT_EQ(int32_t(u.position().y), int32_t(node.position().y));
     ASSERT_EQ(int32_t(u.position().z), int32_t(node.position().z));
@@ -59,7 +70,9 @@ TEST(TestsUnit, Constructor)
 // -----------------------------------------------------------------------------
 TEST(TestsUnit, Accept)
 {
-    City city("Paris", 4u, 4u);
+    TestWorld cityWorld("Paris", 4u, 4u,
+                       Vector3f(0.0f, 0.0f, 0.0f), smallCells());
+    City& city = cityWorld.city;
     Node node(42u, Vector3f(3.0f, 4.0f, 5.0f));
     UnitType unit_type("unit");
     unit_type.resources.addResource("car", 5u);
@@ -107,7 +120,9 @@ public:
 // -----------------------------------------------------------------------------
 TEST(TestsUnit, ExecuteRules)
 {
-    City city("Paris", 4u, 4u);
+    TestWorld cityWorld("Paris", 4u, 4u,
+                       Vector3f(0.0f, 0.0f, 0.0f), smallCells());
+    City& city = cityWorld.city;
     Node node(42u, Vector3f(3.0f, 4.0f, 5.0f));
 
     // OnFail() callback is nullptr

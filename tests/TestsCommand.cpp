@@ -2,8 +2,10 @@
 
 #define protected public
 #define private public
+#  include "TestWorld.hpp"
 #  include "OpenGlassBox/RuleCommand.hpp"
 #  include "OpenGlassBox/City.hpp"
+#  include "OpenGlassBox/SimulationClock.hpp"
 #undef protected
 #undef private
 
@@ -217,7 +219,8 @@ TEST(TestsCommand, RuleCommandAgent)
     ASSERT_EQ(cmd.validate(context), true);
 
     Resources locals, globals;
-    City city("Paris", 2u, 2u);
+    TestWorld cityWorld("Paris", 2u, 2u);
+    City& city = cityWorld.city;
     Path& p1 = city.addPath(PathType("Road"));
     Node& n1 = p1.addNode(Vector3f(0.0f, 0.0f, 3.0f));
     Node& n2 = p1.addNode(Vector3f(2.0f, 0.0f, 3.0f));
@@ -251,4 +254,24 @@ TEST(TestsCommand, RuleCommandAgent)
     EXPECT_EQ(city.agents().size(), 1u);
     cmd.execute(context);
     EXPECT_EQ(city.agents().size(), 2u);
+}
+
+// -----------------------------------------------------------------------------
+TEST(TestsCommand, RuleCommandHour)
+{
+    SimulationClock clock(20u);
+    RuleContext context;
+    context.clock = &clock;
+
+    RuleCommandHour day(8u, 18u);
+    ASSERT_FALSE(day.validate(context));
+
+    for (uint32_t i = 0u; i < 8u * 60u * 20u; ++i)
+        clock.tick();
+
+    ASSERT_TRUE(day.validate(context));
+    ASSERT_EQ(day.type(), std::string("Hour between 8 and 18"));
+
+    RuleCommandHour night(22u, 6u);
+    ASSERT_FALSE(night.validate(context));
 }

@@ -33,9 +33,9 @@ void MapCoordinatesInsideRadius::uncompress(int32_t val, int32_t& u, int32_t& v)
 
 //------------------------------------------------------------------------------
 void MapCoordinatesInsideRadius::init(uint32_t radius,
-                                      uint32_t centerU, uint32_t centerV,
-                                      uint32_t minU, uint32_t maxU,
-                                      uint32_t minV, uint32_t maxV,
+                                      int32_t centerU, int32_t centerV,
+                                      int32_t minU, int32_t maxU,
+                                      int32_t minV, int32_t maxV,
                                       bool random)
 {
     m_centerU = centerU;
@@ -83,7 +83,7 @@ void MapCoordinatesInsideRadius::createRelativeCoordinates(int32_t radius, Relat
 }
 
 //------------------------------------------------------------------------------
-bool MapCoordinatesInsideRadius::next(uint32_t& u, uint32_t& v)
+bool MapCoordinatesInsideRadius::next(int32_t& u, int32_t& v)
 {
     RelativeCoordinates& coord = *m_relativeCoord;
     size_t const size = coord.size();
@@ -91,13 +91,13 @@ bool MapCoordinatesInsideRadius::next(uint32_t& u, uint32_t& v)
     {
         int32_t iu; int32_t iv;
         uncompress(coord[(m_startingIndex + m_offset++) % size], iu, iv);
-        u = uint32_t(iu) + m_centerU;
-        v = uint32_t(iv) + m_centerV;
+        u = iu + m_centerU;
+        v = iv + m_centerV;
 
         if ((u >= m_minU) && (u < m_maxU) && (v >= m_minV) && (v < m_maxV))
             return true;
     }
 
-    u = v = 0u;
+    u = v = 0;
     return false;
 }

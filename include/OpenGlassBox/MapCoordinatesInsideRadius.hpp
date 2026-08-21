@@ -45,9 +45,9 @@ public:
     //! \param[in] random: if set to true generate random values.
     //--------------------------------------------------------------------------
     void init(uint32_t radius,
-              uint32_t centerU, uint32_t centerV,
-              uint32_t minU, uint32_t maxU,
-              uint32_t minV, uint32_t maxV,
+              int32_t centerU, int32_t centerV,
+              int32_t minU, int32_t maxU,
+              int32_t minV, int32_t maxV,
               bool random);
 
     //--------------------------------------------------------------------------
@@ -58,7 +58,7 @@ public:
     //! \return true if we can iterate, else return false when reached the last
     //! iteration.
     //--------------------------------------------------------------------------
-    bool next(uint32_t& u, uint32_t& v);
+    bool next(int32_t& u, int32_t& v);
 
 private:
 
@@ -103,12 +103,12 @@ private:
     RelativeCoordinates* m_relativeCoord = nullptr;
     uint32_t m_startingIndex;
     uint32_t m_offset;
-    uint32_t m_centerU;
-    uint32_t m_centerV;
-    uint32_t m_minU;
-    uint32_t m_maxU;
-    uint32_t m_minV;
-    uint32_t m_maxV;
+    int32_t m_centerU;
+    int32_t m_centerV;
+    int32_t m_minU;
+    int32_t m_maxU;
+    int32_t m_minV;
+    int32_t m_maxV;
 };
 
 #endif

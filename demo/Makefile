@@ -14,17 +14,29 @@ DATA_FOLDER_NAME := demo/data
 include $(M)/project/Makefile
 
 ###################################################
-# Set third party DearImGui
+# Set third party Dear ImGui, with the GLFW and
+# OpenGL 3 backends.
 #
 SRC_FILES += $(P)/external/imgui/imgui.cpp
 SRC_FILES += $(P)/external/imgui/imgui_draw.cpp
 SRC_FILES += $(P)/external/imgui/imgui_tables.cpp
 SRC_FILES += $(P)/external/imgui/imgui_widgets.cpp
-SRC_FILES += $(P)/external/imgui/backends/imgui_impl_sdl2.cpp
-SRC_FILES += $(P)/external/imgui/backends/imgui_impl_sdlrenderer2.cpp
+SRC_FILES += $(P)/external/imgui/misc/cpp/imgui_stdlib.cpp
+SRC_FILES += $(P)/external/imgui/backends/imgui_impl_glfw.cpp
+SRC_FILES += $(P)/external/imgui/backends/imgui_impl_opengl3.cpp
 
-INCLUDES := $(P)/external/imgui $(P)/external/imgui/backends
-PKG_LIBS := sdl2 SDL2_image
+###################################################
+# Set third party ImPlot (charts) and ImGuiFileDialog
+# (the File menu).
+#
+SRC_FILES += $(P)/external/implot/implot.cpp
+SRC_FILES += $(P)/external/implot/implot_items.cpp
+SRC_FILES += $(P)/external/ImGuiFileDialog/ImGuiFileDialog.cpp
+
+INCLUDES := $(P)/external/imgui $(P)/external/imgui/backends \
+    $(P)/external/imgui/misc/cpp $(P)/external/implot \
+    $(P)/external/ImGuiFileDialog
+PKG_LIBS := glfw3 glew gl
 
 USER_CXXFLAGS += -Wno-useless-cast -Wno-conversion -Wno-sign-conversion -Wno-float-equal
 USER_CXXFLAGS += -Wno-float-equal -Wno-float-conversion -Wno-shadow -Wno-unused-parameter
@@ -37,7 +49,7 @@ USER_CXXFLAGS += -Wno-unused-variable -Wno-old-style-cast -Wno-null-dereference 
 SRC_FILES += $(call rwildcard,src,*.cpp)
 INCLUDES += $(P)/include $(P)/demo/src
 VPATH += $(P)/demo
-DEFINES += -DVIRTUAL= -DDESIRED_GRID_SIZE=30u
+DEFINES += -DVIRTUAL=
 INTERNAL_LIBS += $(call internal-lib,$(PROJECT_NAME))
 
 ###################################################

@@ -21,7 +21,7 @@ SRC_FILES := $(call rwildcard,$(P)/src,*.cpp) \
     $(call rwildcard,$(P)/tests,*.cpp)
 INCLUDES := $(P)/include
 VPATH := $(P)/src
-DEFINES += -DVIRTUAL=virtual -DDESIRED_GRID_SIZE=2u
+DEFINES += -DVIRTUAL=virtual
 USER_CXX_FLAGS += -Wno-unused-function -Wno-undef \
   -Wno-keyword-macro -Wno-float-equal \
   -Wno-gnu-zero-variadic-macro-arguments

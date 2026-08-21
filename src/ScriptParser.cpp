@@ -6,558 +6,83 @@
 //-----------------------------------------------------------------------------
 
 #include "OpenGlassBox/ScriptParser.hpp"
-#include "OpenGlassBox/RuleCommand.hpp"
+
 #include <iostream>
-#include <stdexcept>
-#include <cstring>
+#include <sstream>
 
-static uint32_t toUint(std::string const& word)
+// -----------------------------------------------------------------------------
+//! \brief Load into a scratch set of definitions and only adopt them once the
+//! parse succeeded. A script that fails to load therefore leaves the simulation
+//! that is already running exactly as it was.
+// -----------------------------------------------------------------------------
+template<class Load>
+static bool loadInto(ScriptDefinitions& definitions,
+                     std::vector<ParseError>& errors,
+                     std::unique_ptr<IScriptParser>& parser, Load load)
 {
-    return static_cast<uint32_t>(atoi(word.c_str()));
+    ScriptDefinitions parsed;
+    bool const success = load(*parser, parsed);
+
+    errors = parser->errors();
+
+    if (success)
+    {
+        definitions = std::move(parsed);
+    }
+
+    return success;
 }
 
-static uint32_t toColor(std::string const& word)
-{
-    return static_cast<uint32_t>(strtol(word.c_str(), NULL, 16));
-}
-
-static float toFloat(std::string const& word)
-{
-    return static_cast<float>(atoi(word.c_str()));
-}
-
-static bool toBool(std::string const& word)
-{
-    if (word == "true")
-        return true;
-    if (word == "false")
-        return false;
-    return !!toUint(word);
-}
-
+// -----------------------------------------------------------------------------
 bool Script::parse(std::string const& filename)
 {
     std::cout << "Parsing script '" << filename << "'" << std::endl;
 
-    m_file.open(filename);
-    if (!m_file)
+    auto parser = makeScriptParser(filename);
+    bool const success = loadInto(
+        m_definitions, m_errors, parser,
+        [&filename](IScriptParser& p, ScriptDefinitions& out) {
+            return p.parse(filename, out);
+        });
+
+    if (success)
     {
-        std::cerr << "Failed opening '" << filename << "' Reason '"
-                  << strerror(errno) << "'" << std::endl;
-        m_success = false;
+        std::cout << "  done" << std::endl;
     }
     else
     {
-        try
+        std::cerr << formatErrors() << std::endl;
+    }
+
+    return success;
+}
+
+// -----------------------------------------------------------------------------
+bool Script::parseString(std::string const& source, std::string const& name)
+{
+    auto parser = makeScriptParser(name);
+
+    return loadInto(m_definitions, m_errors, parser,
+                    [&source, &name](IScriptParser& p, ScriptDefinitions& out) {
+                        return p.parseString(source, name, out);
+                    });
+}
+
+// -----------------------------------------------------------------------------
+std::string Script::formatErrors() const
+{
+    std::ostringstream stream;
+    bool first = true;
+
+    for (auto const& e: m_errors)
+    {
+        if (!first)
         {
-            parseScript();
-            m_success = true;
-            std::cout << "  done" << std::endl;
+            stream << '\n';
         }
-        catch (std::exception &e)
-        {
-            std::cerr << "Failed parsing script '"
-                      << filename << "' at token '"
-                      << m_token << "' Reason was '"
-                      << e.what() << "'"
-                      << std::endl;
-            m_success = false;
-        }
+        stream << e.format();
+        first = false;
     }
 
-    return m_success;
-}
-
-std::string const& Script::nextToken()
-{
-    if (m_file >> m_token)
-    {
-        // Uncomment for debuging
-        // std::cout << "I read '" << m_token << "'" << std::endl;
-    }
-    else
-    {
-        m_token.clear();
-    }
-    return m_token;
-}
-
-void Script::parseScript()
-{
-    while (true)
-    {
-        bool empty = (m_token.size() == 0u);
-        std::string const& token = nextToken();
-        if (token == "resources")
-            parseResources();
-        else if (token == "rules")
-            parseRules();
-        else if (token == "maps")
-            parseMaps();
-        else if (token == "paths")
-            parsePaths();
-        else if (token == "segments")
-            parseWays();
-        else if (token == "agents")
-            parseAgents();
-        else if (token == "units")
-            parseUnits();
-        else if (token == "")
-        {
-            if (!empty)
-                return ;
-            // Empty file detection
-            throw std::runtime_error("parseScript()");
-        }
-        else
-            throw std::runtime_error("parseScript()");
-    }
-}
-
-void Script::parseResources()
-{
-    while (true)
-    {
-        std::string const& token = nextToken();
-        if (token == "end")
-            return ;
-        else if (token == "resource")
-            parseResource();
-        else
-            throw std::runtime_error("parseResources()");
-    }
-}
-
-void Script::parseResource()
-{
-    std::string const& name = nextToken();
-    m_resources[name] = new Resource(name);
-}
-
-void Script::parseResourcesArray(Resources& resources)
-{
-    {
-        std::string const& token = nextToken();
-        if (token != "[")
-            throw std::runtime_error("parseResourcesArray()");
-    }
-
-    while (true)
-    {
-        std::string const& token = nextToken();
-        if (token == "]")
-            return ;
-
-        Resource const& resource = getResource(token);
-        uint32_t amount = toUint(nextToken());
-        // FIXME should be setAmount
-        resources.addResource(resource.type(), amount);
-    }
-}
-
-void Script::parseCapacitiesArray(Resources& resources)
-{
-    {
-        std::string const& token = nextToken();
-        if (token != "[")
-            throw std::runtime_error("parseCapacitiesArray()");
-    }
-
-    while (true)
-    {
-        std::string const& token = nextToken();
-        if (token == "]")
-            return ;
-
-        Resource const& resource = getResource(token);
-        uint32_t capacity = toUint(nextToken());
-        resources.setCapacity(resource.type(), capacity);
-    }
-}
-
-void Script::parsePaths()
-{
-    while (true)
-    {
-        std::string const& token = nextToken();
-        if (token == "end")
-            return ;
-        else if (token == "path")
-            parsePath();
-        else
-            throw std::runtime_error("parsePaths()");
-    }
-}
-
-void Script::parsePath()
-{
-    PathType* path = new PathType(nextToken());
-    m_pathTypes[path->name] = path;
-
-    while (true)
-    {
-        std::string const& token = nextToken();
-        if (token == "color")
-        {
-            path->color = toColor(nextToken());
-            return ;
-        }
-        else
-        {
-            throw std::runtime_error("parsePath()");
-        }
-    }
-}
-
-void Script::parseWays()
-{
-    while (true)
-    {
-        std::string const& token = nextToken();
-        if (token == "end")
-            return ;
-        else if (token == "segment")
-            parseWay();
-        else
-            throw std::runtime_error("parseWays()");
-    }
-}
-
-void Script::parseWay()
-{
-    WayType* seg = new WayType(nextToken());
-    m_segmentTypes[seg->name] = seg;
-
-    while (true)
-    {
-        std::string const& token = nextToken();
-        if (token == "color")
-        {
-            seg->color = toColor(nextToken());
-            return ;
-        }
-        else
-        {
-            throw std::runtime_error("parseWay()");
-        }
-    }
-}
-
-void Script::parseAgents()
-{
-    while (true)
-    {
-        std::string const& token = nextToken();
-        if (token == "end")
-            return ;
-        else if (token == "agent")
-            parseAgent();
-        else
-            throw std::runtime_error("parseAgents()");
-    }
-}
-
-void Script::parseAgent()
-{
-    AgentType* agent = new AgentType(nextToken());
-    m_agentTypes[agent->name] = agent;
-
-    while (true)
-    {
-        std::string const& token = nextToken();
-        if (token == "color")
-            agent->color = toColor(nextToken());
-        else if (token == "speed")
-        {
-            agent->speed = toFloat(nextToken());
-            return ;
-        }
-        else
-            throw std::runtime_error("parseAgents()");
-    }
-}
-
-void Script::parseRules()
-{
-    while (true)
-    {
-        std::string const& token = nextToken();
-        if (token == "end")
-            return ;
-        else if (token == "mapRule")
-            parseRuleMap();
-        else if (token == "unitRule")
-            parseRuleUnit();
-        else
-            throw std::runtime_error("parseRules()");
-    }
-}
-
-void Script::parseRuleMap()
-{
-    RuleMapType type(nextToken());
-
-    while (true)
-    {
-        std::string const& token = nextToken();
-        if (token == "end")
-        {
-            RuleMap* rule = new RuleMap(type);
-            m_ruleMaps[rule->type()] = rule;
-            return ;
-        }
-        else if (token == "rate")
-            type.rate = toUint(nextToken());
-        else if (token == "randomTiles")
-            type.randomTiles = toBool(nextToken());
-        else if (token == "randomTilesPercent")
-        {
-            type.randomTiles = true;
-            type.randomTilesPercent = toUint(nextToken());
-        }
-        else
-            type.commands.push_back(parseCommand(token));
-    }
-}
-
-void Script::parseRuleUnit()
-{
-    RuleUnitType type(nextToken());
-
-    while (true)
-    {
-        std::string const& token = nextToken();
-        if (token == "end")
-        {
-            RuleUnit* rule = new RuleUnit(type);
-            m_ruleUnits[rule->type()] = rule;
-            return ;
-        }
-        else if (token == "rate")
-            type.rate = toUint(nextToken());
-        //else if (token == "onFail") // TODO
-        //{}
-        else
-            type.commands.push_back(parseCommand(token));
-    }
-}
-
-IRuleCommand* Script::parseCommand(std::string const& token)
-{
-    IRuleValue* target = nullptr;
-    IRuleCommand* command = nullptr;
-
-    if (token == "local")
-    {
-        Resource const& resource = getResource(nextToken());
-        target = new RuleValueLocal(resource);
-    }
-    else if (token == "global")
-    {
-        Resource const& resource = getResource(nextToken());
-        target = new RuleValueGlobal(resource);
-    }
-    else if (token == "map")
-    {
-        target = new RuleValueMap(nextToken());
-    }
-    else if (token == "agent")
-    {
-        std::string name = nextToken();
-        std::string searchTarget;
-        Resources resources;
-
-        while (true)
-        {
-            std::string const& cmd = nextToken();
-            if (cmd == "to")
-            {
-                searchTarget = nextToken();
-            }
-            else if (cmd == "add")
-            {
-                parseResourcesArray(resources);
-                break ;
-            }
-            else
-            {
-                throw std::runtime_error("parseCommand()");
-            }
-        }
-
-        command = new RuleCommandAgent(getAgentType(name),
-                                       searchTarget, resources);
-    }
-    else
-    {
-        throw std::runtime_error("parseCommand()");
-    }
-
-    if (target != nullptr)
-    {
-        std::string const& cmd = nextToken();
-        if (cmd == "add")
-        {
-            command = new RuleCommandAdd(*target, toUint(nextToken()));
-        }
-        else if (cmd == "remove")
-        {
-            command = new RuleCommandRemove(*target, toUint(nextToken()));
-        }
-        else if (cmd == "greater")
-        {
-            command = new RuleCommandTest(*target, RuleCommandTest::Comparison::GREATER,
-                                          toUint(nextToken()));
-        }
-        else if (cmd == "less")
-        {
-            command = new RuleCommandTest(*target, RuleCommandTest::Comparison::LESS,
-                                          toUint(nextToken()));
-        }
-        else if (cmd == "equals")
-        {
-            command = new RuleCommandTest(*target, RuleCommandTest::Comparison::EQUALS,
-                                          toUint(nextToken()));
-        }
-        else
-        {
-            throw std::runtime_error("parseCommand()");
-        }
-    }
-
-    return command;
-}
-
-void Script::parseMaps()
-{
-    while (true)
-    {
-        std::string const& token = nextToken();
-        if (token == "end")
-            return ;
-        else if (token == "map")
-            parseMap();
-        else
-            throw std::runtime_error("parseMaps()");
-    }
-}
-
-void Script::parseMap()
-{
-    MapType* map = new MapType(nextToken());
-    m_mapTypes[map->name] = map;
-
-    while (true)
-    {
-        std::string const& token = nextToken();
-        if (token == "color")
-            map->color = toColor(nextToken());
-        else if (token == "capacity")
-            map->capacity = toUint(nextToken());
-        else if (token == "rules")
-        {
-            parseRuleMapArray(map->rules);
-            return ;
-        }
-    }
-}
-
-void Script::parseUnits()
-{
-    while (true)
-    {
-        std::string const& token = nextToken();
-        if (token == "end")
-            return ;
-        else if (token == "unit")
-            parseUnit();
-        else
-            throw std::runtime_error("parseUnits()");
-    }
-}
-
-void Script::parseUnit()
-{
-    UnitType* unit = new UnitType(nextToken());
-    m_unitTypes[unit->name] = unit;
-
-    Resources caps;
-    Resources resources;
-    std::vector<std::string> todo;
-    while (true)
-    {
-        std::string const& token = nextToken();
-        if (token == "color")
-            unit->color = toColor(nextToken());
-        else if (token == "mapRadius")
-            unit->radius = toUint(nextToken());
-        else if (token == "rules")
-            parseRuleUnitArray(unit->rules);
-        else if (token == "targets")
-            parseStringArray(unit->targets);
-        else if (token == "caps")
-        {
-            parseCapacitiesArray(caps);
-            unit->resources.setCapacities(caps);
-        }
-        else if (token == "resources")
-        {
-            parseResourcesArray(resources);
-            unit->resources.addResources(resources);
-            return ;
-        }
-        else
-            throw std::runtime_error("parseUnit()");
-    }
-}
-
-void Script::parseStringArray(std::vector<std::string>& vec)
-{
-    {
-        std::string const& token = nextToken();
-        if (token != "[")
-            throw std::runtime_error("parseStringArray()");
-    }
-
-    while (true)
-    {
-        std::string const& token = nextToken();
-        if (token == "]")
-            return ;
-        vec.push_back(token);
-    }
-}
-
-void Script::parseRuleMapArray(std::vector<RuleMap*>& rules)
-{
-    {
-        std::string const& token = nextToken();
-        if (token != "[")
-            throw std::runtime_error("parseRuleMapArray()");
-    }
-
-    while (true)
-    {
-        std::string const& token = nextToken();
-        if (token == "]")
-            return ;
-        rules.push_back(m_ruleMaps[token]);
-    }
-}
-
-void Script::parseRuleUnitArray(std::vector<RuleUnit*>& rules)
-{
-    {
-        std::string const& token = nextToken();
-        if (token != "[")
-            throw std::runtime_error("parseRuleUnitArray()");
-    }
-
-    while (true)
-    {
-        std::string const& token = nextToken();
-        if (token == "]")
-            return ;
-        rules.push_back(m_ruleUnits[token]);
-    }
+    return stream.str();
 }

@@ -1,0 +1,49 @@
+# Braess paradox network.
+#
+# Four nodes, two routes of equal cost, plus a tempting shortcut in the
+# middle. With enough Agents the shortcut raises the average travel time,
+# which is the classic counter-example of adding a road that makes everyone
+# worse off. Watch the Traffic panel: the relative gap and the total travel
+# time tell whether the assignment has settled, and the heatmap shows the
+# shortcut filling first.
+
+resources
+	resource People
+end
+
+paths
+	path Road color 0xAAAAAA
+end
+
+segments
+	segment Fast color 0x55CC55 speed 80 capacity 8 beta 4
+	segment Slow color 0xCC5555 speed 20 capacity 40 beta 4
+	segment Shortcut color 0xCCCC55 speed 200 capacity 6 beta 4
+end
+
+agents
+	agent Worker color 0xFFFFFF speed 40
+end
+
+rules
+	unitRule Send
+		rate 4
+		local People remove 1
+		agent Worker to End add [ People 1 ]
+	end
+
+	unitRule Absorb
+		rate 1
+		local People greater 0
+		local People remove 1
+	end
+end
+
+units
+	unit Start color 0x00FF00 mapRadius 1 rules [ Send ] targets [ Start ] caps [ People 200 ] resources [ People 80 ]
+	unit End color 0xFF0000 mapRadius 1 rules [ Absorb ] targets [ End ] caps [ People 200 ] resources [ ]
+end
+
+maps
+	map People color 0xFFFF00 capacity 10 rules [ ]
+end

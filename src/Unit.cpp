@@ -7,27 +7,135 @@
 
 #include "OpenGlassBox/Unit.hpp"
 #include "OpenGlassBox/City.hpp"
+#include "OpenGlassBox/World.hpp"
 #include <algorithm>
 
 // -----------------------------------------------------------------------------
-Unit::Unit(UnitType const& type, Node& node, City& city)
-    : m_type(type), m_node(node), m_resources(type.resources)
+void Unit::bind(City& city)
 {
-    m_node.addUnit(*this);
-
-    // References states needed for running Rules
     m_context.unit = this;
     m_context.city = &city;
     m_context.globals = &(city.globals());
     m_context.locals = &m_resources;
-    m_context.radius = type.radius;
-    city.world2mapPosition(m_node.position(), m_context.u, m_context.v);
+    m_context.radius = m_type.radius;
+    m_context.clock = &city.world().clock();
+    city.world2mapPosition(m_position, m_context.u, m_context.v);
+}
+
+// -----------------------------------------------------------------------------
+Unit::Unit(UnitType const& type, Node& node, City& city)
+    : m_type(type),
+      m_position(node.position()),
+      m_node(&node),
+      m_resources(type.resources)
+{
+    m_node->addUnit(*this);
+    bind(city);
+}
+
+// -----------------------------------------------------------------------------
+Unit::Unit(UnitType const& type, Way& way, float offset, City& city)
+    : m_type(type),
+      m_way(&way),
+      m_offset(offset),
+      m_resources(type.resources)
+{
+    if (m_offset < 0.0f)
+        m_offset = 0.0f;
+    else if (m_offset > 1.0f)
+        m_offset = 1.0f;
+
+    m_position = m_way->positionAt(m_offset);
+    m_way->addUnit(*this);
+    bind(city);
+}
+
+// -----------------------------------------------------------------------------
+Unit::Unit(UnitType const& type, Vector3f const& position, City& city)
+    : m_type(type),
+      m_position(position),
+      m_resources(type.resources)
+{
+    bind(city);
+}
+
+// -----------------------------------------------------------------------------
+Unit::~Unit()
+{
+    detach();
+}
+
+// -----------------------------------------------------------------------------
+void Unit::detach()
+{
+    if (m_node != nullptr)
+    {
+        m_node->removeUnit(*this);
+        m_node = nullptr;
+    }
+    if (m_way != nullptr)
+    {
+        m_way->removeUnit(*this);
+        m_way = nullptr;
+    }
+}
+
+// -----------------------------------------------------------------------------
+bool Unit::hasWays() const
+{
+    if (m_node != nullptr)
+        return m_node->hasWays();
+    return m_way != nullptr;
+}
+
+// -----------------------------------------------------------------------------
+Node* Unit::accessNode() const
+{
+    if (m_node != nullptr)
+        return m_node;
+    if (m_way == nullptr)
+        return nullptr;
+    return (m_offset <= 0.5f) ? &m_way->from() : &m_way->to();
+}
+
+// -----------------------------------------------------------------------------
+Path* Unit::path() const
+{
+    if (m_node != nullptr)
+        return m_node->path();
+    if (m_way != nullptr)
+        return m_way->from().path();
+    return nullptr;
+}
+
+// -----------------------------------------------------------------------------
+void Unit::translate(Vector3f const& direction)
+{
+    // A Unit sitting on a Node or a Way follows it: the City translates the
+    // Path, which moves the Nodes, and the Unit reads the new position.
+    if (m_node != nullptr)
+        m_position = m_node->position();
+    else if (m_way != nullptr)
+        m_position = m_way->positionAt(m_offset);
+    else
+        m_position += direction;
+
+    refreshMapPosition();
+}
+
+// -----------------------------------------------------------------------------
+void Unit::refreshMapPosition()
+{
+    if (m_context.city != nullptr)
+        m_context.city->world2mapPosition(m_position, m_context.u, m_context.v);
 }
 
 // -----------------------------------------------------------------------------
 void Unit::executeRules()
 {
     m_ticks += 1u;
+    if (m_context.city != nullptr)
+        m_context.clock = &m_context.city->world().clock();
 
     size_t i = m_type.rules.size();
     while (i--)
