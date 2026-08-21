@@ -15,7 +15,7 @@ namespace config
     static const uint32_t SCREEN_WIDTH = 800u;
     static const uint32_t SCREEN_HEIGHT = 600u;
     static const uint32_t GRID_SIZE = DESIRED_GRID_SIZE;
-    static const float TICKS_PER_SECOND = 10.0f;
+    static const float TICKS_PER_SECOND = 20.0f;
 }
 
 #endif

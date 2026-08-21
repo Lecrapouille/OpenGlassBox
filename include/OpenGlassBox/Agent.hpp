@@ -62,7 +62,7 @@ public:
     //! \return true when the Agent has reached its destination.
     //! \note VIRTUAL is only used for unit tests.
     //--------------------------------------------------------------------------
-    VIRTUAL bool update(Dijkstra& dijkstra);
+    VIRTUAL bool update(Dijkstra& dijkstra, float dt);
 
     // -------------------------------------------------------------------------
     //! \brief Return the unique identifier.
@@ -109,7 +109,7 @@ private:
     //! \brief Move the Agent on the current Way towards the destination Node
     //! (border of the segment).
     //--------------------------------------------------------------------------
-    void moveTowardsNextNode();
+    void moveTowardsNextNode(float dt);
 
     //--------------------------------------------------------------------------
     //! \brief Search a new Way to reach the destination Node/Unit.

@@ -36,13 +36,13 @@ void City::setListener(City::Listener& listener)
 }
 
 // -----------------------------------------------------------------------------
-void City::update()
+void City::update(float dt)
 {
     // Start from the last element for easy removing of the Agent
     size_t i = m_agents.size();
     while (i--)
     {
-        if (m_agents[i]->update(m_dijkstra))
+        if (m_agents[i]->update(m_dijkstra, dt))
         {
             // Swap the position of the Agent with the last in the vector and
             // remove the last element of the vector.
