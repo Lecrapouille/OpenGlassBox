@@ -238,6 +238,7 @@ TEST(TestsCity, translate)
     Node& n1 = p1.addNode(Vector3f(1.0f, 2.0f, 3.0f));
     Node& n2 = p1.addNode(Vector3f(3.0f, 3.0f, 3.0f));
     Way& w1 = p1.addWay(WayType("Dirt", 0xAAAAAA), n1, n2);
+    float const initialMagnitude = w1.magnitude();
     Unit& u1 = city.addUnit(UnitType("unit1"), n1);
     Agent& a1 = city.addAgent(AgentType("Worker", 1.0f, 2u,
          0xFFFFFF), u1, Resources(), "target");
@@ -275,6 +276,7 @@ TEST(TestsCity, translate)
     ASSERT_EQ(int32_t(w1.position2().x), 3+1);
     ASSERT_EQ(int32_t(w1.position2().y), 3+2);
     ASSERT_EQ(int32_t(w1.position2().z), 3+0);
+    ASSERT_FLOAT_EQ(w1.magnitude(), initialMagnitude);
 
     // Position of the Agent == Node1
     ASSERT_EQ(int32_t(a1.m_position.x), 1+1);
@@ -312,7 +314,7 @@ public:
               std::string const& searchTarget)
         : Agent(id, type, owner, resources, searchTarget)
     {}
-    MOCK_METHOD(bool, update, (Dijkstra&), (override));
+    MOCK_METHOD(bool, update, (Dijkstra&, float), (override));
 };
 
 // -----------------------------------------------------------------------------
@@ -351,9 +353,9 @@ TEST(TestsCity, update)
 
     // Each Agent will call update() once
     EXPECT_CALL(*(static_cast<MockAgent*>(city.m_agents[0].get())),
-                update(_)).Times(1).WillOnce(Return(false));
+                update(_, _)).Times(1).WillOnce(Return(false));
     EXPECT_CALL(*(static_cast<MockAgent*>(city.m_agents[1].get())),
-                update(_)).Times(1).WillOnce(Return(false));
+                update(_, _)).Times(1).WillOnce(Return(false));
     city.update();
 }
 
@@ -376,11 +378,11 @@ TEST(TestsCity, updateRemoveAgent)
     );
 
     EXPECT_CALL(*(static_cast<MockAgent*>(city.m_agents[2].get())),
-                update(_)).Times(1).WillOnce(Return(true));
+                update(_, _)).Times(1).WillOnce(Return(true));
     EXPECT_CALL(*(static_cast<MockAgent*>(city.m_agents[1].get())),
-                update(_)).Times(1).WillOnce(Return(false));
+                update(_, _)).Times(1).WillOnce(Return(false));
     EXPECT_CALL(*(static_cast<MockAgent*>(city.m_agents[0].get())),
-                update(_)).Times(1).WillOnce(Return(false));
+                update(_, _)).Times(1).WillOnce(Return(false));
     city.update();
 
     ASSERT_EQ(city.m_agents.size(), 2u);
@@ -388,9 +390,9 @@ TEST(TestsCity, updateRemoveAgent)
     ASSERT_EQ(city.m_agents[1]->m_id, 1u);
 
     EXPECT_CALL(*(static_cast<MockAgent*>(city.m_agents[1].get())),
-                update(_)).Times(1).WillOnce(Return(false));
+                update(_, _)).Times(1).WillOnce(Return(false));
     EXPECT_CALL(*(static_cast<MockAgent*>(city.m_agents[0].get())),
-                update(_)).Times(1).WillOnce(Return(true));
+                update(_, _)).Times(1).WillOnce(Return(true));
     city.update();
 
     ASSERT_EQ(city.m_agents.size(), 1u);

@@ -116,6 +116,11 @@ public:
     Unit& unit(uint32_t const nth) { return *m_units[nth]; }
 
     // -------------------------------------------------------------------------
+    //! \brief Return the Path this node belongs to, or nullptr if standalone.
+    // -------------------------------------------------------------------------
+    Path* path() const { return m_path; }
+
+    // -------------------------------------------------------------------------
     //! \brief Getter/Setter of node color (global color)
     // -------------------------------------------------------------------------
     uint32_t& color()
@@ -134,6 +139,8 @@ private:
     std::vector<Way*>     m_ways;
     //! \brief Units is affected to a Path Node. Therefore nodes has to know them.
     std::vector<Unit*>    m_units;
+    //! \brief Path owning this node (nullptr for standalone nodes).
+    Path*                 m_path = nullptr;
 };
 
 using NodePtr = std::unique_ptr<Node>;

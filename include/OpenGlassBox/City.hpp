@@ -13,6 +13,7 @@
 #  include "OpenGlassBox/Map.hpp"
 #  include "OpenGlassBox/Path.hpp"
 #  include "OpenGlassBox/Dijkstra.hpp"
+#  include "OpenGlassBox/Config.hpp"
 #  include <memory>
 
 class Path;
@@ -77,7 +78,7 @@ public:
     //! \brief Move agents, execute rule scripts of maps, execute rule scripts
     //! of Units.
     // -------------------------------------------------------------------------
-    void update();
+    void update(float dt = 1.0f / config::TICKS_PER_SECOND);
 
     // -------------------------------------------------------------------------
     //! \brief Create and store a new Map. Destroy the Map of the same name if

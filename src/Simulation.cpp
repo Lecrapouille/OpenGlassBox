@@ -6,9 +6,9 @@
 //-----------------------------------------------------------------------------
 
 #include "OpenGlassBox/Simulation.hpp"
+#include "OpenGlassBox/Config.hpp"
 
 #define MAX_ITERATIONS_PER_UPDATE 20u
-#define TICKS_PER_SECOND 200.0f
 
 //------------------------------------------------------------------------------
 Simulation::Simulation(uint32_t gridSizeU, uint32_t gridSizeV)
@@ -32,12 +32,12 @@ void Simulation::update(float const deltaTime)
 
     // Rules are execute at TICKS_PER_SECOND intervals
     uint32_t maxIterations = MAX_ITERATIONS_PER_UPDATE;
-    while ((m_time >= 1.0f / TICKS_PER_SECOND) && (maxIterations-- > 0u))
+    while ((m_time >= 1.0f / config::TICKS_PER_SECOND) && (maxIterations-- > 0u))
     {
-        m_time -= 1.0f / TICKS_PER_SECOND;
+        m_time -= 1.0f / config::TICKS_PER_SECOND;
 
         for (auto& it: m_cities) {
-            it.second->update();
+            it.second->update(1.0f / config::TICKS_PER_SECOND);
         }
     }
 }

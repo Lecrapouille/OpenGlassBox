@@ -85,7 +85,8 @@ Path::Path(PathType const& type)
 // -----------------------------------------------------------------------------
 Node& Path::addNode(Vector3f const& position)
 {
-    m_nodes.push_back(std::make_unique<Node>(m_nextNodeId++, position/*, *this*/));
+    m_nodes.push_back(std::make_unique<Node>(m_nextNodeId++, position));
+    m_nodes.back()->m_path = this;
     return *m_nodes.back();
 }
 
@@ -126,5 +127,10 @@ void Path::translate(Vector3f const direction)
     for (auto& it: m_nodes)
     {
         it->m_position += direction;
+    }
+
+    for (auto& it: m_ways)
+    {
+        it->updateMagnitude();
     }
 }

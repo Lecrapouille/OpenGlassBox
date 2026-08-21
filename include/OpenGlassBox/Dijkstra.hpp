@@ -5,36 +5,40 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
-#ifndef OPEN_GLASSBOX_DSTAR_HPP
-#  define OPEN_GLASSBOX_DSTAR_HPP
+#ifndef OPEN_GLASSBOX_DIJKSTRA_HPP
+#  define OPEN_GLASSBOX_DIJKSTRA_HPP
 
 #  include "OpenGlassBox/Path.hpp"
+#  include <random>
 #  include <unordered_set>
-#  include <vector>
 #  include <map>
 
 //==============================================================================
-//! \brief
+//! \brief One-hop dynamic router (best-first search toward the nearest Unit
+//! accepting the carried resources). Recalculated at every graph node.
 //==============================================================================
 class Dijkstra
 {
 public:
 
-    Node* findNextPoint(Node& fromNode, std::string & searchTarget,
-                        Resources & resources);
+    Dijkstra();
+
+    Node* findNextPoint(Node& fromNode, std::string& searchTarget,
+                        Resources& resources);
+
+    void setRandomSeed(unsigned seed);
 
 private:
 
-    Node* getPointWithLowestScorePlusHeuristicFromStart();
-    float heuristic(Node & p1, Node & p2);
+    float heuristic(Node& p1, Node& p2);
+    Node* randomNeighbor(Node& fromNode);
 
 private:
 
     std::unordered_set<Node*> m_closedSet;
-    std::vector<Node*>        m_openSet;
     std::map<Node*, Node*>    m_cameFrom;
     std::map<Node*, float>    m_scoreFromStart;
-    std::map<Node*, float>    m_scorePlusHeuristicFromStart;
+    std::mt19937              m_rng;
 };
 
 #endif

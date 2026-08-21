@@ -1,5 +1,5 @@
 #include "main.hpp"
-#include <iostream>
+#include "OpenGlassBox/Config.hpp"
 
 #define protected public
 #define private public
@@ -37,7 +37,7 @@ TEST(TestsAgent, Constructor)
     ASSERT_EQ(int32_t(a.m_position.y), 2);
     ASSERT_EQ(int32_t(a.m_position.z), 3);
     ASSERT_EQ(a.m_offset, 0.0f);
-    ASSERT_EQ(a.m_currentWay, nullptr); // FIXME temporary
+    ASSERT_EQ(a.m_currentWay, nullptr);
     ASSERT_EQ(a.m_lastNode, &n);
     ASSERT_EQ(a.m_lastNode, &(u.m_node));
     ASSERT_EQ(a.m_nextNode, nullptr);
@@ -53,29 +53,42 @@ TEST(TestsAgent, Move)
     Node& n1 = p.addNode(Vector3f(1.0f, 2.0f, 3.0f));
     Node& n2 = p.addNode(Vector3f(3.0f, 2.0f, 3.0f));
     WayType type2("Dirt", 0xAAAAAA);
-    /*Way& s1 =*/ p.addWay(type2, n1, n2);
+    Way& s1 = p.addWay(type2, n1, n2);
 
     Resources r;
-    UnitType type("Home");
-    type.color = 0xFF00FF;
-    type.radius = 1u;
-    type.resources = r;
-    Unit u(type, n1, city);
-    AgentType c("Worker", 5.0f, 3u, 42u);
-    Agent a(43u, c, u, r, "???");
+    UnitType homeType("Home");
+    homeType.color = 0xFF00FF;
+    homeType.radius = 1u;
+    homeType.resources = r;
+    homeType.targets.push_back("Home");
+    Unit u(homeType, n1, city);
+
+    UnitType factoryType("Factory");
+    factoryType.targets.push_back("People");
+    factoryType.resources.setCapacity("People", 10u);
+    city.addUnit(factoryType, n2);
+
+    AgentType worker("Worker", 5.0f, 3u, 42u);
+    Resources carried;
+    carried.addResource("People", 1u);
+    Agent a(43u, worker, u, carried, "People");
+
+    float const dt = 1.0f / config::TICKS_PER_SECOND;
 
     ASSERT_EQ(a.m_position.x, 1.0f);
     ASSERT_EQ(a.m_position.y, 2.0f);
     ASSERT_EQ(a.m_position.z, 3.0f);
     ASSERT_EQ(a.m_offset, 0.0f);
-    ASSERT_EQ(a.m_currentWay, nullptr); // TODO &s1);
+    ASSERT_EQ(a.m_currentWay, nullptr);
     ASSERT_EQ(a.m_lastNode, &n1);
-    ASSERT_EQ(a.m_lastNode, &(u.m_node));
-    ASSERT_EQ(&n1, &(u.m_node));
-    ASSERT_EQ(a.m_nextNode, nullptr); // &n2);
+    ASSERT_EQ(a.m_nextNode, nullptr);
 
-#if 0 // TODO
-    ASSERT_EQ(a.update(city), false); // TODO tester true
+    ASSERT_EQ(a.update(city.m_dijkstra, dt), false);
+    ASSERT_EQ(a.m_currentWay, &s1);
+    ASSERT_EQ(a.m_lastNode, &n1);
+    ASSERT_EQ(a.m_nextNode, &n2);
+
+    ASSERT_EQ(a.update(city.m_dijkstra, dt), false);
     ASSERT_GT(a.m_position.x, 1.0f);
     ASSERT_EQ(a.m_position.y, 2.0f);
     ASSERT_EQ(a.m_position.z, 3.0f);
@@ -83,5 +96,30 @@ TEST(TestsAgent, Move)
     ASSERT_EQ(a.m_currentWay, &s1);
     ASSERT_EQ(a.m_lastNode, &n1);
     ASSERT_EQ(a.m_nextNode, &n2);
-#endif
+}
+
+TEST(TestsAgent, ZeroLengthWayDoesNotCrash)
+{
+    City city("Paris", 32u, 32u);
+    Path& path = city.addPath(PathType("Road"));
+    Node& n1 = path.addNode(Vector3f(1.0f, 2.0f, 3.0f));
+    Node& n2 = path.addNode(Vector3f(1.0f, 2.0f, 3.0f));
+    path.addWay(WayType("Dirt", 0xAAAAAA), n1, n2);
+
+    UnitType homeType("Home");
+    homeType.targets.push_back("Home");
+    Unit u(homeType, n1, city);
+
+    UnitType factoryType("Factory");
+    factoryType.targets.push_back("People");
+    factoryType.resources.setCapacity("People", 10u);
+    city.addUnit(factoryType, n2);
+
+    Resources carried;
+    carried.addResource("People", 1u);
+    Agent a(1u, AgentType("Worker", 5.0f, 3u, 42u), u, carried, "People");
+
+    float const dt = 1.0f / config::TICKS_PER_SECOND;
+    ASSERT_NO_THROW(a.update(city.m_dijkstra, dt));
+    ASSERT_NO_THROW(a.update(city.m_dijkstra, dt));
 }

@@ -8,8 +8,12 @@
 #include "OpenGlassBox/Agent.hpp"
 #include "OpenGlassBox/Dijkstra.hpp"
 #include "OpenGlassBox/Unit.hpp"
-#include "OpenGlassBox/Config.hpp"
 #include <iostream>
+
+namespace
+{
+    static const float MIN_WAY_MAGNITUDE = 1e-6f;
+}
 
 //------------------------------------------------------------------------------
 Agent::Agent(uint32_t id, AgentType const& type, Unit& owner,
@@ -32,7 +36,7 @@ void Agent::translate(Vector3f const direction)
 }
 
 //------------------------------------------------------------------------------
-bool Agent::update(Dijkstra& dijkstra)
+bool Agent::update(Dijkstra& dijkstra, float dt)
 {
     // Reached the destination node ?
     if (m_nextNode == nullptr)
@@ -53,7 +57,7 @@ bool Agent::update(Dijkstra& dijkstra)
     else
     {
         // Move the Agent towards the next Node.
-        moveTowardsNextNode();
+        moveTowardsNextNode(dt);
     }
 
     return false;
@@ -94,39 +98,35 @@ void Agent::findNextNode(Dijkstra& dijkstra)
         return ;
 
     m_nextNode = dijkstra.findNextPoint(*m_lastNode, m_searchTarget, m_resources);
-    if (m_nextNode != nullptr)
+    if (m_nextNode == nullptr)
     {
-        m_currentWay = m_lastNode->getWayToNode(*m_nextNode);
-        if (m_currentWay != nullptr)
-        {
-            if (m_lastNode == &m_currentWay->from())
-                m_offset = 0.0f;
-            else
-                m_offset = 1.0f;
-        }
+        m_currentWay = nullptr;
+        return;
+    }
+
+    m_currentWay = m_lastNode->getWayToNode(*m_nextNode);
+    if (m_currentWay != nullptr)
+    {
+        if (m_lastNode == &m_currentWay->from())
+            m_offset = 0.0f;
         else
-        {
-            std::cout << "failure: getWayToNode" << std::endl;
-        }
+            m_offset = 1.0f;
+    }
+    else
+    {
+        std::cout << "failure: getWayToNode" << std::endl;
+        m_nextNode = nullptr;
+        m_currentWay = nullptr;
     }
 }
 
 //------------------------------------------------------------------------------
-void Agent::moveTowardsNextNode()
+void Agent::moveTowardsNextNode(float dt)
 {
-    float direction;
-
-#if !defined(NDEBUG)
-    // Unit's Node should be linked at least one arc (Way) of the graph (Path)
-    // else Agents cannot move towards a Path Way.
     if (m_currentWay == nullptr)
-    {
-        std::cerr << "Ill-formed Node: should have Ways to "
-                  << "make Agents move towards them" << std::endl;
-        m_position = m_lastNode->position();
-        return ;
-    }
-#endif
+        return;
+
+    float direction;
 
     if (m_nextNode == &(m_currentWay->to()))
     {
@@ -139,10 +139,18 @@ void Agent::moveTowardsNextNode()
         direction = -1.0f;
     }
 
-    // FIXME use dt()
-    m_offset += direction
-                * (m_type.speed / config::TICKS_PER_SECOND)
-                / m_currentWay->magnitude();
+    float const wayLength = m_currentWay->magnitude();
+    if (wayLength <= MIN_WAY_MAGNITUDE)
+    {
+        m_lastNode = m_nextNode;
+        m_nextNode = nullptr;
+        m_offset = 0.0f;
+        if (m_lastNode != nullptr)
+            m_position = m_lastNode->position();
+        return;
+    }
+
+    m_offset += direction * m_type.speed * dt / wayLength;
 
     // Reached node1 ?
     if (m_offset < 0.0f)
@@ -161,8 +169,6 @@ void Agent::moveTowardsNextNode()
     }
 
     // Update the world position of the Agent along the way.
-    // TODO: Faster m_position += m_deltaSlope where m_deltaSlope
-    // is the vector of delta deplacement along the slope
     m_position = m_currentWay->position1() +
                  (m_currentWay->position2() - m_currentWay->position1())
                  * m_offset;
