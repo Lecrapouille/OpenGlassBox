@@ -1,83 +1,105 @@
 # OpenGlassBox
 
-[OpenGlassBox](https://github.com/Lecrapouille/OpenGlassBox) is an implementation of Maxis SimCity 2013 simulation engine named GlassBox, based on the GDC conference 2012 [slides](http://www.andrewwillmott.com/talks/inside-glassbox). This project is neither Maxis's released source code nor an affiliated project to Maxis, but a port to C++14 of the nicely written code [MultiAgentSimulation](https://github.com/federicodangelo/MultiAgentSimulation), now more than 8 years old and written in C# for the Unity game engine.
+[OpenGlassBox](https://github.com/Lecrapouille/OpenGlassBox) is an implementation of the GlassBox simulation engine from Maxis's SimCity (2013), based on the [2012 GDC talk slides](http://www.andrewwillmott.com/talks/inside-glassbox). This project is neither Maxis's official source code nor affiliated with Maxis. It is a C++14 port of the well-written [MultiAgentSimulation](https://github.com/federicodangelo/MultiAgentSimulation) project — originally written in C# for the Unity game engine more than 8 years ago.
 
-This project compiles to:
+This project builds:
 
-- static/shared libraries of the simulation engine.
-- a standalone demonstration application displayed with SDL2 and DearImgui libraries.
+- static and shared libraries for the simulation engine;
+- a standalone demo application rendered with SDL2 and [Dear ImGui](https://github.com/ocornut/imgui).
 
-I separated these components because I was more interested in the simulation engine than the rendering.
-For rendering the demo application states, I chose SDL2 and DearImGui because this was
-the easier way for me, but please use your own personal/preferred rendering engine instead :)
+The simulation engine and the demo renderer are kept separate: I was more interested in the simulation logic than in rendering. SDL2 and Dear ImGui were chosen for the demo because they were the quickest way to visualize the simulation — feel free to plug in your own rendering engine instead :) I'm also looking for a game dev / artist ables to make a more interesting demo game.
 
 ## Screenshot of the standalone demo application
 
-Note: this screenshot may not refer to the latest development state, which also depends on the loaded simulation script.
-Click on the image to watch the video of the simulation.
+Note: this screenshot may not reflect the latest development state, which also depends on the loaded simulation script.
+Click on the image to watch a video of the simulation.
 [![OpenGlassBox](https://github.com/Lecrapouille/OpenGlassBox/blob/master/doc/OpenGlassBox.png)](https://youtu.be/zyLO9Ls_hME?feature=shared).
 
 In this screenshot:
 
 - In pink: houses (static).
 - In cyan: factories (static).
-- In yellow: People going from houses to factories (dynamic).
-- In white: People going from factories to houses (dynamic).
+- In yellow: people traveling from houses to factories (dynamic).
+- In white: people traveling from factories to houses (dynamic).
 - In grey: nodes (crossroads) and ways (roads) (static).
 - In blue: water produced by factories (dynamic).
 - In green: grass consuming water (dynamic).
-- Grid: city holding maps (grass, water), paths (ways, nodes), and units (producing agents moving along paths and carrying resources from one unit to another unit).
+- Grid: the city holding maps (grass, water), paths (ways, nodes), and units (agents moving along paths and carrying resources from one unit to another).
 
-## Compilation Prerequisites
+## Prerequisites
 
-- Operating Systems: Linux, Mac OS X. Should compile for Windows.
-- Compilation tools: C++14 (g++ or clang++), GNU Makefile. C++14 was used to use `std::make_unique`, otherwise the whole code is C++11 compatible.
-- Renderer libraries: SDL2, SDL2_image (You have to install them on your system: `sudo apt-get install libsdl2-dev libsdl2-image-dev`).
-- GUI libraries: [DearImGui](https://github.com/ocornut/imgui), [imgui_sdl](https://github.com/Tyyppi77/imgui_sdl) (automatically downloaded and compiled by the Makefile, but not installed).
-- Debug library (if and only if you compile the project in debug mode): [backward-cpp](https://github.com/bombela/backward-cpp) (automatically downloaded and compiled by the Makefile, but not installed).
-- Non-regression tests (optional and only for developers): [googletest](https://github.com/google/googletest) (you have to manually download the source code, compile it and install it on your system), gcov (you have to install it on your system: `sudo apt-get install`).
-- Makefile helper [MyMakefile](https://github.com/Lecrapouille/MyMakefile): (automatically downloaded when git cloning recursively).
+- **Operating systems**: Linux, macOS. Should compile on Windows as well.
+- **Build tools**: C++14 compiler (`g++` or `clang++`), GNU Make, Git. C++14 is required for `std::make_unique`; otherwise, the code is largely C++11-compatible.
+- **Renderer libraries**: SDL2 and SDL2_image (must be installed on your system; only needed for the demo — see below).
+- **GUI libraries**: [Dear ImGui](https://github.com/ocornut/imgui) and [imgui_sdl](https://github.com/Tyyppi77/imgui_sdl) — automatically downloaded and built by the Makefile (not installed system-wide; only needed for the demo).
+- **Debug library** (debug builds only): [backward-cpp](https://github.com/bombela/backward-cpp) — automatically downloaded and built by the Makefile (not installed system-wide).
+- **Unit tests** (optional, for developers): [Google Test](https://github.com/google/googletest) (must be downloaded, built, and installed manually), plus coverage tools (see below).
+- **Makefile helper** [MyMakefile](https://github.com/Lecrapouille/MyMakefile): automatically fetched when cloning with `--recursive`.
 
-Again: the logic and the rendering are separated in the code. SDL2 and DearImGui were used to display the game states for the demonstration. Use your own rendering engine instead.
+The simulation logic and the rendering layer are separated in the code. SDL2 and Dear ImGui are only used to display simulation states in the demo — use your own rendering engine for integration.
 
-## Download, compile and run
+### Installing system packages
 
-- Download git source recursively:
+**Debian / Ubuntu**
+
+```sh
+# Required to build the demo
+sudo apt-get install build-essential git pkg-config libsdl2-dev libsdl2-image-dev
+
+# Optional: debug builds (backward-cpp) and code coverage
+sudo apt-get install libdw-dev lcov
+```
+
+**Fedora**
+
+```sh
+# Required to build the demo
+sudo dnf install gcc-c++ make git pkgconf-pkg-config sdl2-compat-devel SDL2_image-devel
+
+# Optional: debug builds (backward-cpp) and code coverage
+sudo dnf install elfutils-devel lcov cmake
+```
+
+On Fedora, `cmake` is only needed if you build and install Google Test from source (see the CI workflow for an example).
+
+## Download, compile, and run
+
+Clone the repository recursively:
 
 ```sh
 git clone https://github.com/Lecrapouille/OpenGlassBox.git --recursive
 ```
 
-- Compile the project (libs + demo):
+Build the project (libraries + demo):
 
 ```sh
 cd OpenGlassBox/
 make download-external-libs
-make CXX=g++ -j8
+make -j8
 ```
 
-Where `-j8` should be adapted to match the number of CPU cores.
+Adjust `-j8` to match the number of CPU cores on your machine. You can also change your compiler: `make CXX=g++ -j8` if wanted.
 
-- Run the OpenGlassBox demo:
+Run the demo:
 
 ```sh
 ./demo/build-release/Demo/Demo
 ```
 
-- (Optional) Unit test with code coverage:
+(Optional) Run unit tests with code coverage:
 
 ```sh
-cd OpenGlassBox/test
+cd OpenGlassBox/tests
 make coverage -j8
 ```
 
-- (Optional) To install OpenGlassBox on your operating system:
+(Optional) Install OpenGlassBox on your system:
 
 ```sh
 sudo make install
 ```
 
-- Example of how to link OpenGlassBox in your project (once OpenGlassBox has been installed on your operating system):
+Example: link against OpenGlassBox from another project (after installation):
 
 ```sh
 git clone https://github.com/Lecrapouille/LinkAgainstMyLibs.git --recursive
@@ -86,51 +108,49 @@ make -j8
 ./build/OpenGlassBox
 ```
 
-For Mac OS X users, a bundle application is also created inside the build folder.
+On macOS, a bundle application is also created inside the build folder.
 
-## Notes concerning the port
+## Notes on the port
 
-Here are the current changes made from the original source code:
+Changes made compared to the original source code:
 
-- The original code was made in C# for the Unity engine. Since I never develop in C#, I made a port to C++.
-- The original project was using the same names as the GDC conference. I renamed classes whose names confused me:
-  - `Box` is now named `City`.
-  - `Point` and `Segment` are now named `Node` and `Way` (since these match graph theory terms better).
-  - `ResourceBinCollection` is simply named `Resources`.
-  - `SimulationDefinitionLoader` is now renamed `ScriptParser`.
-- The original project did not implement the `Area` class (aka `Zone`). `Area` manages `Units` (creation, upgrade, destruction). This still needs to be added to this project.
-- A `Unit` shall be coupled to a `Node` of the `Path`. This is not particularly nice since this will create a lot of unnecessary graph nodes.
-- The original project implemented a dynamic A* algorithm in `Path::FindNextPoint`. I have created a `Dijkstra` class instead, but a real traffic algorithm should be developed.
-- Currently, I made a quick & dirty straightforward script parser. My code is less good than the original one. It was acceptable because I wished to replace the script syntax with [Forth](https://esp32.arduino-forth.com/) (which has a smaller footprint than Lua).
-- The original project did not come with unit tests or comments. I've added them!
-- Since I was more interested in the simulation than the rendering:
-  - dependencies on the Unity game engine and Decorator classes for using it have not been ported.
-  - I have separated the library from the demo application.
-  - For rendering the demo application, I'm not using a game engine such as Unity. SDL2 is enough to draw lines and dots.
+- The original code was written in C# for the Unity engine. Since I'm never developing in C#, I ported it to C++.
+- The original project reused names from the GDC talk. I renamed classes whose names I found confusing:
+  - `Box` is now `City`.
+  - `Point` and `Segment` are now `Node` and `Way` (better aligned with graph theory terminology).
+  - `ResourceBinCollection` is now `Resources`.
+  - `SimulationDefinitionLoader` is now `ScriptParser`.
+- The original project did not implement the `Area` class (a.k.a. `Zone`). `Area` manages `Unit` creation, upgrade, and destruction. This still needs to be added.
+- A `Unit` is coupled to a `Node` on a `Path`. This is not ideal, as it creates many unnecessary graph nodes.
+- The original project implemented a dynamic A* algorithm in `Path::FindNextPoint`. I replaced it with a `Dijkstra` class, but a proper traffic-aware routing algorithm is still needed.
+- I implemented a quick-and-dirty script parser that is less elegant than the original. This was acceptable because I planned to replace the script syntax with [Forth](https://esp32.arduino-forth.com/) (which has a smaller footprint than Lua).
+- The original project had no unit tests or comments. I added both.
+- Since I was more interested in the simulation than in rendering:
+  - dependencies on the Unity engine and its decorator classes were not ported;
+  - the library was separated from the demo application;
+  - the demo uses SDL2 to draw lines and dots instead of a full game engine such as Unity.
 
-## How to use the demo application?
+## Using the demo application
 
-- For the moment, you cannot construct your game interactively. A prebuilt game is made in `demo/Demo.cpp` inside `bool GlassBox::initSimulation()` which you can adapt to create your own map.
+- You cannot build a city interactively yet. A sample simulation is defined in `demo/Demo.cpp` inside `bool GlassBox::initSimulation()` — edit this function to create your own map.
 - The simulation script is located at `data/Simulations/TestCity.txt`.
-- Once the demo has started, press the `d` key to see the simulation.
-- During the simulation, you can press the `d` key to show/hide the debug window showing the internal states of the simulation.
+- Once the demo has started, press the `d` key to toggle the debug window showing the internal state of the simulation.
 
-## Ideas for the future?
+## Future ideas
 
 - Import [OpenStreetMap](https://www.openstreetmap.org) maps.
-- Implement some ideas explained in this video [Exploring SimCity: A Conscious Process of Discovery](https://youtu.be/eZfj7LEFT98).
-- Update the dynamic A* algorithm to take into account the traffic flow instead of just the shorter path.
-- Parallelize the algorithm: dispatch over all CPU cores (i.e. using OpenMP) or distribute computations (i.e. network, peer to peer).
-- `Agent` should be directly attached to `Ways` and for cars, know the distance to the next `Agent`.
-- I would like to show and manipulate a SimCity city as a spreadsheet: insert/edit cells to add simulation rules. This project could be merged
-  with [SimTaDyn](https://github.com/Lecrapouille/SimTaDyn).
+- Implement ideas from [Exploring SimCity: A Conscious Process of Discovery](https://youtu.be/eZfj7LEFT98).
+- Improve pathfinding to account for traffic flow instead of simply choosing the shortest path.
+- Parallelize the simulation: dispatch work across CPU cores (e.g. with OpenMP) or distribute it over the network (peer-to-peer).
+- Attach `Agent` objects directly to `Way` segments; for cars, track the distance to the next `Agent`.
+- Display and edit a SimCity-like city as a spreadsheet: insert and edit cells to define simulation rules. This project could be merged with [SimTaDyn](https://github.com/Lecrapouille/SimTaDyn).
 
 ## References
 
-- Slides from the GDC conference can be downloaded here http://www.andrewwillmott.com/talks/inside-glassbox
-- Since the video of this conference is no longer available, an alternative GDC conference video can be found here: https://youtu.be/eZfj7LEFT98
-- A Scilab traffic assignment toolbox: https://www.rocq.inria.fr/metalau/ciudadsim and https://www.rocq.inria.fr/metalau/ciudadsim/ftp/CS5/manual/manual.pdf For more information on this work, you can find other PDFs at https://jpquadrat.github.io/ in section *Modélisation du Trafic Routier*
-- A tutorial to make a city builder (more focused on rendering with the SFML library) https://www.binpress.com/creating-city-building-game-with-sfml/
-- Moving cars: http://lo-th.github.io/root/traffic/ (source code https://github.com/lo-th/root/tree/gh-pages/traffic, a fork based on https://github.com/volkhin/RoadTrafficSimulator)
-- A work-in-progress, open-source, multi-player city simulation game: https://github.com/citybound/citybound
-- An open-source version of the game Transport Tycoon: https://github.com/OpenTTD/OpenTTD
+- GDC talk slides: http://www.andrewwillmott.com/talks/inside-glassbox
+- Since the original conference video is no longer available, an alternative GDC talk can be found here: https://youtu.be/eZfj7LEFT98
+- A Scilab traffic assignment toolbox: https://www.rocq.inria.fr/metalau/ciudadsim and https://www.rocq.inria.fr/metalau/ciudadsim/ftp/CS5/manual/manual.pdf. For more information, see other PDFs at https://jpquadrat.github.io/ in the section *Modélisation du Trafic Routier*.
+- A tutorial for building a city builder (focused on rendering with SFML): https://www.binpress.com/creating-city-building-game-with-sfml/
+- Moving cars: http://lo-th.github.io/root/traffic/ (source code: https://github.com/lo-th/root/tree/gh-pages/traffic, a fork of https://github.com/volkhin/RoadTrafficSimulator)
+- A work-in-progress, open-source, multiplayer city simulation game: https://github.com/citybound/citybound
+- An open-source version of Transport Tycoon: https://github.com/OpenTTD/OpenTTD
