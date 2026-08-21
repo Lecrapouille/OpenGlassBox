@@ -1,19 +1,23 @@
+// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-OpenGlassBox-Commercial
+// Copyright (c) 2020-2026 Quentin Quadrat
+//
+// This file is part of OpenGlassBox. It is available under the GNU GPL v3 or,
+// for users who cannot use the GPL, under a commercial license.
+// See LICENSING.md for details.
+
 #include "main.hpp"
 #include "Display/DearImGui.hpp"
 #include "OpenGlassBox/Simulation.hpp"
 #include <sstream>
 
-//------------------------------------------------------------------------------
 #define COLOR(a) ImVec4(                                \
         float(((a)->color() >> 16) & 0xFF),             \
         float(((a)->color() >> 8) & 0xFF),              \
         float(((a)->color() >> 0) & 0xFF),              \
         1.0f)
 
-//------------------------------------------------------------------------------
 static char buffer[1024];
 
-//------------------------------------------------------------------------------
 static void debugAgents(City const& city)
 {
     if (!ImGui::CollapsingHeader("Agents"))
@@ -39,7 +43,6 @@ static void debugAgents(City const& city)
     }
 }
 
-//------------------------------------------------------------------------------
 static void debugUnits(City const& city)
 {
     if (!ImGui::CollapsingHeader("Units"))
@@ -70,7 +73,6 @@ static void debugUnits(City const& city)
     }
 }
 
-//------------------------------------------------------------------------------
 static void debugMaps(City const& city)
 {
     if (!ImGui::CollapsingHeader("Maps"))
@@ -137,7 +139,6 @@ static void debugMaps(City const& city)
     }
 }
 
-//------------------------------------------------------------------------------
 static void debugPaths(City const& city)
 {
     if (!ImGui::CollapsingHeader("Paths"))
@@ -199,7 +200,6 @@ static void debugPaths(City const& city)
     }
 }
 
-//------------------------------------------------------------------------------
 static void debugCity(City const& city)
 {
     debugAgents(city);
@@ -208,7 +208,6 @@ static void debugCity(City const& city)
     debugPaths(city);
 }
 
-//------------------------------------------------------------------------------
 void GlassBox::debugSimulation()
 {
     ImGui::Combo("City", &m_city_combo_item, m_cityNames);

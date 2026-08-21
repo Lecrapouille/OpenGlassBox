@@ -1,4 +1,10 @@
-//=====================================================================
+// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-OpenGlassBox-Commercial
+// Copyright (c) 2020-2026 Quentin Quadrat
+//
+// This file is part of OpenGlassBox. It is available under the GNU GPL v3 or,
+// for users who cannot use the GPL, under a commercial license.
+// See LICENSING.md for details.
+
 // MyLogger: A basic logger.
 // Copyright 2018 Quentin Quadrat <lecrapouille@gmail.com>
 //
@@ -16,8 +22,6 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with MyLogger.  If not, see <http://www.gnu.org/licenses/>.
-//=====================================================================
-
 #include "Display/DataPath.hpp"
 #include <sstream>
 #include <sys/stat.h>
@@ -26,7 +30,6 @@
 #  include <CoreFoundation/CFBundle.h>
 #endif
 
-//------------------------------------------------------------------------------
 #ifdef __APPLE__
 std::string osx_get_resources_dir(std::string const& file)
 {
@@ -61,14 +64,12 @@ std::string osx_get_resources_dir(std::string const& file)
 }
 #endif
 
-//------------------------------------------------------------------------------
 DataPath::DataPath(std::string const& path, char const delimiter)
   : m_delimiter(delimiter)
 {
     add(path);
 }
 
-//------------------------------------------------------------------------------
 void DataPath::add(std::string const& path)
 {
     if (!path.empty())
@@ -77,33 +78,28 @@ void DataPath::add(std::string const& path)
     }
 }
 
-//------------------------------------------------------------------------------
 void DataPath::reset(std::string const& path)
 {
     m_search_paths.clear();
     split(path);
 }
 
-//------------------------------------------------------------------------------
 void DataPath::clear()
 {
     m_search_paths.clear();
 }
 
-//------------------------------------------------------------------------------
 void DataPath::remove(std::string const& path)
 {
     m_search_paths.remove(path);
 }
 
-//------------------------------------------------------------------------------
 bool DataPath::exist(std::string const& path) const
 {
     struct stat buffer;
     return stat(path.c_str(), &buffer) == 0;
 }
 
-//------------------------------------------------------------------------------
 std::pair<std::string, bool> DataPath::find(std::string const& filename) const
 {
     if (DataPath::exist(filename))
@@ -120,7 +116,6 @@ std::pair<std::string, bool> DataPath::find(std::string const& filename) const
     return std::make_pair(std::string(), false);
 }
 
-//------------------------------------------------------------------------------
 std::string DataPath::expand(std::string const& filename) const
 {
     for (auto const& it: m_search_paths)
@@ -133,7 +128,6 @@ std::string DataPath::expand(std::string const& filename) const
     return filename;
 }
 
-//------------------------------------------------------------------------------
 bool DataPath::open(std::string& filename, std::ifstream& ifs, std::ios_base::openmode mode) const
 {
     ifs.open(filename.c_str(), mode);
@@ -155,7 +149,6 @@ bool DataPath::open(std::string& filename, std::ifstream& ifs, std::ios_base::op
     return false;
 }
 
-//------------------------------------------------------------------------------
 bool DataPath::open(std::string& filename, std::ofstream& ofs, std::ios_base::openmode mode) const
 {
     ofs.open(filename.c_str(), mode);
@@ -177,7 +170,6 @@ bool DataPath::open(std::string& filename, std::ofstream& ofs, std::ios_base::op
     return false;
 }
 
-//------------------------------------------------------------------------------
 bool DataPath::open(std::string& filename, std::fstream& fs, std::ios_base::openmode mode) const
 {
     fs.open(filename.c_str(), mode);
@@ -199,7 +191,6 @@ bool DataPath::open(std::string& filename, std::fstream& fs, std::ios_base::open
     return false;
 }
 
-//------------------------------------------------------------------------------
 std::vector<std::string> DataPath::pathes() const
 {
     std::vector<std::string> res;
@@ -212,7 +203,6 @@ std::vector<std::string> DataPath::pathes() const
     return res;
 }
 
-//------------------------------------------------------------------------------
 std::string DataPath::toString() const
 {
     std::string string_path;
@@ -228,7 +218,6 @@ std::string DataPath::toString() const
     return string_path;
 }
 
-//------------------------------------------------------------------------------
 void DataPath::split(std::string const& path)
 {
     std::stringstream ss(path);

@@ -1,1 +1,12 @@
+# Authors
+
+## Main author
+
 Quentin Quadrat <lecrapouille@gmail.com>
+
+## AI assistance
+
+From OpenGlassBox version > 0.2.1 onward, git commits may include
+`Co-authored-by` / `AI Co-authored-by` trailers (Cursor, Claude, and similar
+tools). Source file headers name only the human copyright holder; see git
+history for AI co-authorship.

@@ -1,9 +1,9 @@
-//-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
-// https://github.com/Lecrapouille/OpenGlassBox
-// Based on https://github.com/federicodangelo/MultiAgentSimulation
-// Distributed under MIT License.
-//-----------------------------------------------------------------------------
+// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-OpenGlassBox-Commercial
+// Copyright (c) 2020-2026 Quentin Quadrat
+//
+// This file is part of OpenGlassBox. It is available under the GNU GPL v3 or,
+// for users who cannot use the GPL, under a commercial license.
+// See LICENSING.md for details.
 
 #include "OpenGlassBox/Dijkstra.hpp"
 #include "OpenGlassBox/Vector.hpp"
@@ -11,7 +11,6 @@
 #include <algorithm>
 #include <limits>
 
-//------------------------------------------------------------------------------
 template<class T>
 static void remove(std::vector<T>& vec, T item)
 {
@@ -28,21 +27,18 @@ static void remove(std::vector<T>& vec, T item)
     }
 }
 
-//------------------------------------------------------------------------------
 template<class T, class U>
 static void remove(std::map<T, U>& map, T item)
 {
     map.erase(map.find(item));
 }
 
-//------------------------------------------------------------------------------
 template<class T>
 static bool contains(std::vector<T>& vec, T item)
 {
     return std::find(vec.begin(), vec.end(), item) != vec.end();
 }
 
-//------------------------------------------------------------------------------
 static bool getUnitWithTargetAndCapacity(Node* current,
                                          std::string & searchTarget,
                                          Resources & resources)
@@ -59,7 +55,6 @@ static bool getUnitWithTargetAndCapacity(Node* current,
     return false;
 }
 
-//------------------------------------------------------------------------------
 Node* Dijkstra::findNextPoint(Node & fromNode, std::string & searchTarget,
                               Resources & resources)
 {
@@ -129,7 +124,6 @@ Node* Dijkstra::findNextPoint(Node & fromNode, std::string & searchTarget,
     return nullptr;
 }
 
-//------------------------------------------------------------------------------
 Node* Dijkstra::getPointWithLowestScorePlusHeuristicFromStart()
 {
     float lowestValue = std::numeric_limits<float>::max();
@@ -150,7 +144,6 @@ Node* Dijkstra::getPointWithLowestScorePlusHeuristicFromStart()
     return lowestPoint;
 }
 
-//------------------------------------------------------------------------------
 float Dijkstra::heuristic(Node& p1, Node& p2)
 {
     return squaredMagnitude(p2.position() - p1.position());

@@ -1,16 +1,15 @@
-//-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
-// https://github.com/Lecrapouille/OpenGlassBox
-// Based on https://github.com/federicodangelo/MultiAgentSimulation
-// Distributed under MIT License.
-//-----------------------------------------------------------------------------
+// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-OpenGlassBox-Commercial
+// Copyright (c) 2020-2026 Quentin Quadrat
+//
+// This file is part of OpenGlassBox. It is available under the GNU GPL v3 or,
+// for users who cannot use the GPL, under a commercial license.
+// See LICENSING.md for details.
 
 #include "OpenGlassBox/Simulation.hpp"
 
 #define MAX_ITERATIONS_PER_UPDATE 20u
 #define TICKS_PER_SECOND 200.0f
 
-//------------------------------------------------------------------------------
 Simulation::Simulation(uint32_t gridSizeU, uint32_t gridSizeV)
     : m_gridSizeU(gridSizeU),
       m_gridSizeV(gridSizeV)
@@ -25,7 +24,6 @@ void Simulation::setListener(Simulation::Listener& listener)
     m_listener = &listener;
 }
 
-//------------------------------------------------------------------------------
 void Simulation::update(float const deltaTime)
 {
     m_time += deltaTime;
@@ -42,7 +40,6 @@ void Simulation::update(float const deltaTime)
     }
 }
 
-//------------------------------------------------------------------------------
 City& Simulation::addCity(std::string const& name, Vector3f position)
 {
     City& city = *(m_cities[name] = std::make_unique<City>(name, position, m_gridSizeU, m_gridSizeV));
@@ -50,13 +47,11 @@ City& Simulation::addCity(std::string const& name, Vector3f position)
     return city;
 }
 
-//------------------------------------------------------------------------------
 City& Simulation::getCity(std::string const& name)
 {
     return *m_cities.at(name);
 }
 
-//------------------------------------------------------------------------------
 City const& Simulation::getCity(std::string const& name) const
 {
     return *m_cities.at(name);

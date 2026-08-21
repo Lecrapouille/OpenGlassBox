@@ -1,4 +1,10 @@
-//=====================================================================
+// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-OpenGlassBox-Commercial
+// Copyright (c) 2020-2026 Quentin Quadrat
+//
+// This file is part of OpenGlassBox. It is available under the GNU GPL v3 or,
+// for users who cannot use the GPL, under a commercial license.
+// See LICENSING.md for details.
+
 // OpenGLCppWrapper: A C++11 OpenGL 'Core' wrapper.
 // Copyright 2018-2019 Quentin Quadrat <lecrapouille@gmail.com>
 //
@@ -16,8 +22,6 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with OpenGLCppWrapper.  If not, see <http://www.gnu.org/licenses/>.
-//=====================================================================
-
 // *****************************************************************************
 //! \file This file just gathers imgui cpp files and around them with pragma
 //! for reducing compilation warnings. Yep this is misery!
@@ -25,10 +29,7 @@
 
 #include "Display/DearImGui.hpp"
 
-//==============================================================================
 // Add some extra helpers
-//==============================================================================
-
 namespace ImGui
 {
 static auto vector_getter = [](void* vec, int idx, const char** out_text)

@@ -1,9 +1,9 @@
-//-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
-// https://github.com/Lecrapouille/OpenGlassBox
-// Based on https://github.com/federicodangelo/MultiAgentSimulation
-// Distributed under MIT License.
-//-----------------------------------------------------------------------------
+// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-OpenGlassBox-Commercial
+// Copyright (c) 2020-2026 Quentin Quadrat
+//
+// This file is part of OpenGlassBox. It is available under the GNU GPL v3 or,
+// for users who cannot use the GPL, under a commercial license.
+// See LICENSING.md for details.
 
 #ifndef OPEN_GLASSBOX_RULE_HPP
 #  define OPEN_GLASSBOX_RULE_HPP
@@ -15,9 +15,7 @@ class City;
 class Unit;
 class Resources;
 
-//==============================================================================
 //! \brief Structure holding all information needed to execute simulation rules.
-//==============================================================================
 struct RuleContext
 {
     //! \brief Non null pointer on the City.
@@ -34,9 +32,7 @@ struct RuleContext
     uint32_t radius = 0u;
 };
 
-//==============================================================================
 //! \brief Base class interfacing command defined from simulation scripts
-//==============================================================================
 class IRuleCommand
 {
 public:
@@ -62,9 +58,7 @@ public:
     virtual std::string type() = 0;
 };
 
-//==============================================================================
 //! \brief
-//==============================================================================
 class IRuleValue
 {
 public:
@@ -100,9 +94,7 @@ public:
     virtual std::string const& type() const = 0;
 };
 
-//==============================================================================
 //! \brief
-//==============================================================================
 class IRule
 {
 public:
@@ -162,9 +154,7 @@ private:
     std::vector<IRuleCommand*> m_commands;
 };
 
-//==============================================================================
 //! \brief
-//==============================================================================
 class RuleMap: public IRule
 {
 public:
@@ -198,9 +188,7 @@ private:
     uint32_t m_randomTilesPercent;
 };
 
-//==============================================================================
 //! \brief
-//==============================================================================
 class RuleUnit: public IRule
 {
 public:

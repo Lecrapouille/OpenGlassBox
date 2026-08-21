@@ -1,9 +1,9 @@
-//-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
-// https://github.com/Lecrapouille/OpenGlassBox
-// Based on https://github.com/federicodangelo/MultiAgentSimulation
-// Distributed under MIT License.
-//-----------------------------------------------------------------------------
+// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-OpenGlassBox-Commercial
+// Copyright (c) 2020-2026 Quentin Quadrat
+//
+// This file is part of OpenGlassBox. It is available under the GNU GPL v3 or,
+// for users who cannot use the GPL, under a commercial license.
+// See LICENSING.md for details.
 
 #ifndef OPEN_GLASSBOX_SIMULATION_HPP
 #define OPEN_GLASSBOX_SIMULATION_HPP
@@ -11,11 +11,9 @@
 #  include "OpenGlassBox/City.hpp"
 #  include "OpenGlassBox/ScriptParser.hpp"
 
-//==============================================================================
 //! \brief Entry point class managing (add, get, remove) a collection of Cities
 //! and running simulation on them.
 //! In this current phase of development Cities are not connected between them.
-//==============================================================================
 class Simulation: public Script
 {
 public:

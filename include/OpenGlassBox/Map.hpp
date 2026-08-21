@@ -1,9 +1,9 @@
-//-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
-// https://github.com/Lecrapouille/OpenGlassBox
-// Based on https://github.com/federicodangelo/MultiAgentSimulation
-// Distributed under MIT License.
-//-----------------------------------------------------------------------------
+// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-OpenGlassBox-Commercial
+// Copyright (c) 2020-2026 Quentin Quadrat
+//
+// This file is part of OpenGlassBox. It is available under the GNU GPL v3 or,
+// for users who cannot use the GPL, under a commercial license.
+// See LICENSING.md for details.
 
 #ifndef OPEN_GLASSBOX_MAP_HPP
 #  define OPEN_GLASSBOX_MAP_HPP
@@ -16,12 +16,10 @@
 
 class City;
 
-//==============================================================================
 //! \brief Maps are simple uniform size grids. A Map represents a single type of
 //! resource in the environment (coal, oil, forest but also air pollution, land
 //! value, desirability ...). Each cell of a Map is a Resource. Units interact
 //! with maps through their footprint. Resources are limited.
-//==============================================================================
 class Map
 {
 public:

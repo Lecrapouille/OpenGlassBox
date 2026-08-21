@@ -1,9 +1,9 @@
-//-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
-// https://github.com/Lecrapouille/OpenGlassBox
-// Based on https://github.com/federicodangelo/MultiAgentSimulation
-// Distributed under MIT License.
-//-----------------------------------------------------------------------------
+// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-OpenGlassBox-Commercial
+// Copyright (c) 2020-2026 Quentin Quadrat
+//
+// This file is part of OpenGlassBox. It is available under the GNU GPL v3 or,
+// for users who cannot use the GPL, under a commercial license.
+// See LICENSING.md for details.
 
 #include "main.hpp"
 
@@ -22,7 +22,6 @@ void GlassBox::onCityAdded(City& city)
     }
 }
 
-//------------------------------------------------------------------------------
 void GlassBox::onCityRemoved(City& city)
 {
     std::cout << "City " << city.name() << " removed" << std::endl;
@@ -34,52 +33,44 @@ void GlassBox::onCityRemoved(City& city)
     }
 }
 
-//------------------------------------------------------------------------------
 void GlassBox::onMapAdded(Map& map)
 {
     std::cout << "Map " << map.type() << " added" << std::endl;
 }
 
-//------------------------------------------------------------------------------
 void GlassBox::onMapRemoved(Map& map)
 {
     std::cout << "Map " << map.type() << " removed" << std::endl;
 }
 
-//------------------------------------------------------------------------------
 void GlassBox::onPathAdded(Path& path)
 {
     std::cout << "Path " << path.type() << " added" << std::endl;
 }
 
-//------------------------------------------------------------------------------
 void GlassBox::onPathRemoved(Path& path)
 {
     std::cout << "Path " << path.type() << " removed" << std::endl;
 }
 
-//------------------------------------------------------------------------------
 void GlassBox::onUnitAdded(Unit& unit)
 {
     std::cout << "Unit " << unit.type() << " "
               << unit.id() << " added" << std::endl;
 }
 
-//------------------------------------------------------------------------------
 void GlassBox::onUnitRemoved(Unit& unit)
 {
     std::cout << "Unit " << unit.type() << " "
               << unit.id() << " removed" << std::endl;
 }
 
-//------------------------------------------------------------------------------
 void GlassBox::onAgentAdded(Agent& agent)
 {
     std::cout << "Agent " << agent.type() << " "
               << agent.id() << " added" << std::endl;
 }
 
-//------------------------------------------------------------------------------
 void GlassBox::onAgentRemoved(Agent& agent)
 {
     std::cout << "Agent " << agent.type() << " "

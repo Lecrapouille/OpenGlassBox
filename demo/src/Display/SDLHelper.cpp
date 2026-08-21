@@ -1,9 +1,9 @@
-//-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
-// https://github.com/Lecrapouille/OpenGlassBox
-// Based on https://github.com/federicodangelo/MultiAgentSimulation
-// Distributed under MIT License.
-//-----------------------------------------------------------------------------
+// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-OpenGlassBox-Commercial
+// Copyright (c) 2020-2026 Quentin Quadrat
+//
+// This file is part of OpenGlassBox. It is available under the GNU GPL v3 or,
+// for users who cannot use the GPL, under a commercial license.
+// See LICENSING.md for details.
 
 #include "Display/SDLHelper.hpp"
 #include <ctype.h>
@@ -11,7 +11,6 @@
 #define GLYPH_WIDTH  (18)
 #define GLYPH_HEIGHT (29)
 
-//------------------------------------------------------------------------------
 static void blitRect(SDL_Renderer* renderer, SDL_Texture* texture,
                      SDL_Rect* src, int x, int y)
 {
@@ -25,9 +24,7 @@ static void blitRect(SDL_Renderer* renderer, SDL_Texture* texture,
     SDL_RenderCopy(renderer, texture, src, &dest);
 }
 
-//------------------------------------------------------------------------------
 // Original code https://www.parallelrealities.co.uk/tutorials/
-//------------------------------------------------------------------------------
 void drawText(SDL_Renderer* renderer, SDL_Texture* fontTexture,
               int x, int y, Uint8 r, Uint8 g, Uint8 b,
               TextAlignment align, const char *format, ...)

@@ -1,9 +1,9 @@
-//-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
-// https://github.com/Lecrapouille/OpenGlassBox
-// Based on https://github.com/federicodangelo/MultiAgentSimulation
-// Distributed under MIT License.
-//-----------------------------------------------------------------------------
+// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-OpenGlassBox-Commercial
+// Copyright (c) 2020-2026 Quentin Quadrat
+//
+// This file is part of OpenGlassBox. It is available under the GNU GPL v3 or,
+// for users who cannot use the GPL, under a commercial license.
+// See LICENSING.md for details.
 
 #ifndef OPEN_GLASSBOX_RESOURCES_HPP
 #  define OPEN_GLASSBOX_RESOURCES_HPP
@@ -11,12 +11,10 @@
 #  include "OpenGlassBox/Resource.hpp"
 #  include <vector>
 
-//==============================================================================
 //! \brief Resources come in a container. This class manages a collection of
 //! heterogeneous resources. A Resource are initialy empty but with inifinite
 //! capacity.
 //! Example: House = { Citizen 0/2, Money 1/10, Electricity 3/3, Trash 0/1 }.
-//==============================================================================
 class Resources
 {
 public:

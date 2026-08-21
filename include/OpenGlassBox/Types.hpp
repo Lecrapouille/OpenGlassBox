@@ -1,30 +1,25 @@
-//-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
-// https://github.com/Lecrapouille/OpenGlassBox
-// Based on https://github.com/federicodangelo/MultiAgentSimulation
-// Distributed under MIT License.
-//-----------------------------------------------------------------------------
+// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-OpenGlassBox-Commercial
+// Copyright (c) 2020-2026 Quentin Quadrat
+//
+// This file is part of OpenGlassBox. It is available under the GNU GPL v3 or,
+// for users who cannot use the GPL, under a commercial license.
+// See LICENSING.md for details.
 
 #ifndef OPEN_GLASSBOX_TYPES_HPP
 #  define OPEN_GLASSBOX_TYPES_HPP
 
 #  include "OpenGlassBox/Resources.hpp"
 
-//==========================================================================
 //! This file defines all types holding information after the parsing of a
 //! simulation script.
-//==========================================================================
-
 class RuleUnit;
 class RuleMap;
 class IRuleCommand;
 
-//==========================================================================
 //! \brief Type of RuleMap. Class constructed during the parsing of simulation
 //! scripts. Examples:
 //!  - map Water remove 10
 //!  - map Grass add 1
-//==========================================================================
 class RuleMapType
 {
 public:
@@ -42,12 +37,10 @@ public:
     std::vector<IRuleCommand*> commands; // Shall not be free and pointer stay valid.
 };
 
-//==========================================================================
 //! \brief Type of RuleMap. Class constructed during the parsing of simulation
 //! scripts. Examples:
 //!  - map Water remove 10
 //!  - map Grass add 1
-//==========================================================================
 class RuleUnitType
 {
 public:
@@ -64,13 +57,11 @@ public:
     std::vector<IRuleCommand*> commands; // Shall not be free and pointer stay valid.
 };
 
-//==========================================================================
 //! \brief Type of Units (Home, Work ...).
 //! Class constructed during the parsing of simulation scripts.
 //! Examples:
 //!  - unit Home color 0xFF00FF radius 1 rules [ SendPeopleToWork ]
 //!          targets [ Home ] capacities [ People 4 ] resources [ People 4 ]
-//==========================================================================
 class UnitType
 {
 public:
@@ -89,13 +80,11 @@ public:
     std::vector<std::string> targets;
 };
 
-//==========================================================================
 //! \brief Type of Map (water, grass ...).
 //! Class constructed during the parsing of simulation scripts.
 //! Examples:
 //!  - map Water color 0x0000FF capacity 100 rules [ ]
 //!  - map Grass color 0x00FF00 capacity 10 rules [ CreateGrass ]
-//==========================================================================
 class MapType
 {
 public:
@@ -117,7 +106,6 @@ public:
     std::vector<RuleMap*> rules; // Shall not be free and pointer stay valid.
 };
 
-//==============================================================================
 //! \brief Type of Agents (people, worker ...).
 //! Class constructed during the parsing of simulation scripts. This class is
 //! shared as read only by several Agent and therefore used as const reference.
@@ -125,7 +113,6 @@ public:
 //! Examples:
 //!  - agent People color 0xFFFF00 speed 10.5
 //!  - agent Worker color 0xFFFFFF speed 10 radius 3
-//==============================================================================
 class AgentType
 {
 public:
@@ -159,12 +146,10 @@ public:
     uint32_t    color;
 };
 
-//==========================================================================
 //! \brief Type of Ways (people, worker ...).
 //! Class constructed during the parsing of simulation scripts.
 //! Examples:
 //!  - segment Dirt color 0xAAAAAA
-//==========================================================================
 class WayType
 {
 public:
@@ -183,12 +168,10 @@ public:
     uint32_t    color;
 };
 
-//==========================================================================
 //! \brief Type of Ways (people, worker ...).
 //! Class constructed during the parsing of simulation scripts.
 //! Examples:
 //!  - path Road color 0xAAAAAA
-//==========================================================================
 class PathType
 {
 public:

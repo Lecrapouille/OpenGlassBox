@@ -1,9 +1,9 @@
-//-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
-// https://github.com/Lecrapouille/OpenGlassBox
-// Based on https://github.com/federicodangelo/MultiAgentSimulation
-// Distributed under MIT License.
-//-----------------------------------------------------------------------------
+// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-OpenGlassBox-Commercial
+// Copyright (c) 2020-2026 Quentin Quadrat
+//
+// This file is part of OpenGlassBox. It is available under the GNU GPL v3 or,
+// for users who cannot use the GPL, under a commercial license.
+// See LICENSING.md for details.
 
 #ifndef OPEN_GLASSBOX_RESOURCE_HPP
 #  define OPEN_GLASSBOX_RESOURCE_HPP
@@ -12,16 +12,13 @@
 #  include <cstdint> // uint32_t
 #  include <iostream> // operator<<
 
-//==============================================================================
 //! \brief Type of Resource ("Water", "Oil", "Electricity", "Citizen" ...)
 //! Type defined during the parsing of simulation scripts. Example:
 //! \code
 //! resource Water
 //! \endcode
-//==============================================================================
 using ResourceType = std::string;
 
-//==============================================================================
 //! \brief Resource is the basic currency of the game defined by its type,
 //! amount and capacity.
 //!
@@ -31,7 +28,6 @@ using ResourceType = std::string;
 //!  - Oil, coal, wood, water, electricity ...
 //!  - Money, food, labour, pollution, trash ...
 //!  - Happiness, sickness, taxes.
-//==============================================================================
 class Resource
 {
 public:

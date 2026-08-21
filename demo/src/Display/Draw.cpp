@@ -1,21 +1,19 @@
-//-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
-// https://github.com/Lecrapouille/OpenGlassBox
-// Based on https://github.com/federicodangelo/MultiAgentSimulation
-// Distributed under MIT License.
-//-----------------------------------------------------------------------------
+// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-OpenGlassBox-Commercial
+// Copyright (c) 2020-2026 Quentin Quadrat
+//
+// This file is part of OpenGlassBox. It is available under the GNU GPL v3 or,
+// for users who cannot use the GPL, under a commercial license.
+// See LICENSING.md for details.
 
 #include "main.hpp"
 #include "Display/SDLHelper.hpp"
 #include "OpenGlassBox/Config.hpp"
 #include <algorithm>
 
-//------------------------------------------------------------------------------
 #define RED(color)   ((color >> 16) & 0xFF)
 #define GREEN(color) ((color >> 8) & 0xFF)
 #define BLUE(color)  ((color >> 0) & 0xFF)
 
-//------------------------------------------------------------------------------
 void GlassBox::drawAgents(City const& city, SDL_Renderer& renderer)
 {
     for (auto& it: city.agents())
@@ -38,7 +36,6 @@ void GlassBox::drawAgents(City const& city, SDL_Renderer& renderer)
     }
 }
 
-//------------------------------------------------------------------------------
 void GlassBox::drawUnits(City const& city, SDL_Renderer& renderer)
 {
     for (auto& it: city.units())
@@ -61,7 +58,6 @@ void GlassBox::drawUnits(City const& city, SDL_Renderer& renderer)
     }
 }
 
-//------------------------------------------------------------------------------
 void GlassBox::drawMaps(City const& city, SDL_Renderer& renderer)
 {
     struct Order
@@ -145,7 +141,6 @@ void GlassBox::drawMaps(City const& city, SDL_Renderer& renderer)
     }
 }
 
-//------------------------------------------------------------------------------
 // TODO use SDL_RenderDrawLines to draw a batch of segments
 void GlassBox::drawPaths(City const& city, SDL_Renderer& renderer)
 {
@@ -188,7 +183,6 @@ void GlassBox::drawPaths(City const& city, SDL_Renderer& renderer)
     }
 }
 
-//------------------------------------------------------------------------------
 void GlassBox::drawCity(City const& city, SDL_Renderer& renderer)
 {
     // TODO
@@ -202,7 +196,6 @@ void GlassBox::drawCity(City const& city, SDL_Renderer& renderer)
     drawAgents(city, renderer);
 }
 
-//------------------------------------------------------------------------------
 void GlassBox::renderSimulation(SDL_Renderer& renderer)
 {
     for (auto const& city: m_simulation.cities())

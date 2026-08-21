@@ -1,12 +1,17 @@
+// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-OpenGlassBox-Commercial
+// Copyright (c) 2020-2026 Quentin Quadrat
+//
+// This file is part of OpenGlassBox. It is available under the GNU GPL v3 or,
+// for users who cannot use the GPL, under a commercial license.
+// See LICENSING.md for details.
+
 #ifndef WINDOW_HPP
 #  define WINDOW_HPP
 
 #  include "Display/IGame.hpp"
 
-//==============================================================================
 //! \brief Create and manage a window made in SDL. This class is made to run a
 //!  IGame which is the interface for your game.
-//==============================================================================
 class Window
 {
 public:

@@ -1,9 +1,9 @@
-//-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
-// https://github.com/Lecrapouille/OpenGlassBox
-// Based on https://github.com/federicodangelo/MultiAgentSimulation
-// Distributed under MIT License.
-//-----------------------------------------------------------------------------
+// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-OpenGlassBox-Commercial
+// Copyright (c) 2020-2026 Quentin Quadrat
+//
+// This file is part of OpenGlassBox. It is available under the GNU GPL v3 or,
+// for users who cannot use the GPL, under a commercial license.
+// See LICENSING.md for details.
 
 #ifndef OPEN_GLASSBOX_CITY_HPP
 #  define OPEN_GLASSBOX_CITY_HPP
@@ -18,10 +18,8 @@
 class Path;
 class Node;
 
-//==============================================================================
 //! \brief Class holding everything that makes up a city.
 //! Manage maps, global resources, Paths, Agents. Run Unit and Map rule scripts.
-//==============================================================================
 class City
 {
 public:
@@ -243,9 +241,7 @@ private:
     City::Listener *m_listener;
 };
 
-//==============================================================================
 //! \brief Collection of City.
-//==============================================================================
 using Cities = std::map<std::string, std::unique_ptr<City>>;
 
 #endif

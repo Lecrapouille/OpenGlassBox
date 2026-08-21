@@ -1,9 +1,9 @@
-//-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
-// https://github.com/Lecrapouille/OpenGlassBox
-// Based on https://github.com/federicodangelo/MultiAgentSimulation
-// Distributed under MIT License.
-//-----------------------------------------------------------------------------
+// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-OpenGlassBox-Commercial
+// Copyright (c) 2020-2026 Quentin Quadrat
+//
+// This file is part of OpenGlassBox. It is available under the GNU GPL v3 or,
+// for users who cannot use the GPL, under a commercial license.
+// See LICENSING.md for details.
 
 #include "OpenGlassBox/Agent.hpp"
 #include "OpenGlassBox/Dijkstra.hpp"
@@ -11,7 +11,6 @@
 #include "OpenGlassBox/Config.hpp"
 #include <iostream>
 
-//------------------------------------------------------------------------------
 Agent::Agent(uint32_t id, AgentType const& type, Unit& owner,
              Resources const& resources, std::string const& searchTarget)
     : m_id(id),
@@ -25,13 +24,11 @@ Agent::Agent(uint32_t id, AgentType const& type, Unit& owner,
     // else Agents cannot move towards a Path Way.
 }
 
-//------------------------------------------------------------------------------
 void Agent::translate(Vector3f const direction)
 {
     m_position += direction;
 }
 
-//------------------------------------------------------------------------------
 bool Agent::update(Dijkstra& dijkstra)
 {
     // Reached the destination node ?
@@ -59,7 +56,6 @@ bool Agent::update(Dijkstra& dijkstra)
     return false;
 }
 
-//------------------------------------------------------------------------------
 Unit* Agent::searchUnit()
 {
     if (m_lastNode == nullptr)
@@ -78,7 +74,6 @@ Unit* Agent::searchUnit()
     return nullptr;
 }
 
-//------------------------------------------------------------------------------
 bool Agent::unloadResources()
 {
     Unit* unit = searchUnit();
@@ -87,7 +82,6 @@ bool Agent::unloadResources()
     return m_resources.isEmpty();
 }
 
-//------------------------------------------------------------------------------
 void Agent::findNextNode(Dijkstra& dijkstra)
 {
     if (m_lastNode == nullptr)
@@ -111,7 +105,6 @@ void Agent::findNextNode(Dijkstra& dijkstra)
     }
 }
 
-//------------------------------------------------------------------------------
 void Agent::moveTowardsNextNode()
 {
     float direction;

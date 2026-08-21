@@ -1,37 +1,31 @@
-//-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
-// https://github.com/Lecrapouille/OpenGlassBox
-// Based on https://github.com/federicodangelo/MultiAgentSimulation
-// Distributed under MIT License.
-//-----------------------------------------------------------------------------
+// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-OpenGlassBox-Commercial
+// Copyright (c) 2020-2026 Quentin Quadrat
+//
+// This file is part of OpenGlassBox. It is available under the GNU GPL v3 or,
+// for users who cannot use the GPL, under a commercial license.
+// See LICENSING.md for details.
 
 #include "OpenGlassBox/MapCoordinatesInsideRadius.hpp"
 #include <random>
 
-//------------------------------------------------------------------------------
 // Random numbers
-//------------------------------------------------------------------------------
-
 // Will be used to obtain a seed for the random number engine
 static std::random_device rd;
 // Standard mersenne_twister_engine seeded with rd()
 static std::mt19937 generator(rd());
 
-//------------------------------------------------------------------------------
 int32_t MapCoordinatesInsideRadius::compress(int32_t u, int32_t v)
 {
     return ((u + MapCoordinatesInsideRadius::MAX_RADIUS) << 16) |
             (v + MapCoordinatesInsideRadius::MAX_RADIUS);
 }
 
-//------------------------------------------------------------------------------
 void MapCoordinatesInsideRadius::uncompress(int32_t val, int32_t& u, int32_t& v)
 {
     u = ((val >> 16) & 0xFFFF) - MapCoordinatesInsideRadius::MAX_RADIUS;
     v = (val & 0xFFFF) - MapCoordinatesInsideRadius::MAX_RADIUS;
 }
 
-//------------------------------------------------------------------------------
 void MapCoordinatesInsideRadius::init(uint32_t radius,
                                       uint32_t centerU, uint32_t centerV,
                                       uint32_t minU, uint32_t maxU,
@@ -66,7 +60,6 @@ void MapCoordinatesInsideRadius::init(uint32_t radius,
     }
 }
 
-//------------------------------------------------------------------------------
 void MapCoordinatesInsideRadius::createRelativeCoordinates(int32_t radius, RelativeCoordinates &res)
 {
     res.clear();
@@ -82,7 +75,6 @@ void MapCoordinatesInsideRadius::createRelativeCoordinates(int32_t radius, Relat
     }
 }
 
-//------------------------------------------------------------------------------
 bool MapCoordinatesInsideRadius::next(uint32_t& u, uint32_t& v)
 {
     RelativeCoordinates& coord = *m_relativeCoord;

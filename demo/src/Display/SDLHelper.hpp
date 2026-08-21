@@ -1,9 +1,9 @@
-//-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
-// https://github.com/Lecrapouille/OpenGlassBox
-// Based on https://github.com/federicodangelo/MultiAgentSimulation
-// Distributed under MIT License.
-//-----------------------------------------------------------------------------
+// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-OpenGlassBox-Commercial
+// Copyright (c) 2020-2026 Quentin Quadrat
+//
+// This file is part of OpenGlassBox. It is available under the GNU GPL v3 or,
+// for users who cannot use the GPL, under a commercial license.
+// See LICENSING.md for details.
 
 #ifndef SDLHELPER_HPP
 #  define SDLHELPER_HPP
@@ -18,7 +18,6 @@ enum class TextAlignment
     TEXT_RIGHT
 };
 
-//------------------------------------------------------------------------------
 //! \brief Draw a text from a texture.
 //! \param[in] renderer: SDL renderer,
 //! \param[in] fontTexture: SDL struct holding the texture of the fonts.
@@ -29,7 +28,6 @@ enum class TextAlignment
 //! \param[in] b: blue color.
 //! \param[in] align: horizontal alignment.
 //! \param[in] format: printf style to draw text
-//------------------------------------------------------------------------------
 void drawText(SDL_Renderer* renderer, SDL_Texture* fontTexture,
               int x, int y, Uint8 r, Uint8 g, Uint8 b,
               TextAlignment align, const char *format, ...);

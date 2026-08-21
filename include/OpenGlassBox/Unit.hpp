@@ -1,9 +1,9 @@
-//-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
-// https://github.com/Lecrapouille/OpenGlassBox
-// Based on https://github.com/federicodangelo/MultiAgentSimulation
-// Distributed under MIT License.
-//-----------------------------------------------------------------------------
+// SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-OpenGlassBox-Commercial
+// Copyright (c) 2020-2026 Quentin Quadrat
+//
+// This file is part of OpenGlassBox. It is available under the GNU GPL v3 or,
+// for users who cannot use the GPL, under a commercial license.
+// See LICENSING.md for details.
 
 #ifndef OPEN_GLASSBOX_UNIT_HPP
 #  define OPEN_GLASSBOX_UNIT_HPP
@@ -14,13 +14,11 @@
 class RuleUnit;
 class City;
 
-//==============================================================================
 //! \brief A Unit represents things: houses, factories, even people. A unit has
 //! state: a collection of resource but also a well-defined spatial extent:
 //! bounding volume, simulation footprint. Currently implemented, an Unit shall
 //! refer to an existing Path Node to allow Agent to carry Resources from an
 //! Unit to another Unit.
-//==============================================================================
 class Unit
 {
 public:
