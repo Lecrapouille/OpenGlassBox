@@ -25,6 +25,9 @@ static constexpr float MIN_ZOOM = 0.05f;
 static constexpr float MAX_ZOOM = 20.0f;
 //! \brief How far, in pixels, a click may land from an entity to select it.
 static constexpr float PICK_RADIUS = 12.0f;
+//! \brief Below that many pixels a grid cell is not worth a rectangle of its
+//! own, and the maps are drawn by blocks of cells instead.
+static constexpr float MIN_CELL_PIXELS = 3.0f;
 //! \brief Radius, in pixels, of a Node and of a Unit at zoom one.
 static constexpr float NODE_RADIUS = 4.0f;
 static constexpr float UNIT_RADIUS = 7.0f;
@@ -556,6 +559,19 @@ void CityViewer::drawMaps(World& world, game::DebugState const& state)
     float const side = world.cellSize();
     float const pixels = side * m_zoom;
 
+    // What the canvas shows, in cells, with a margin of one so that the cells
+    // straddling the border are still drawn. A city of half a million cells
+    // would otherwise cost half a million rectangles a frame whatever the zoom.
+    ImVec2 const topLeft = screenToWorld(m_canvas_origin);
+    ImVec2 const bottomRight =
+        screenToWorld(m_canvas_origin + m_canvas_size);
+    int32_t const uMin = int32_t(std::floor(topLeft.x / side)) - 1;
+    int32_t const vMin = int32_t(std::floor(topLeft.y / side)) - 1;
+    int32_t const uMax = int32_t(std::floor(bottomRight.x / side)) + 1;
+    int32_t const vMax = int32_t(std::floor(bottomRight.y / side)) + 1;
+    MapRegion const visible{ uMin, vMin, uint32_t(std::max(0, uMax - uMin)),
+                             uint32_t(std::max(0, vMax - vMin)) };
+
     for (auto& it: world.maps())
     {
         Map& map = *it.second;
@@ -570,9 +586,36 @@ void CityViewer::drawMaps(World& world, game::DebugState const& state)
                              (state.soloLayer == map.type());
         uint32_t const capacity = std::max(1u, map.getCapacity());
 
-        // Only the cells that hold something are stored, and only those are
-        // worth drawing.
-        map.forEachCell([&](int32_t u, int32_t v, uint32_t amount) {
+        // Zoomed out far enough that a cell is not even a pixel, drawing one
+        // rectangle per block with its average says the same thing for a
+        // fraction of the vertices.
+        if (pixels < MIN_CELL_PIXELS)
+        {
+            map.forEachChunk([&](int32_t u, int32_t v, int32_t cells,
+                                 uint32_t mean) {
+                if (mean == 0u)
+                    return;
+                ImVec2 const p0 = worldToScreen(float(u) * side, float(v) * side);
+                ImVec2 const p1(p0.x + pixels * float(cells),
+                                p0.y + pixels * float(cells));
+                if ((p1.x < m_canvas_origin.x) || (p1.y < m_canvas_origin.y) ||
+                    (p0.x > m_canvas_origin.x + m_canvas_size.x) ||
+                    (p0.y > m_canvas_origin.y + m_canvas_size.y))
+                {
+                    return;
+                }
+                float const ratio = std::min(1.0f, float(mean) / float(capacity));
+                m_draw_list->AddRectFilled(
+                    p0, p1,
+                    theme::fromScript(map.color(),
+                                      options.opacity * (0.15f + 0.85f * ratio)));
+            });
+            continue;
+        }
+
+        // Only the cells that hold something are stored, and only those that
+        // are on screen are worth drawing.
+        map.forEachCellInRegion(visible, [&](int32_t u, int32_t v, uint32_t amount) {
                 float const ratio =
                     std::min(1.0f, float(amount) / float(capacity));
 
@@ -590,9 +633,10 @@ void CityViewer::drawMaps(World& world, game::DebugState const& state)
                     // A cell holding a tenth of the capacity would be all but
                     // invisible if the opacity were the ratio itself, so the
                     // ratio shades a floor instead of scaling from zero: any
-                    // cell that holds something can be seen.
+                    // cell that holds something can be seen. The floor is low
+                    // enough for a full map not to bury the ones under it.
                     float const alpha =
-                        options.opacity * (0.25f + 0.75f * ratio);
+                        options.opacity * (0.15f + 0.85f * ratio);
                     m_draw_list->AddRectFilled(
                         ImVec2(p0.x + inset, p0.y + inset),
                         ImVec2(p1.x - inset, p1.y - inset),
@@ -764,6 +808,24 @@ void CityViewer::drawUnits(City& city, game::DebugState const& state)
     {
         ImVec2 const position = worldToScreen(unit->position());
         ImU32 const color = theme::fromScript(unit->color());
+
+        // The driveway: a building stands on its own cell but reaches the
+        // network through a Way, and that link is what makes it part of the
+        // city rather than a house in a field.
+        Way const* const way = unit->way();
+        if ((way != nullptr) && state.showPaths)
+        {
+            Vector3f const anchor = way->positionAt(unit->wayOffset());
+            ImVec2 const onRoad = worldToScreen(anchor);
+            float const dx = onRoad.x - position.x;
+            float const dy = onRoad.y - position.y;
+            if ((dx * dx + dy * dy) > (UNIT_RADIUS * UNIT_RADIUS))
+            {
+                m_draw_list->AddLine(position, onRoad,
+                                     theme::fromScript(unit->color(), 0.45f),
+                                     1.5f);
+            }
+        }
 
         // A square, so that a Unit is never confused with a Node or an Agent.
         m_draw_list->AddRectFilled(

@@ -269,6 +269,17 @@ void Path::removeNode(Node& node)
 }
 
 // -----------------------------------------------------------------------------
+void Path::clear()
+{
+    // Segments first: they point at the nodes.
+    m_ways.clear();
+    m_nodes.clear();
+    m_nextNodeId = 0u;
+    m_nextWayId = 0u;
+    m_maxFreeFlowSpeed = 1.0f;
+}
+
+// -----------------------------------------------------------------------------
 void Path::updateMaxFreeFlowSpeed()
 {
     // One is the floor rather than zero: the router divides a distance by this

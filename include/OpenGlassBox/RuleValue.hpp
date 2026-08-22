@@ -16,6 +16,9 @@
 
 namespace ogb {
 
+class Map;
+class World;
+
 //==============================================================================
 //! \brief
 //==============================================================================
@@ -79,7 +82,21 @@ public:
 
 private:
 
+    //--------------------------------------------------------------------------
+    //! \brief The Map this value reads, looked up by name once per World.
+    //!
+    //! A map rule runs on every cell of the region, so the lookup by name would
+    //! be paid hundreds of thousands of times per tick for a large city.
+    //--------------------------------------------------------------------------
+    Map& map(RuleContext& context);
+
+private:
+
     std::string m_mapId;
+    //! \brief Cache of the lookup, valid as long as the World it was resolved
+    //! against is the one being simulated.
+    World const* m_world = nullptr;
+    Map* m_map = nullptr;
 };
 
 } // namespace ogb

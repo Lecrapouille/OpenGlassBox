@@ -64,27 +64,38 @@ std::string const& RuleValueLocal::type() const
 
 // ----
 
+Map& RuleValueMap::map(RuleContext& context)
+{
+    World const* const world = &(context.city->world());
+    if ((m_map == nullptr) || (m_world != world))
+    {
+        m_map = &(context.city->getMap(m_mapId));
+        m_world = world;
+    }
+    return *m_map;
+}
+
 uint32_t RuleValueMap::get(RuleContext& context)
 {
-    return context.city->getMap(m_mapId).getResource(
-        context.u, context.v, context.radius, context.city->region());
+    return map(context).getResource(context.u, context.v, context.radius,
+                                    context.city->region());
 }
 
 uint32_t RuleValueMap::capacity(RuleContext& context)
 {
-    return context.city->getMap(m_mapId).getCapacity();
+    return map(context).getCapacity();
 }
 
 void RuleValueMap::add(RuleContext& context, uint32_t toAdd)
 {
-    context.city->getMap(m_mapId).addResource(
-        context.u, context.v, context.radius, context.city->region(), toAdd);
+    map(context).addResource(context.u, context.v, context.radius,
+                             context.city->region(), toAdd);
 }
 
 void RuleValueMap::remove(RuleContext& context, uint32_t toRemove)
 {
-    context.city->getMap(m_mapId).removeResource(
-        context.u, context.v, context.radius, context.city->region(), toRemove);
+    map(context).removeResource(context.u, context.v, context.radius,
+                                context.city->region(), toRemove);
 }
 
 std::string const& RuleValueMap::type() const

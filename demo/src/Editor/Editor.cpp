@@ -107,8 +107,13 @@ void Editor::drawPaintOptions(Simulation& simulation, game::DebugState& state,
     if (city != nullptr)
     {
         nameCombo("##map", 150.0f, city->maps(), m_map);
-        if (!m_map.empty())
+
+        // Show what is being painted, but only when the choice changes: doing
+        // it every frame would pin that one layer visible and primary, and no
+        // click in the list below could ever turn it off again.
+        if (!m_map.empty() && (m_map != m_shownMap))
         {
+            m_shownMap = m_map;
             state.primaryLayer = m_map;
             state.layer(m_map).visible = true;
         }
@@ -167,6 +172,7 @@ void Editor::reset()
     m_wayType.clear();
     m_unitType.clear();
     m_map.clear();
+    m_shownMap.clear();
     m_areaType.clear();
 }
 
@@ -214,6 +220,10 @@ void Editor::refreshTargets(Simulation& simulation)
     if (city->paths().find(m_path) == city->paths().end())
     {
         m_path = firstKey(city->paths());
+        // An emptied or brand new city holds no graph yet: name the one the
+        // ruleset declares, and laying a road will found it.
+        if (m_path.empty())
+            m_path = firstKey(simulation.script().pathTypes());
     }
     if (city->maps().find(m_map) == city->maps().end())
     {

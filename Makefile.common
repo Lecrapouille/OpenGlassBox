@@ -1,5 +1,9 @@
 PROJECT_NAME := OpenGlassBox
 PROJECT_VERSION := 0.2.0
-COMPILATION_MODE := debug
+# -O2 with debug symbols and assertions kept. A city the size of Chicago runs
+# its rules over three hundred thousand cells per tick, which an -O0 build
+# cannot keep up with, and the stack traces of the demo still name their lines.
+# Use COMPILATION_MODE=debug to step through the code, =release to ship.
+COMPILATION_MODE := normal
 CXX_STANDARD := --std=c++14
 PROJECT_DATA := demo/data

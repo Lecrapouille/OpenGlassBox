@@ -78,6 +78,8 @@ make -j8
 
 Adjust `-j8` to the number of cores of your machine, and pick a compiler with `make CXX=clang++ -j8` if you prefer.
 
+Builds are optimised with debug symbols by default (`COMPILATION_MODE := normal` in `Makefile.common`). Use `make COMPILATION_MODE=debug -j8` to step through the code, and `make COMPILATION_MODE=release -j8` to ship. The mode matters: a map rule runs over every cell of a city, so the Chicago save with its three hundred thousand cells is an order of magnitude slower to simulate when compiled without optimisations.
+
 Run the demo (from the project root, after `make`):
 
 ```sh
@@ -131,7 +133,7 @@ What changed compared to the original source code:
   - `ResourceBinCollection` is now `Resources`.
   - `SimulationDefinitionLoader` is now `ScriptParser`.
 - The original project never implemented the `Area` class, also called `Zone`. OpenGlassBox has `Area` and `AreaRule`, with `spawn`, `upgrade`, `destroy` and `count` commands. Areas and Units are kept independent: a zone is a rectangle of cells, and a building is not a graph node.
-- A `Unit` used to be forced onto a `Node` of a `Path`, which made the graph explode. A Unit now has its own position, plus an optional anchor either at an offset along a `Way` or on a `Node`.
+- A `Unit` used to be forced onto a `Node` of a `Path`, which made the graph explode. A Unit now has its own position, plus an optional anchor either at an offset along a `Way` or on a `Node`. That anchor is not decoration: `spawn ... at nearestWay` only grows a building on a cell a road runs through or fronts, and the demo draws the link. A building with no way to reach the network could neither send nor receive an `Agent`, so an `Area` refuses to grow one at all rather than scatter houses in a field.
 - The original project implemented a dynamic A\* in `Path::FindNextPoint`. Routing now goes through `IRouter` (`Dijkstra` or `AStarRouter`) and minimises BPR travel times. The flow of each `Way` is an exponential moving average and **not** the MSA solver of CiudadSim; the traffic section below explains the difference.
 - There are only two file formats: `.ogs` for the ruleset and `.ogc` for a save, whose header holds a hash of the ruleset and the list of the types used. There is no third "world" file.
 - One application window shows one city. A `World` can still hold several of them: a road crossing a border is split, each half belonging to the city containing its midpoint, once `World::Listener` has allowed it. Routing stays inside one `Path`, so an agent never wanders into the neighbouring city on its own.
@@ -148,9 +150,9 @@ The row to the right of the rail holds the settings of the selected tool, and on
 - **Inspect** highlights whatever is under the cursor — a building, an agent, a road, a node, a zone, or the grid cell when there is nothing else — and a click sends it to the Inspector panel. This is the only tool that highlights cells; the others show the footprint of what they are about to do instead.
 - **Roads** drags a segment of the chosen way type. Both ends snap to a nearby node, and otherwise to the world grid.
 - **Zones** and **Maps** paint a rectangle. Click for a single square of the brush size, or drag for a rectangle. Zones do not overlap: painting Commercial over part of a Residential rectangle re-zones exactly the cells you painted and leaves the rest residential.
-- **Maps** also carries the layer list, since choosing which map to paint and which map to look at is the same decision. Each row toggles the visibility of a map, sets its opacity, and picks how it is drawn: filled cells, contours, or numeric values. Clicking a name makes it the main layer; Alt+clicking shows it alone.
+- **Maps** also carries the layer list, since choosing which map to paint and which map to look at is the same decision. Each row toggles the visibility of a map, sets its opacity, and picks how it is drawn: filled cells, contours, or numeric values. Clicking a name makes it the main layer; Alt+clicking shows it alone. A simulation opens with one map shown, because half a dozen heatmaps stacked on the same cells cannot be read.
 - **Buildings** drops a building on a road without splitting it.
-- **Demolish** removes a building, a road or an orphan node, and holds **Clear city**, which empties the city but keeps the ruleset. That one cannot be undone; everything else can, with Ctrl+Z and Ctrl+Y.
+- **Demolish** removes a building, a road or an orphan node, and holds **Clear city**, which throws away everything that was built but keeps the ruleset, so roads can be laid again straight away. That one cannot be undone; everything else can, with Ctrl+Z and Ctrl+Y.
 
 **Recenter** and the **Zoom** slider sit on the row below, next to the display toggles. You can also pan by dragging with the middle or right button, zoom with the wheel, and frame the whole city with the Home key.
 

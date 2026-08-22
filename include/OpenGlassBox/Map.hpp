@@ -174,20 +174,58 @@ public:
     {
         for (auto const& it: m_chunks)
         {
-            int32_t const baseU = it.second.u0;
-            int32_t const baseV = it.second.v0;
-            for (int32_t dv = 0; dv < CHUNK_SIZE; ++dv)
+            forEachCellOfChunk(it.second, function);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    //! \brief Same as forEachCell, restricted to the cells inside the region.
+    //! Blocks that fall entirely outside are skipped without being read, which
+    //! is what keeps the cost of drawing a map proportional to what is on
+    //! screen rather than to the size of the world.
+    // -------------------------------------------------------------------------
+    template<class Function>
+    void forEachCellInRegion(MapRegion const& region, Function function) const
+    {
+        if (region.empty())
+            return;
+
+        for (auto const& it: m_chunks)
+        {
+            Chunk const& chunk = it.second;
+            if (chunk.total == 0u)
+                continue;
+            if ((chunk.u0 + CHUNK_SIZE <= region.u0) ||
+                (chunk.v0 + CHUNK_SIZE <= region.v0) ||
+                (chunk.u0 >= region.u1()) || (chunk.v0 >= region.v1()))
             {
-                for (int32_t du = 0; du < CHUNK_SIZE; ++du)
-                {
-                    uint32_t const amount =
-                        it.second.cells[size_t(dv * CHUNK_SIZE + du)];
-                    if (amount != 0u)
-                    {
-                        function(baseU + du, baseV + dv, amount);
-                    }
-                }
+                continue;
             }
+
+            forEachCellOfChunk(chunk, [&](int32_t u, int32_t v, uint32_t amount) {
+                if (region.contains(u, v))
+                    function(u, v, amount);
+            });
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    //! \brief Call the given function for every allocated block holding
+    //! something, as f(u0, v0, side, mean), where mean is the average amount
+    //! over the block. Zoomed out, a cell is a fraction of a pixel and the
+    //! renderer draws blocks instead: two hundred and fifty six times fewer
+    //! rectangles for the same picture.
+    // -------------------------------------------------------------------------
+    template<class Function>
+    void forEachChunk(Function function) const
+    {
+        for (auto const& it: m_chunks)
+        {
+            Chunk const& chunk = it.second;
+            if (chunk.total == 0u)
+                continue;
+            function(chunk.u0, chunk.v0, CHUNK_SIZE,
+                     uint32_t(chunk.total / uint64_t(CHUNK_SIZE * CHUNK_SIZE)));
         }
     }
 
@@ -201,8 +239,32 @@ private:
         //! \brief Coordinates of the cell at the top-left of the chunk.
         int32_t u0 = 0;
         int32_t v0 = 0;
+        //! \brief Sum of the cells, kept up to date by setResource. Walking the
+        //! cells to get it again would cost the whole grid, and the panels ask
+        //! for it on every frame.
+        uint64_t total = 0u;
         std::array<uint32_t, size_t(CHUNK_SIZE * CHUNK_SIZE)> cells{};
     };
+
+    //--------------------------------------------------------------------------
+    //! \brief Call f(u, v, amount) for the non empty cells of one block.
+    //--------------------------------------------------------------------------
+    template<class Function>
+    static void forEachCellOfChunk(Chunk const& chunk, Function function)
+    {
+        for (int32_t dv = 0; dv < CHUNK_SIZE; ++dv)
+        {
+            for (int32_t du = 0; du < CHUNK_SIZE; ++du)
+            {
+                uint32_t const amount =
+                    chunk.cells[size_t(dv * CHUNK_SIZE + du)];
+                if (amount != 0u)
+                {
+                    function(chunk.u0 + du, chunk.v0 + dv, amount);
+                }
+            }
+        }
+    }
 
     //--------------------------------------------------------------------------
     //! \brief Pack the coordinates of a chunk into a single key. Division is

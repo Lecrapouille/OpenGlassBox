@@ -8,6 +8,7 @@
 #include "OpenGlassBox/City.hpp"
 #include "OpenGlassBox/World.hpp"
 
+#include <array>
 #include <cmath>
 #include <limits>
 
@@ -68,10 +69,13 @@ Vector3f Area::cellWorldPosition(int32_t u, int32_t v) const
 }
 
 // -----------------------------------------------------------------------------
-Way* Area::nearestWay(Vector3f const& world, float& offset) const
+Way* Area::nearestWay(Vector3f const& world, float& offset,
+                      float maxDistance) const
 {
     Way* best = nullptr;
-    float bestDist = std::numeric_limits<float>::infinity();
+    float bestDist = (maxDistance < 0.0f)
+                     ? std::numeric_limits<float>::infinity()
+                     : (maxDistance * maxDistance);
     offset = 0.5f;
 
     for (auto& pathIt: m_city.paths())
@@ -154,6 +158,70 @@ bool Area::findFreeCell(int32_t& u, int32_t& v) const
     u = bestU;
     v = bestV;
     return true;
+}
+
+// -----------------------------------------------------------------------------
+bool Area::findBuildableCell(int32_t& u, int32_t& v) const
+{
+    if (m_footprint.empty())
+        return false;
+
+    if (m_city.paths().empty())
+        return false;
+
+    std::vector<Unit*> const occupied = unitsInside(std::string());
+
+    auto taken = [&](int32_t cu, int32_t cv) {
+        for (Unit* unit: occupied)
+        {
+            if ((unit->mapU() == cu) && (unit->mapV() == cv))
+                return true;
+        }
+        return false;
+    };
+
+    // The cell the road runs through, then the four it fronts.
+    static std::array<int32_t, 5u> const NEIGHBOURS_U = { 0, 1, -1, 0, 0 };
+    static std::array<int32_t, 5u> const NEIGHBOURS_V = { 0, 0, 0, 1, -1 };
+
+    float const side = m_city.gridCellSize();
+
+    for (auto const& pathIt: m_city.paths())
+    {
+        for (auto const& way: pathIt.second->ways())
+        {
+            Vector3f const a = way->position1();
+            Vector3f const ab = way->position2() - a;
+            // One sample per cell crossed, so that no cell along the segment is
+            // missed and none is visited twice.
+            int32_t const steps =
+                std::max(1, int32_t(std::sqrt(squaredMagnitude(ab)) / side));
+
+            for (int32_t step = 0; step <= steps; ++step)
+            {
+                Vector3f const point = a + ab * (float(step) / float(steps));
+                int32_t cu = 0;
+                int32_t cv = 0;
+                m_city.world().world2mapPosition(point, cu, cv);
+
+                for (size_t k = 0u; k < NEIGHBOURS_U.size(); ++k)
+                {
+                    int32_t const su = cu + NEIGHBOURS_U[k];
+                    int32_t const sv = cv + NEIGHBOURS_V[k];
+                    if (!m_footprint.contains(su, sv))
+                        continue;
+                    if (taken(su, sv))
+                        continue;
+
+                    u = su;
+                    v = sv;
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
 }
 
 } // namespace ogb

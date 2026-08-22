@@ -36,6 +36,78 @@ TEST(TestsArea, SpawnOnNearestWay)
     ASSERT_EQ(path.nodes().size(), 2u);
 }
 
+//------------------------------------------------------------------------------
+//! \brief A building belongs beside the road that serves it: the cell the Area
+//! grows it on is one the road runs through or fronts, whatever the shape of the
+//! footprint.
+//------------------------------------------------------------------------------
+TEST(TestsArea, SpawnedUnitsStandAlongTheRoad)
+{
+    TestWorld world("Paris", 8u, 8u);
+    City& city = world.city;
+    float const side = city.gridCellSize();
+
+    Path& path = city.addPath(PathType("Road"));
+    // A road along the third row of cells, crossing the whole city.
+    Node& n1 = path.addNode(Vector3f(0.5f * side, 2.5f * side, 0.0f));
+    Node& n2 = path.addNode(Vector3f(7.5f * side, 2.5f * side, 0.0f));
+    path.addWay(WayType("Dirt", 0xAAAAAA), n1, n2);
+
+    UnitType home("Home");
+    RuleAreaType growType("Grow");
+    RuleCommandSpawn spawn(home, RuleCommandSpawn::Placement::NearestWay);
+    growType.commands.push_back(&spawn);
+    RuleArea grow(growType);
+
+    AreaType residential("Residential");
+    residential.rules.push_back(&grow);
+    Area& area = city.addArea(residential, city.region());
+
+    // More buildings than the row of cells the road runs through, so that the
+    // ones that do not fit have to be refused rather than piled up.
+    for (uint32_t i = 0u; i < 12u; ++i)
+        area.executeRules();
+
+    ASSERT_FALSE(city.units().empty());
+    for (auto const& unit: city.units())
+    {
+        // Two cells at most from the road, and no two buildings on one cell.
+        ASSERT_LE(std::abs(unit->mapV() - 2), 1);
+        for (auto const& other: city.units())
+        {
+            if (other.get() == unit.get())
+                continue;
+            ASSERT_FALSE((other->mapU() == unit->mapU()) &&
+                         (other->mapV() == unit->mapV()));
+        }
+    }
+}
+
+//------------------------------------------------------------------------------
+//! \brief Without a road there is no connection to make, so the Area grows
+//! nothing at all instead of scattering houses in a field.
+//------------------------------------------------------------------------------
+TEST(TestsArea, NoRoadNoBuilding)
+{
+    TestWorld world("Paris", 8u, 8u);
+    City& city = world.city;
+    city.addPath(PathType("Road"));
+
+    UnitType home("Home");
+    RuleAreaType growType("Grow");
+    RuleCommandSpawn spawn(home, RuleCommandSpawn::Placement::NearestWay);
+    growType.commands.push_back(&spawn);
+    RuleArea grow(growType);
+
+    AreaType residential("Residential");
+    residential.rules.push_back(&grow);
+    Area& area = city.addArea(residential, city.region());
+
+    area.executeRules();
+    area.executeRules();
+    ASSERT_TRUE(city.units().empty());
+}
+
 TEST(TestsArea, CountAndDestroy)
 {
     TestWorld world("Paris", 8u, 8u);

@@ -510,3 +510,37 @@ TEST(TestsCity, RemovingANodeLeavesNoAgentPointingAtIt)
     // Nothing dangles: a tick over the emptied city has to be harmless.
     city.update(1.0f);
 }
+
+// -----------------------------------------------------------------------------
+//! \brief Clearing a City throws away what the player built, not the kinds of
+//! network the ruleset declares: roads have to remain buildable afterwards.
+// -----------------------------------------------------------------------------
+TEST(TestsCity, ClearKeepsTheGraphsAndEmptiesThem)
+{
+    TestWorld cityWorld("Paris", 8u, 8u);
+    City& city = cityWorld.city;
+    WayType wayType("Dirt", 0xAAAAAA);
+
+    Path& path = city.addPath(PathType("Road"));
+    Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
+    Node& n2 = path.addNode(Vector3f(10.0f, 0.0f, 0.0f));
+    path.addWay(wayType, n1, n2);
+    city.addUnit(UnitType("Home"), n1);
+    city.addArea(AreaType("Residential"), city.region());
+
+    city.clear();
+
+    ASSERT_EQ(city.units().size(), 0u);
+    ASSERT_EQ(city.areas().size(), 0u);
+    ASSERT_EQ(city.paths().size(), 1u);
+
+    Path& road = city.getPath("Road");
+    ASSERT_EQ(road.nodes().size(), 0u);
+    ASSERT_EQ(road.ways().size(), 0u);
+
+    // And the emptied graph takes new segments.
+    Node& n3 = road.addNode(Vector3f(0.0f, 0.0f, 0.0f));
+    Node& n4 = road.addNode(Vector3f(10.0f, 0.0f, 0.0f));
+    road.addWay(wayType, n3, n4);
+    ASSERT_EQ(road.ways().size(), 1u);
+}

@@ -210,23 +210,38 @@ std::string RuleCommandCount::type()
 }
 
 //------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+//! \brief How far a building may stand from the road that serves it, in world
+//! units. A couple of cells: the driveway, not a hike.
+//------------------------------------------------------------------------------
+static float maxAccessDistance(City const& city)
+{
+    static constexpr float ACCESS_CELLS = 2.0f;
+    return ACCESS_CELLS * city.gridCellSize();
+}
+
+//------------------------------------------------------------------------------
 bool RuleCommandSpawn::validate(RuleContext& context)
 {
     if (context.area == nullptr || context.city == nullptr)
         return false;
 
     int32_t u = 0, v = 0;
-    if (!context.area->findFreeCell(u, v))
-        return false;
 
     if (m_placement != Placement::NearestWay)
-        return true;
+        return context.area->findFreeCell(u, v);
 
     // A building has to be reachable. Without a road, no Agent could ever
-    // leave it or deliver to it, and the Area would keep growing ghosts.
+    // leave it or deliver to it, and the Area would keep growing ghosts, so the
+    // free cell is looked for along the network instead of anywhere in the
+    // footprint.
+    if (!context.area->findBuildableCell(u, v))
+        return false;
+
     float offset = 0.5f;
     Way const* way =
-        context.area->nearestWay(context.area->cellWorldPosition(u, v), offset);
+        context.area->nearestWay(context.area->cellWorldPosition(u, v), offset,
+                                 maxAccessDistance(*context.city));
     return (way != nullptr) && (way->from().path() != nullptr);
 }
 
@@ -237,19 +252,22 @@ void RuleCommandSpawn::execute(RuleContext& context)
         return;
 
     int32_t u = 0, v = 0;
-    if (!context.area->findFreeCell(u, v))
-        return;
-
-    Vector3f const world = context.area->cellWorldPosition(u, v);
 
     if (m_placement != Placement::NearestWay)
     {
-        context.city->addUnit(m_unitType, world);
+        if (!context.area->findFreeCell(u, v))
+            return;
+        context.city->addUnit(m_unitType, context.area->cellWorldPosition(u, v));
         return;
     }
 
+    if (!context.area->findBuildableCell(u, v))
+        return;
+
+    Vector3f const world = context.area->cellWorldPosition(u, v);
     float offset = 0.5f;
-    Way* way = context.area->nearestWay(world, offset);
+    Way* way =
+        context.area->nearestWay(world, offset, maxAccessDistance(*context.city));
     Path* path = (way == nullptr) ? nullptr : way->from().path();
     if ((way == nullptr) || (path == nullptr))
         return;

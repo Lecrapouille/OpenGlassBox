@@ -250,6 +250,11 @@ void GlassBoxApp::createEmptyCity(Simulation& simulation, std::string const& nam
                                     DEFAULT_CITY_SIZE, DEFAULT_CITY_SIZE);
     for (auto const& it: simulation.script().mapTypes())
         city.addMap(*it.second);
+
+    // The city starts with no road, but it has to start with the graphs the
+    // ruleset declares: an empty Path is what the road tool lays segments into.
+    for (auto const& it: simulation.script().pathTypes())
+        city.addPath(*it.second);
 }
 
 // ----------------------------------------------------------------------------
@@ -260,12 +265,21 @@ void GlassBoxApp::resetView()
     m_trace.clear();
     m_editor.reset();
 
-    if (m_state.primaryLayer.empty() && m_simulation &&
-        !m_simulation->cities().empty())
+    // Six maps drawn on top of each other is a mush in which none can be read,
+    // so a fresh simulation shows the first one and lists the others in the
+    // Maps tool, one click away.
+    if (m_simulation && !m_simulation->cities().empty())
     {
         auto const& maps = m_simulation->cities().begin()->second->maps();
-        if (!maps.empty())
+        if (m_state.primaryLayer.empty() && !maps.empty())
             m_state.primaryLayer = maps.begin()->second->type();
+
+        m_state.soloLayer.clear();
+        for (auto const& it: maps)
+        {
+            m_state.layer(it.first).visible =
+                (it.first == m_state.primaryLayer);
+        }
     }
 
     m_viewer.requestFrameAll();

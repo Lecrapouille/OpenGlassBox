@@ -333,7 +333,13 @@ void City::clear()
         removeUnit(*m_units.back());
     while (!m_areas.empty())
         removeArea(*m_areas.back());
-    m_paths.clear();
+
+    // The graphs are emptied but kept: which kinds of network exist comes from
+    // the ruleset, not from what the player drew. Dropping them would leave the
+    // City with no road type to lay a road with.
+    for (auto& it: m_paths)
+        it.second->clear();
+
     m_globals = Resources();
 }
 

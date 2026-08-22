@@ -81,8 +81,13 @@ public:
     // -------------------------------------------------------------------------
     //! \brief Closest Way of the City to the given world position, or nullptr.
     //! Used by spawn-at-nearestWay.
+    //! \param[out] offset: where the projection lands along the Way, in [0..1].
+    //! \param[in] maxDistance: how far the Way may be, in world units. A
+    //! building beyond that is not connected to anything, and the Area does not
+    //! grow it: negative means no limit.
     // -------------------------------------------------------------------------
-    Way* nearestWay(Vector3f const& world, float& offset) const;
+    Way* nearestWay(Vector3f const& world, float& offset,
+                    float maxDistance = -1.0f) const;
 
     // -------------------------------------------------------------------------
     //! \brief A cell of the footprint that holds no Unit at all, whatever its
@@ -90,6 +95,16 @@ public:
     //! full.
     // -------------------------------------------------------------------------
     bool findFreeCell(int32_t& u, int32_t& v) const;
+
+    // -------------------------------------------------------------------------
+    //! \brief A free cell of the footprint that a road runs through or fronts,
+    //! so that the building put there is connected to the network.
+    //!
+    //! The search walks the roads rather than the cells: a large city holds a
+    //! few thousand segments against a few hundred thousand cells, and a
+    //! building belongs beside the road that serves it anyway.
+    // -------------------------------------------------------------------------
+    bool findBuildableCell(int32_t& u, int32_t& v) const;
 
 private:
 

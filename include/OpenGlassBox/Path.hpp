@@ -381,6 +381,15 @@ public:
     void removeNode(Node& node);
 
     // -------------------------------------------------------------------------
+    //! \brief Drop every node and every segment, keeping the type of the graph.
+    //! What the player drew goes away; the kind of network the ruleset declared
+    //! stays, so roads can be laid again.
+    //! \note Same warning as removeNode: the caller gets rid of the Units and
+    //! the Agents first.
+    // -------------------------------------------------------------------------
+    void clear();
+
+    // -------------------------------------------------------------------------
     //! \brief Create and store a new segment given two existing nodes.
     //! \return the newly created segment.
     // -------------------------------------------------------------------------

@@ -171,7 +171,21 @@ bool AddWayCommand::redo(Simulation& simulation)
 {
     Path* path = findPath(simulation, m_city, m_path);
     if (path == nullptr)
-        return false;
+    {
+        // A city that never had a road of that kind has no graph to put one in.
+        // Found it from the ruleset rather than refuse the segment.
+        City* city = findCity(simulation, m_city);
+        if (city == nullptr)
+            return false;
+        try
+        {
+            path = &city->addPath(simulation.script().getPathType(m_path));
+        }
+        catch (...)
+        {
+            return false;
+        }
+    }
 
     WayType const* type = nullptr;
     try

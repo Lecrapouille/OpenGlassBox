@@ -91,11 +91,16 @@ void Map::setResource(int32_t const u, int32_t const v, uint32_t amount)
         if (it == m_chunks.end())
             return;
 
-        it->second.cells[cellIndex(u, v)] = 0u;
+        uint32_t& cell = it->second.cells[cellIndex(u, v)];
+        it->second.total -= cell;
+        cell = 0u;
         return;
     }
 
-    chunkFor(u, v).cells[cellIndex(u, v)] = amount;
+    Chunk& chunk = chunkFor(u, v);
+    uint32_t& cell = chunk.cells[cellIndex(u, v)];
+    chunk.total = chunk.total - cell + amount;
+    cell = amount;
 }
 
 // -----------------------------------------------------------------------------
@@ -109,6 +114,11 @@ uint32_t Map::getResource(int32_t const u, int32_t const v) const
 uint32_t Map::getResource(int32_t const u, int32_t const v, uint32_t radius,
                           MapRegion const& region)
 {
+    // A map rule reads the cell it stands on, and it does so for every cell of
+    // the region: worth not walking a one element circle to get there.
+    if (radius == 0u)
+        return region.contains(u, v) ? getResource(u, v) : 0u;
+
     uint32_t totalInsideRadius = 0u;
     int32_t x = u;
     int32_t y = v;
@@ -140,6 +150,13 @@ void Map::addResource(int32_t const u, int32_t const v, uint32_t toAdd)
 void Map::addResource(int32_t const u, int32_t const v, uint32_t const radius,
                       MapRegion const& region, uint32_t toAdd, bool distributed)
 {
+    if (radius == 0u)
+    {
+        if (region.contains(u, v))
+            addResource(u, v, toAdd);
+        return;
+    }
+
     uint32_t remainingToAdd = toAdd;
     int32_t x = u;
     int32_t y = v;
@@ -177,6 +194,13 @@ void Map::removeResource(int32_t const u, int32_t const v, uint32_t radius,
                          MapRegion const& region, uint32_t toRemove,
                          bool distributed)
 {
+    if (radius == 0u)
+    {
+        if (region.contains(u, v))
+            removeResource(u, v, toRemove);
+        return;
+    }
+
     uint32_t remainingToRemove = toRemove;
     int32_t x = u;
     int32_t y = v;
@@ -209,10 +233,7 @@ uint64_t Map::totalResource() const
 
     for (auto const& it: m_chunks)
     {
-        for (uint32_t const amount: it.second.cells)
-        {
-            total += amount;
-        }
+        total += it.second.total;
     }
 
     return total;

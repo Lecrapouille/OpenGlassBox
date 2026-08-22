@@ -130,6 +130,46 @@ TEST(TestsMap, SparseNegativeCells)
 }
 
 // -----------------------------------------------------------------------------
+//! \brief The sum of a block is kept as cells are written, because the panels
+//! and the renderer ask for it on every frame and walking the grid would cost
+//! the whole city.
+// -----------------------------------------------------------------------------
+TEST(TestsMap, TotalAndRegionIterationFollowWrites)
+{
+    TestWorld cityWorld("Paris", 4u, 4u);
+    Map map(MapType("map"), cityWorld.world);
+
+    map.setResource(1, 1, 10u);
+    map.setResource(2, 1, 5u);
+    ASSERT_EQ(map.totalResource(), 15u);
+
+    map.setResource(1, 1, 3u);
+    ASSERT_EQ(map.totalResource(), 8u);
+
+    map.removeResource(2, 1, 5u);
+    ASSERT_EQ(map.totalResource(), 3u);
+
+    // A far away cell allocates its own block, and only the cells inside the
+    // asked region are visited.
+    map.setResource(100, 100, 7u);
+    ASSERT_EQ(map.totalResource(), 10u);
+
+    uint64_t visited = 0u;
+    uint64_t sum = 0u;
+    map.forEachCellInRegion(MapRegion{ 0, 0, 4u, 4u },
+                            [&](int32_t, int32_t, uint32_t amount) {
+                                ++visited;
+                                sum += amount;
+                            });
+    ASSERT_EQ(visited, 1u);
+    ASSERT_EQ(sum, 3u);
+
+    uint64_t blocks = 0u;
+    map.forEachChunk([&](int32_t, int32_t, int32_t, uint32_t) { ++blocks; });
+    ASSERT_EQ(blocks, 2u);
+}
+
+// -----------------------------------------------------------------------------
 class MockRuleMap: public RuleMap
 {
 public:

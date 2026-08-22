@@ -171,6 +171,9 @@ private:
     std::string m_unitType;
     std::string m_map;
     std::string m_areaType;
+    //! \brief Map the layer list was last switched to, so that arming the paint
+    //! tool shows it once instead of forcing it on at every frame.
+    std::string m_shownMap;
 
     int m_paintAmount = 10;
     //! \brief Side, in cells, of the square a single click of the zone or map

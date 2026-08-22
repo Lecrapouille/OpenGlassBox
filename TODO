@@ -24,3 +24,21 @@ Creer une simulation
 Deplacer node
 bulldozer la carte entiere => bug road
 manquer zone vide
+
+Ok ameliore un peu les regles de Desirability car c'est beaucoup trop rapide, en quelques heures ca se construit et se detruit, regle pour que ca se compte en jours.
+Il y a toujours le bug ou deux groupe d'agents vont vers la meme maison. le premier groupe entre puis quand le deuxieme arrive les agents se teleportent vers le noeud avant la maison.
+ca boucle indefiniment. Les agents devraient trouver un autre chemin.
+Dans la tooltip de l'inspecteur il faudrait afficher les agents dans les buildings et la capacite.
+Dans la tooltip de l'inspecteur il faudrait afficher les noms des regles quand c'est possible (zones et areas).
+Dans la tooltip de l'inspecteur il faudrait afficher ce que les agents transportent.
+le dernier zone reste bleue.
+
+Dans l'inspecteur tableau rules il faut ajouter des colonnes pour hour, remove, add
+
+On dirait que les biens goods ne sont pas bien créés
+
+Quand on croise deux routes ca ne cree pas de carrefour
+
+Le route builder est tres mauvais.
+Il faut pouvoir construire des routes avec des noeuds.
+Il faut pouvoir construire des routes avec des noeuds.
