@@ -5,9 +5,9 @@
 //-----------------------------------------------------------------------------
 
 #include "UI/Theme.hpp"
-#include "Core/DataPath.hpp"
 
 #include <algorithm>
+#include <sys/stat.h>
 
 namespace ogb {
 namespace theme {
@@ -102,16 +102,22 @@ void apply()
     colors[ImGuiCol_TableRowBgAlt] = ImVec4(1.0f, 1.0f, 1.0f, 0.02f);
 }
 
+namespace {
+
+bool fileExists(char const* path)
+{
+    struct stat info;
+    return (path != nullptr) && (path[0] != '\0') && (::stat(path, &info) == 0);
+}
+
+} // namespace
+
 // ----------------------------------------------------------------------------
-void loadFonts(DataPath const& path)
+void loadFonts()
 {
     ImGuiIO& io = ImGui::GetIO();
 
-    // Any of these is fine: the demo only needs a readable sans-serif. The
-    // built-in ImGui font is used when none is available.
     char const* const candidates[] = {
-        "Fonts/Roboto-Regular.ttf",
-        "Fonts/DejaVuSans.ttf",
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
         "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf",
         "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
@@ -120,11 +126,10 @@ void loadFonts(DataPath const& path)
 
     for (char const* const candidate: candidates)
     {
-        auto const found = path.find(candidate);
-        if (!found.second)
+        if (!fileExists(candidate))
             continue;
 
-        if (io.Fonts->AddFontFromFileTTF(found.first.c_str(), 16.0f) != nullptr)
+        if (io.Fonts->AddFontFromFileTTF(candidate, 16.0f) != nullptr)
             return;
     }
 

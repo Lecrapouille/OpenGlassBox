@@ -9,8 +9,6 @@
 
 #  include "Application/OpenGL.hpp"
 
-class DataPath;
-
 namespace ogb {
 namespace theme {
 
@@ -33,11 +31,10 @@ ImU32 const GRID_LINE_STRONG = IM_COL32(255, 255, 255, 40);
 void apply();
 
 // ----------------------------------------------------------------------------
-//! \brief Load the fonts of the demo from the data path. Falls back silently on
-//! the built-in ImGui font when the files are missing, so a partial install
-//! still runs.
+//! \brief Load a readable sans-serif when a system font is available, otherwise
+//! the built-in ImGui font.
 // ----------------------------------------------------------------------------
-void loadFonts(DataPath const& path);
+void loadFonts();
 
 // ----------------------------------------------------------------------------
 //! \brief Convert a 0xRRGGBB color coming from a simulation script into an

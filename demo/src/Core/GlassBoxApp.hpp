@@ -8,7 +8,6 @@
 #  define OPEN_GLASSBOX_DEMO_GLASSBOX_APP_HPP
 
 #  include "Application/Application.hpp"
-#  include "Core/DataPath.hpp"
 #  include "Core/DebugState.hpp"
 #  include "Core/Editor.hpp"
 #  include "Core/RuleTrace.hpp"
@@ -19,6 +18,7 @@
 
 #  include <memory>
 #  include <string>
+#  include <vector>
 
 namespace ogb {
 
@@ -121,7 +121,8 @@ private:
 private:
 
     Options m_options;
-    DataPath m_data_path;
+    //! \brief Directories searched for simulation scripts, highest priority first.
+    std::vector<std::string> m_data_paths;
     //! \brief Rebuilt from scratch on every script load, hence the pointer.
     std::unique_ptr<Simulation> m_simulation;
     DebugState m_state;
