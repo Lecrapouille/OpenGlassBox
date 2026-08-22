@@ -64,6 +64,7 @@ struct Selection
         Node,
         Agent,
         Way,
+        Area,
         Cell,
     };
 
@@ -73,6 +74,7 @@ struct Selection
     Unit* unit = nullptr;
     Node* node = nullptr;
     Way* way = nullptr;
+    Area* area = nullptr;
     //! \brief Agent::id() of the selected Agent.
     uint32_t agentId = 0u;
     int32_t u = 0;

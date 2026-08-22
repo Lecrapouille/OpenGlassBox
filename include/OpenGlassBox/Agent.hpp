@@ -51,10 +51,43 @@ public:
     Route const& route() const { return m_route; }
     float remainingCost() const { return remainingRouteCost(); }
     Node* lastNode() const { return m_lastNode; }
+    Resources& carried() { return m_resources; }
     Resources const& carried() const { return m_resources; }
+    Unit* owner() const { return m_owner; }
+    void detachOwner() { m_owner = nullptr; }
 
     void translate(Vector3f const direction);
     void relocate(Vector3f const& position, Way* way, float offset, Node* last);
+
+    //! \brief Drop the cached itinerary so the next tick recomputes it.
+    void disruptRoute();
+
+    // -------------------------------------------------------------------------
+    //! \brief Forget the cached itinerary without moving: it was computed on a
+    //! network that has since changed.
+    // -------------------------------------------------------------------------
+    void invalidateRoute();
+
+    // -------------------------------------------------------------------------
+    //! \brief Let go of a Way that is about to be destroyed. Has to be called
+    //! while the Way is still alive, because the Agent has to take itself out
+    //! of its traffic count. An Agent driving on it is parked on the Node it
+    //! came from.
+    // -------------------------------------------------------------------------
+    void forget(Way const& way);
+
+    // -------------------------------------------------------------------------
+    //! \brief Let go of a Node that is about to be destroyed. Call it after
+    //! forget() has been called for every Way incident to that Node.
+    // -------------------------------------------------------------------------
+    void forget(Node const& node);
+
+    // -------------------------------------------------------------------------
+    //! \brief Whether the Agent has nowhere left to stand: no Way under it and
+    //! no Node with a road. Such an Agent can neither move nor deliver, and the
+    //! City takes it away rather than leave it floating over the map.
+    // -------------------------------------------------------------------------
+    bool stranded() const;
 
     bool uses(Way const& way) const;
     bool uses(Node const& node) const;
@@ -76,6 +109,7 @@ private:
 
     uint32_t           m_id;
     AgentType const&   m_type;
+    Unit*              m_owner = nullptr;
     std::string        m_searchTarget;
     Resources          m_resources;
     Vector3f           m_position;

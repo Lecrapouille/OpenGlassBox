@@ -169,15 +169,17 @@ public:
     void removeArea(Area& area);
 
     // -------------------------------------------------------------------------
-    //! \brief Destroy a segment of a Path together with everything that would
-    //! be left dangling: the Agents travelling on it.
+    //! \brief Destroy a segment of a Path together with the Units sitting on
+    //! it. Agents using the segment or waiting at either end are recycled:
+    //! their cargo goes back to the owner Unit (or a compatible one) before
+    //! they are removed.
     // -------------------------------------------------------------------------
     void removeWay(Path& path, Way& way);
 
     // -------------------------------------------------------------------------
-    //! \brief Destroy a node of a Path together with everything that would be
-    //! left dangling: its incident segments, the Units sitting on it and the
-    //! Agents heading for it.
+    //! \brief Destroy a node of a Path, its incident segments and the Units on
+    //! them. Agents using the node or those segments are recycled to their
+    //! owner.
     // -------------------------------------------------------------------------
     void removeNode(Path& path, Node& node);
 
@@ -303,8 +305,15 @@ public:
 
     // -------------------------------------------------------------------------
     //! \brief After a Way was removed, drop Nodes that no longer have a Way.
+    //! Agents standing on such a Node let go of it first.
     // -------------------------------------------------------------------------
     void removeOrphanNodes(Path& path);
+
+    // -------------------------------------------------------------------------
+    //! \brief Take away the Agents left with no road under them, which is what
+    //! happens to all of them when the last Way of the City is demolished.
+    // -------------------------------------------------------------------------
+    void dropStrandedAgents();
 
 private:
 

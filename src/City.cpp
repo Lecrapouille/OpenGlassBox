@@ -6,9 +6,12 @@
 //-----------------------------------------------------------------------------
 
 #include "OpenGlassBox/City.hpp"
+#include "OpenGlassBox/Agent.hpp"
 #include "OpenGlassBox/Config.hpp"
 #include "OpenGlassBox/World.hpp"
+#include "OpenGlassBox/Vector.hpp"
 #include <algorithm>
+#include <vector>
 
 // -----------------------------------------------------------------------------
 namespace ogb {
@@ -224,6 +227,12 @@ Agent& City::addAgent(AgentType const& type, Unit& owner, Resources const& resou
 // -----------------------------------------------------------------------------
 void City::removeUnit(Unit& unit)
 {
+    for (auto& agent: m_agents)
+    {
+        if (agent->owner() == &unit)
+            agent->detachOwner();
+    }
+
     m_listener->onUnitRemoved(unit);
     unit.detach();
 
@@ -246,22 +255,17 @@ void City::removeArea(Area& area)
 }
 
 // -----------------------------------------------------------------------------
-//! \brief Destroy every Agent for which the predicate holds. Factored out
-//! because the two demolition entry points differ only by that predicate.
-// -----------------------------------------------------------------------------
-template<class Predicate>
-static void removeAgentsIf(Agents& agents, City::Listener& listener,
-                           Predicate predicate)
+void City::dropStrandedAgents()
 {
-    size_t i = agents.size();
+    size_t i = m_agents.size();
     while (i--)
     {
-        if (predicate(*agents[i]))
-        {
-            listener.onAgentRemoved(*agents[i]);
-            std::swap(agents[i], agents[agents.size() - 1u]);
-            agents.pop_back();
-        }
+        if (!m_agents[i]->stranded())
+            continue;
+
+        m_listener->onAgentRemoved(*m_agents[i]);
+        std::swap(m_agents[i], m_agents[m_agents.size() - 1u]);
+        m_agents.pop_back();
     }
 }
 
@@ -277,6 +281,15 @@ void City::removeWay(Path& path, Way& way)
         return;
     }
 
+    // The Agents hold raw pointers on the segment and on the Nodes, so they
+    // have to let go before anything is freed. They keep their position: the
+    // next tick routes them again over the graph that remains.
+    for (auto& agent: m_agents)
+    {
+        agent->forget(way);
+        agent->invalidateRoute();
+    }
+
     size_t i = m_units.size();
     while (i--)
     {
@@ -284,11 +297,9 @@ void City::removeWay(Path& path, Way& way)
             removeUnit(*m_units[i]);
     }
 
-    removeAgentsIf(m_agents, *m_listener,
-                   [&way](Agent const& agent) { return agent.uses(way); });
-
     path.removeWay(way);
     removeOrphanNodes(path);
+    dropStrandedAgents();
 }
 
 // -----------------------------------------------------------------------------
@@ -302,6 +313,10 @@ void City::removeOrphanNodes(Path& path)
             continue;
         if (!node.units().empty())
             continue;
+
+        for (auto& agent: m_agents)
+            agent->forget(node);
+
         path.removeNode(node);
     }
 }
@@ -325,31 +340,42 @@ void City::clear()
 // -----------------------------------------------------------------------------
 void City::removeNode(Path& path, Node& node)
 {
+    std::vector<Way*> incident = node.ways();
+
+    // Segments first, then the Node: an Agent parked on the Node is only
+    // detached from the graph once nothing carries it any more.
+    for (auto& agent: m_agents)
+    {
+        for (Way* way: incident)
+            agent->forget(*way);
+        agent->forget(node);
+        agent->invalidateRoute();
+    }
+
     size_t i = m_units.size();
     while (i--)
     {
-        if (m_units[i]->node() == &node)
+        Unit& unit = *m_units[i];
+        if (unit.node() == &node)
         {
-            removeUnit(*m_units[i]);
+            removeUnit(unit);
+            continue;
+        }
+        for (Way* way: incident)
+        {
+            if (unit.way() == way)
+            {
+                removeUnit(unit);
+                break;
+            }
         }
     }
 
-    removeAgentsIf(m_agents, *m_listener, [&node](Agent const& agent) {
-        if (agent.uses(node))
-            return true;
-
-        // Also catch the Agents halfway along a segment that is about to go
-        // down with the node.
-        for (auto const& way: node.ways())
-        {
-            if (agent.uses(*way))
-                return true;
-        }
-
-        return false;
-    });
-
     path.removeNode(node);
+
+    // The far ends of the segments that went with it may have become orphans.
+    removeOrphanNodes(path);
+    dropStrandedAgents();
 }
 
 } // namespace ogb

@@ -24,6 +24,7 @@ Agent::Agent(uint32_t id, AgentType const& type, Unit& owner,
              Resources const& resources, std::string const& searchTarget)
     : m_id(id),
       m_type(type),
+      m_owner(&owner),
       m_searchTarget(searchTarget),
       m_resources(resources),
       m_position(owner.position())
@@ -36,7 +37,6 @@ Agent::Agent(uint32_t id, AgentType const& type, Unit& owner,
         m_currentWay->addAgent();
         m_offset = owner.wayOffset();
         m_lastNode = owner.accessNode();
-        m_nextNode = m_lastNode;
     }
     else
     {
@@ -80,6 +80,64 @@ void Agent::relocate(Vector3f const& position, Way* way, float offset, Node* las
     m_lastNode = last;
     m_nextNode = last;
     m_route = Route{};
+}
+
+//------------------------------------------------------------------------------
+void Agent::disruptRoute()
+{
+    setCurrentWay(nullptr);
+    m_route = Route{};
+    m_nextNode = nullptr;
+    m_ticksOnRoute = 0u;
+}
+
+//------------------------------------------------------------------------------
+void Agent::invalidateRoute()
+{
+    m_route = Route{};
+    m_nextNode = nullptr;
+    m_ticksOnRoute = 0u;
+}
+
+//------------------------------------------------------------------------------
+void Agent::forget(Way const& way)
+{
+    if (m_route.approachWay == &way)
+        invalidateRoute();
+
+    if (m_currentWay != &way)
+        return;
+
+    // Step back onto the Node the Agent came from. It may itself be about to
+    // go, in which case forget(Node) clears it too and the Agent is stranded.
+    setCurrentWay(nullptr);
+    invalidateRoute();
+    m_offset = 0.0f;
+    if (m_lastNode != nullptr)
+        m_position = m_lastNode->position();
+}
+
+//------------------------------------------------------------------------------
+void Agent::forget(Node const& node)
+{
+    if (uses(node))
+        invalidateRoute();
+
+    if (m_nextNode == &node)
+        m_nextNode = nullptr;
+
+    if (m_lastNode == &node)
+        m_lastNode = nullptr;
+}
+
+//------------------------------------------------------------------------------
+bool Agent::stranded() const
+{
+    if (m_currentWay != nullptr)
+        return false;
+    if (m_lastNode == nullptr)
+        return true;
+    return !m_lastNode->hasWays();
 }
 
 //------------------------------------------------------------------------------
@@ -306,7 +364,7 @@ Unit* Agent::searchUnit()
 bool Agent::unloadResources()
 {
     Unit* unit = searchUnit();
-    if (unit != nullptr)
+    if ((unit != nullptr) && unit->accepts(m_searchTarget, m_resources))
         m_resources.transferResourcesTo(unit->resources());
     return m_resources.isEmpty();
 }

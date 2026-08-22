@@ -6,6 +6,7 @@
 
 #include "UI/CityViewer.hpp"
 #include "UI/Theme.hpp"
+#include "UI/Panels.hpp"
 #include "Editor/Editor.hpp"
 #include "OpenGlassBox/Simulation.hpp"
 
@@ -121,8 +122,10 @@ void CityViewer::draw(Simulation& simulation, game::DebugState& state, editor::E
     drawToolbar(simulation, state, editor);
 
     SimulationClock const& clock = simulation.clock();
+    float const hour =
+        float(clock.hourOfDay()) + float(clock.minuteOfHour()) / 60.0f;
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-    ImGui::PushStyleColor(ImGuiCol_ChildBg, theme::canvasBackground(clock.hourOfDay()));
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, theme::canvasBackground(hour));
     ImGui::BeginChild("Canvas", ImVec2(0.0f, 0.0f), true,
                       ImGuiWindowFlags_NoScrollbar |
                       ImGuiWindowFlags_NoScrollWithMouse |
@@ -166,17 +169,17 @@ void CityViewer::draw(Simulation& simulation, game::DebugState& state, editor::E
         drawAgents(city, state);
     }
 
-    drawSelectionOverlay(simulation, state);
+    drawSelectionOverlay(simulation, state, editor);
 
     m_splitter.SetCurrentChannel(m_draw_list, CHANNEL_OVERLAY);
-    editor.drawPreview(simulation, *this, m_draw_list);
+    editor.drawPreview(simulation, state, *this, m_draw_list);
 
     m_splitter.Merge(m_draw_list);
 
     m_draw_list->PopClipRect();
 
     drawLegend(state);
-    drawHoverTooltip(simulation, state);
+    drawHoverTooltip(simulation, state, editor);
     drawClockHud(simulation);
     drawHint(editor);
 
@@ -195,13 +198,19 @@ void CityViewer::drawToolbar(Simulation& simulation, game::DebugState& state,
 
     if (ImGui::Button("Recenter"))
     {
-        frameAll(simulation);
+        requestFrameAll();
     }
-    ImGui::SameLine();
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("Frame the whole city in the view. Shortcut: Home.");
+    }
 
+    ImGui::SameLine();
     ImGui::SetNextItemWidth(140.0f);
     ImGui::SliderFloat("Zoom", &m_zoom, MIN_ZOOM, MAX_ZOOM, "%.2f",
                        ImGuiSliderFlags_Logarithmic);
+
+    drawDisplayToggles(state);
 
     ImGui::Separator();
 }
@@ -245,7 +254,7 @@ void CityViewer::handleInputs(Simulation& simulation, game::DebugState& state,
 
     // The hovered cell drives both the tooltip and the brush, and the tools
     // read it, so refresh it before they run.
-    updateHover(simulation, state);
+    updateHover(simulation, state, hovered || ImGui::IsItemActive());
 
     // An armed tool owns the left button. Only when it declines does the click
     // fall through to the selection.
@@ -364,8 +373,31 @@ Unit* CityViewer::pickUnit(City& city, ImVec2 const& world, float pixels) const
 }
 
 // ----------------------------------------------------------------------------
-void CityViewer::pick(Simulation& simulation, game::DebugState& state,
-                      ImVec2 const& screen)
+Agent* CityViewer::pickAgent(City& city, ImVec2 const& world, float pixels) const
+{
+    float const tolerance = pixels / std::max(1e-3f, m_zoom);
+    float best = tolerance * tolerance;
+    Agent* found = nullptr;
+
+    for (auto& agent: city.agents())
+    {
+        float const dx = agent->position().x - world.x;
+        float const dy = agent->position().y - world.y;
+        float const distance = dx * dx + dy * dy;
+        if (distance <= best)
+        {
+            best = distance;
+            found = agent.get();
+        }
+    }
+
+    return found;
+}
+
+// ----------------------------------------------------------------------------
+game::Selection CityViewer::pickAt(Simulation& simulation,
+                                   game::DebugState const& state,
+                                   ImVec2 const& screen) const
 {
     float bestDistance = PICK_RADIUS * PICK_RADIUS;
     game::Selection best;
@@ -427,10 +459,7 @@ void CityViewer::pick(Simulation& simulation, game::DebugState& state,
     }
 
     if (best.kind != game::Selection::Kind::None)
-    {
-        state.selection = std::move(best);
-        return;
-    }
+        return best;
 
     if (state.showPaths)
     {
@@ -445,34 +474,59 @@ void CityViewer::pick(Simulation& simulation, game::DebugState& state,
             selected.kind = game::Selection::Kind::Way;
             selected.city = it.second->name();
             selected.way = way;
-            state.selection = selected;
-            return;
+            return selected;
         }
     }
 
-    // Nothing close enough: fall back on the grid cell, which is still useful
-    // to read the maps.
-    if (state.hasHoveredCell)
+    if (!state.hasHoveredCell)
+        return {};
+
+    if (state.showAreas)
     {
-        game::Selection cell;
-        cell.kind = game::Selection::Kind::Cell;
-        cell.city = state.hoveredCity;
-        cell.u = state.hoveredU;
-        cell.v = state.hoveredV;
-        state.selection = cell;
+        auto const cityIt = simulation.cities().find(state.hoveredCity);
+        if (cityIt != simulation.cities().end())
+        {
+            // Walk backwards: the last painted zone is the one drawn on top.
+            Areas const& areas = cityIt->second->areas();
+            size_t i = areas.size();
+            while (i--)
+            {
+                if (!areas[i]->contains(state.hoveredU, state.hoveredV))
+                    continue;
+
+                game::Selection selected;
+                selected.kind = game::Selection::Kind::Area;
+                selected.city = state.hoveredCity;
+                selected.area = areas[i].get();
+                selected.u = state.hoveredU;
+                selected.v = state.hoveredV;
+                return selected;
+            }
+        }
     }
-    else
-    {
-        state.selection.clear();
-    }
+
+    game::Selection cell;
+    cell.kind = game::Selection::Kind::Cell;
+    cell.city = state.hoveredCity;
+    cell.u = state.hoveredU;
+    cell.v = state.hoveredV;
+    return cell;
 }
 
 // ----------------------------------------------------------------------------
-void CityViewer::updateHover(Simulation& simulation, game::DebugState& state)
+void CityViewer::pick(Simulation& simulation, game::DebugState& state,
+                      ImVec2 const& screen)
+{
+    state.selection = pickAt(simulation, state, screen);
+}
+
+// ----------------------------------------------------------------------------
+void CityViewer::updateHover(Simulation& simulation, game::DebugState& state,
+                             bool hovered)
 {
     state.hasHoveredCell = false;
 
-    if (!ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows))
+    if (!hovered)
         return;
 
     ImVec2 const world = screenToWorld(ImGui::GetIO().MousePos);
@@ -533,10 +587,16 @@ void CityViewer::drawMaps(World& world, game::DebugState const& state)
                     // A non primary map is drawn thinner so that several of
                     // them stay readable when superimposed.
                     float const inset = primary ? 0.0f : pixels * 0.18f;
+                    // A cell holding a tenth of the capacity would be all but
+                    // invisible if the opacity were the ratio itself, so the
+                    // ratio shades a floor instead of scaling from zero: any
+                    // cell that holds something can be seen.
+                    float const alpha =
+                        options.opacity * (0.25f + 0.75f * ratio);
                     m_draw_list->AddRectFilled(
                         ImVec2(p0.x + inset, p0.y + inset),
                         ImVec2(p1.x - inset, p1.y - inset),
-                        theme::fromScript(map.color(), ratio * options.opacity));
+                        theme::fromScript(map.color(), alpha));
                     break;
                 }
                 case game::LayerMode::Contour:
@@ -548,6 +608,8 @@ void CityViewer::drawMaps(World& world, game::DebugState const& state)
 
                 case game::LayerMode::Value:
                 {
+                    if (!primary)
+                        break;
                     if (pixels < 22.0f)
                         break;
                     char label[16];
@@ -604,13 +666,9 @@ void CityViewer::drawCityFrame(City& city, game::DebugState const& state)
                              IM_COL32(200, 205, 215, 220), city.name().c_str());
     }
 
-    if (state.hasHoveredCell && (state.hoveredCity == city.name()))
-    {
-        ImVec2 const p0 = worldToScreen(
-            city.world().mapPosition2world(state.hoveredU, state.hoveredV));
-        ImVec2 const p1(p0.x + side * m_zoom, p0.y + side * m_zoom);
-        m_draw_list->AddRect(p0, p1, IM_COL32(255, 255, 255, 120), 0.0f, 0, 1.5f);
-    }
+    // The cell under the cursor is not highlighted here: it belongs to the
+    // Inspect tool, which only lights it up when there is nothing more
+    // specific under the mouse. See drawInspectHover.
 }
 
 // ----------------------------------------------------------------------------
@@ -743,10 +801,101 @@ void CityViewer::drawAgents(City& city, game::DebugState const& state)
 }
 
 // ----------------------------------------------------------------------------
+void CityViewer::drawInspectHover(Simulation& simulation,
+                                  game::DebugState const& state,
+                                  editor::Editor const& editor)
+{
+    if (!ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows))
+        return;
+
+    game::Selection const hover =
+        pickAt(simulation, state, ImGui::GetIO().MousePos);
+    if (hover.kind == game::Selection::Kind::None)
+        return;
+
+    ImU32 const highlight = theme::fromScript(0x56AADE, 0.85f);
+
+    switch (hover.kind)
+    {
+    case game::Selection::Kind::Cell:
+    {
+        auto const cityIt = simulation.cities().find(hover.city);
+        if (cityIt == simulation.cities().end())
+            break;
+        City& city = *cityIt->second;
+        float const side = city.gridCellSize();
+        ImVec2 const p0 = worldToScreen(
+            city.world().mapPosition2world(hover.u, hover.v));
+        ImVec2 const p1(p0.x + side * m_zoom, p0.y + side * m_zoom);
+        m_draw_list->AddRectFilled(p0, p1, theme::fromScript(0x56AADE, 0.18f));
+        m_draw_list->AddRect(p0, p1, highlight, 0.0f, 0, 2.5f);
+        break;
+    }
+    case game::Selection::Kind::Node:
+    {
+        if (hover.node == nullptr)
+            break;
+        m_draw_list->AddCircle(worldToScreen(hover.node->position()),
+                               NODE_RADIUS + 8.0f, highlight, 0, 2.5f);
+        break;
+    }
+    case game::Selection::Kind::Way:
+    {
+        if (hover.way == nullptr)
+            break;
+        ImVec2 const a = worldToScreen(hover.way->position1());
+        ImVec2 const b = worldToScreen(hover.way->position2());
+        m_draw_list->AddLine(a, b, highlight, 6.0f);
+        break;
+    }
+    case game::Selection::Kind::Unit:
+    {
+        if (hover.unit == nullptr)
+            break;
+        m_draw_list->AddCircle(worldToScreen(hover.unit->position()),
+                               UNIT_RADIUS + 8.0f, highlight, 0, 2.5f);
+        break;
+    }
+    case game::Selection::Kind::Agent:
+    {
+        Agent const* agent = hover.resolveAgent(simulation);
+        if (agent == nullptr)
+            break;
+        m_draw_list->AddCircle(worldToScreen(agent->position()),
+                               AGENT_RADIUS + 8.0f, highlight, 0, 2.5f);
+        break;
+    }
+    case game::Selection::Kind::Area:
+    {
+        auto const cityIt = simulation.cities().find(hover.city);
+        if ((hover.area == nullptr) || (cityIt == simulation.cities().end()))
+            break;
+        City& city = *cityIt->second;
+        float const side = city.gridCellSize();
+        MapRegion const& footprint = hover.area->footprint();
+        ImVec2 const p0 = worldToScreen(
+            city.world().mapPosition2world(footprint.u0, footprint.v0));
+        ImVec2 const p1(p0.x + float(footprint.sizeU) * side * m_zoom,
+                        p0.y + float(footprint.sizeV) * side * m_zoom);
+        m_draw_list->AddRect(p0, p1, highlight, 0.0f, 0, 2.5f);
+        break;
+    }
+    case game::Selection::Kind::None:
+        break;
+    }
+}
+
+// ----------------------------------------------------------------------------
 void CityViewer::drawSelectionOverlay(Simulation& simulation,
-                                      game::DebugState const& state)
+                                      game::DebugState const& state,
+                                      editor::Editor const& editor)
 {
     m_splitter.SetCurrentChannel(m_draw_list, CHANNEL_OVERLAY);
+
+    if (editor.tool() == editor::EditTool::Select)
+    {
+        drawInspectHover(simulation, state, editor);
+    }
 
     game::Selection const& selection = state.selection;
     if (selection.kind == game::Selection::Kind::None)
@@ -840,6 +989,19 @@ void CityViewer::drawSelectionOverlay(Simulation& simulation,
         m_draw_list->AddRect(p0, p1, highlight, 0.0f, 0, 2.5f);
         break;
     }
+    case game::Selection::Kind::Area:
+    {
+        if (selection.area == nullptr)
+            break;
+        float const side = city.gridCellSize();
+        MapRegion const& footprint = selection.area->footprint();
+        ImVec2 const p0 = worldToScreen(
+            city.world().mapPosition2world(footprint.u0, footprint.v0));
+        ImVec2 const p1(p0.x + float(footprint.sizeU) * side * m_zoom,
+                        p0.y + float(footprint.sizeV) * side * m_zoom);
+        m_draw_list->AddRect(p0, p1, highlight, 0.0f, 0, 3.0f);
+        break;
+    }
     case game::Selection::Kind::Way:
     {
         if (selection.way == nullptr)
@@ -860,10 +1022,11 @@ void CityViewer::drawLegend(game::DebugState const& state)
     if (!state.showTraffic)
         return;
 
-    // Anchored to the bottom left corner of the canvas.
+    // Anchored to the bottom right corner: the bottom left one already holds
+    // the hint of the armed tool.
     float const width = 140.0f;
     float const height = 10.0f;
-    ImVec2 const origin(m_canvas_origin.x + 12.0f,
+    ImVec2 const origin(m_canvas_origin.x + m_canvas_size.x - width - 12.0f,
                         m_canvas_origin.y + m_canvas_size.y - 34.0f);
 
     for (int i = 0; i < 32; ++i)
@@ -883,38 +1046,156 @@ void CityViewer::drawLegend(game::DebugState const& state)
 }
 
 // ----------------------------------------------------------------------------
-void CityViewer::drawHoverTooltip(Simulation& simulation, game::DebugState const& state)
+void CityViewer::drawDisplayToggles(game::DebugState& state)
 {
-    if (!state.hasHoveredCell)
+    struct Toggle
+    {
+        char const* label;
+        bool* value;
+    };
+
+    Toggle const toggles[] = {
+        { "Grid", &state.showGrid },
+        { "Paths", &state.showPaths },
+        { "Units", &state.showUnits },
+        { "Areas", &state.showAreas },
+        { "Agents", &state.showAgents },
+        { "Traffic", &state.showTraffic },
+        { "Labels", &state.showLabels },
+    };
+
+    float const right = ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
+    for (size_t i = 0u; i < IM_ARRAYSIZE(toggles); ++i)
+    {
+        float const width = ImGui::CalcTextSize(toggles[i].label).x +
+                            ImGui::GetFrameHeight() +
+                            2.0f * ImGui::GetStyle().FramePadding.x +
+                            ImGui::GetStyle().ItemInnerSpacing.x;
+        float const next = ImGui::GetItemRectMax().x +
+                           ImGui::GetStyle().ItemSpacing.x + width;
+        if (next < right)
+            ImGui::SameLine();
+        ImGui::Checkbox(toggles[i].label, toggles[i].value);
+    }
+}
+
+// ----------------------------------------------------------------------------
+void CityViewer::drawHoverTooltip(Simulation& simulation,
+                                 game::DebugState const& state,
+                                 editor::Editor const& editor)
+{
+    if (editor.tool() != editor::EditTool::Select)
+        return;
+    if (!ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows))
         return;
 
-    auto const it = simulation.cities().find(state.hoveredCity);
-    if (it == simulation.cities().end())
+    game::Selection const hover = pickAt(simulation, state, ImGui::GetIO().MousePos);
+    if (hover.kind == game::Selection::Kind::None)
         return;
-
-    City& city = *it->second;
 
     ImGui::BeginTooltip();
-    ImGui::TextUnformatted(city.name().c_str());
-    ImGui::Separator();
-    ImGui::Text("cell (%d, %d)", state.hoveredU, state.hoveredV);
 
-    if (city.maps().empty())
+    switch (hover.kind)
     {
-        ImGui::TextDisabled("no map");
-    }
-    else
-    {
-        for (auto& mapIt: city.maps())
+    case game::Selection::Kind::Unit:
+        if (hover.unit != nullptr)
         {
-            Map& map = *mapIt.second;
-            ImGui::TextColored(
-                ImGui::ColorConvertU32ToFloat4(theme::fromScript(map.color())),
-                "%s", map.type().c_str());
-            ImGui::SameLine();
-            ImGui::Text(": %u / %u", map.getResource(state.hoveredU, state.hoveredV),
-                        map.getCapacity());
+            ImGui::Text("Unit %s #%u", hover.unit->type().c_str(),
+                        hover.unit->id());
         }
+        break;
+    case game::Selection::Kind::Agent:
+    {
+        Agent* const agent = hover.resolveAgent(simulation);
+        if (agent != nullptr)
+        {
+            ImGui::Text("Agent %s #%u", agent->type().c_str(), agent->id());
+            ImGui::TextDisabled("looking for %s", agent->searchTarget().c_str());
+        }
+        break;
+    }
+    case game::Selection::Kind::Node:
+        if (hover.node != nullptr)
+        {
+            ImGui::Text("Node #%u", hover.node->id());
+            if (hover.node->ways().empty())
+                ImGui::TextDisabled("orphan");
+            for (Way const* way: hover.node->ways())
+            {
+                ImGui::BulletText("%s, %.1f m", way->type().c_str(),
+                                  way->magnitude());
+            }
+        }
+        break;
+    case game::Selection::Kind::Way:
+        if (hover.way != nullptr)
+        {
+            Way const& way = *hover.way;
+            ImGui::Text("Way %s #%u", way.type().c_str(), way.id());
+            ImGui::Text("%.1f m", way.magnitude());
+            ImGui::Text("free flow %.2f s, now %.2f s",
+                        way.freeFlowTime(), way.travelTime());
+            float const saturation = way.saturation();
+            char overlay[64];
+            std::snprintf(overlay, sizeof(overlay), "%.0f / %.0f agents",
+                          way.flow(), way.capacity());
+            ImGui::Text("saturation");
+            ImGui::SameLine(120.0f);
+            ImGui::PushStyleColor(ImGuiCol_PlotHistogram,
+                                  ImGui::ColorConvertU32ToFloat4(
+                                      theme::congestionColor(saturation)));
+            ImGui::ProgressBar(std::min(1.0f, saturation),
+                               ImVec2(140.0f, 0.0f), overlay);
+            ImGui::PopStyleColor();
+        }
+        break;
+    case game::Selection::Kind::Area:
+    {
+        if (hover.area == nullptr)
+            break;
+        MapRegion const& footprint = hover.area->footprint();
+        ImGui::TextColored(
+            ImGui::ColorConvertU32ToFloat4(theme::fromScript(hover.area->color())),
+            "Zone %s #%u", hover.area->type().c_str(), hover.area->id());
+        ImGui::TextDisabled("%u x %u cells", footprint.sizeU, footprint.sizeV);
+        ImGui::Text("%zu building(s) inside", hover.area->unitsInside().size());
+        for (RuleArea const* rule: hover.area->rules())
+        {
+            if (rule != nullptr)
+                ImGui::BulletText("%s", rule->type().c_str());
+        }
+        break;
+    }
+    case game::Selection::Kind::Cell:
+    {
+        auto const it = simulation.cities().find(hover.city);
+        if (it == simulation.cities().end())
+            break;
+        City& city = *it->second;
+        ImGui::TextUnformatted(city.name().c_str());
+        ImGui::Separator();
+        ImGui::Text("cell (%d, %d)", hover.u, hover.v);
+        if (city.maps().empty())
+        {
+            ImGui::TextDisabled("no map");
+        }
+        else
+        {
+            for (auto& mapIt: city.maps())
+            {
+                Map& map = *mapIt.second;
+                ImGui::TextColored(
+                    ImGui::ColorConvertU32ToFloat4(theme::fromScript(map.color())),
+                    "%s", map.type().c_str());
+                ImGui::SameLine();
+                ImGui::Text(": %u / %u", map.getResource(hover.u, hover.v),
+                            map.getCapacity());
+            }
+        }
+        break;
+    }
+    case game::Selection::Kind::None:
+        break;
     }
 
     ImGui::EndTooltip();
@@ -924,14 +1205,25 @@ void CityViewer::drawHoverTooltip(Simulation& simulation, game::DebugState const
 void CityViewer::drawClockHud(Simulation const& simulation)
 {
     SimulationClock const& clock = simulation.clock();
-    char line[48];
-    std::snprintf(line, sizeof(line), "Jour %u  %02u:%02u",
-                  clock.day(), clock.hourOfDay(), clock.minuteOfHour());
+    float const hour =
+        float(clock.hourOfDay()) + float(clock.minuteOfHour()) / 60.0f;
 
+    char time[16];
+    std::snprintf(time, sizeof(time), "%02u:%02u",
+                  clock.hourOfDay(), clock.minuteOfHour());
+    char day[24];
+    std::snprintf(day, sizeof(day), "Jour %u", clock.day());
+
+    ImU32 const color = theme::clockHudColor(hour);
     ImVec2 const pos(m_canvas_origin.x + 12.0f, m_canvas_origin.y + 10.0f);
     m_draw_list->AddText(ImVec2(pos.x + 1.0f, pos.y + 1.0f),
-                         IM_COL32(0, 0, 0, 180), line);
-    m_draw_list->AddText(pos, IM_COL32(240, 236, 220, 230), line);
+                         IM_COL32(0, 0, 0, 180), time);
+    m_draw_list->AddText(pos, color, time);
+
+    ImVec2 const dayPos(pos.x, pos.y + 16.0f);
+    m_draw_list->AddText(ImVec2(dayPos.x + 1.0f, dayPos.y + 1.0f),
+                         IM_COL32(0, 0, 0, 160), day);
+    m_draw_list->AddText(dayPos, theme::MUTED, day);
 }
 
 // ----------------------------------------------------------------------------

@@ -27,8 +27,14 @@ ImU32 const CANVAS_BACKGROUND = IM_COL32(24, 26, 31, 255);
 
 // ----------------------------------------------------------------------------
 //! \brief Canvas colour that follows the in-game hour: night, dawn, day, dusk.
+//! \param[in] hourOfDay: fractional hour in [0, 24), minutes included.
 // ----------------------------------------------------------------------------
-ImU32 canvasBackground(uint32_t hourOfDay);
+ImU32 canvasBackground(float hourOfDay);
+
+// ----------------------------------------------------------------------------
+//! \brief Colour of the clock HUD, warm by day and cool at night.
+// ----------------------------------------------------------------------------
+ImU32 clockHudColor(float hourOfDay);
 //! \brief Grid lines drawn over the maps.
 ImU32 const GRID_LINE = IM_COL32(255, 255, 255, 18);
 ImU32 const GRID_LINE_STRONG = IM_COL32(255, 255, 255, 40);

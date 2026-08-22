@@ -133,6 +133,14 @@ public:
     // -------------------------------------------------------------------------
     void refreshMapPosition();
 
+    // -------------------------------------------------------------------------
+    //! \brief Stand at that world position while staying anchored to the Node
+    //! or the Way given at construction. This is how a building occupies the
+    //! cell its Area chose for it while being served by a road that runs a few
+    //! cells away.
+    // -------------------------------------------------------------------------
+    void placeAt(Vector3f const& position);
+
 private:
 
     void bind(City& city);
@@ -145,6 +153,9 @@ private:
     Node*           m_node = nullptr;
     Way*            m_way = nullptr;
     float           m_offset = 0.0f;
+    //! \brief Whether m_position is the footprint of the Unit rather than the
+    //! position of its anchor. Set by placeAt().
+    bool            m_placed = false;
     Resources       m_resources;
     RuleContext     m_context;
     uint32_t        m_ticks = 0u;

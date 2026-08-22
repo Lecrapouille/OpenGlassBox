@@ -216,7 +216,8 @@ TEST(TestsCommand, RuleCommandAgent)
     EXPECT_CALL(target, remove(_,_)).Times(0);
     EXPECT_CALL(target, get(_)).Times(0);
     EXPECT_CALL(target, capacity(_)).Times(0);
-    ASSERT_EQ(cmd.validate(context), true);
+    // An empty context carries no Unit to spawn the Agent from.
+    ASSERT_EQ(cmd.validate(context), false);
 
     Resources locals, globals;
     TestWorld cityWorld("Paris", 2u, 2u);

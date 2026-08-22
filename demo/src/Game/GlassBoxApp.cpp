@@ -229,17 +229,12 @@ void GlassBoxApp::buildDefaultLayout(ImGuiID dockspace)
     ImGui::DockBuilderSplitNode(center, ImGuiDir_Right, 0.26f, &right, &center);
     ImGui::DockBuilderSplitNode(center, ImGuiDir_Down, 0.32f, &bottom, &center);
 
-    ImGuiID leftTop = 0u;
-    ImGuiID leftBottom = 0u;
-    ImGui::DockBuilderSplitNode(left, ImGuiDir_Down, 0.62f, &leftBottom, &leftTop);
-
     ImGuiID rightTop = 0u;
     ImGuiID rightBottom = 0u;
     ImGui::DockBuilderSplitNode(right, ImGuiDir_Down, 0.50f, &rightBottom, &rightTop);
 
     ImGui::DockBuilderDockWindow("Map", center);
-    ImGui::DockBuilderDockWindow("Time", leftTop);
-    ImGui::DockBuilderDockWindow("Layers", leftBottom);
+    ImGui::DockBuilderDockWindow("Simulation clock", left);
     ImGui::DockBuilderDockWindow("Inspector", rightTop);
     ImGui::DockBuilderDockWindow("Traffic", rightBottom);
     ImGui::DockBuilderDockWindow("History", rightBottom);
@@ -684,12 +679,11 @@ void GlassBoxApp::onDrawMenuBar()
 
     if (ImGui::BeginMenu("View"))
     {
-        ImGui::MenuItem("Layers", nullptr, &m_show_layers);
         ImGui::MenuItem("Inspector", nullptr, &m_show_inspector);
         ImGui::MenuItem("Rule Log", nullptr, &m_show_rule_log);
         ImGui::MenuItem("Charts", nullptr, &m_show_charts);
         ImGui::MenuItem("Script", nullptr, &m_show_script);
-        ImGui::MenuItem("Time", nullptr, &m_show_time);
+        ImGui::MenuItem("Simulation clock", nullptr, &m_show_time);
         ImGui::MenuItem("Traffic", nullptr, &m_show_traffic);
         ImGui::MenuItem("History", nullptr, &m_show_history);
         ImGui::Separator();
@@ -750,9 +744,7 @@ void GlassBoxApp::onDrawPanels()
         if (m_show_history)
             m_editor.drawHistoryPanel(*m_simulation);
         if (m_show_time)
-            m_time.draw(*m_simulation, m_state, m_trace);
-        if (m_show_layers)
-            m_layers.draw(*m_simulation, m_state);
+            m_time.draw(*m_simulation);
         if (m_show_inspector)
             m_inspector.draw(*m_simulation, m_state, m_trace);
         if (m_show_rule_log)

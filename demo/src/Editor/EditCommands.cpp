@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------------
 
 #include "Editor/EditCommands.hpp"
+#include "OpenGlassBox/Area.hpp"
 #include "OpenGlassBox/Simulation.hpp"
 
 #include <algorithm>
@@ -574,10 +575,22 @@ bool RemoveNodeCommand::redo(Simulation& simulation)
         return false;
 
     Node* node = path->node(m_nodeId);
-    if ((node == nullptr) || node->hasWays())
+    if (node == nullptr)
         return false;
 
     m_position = node->position();
+    m_ways.clear();
+    for (Way* way: node->ways())
+    {
+        WaySnapshot snapshot;
+        snapshot.id = way->id();
+        snapshot.type = way->type();
+        snapshot.fromId = way->from().id();
+        snapshot.toId = way->to().id();
+        snapshot.fromPosition = way->position1();
+        snapshot.toPosition = way->position2();
+        m_ways.push_back(std::move(snapshot));
+    }
     m_captured = true;
     city->removeNode(*path, *node);
     return true;
@@ -591,6 +604,22 @@ void RemoveNodeCommand::undo(Simulation& simulation)
         return;
 
     path->addNode(m_nodeId, m_position);
+    for (WaySnapshot const& snapshot: m_ways)
+    {
+        WayType const* type = nullptr;
+        try
+        {
+            type = &simulation.script().getWayType(snapshot.type);
+        }
+        catch (...)
+        {
+            continue;
+        }
+
+        Node& from = path->addNode(snapshot.fromId, snapshot.fromPosition);
+        Node& to = path->addNode(snapshot.toId, snapshot.toPosition);
+        path->addWay(snapshot.id, *type, from, to);
+    }
 }
 
 // ----------------------------------------------------------------------------
@@ -709,6 +738,54 @@ std::string PaintResourceCommand::label() const
 // ADD AREA
 // =============================================================================
 
+namespace {
+
+bool regionsOverlap(MapRegion const& a, MapRegion const& b)
+{
+    return (a.u0 < b.u1()) && (b.u0 < a.u1()) && (a.v0 < b.v1()) && (b.v0 < a.v1());
+}
+
+MapRegion makeRegion(int32_t u0, int32_t v0, int32_t u1, int32_t v1)
+{
+    MapRegion region;
+    region.u0 = u0;
+    region.v0 = v0;
+    region.sizeU = uint32_t(u1 - u0);
+    region.sizeV = uint32_t(v1 - v0);
+    return region;
+}
+
+// ----------------------------------------------------------------------------
+//! \brief What is left of \c from once \c cut is taken out of it, as up to four
+//! rectangles: the band above, the band below, then the left and right sides of
+//! what remains in between.
+// ----------------------------------------------------------------------------
+std::vector<MapRegion> subtract(MapRegion const& from, MapRegion const& cut)
+{
+    std::vector<MapRegion> pieces;
+    if (!regionsOverlap(from, cut))
+    {
+        pieces.push_back(from);
+        return pieces;
+    }
+
+    int32_t const v0 = std::max(from.v0, cut.v0);
+    int32_t const v1 = std::min(from.v1(), cut.v1());
+
+    if (from.v0 < v0)
+        pieces.push_back(makeRegion(from.u0, from.v0, from.u1(), v0));
+    if (v1 < from.v1())
+        pieces.push_back(makeRegion(from.u0, v1, from.u1(), from.v1()));
+    if (from.u0 < cut.u0)
+        pieces.push_back(makeRegion(from.u0, v0, std::min(from.u1(), cut.u0), v1));
+    if (cut.u1() < from.u1())
+        pieces.push_back(makeRegion(std::max(from.u0, cut.u1()), v0, from.u1(), v1));
+
+    return pieces;
+}
+
+} // namespace
+
 AddAreaCommand::AddAreaCommand(std::string city, std::string areaType,
                                int32_t u0, int32_t v0, int32_t u1, int32_t v1)
     : m_city(std::move(city)),
@@ -735,11 +812,57 @@ bool AddAreaCommand::redo(Simulation& simulation)
         return false;
     }
 
-    MapRegion region;
-    region.u0 = m_u0;
-    region.v0 = m_v0;
-    region.sizeU = uint32_t(m_u1 - m_u0 + 1);
-    region.sizeV = uint32_t(m_v1 - m_v0 + 1);
+    MapRegion const region = makeRegion(m_u0, m_v0, m_u1 + 1, m_v1 + 1);
+    if (region.empty())
+        return false;
+
+    // The first run records what it re-zoned; a redo runs after an undo put the
+    // original Areas back, so the cutting itself has to happen every time.
+    bool const capture = m_removed.empty();
+    std::vector<SavedArea> overlapped;
+
+    size_t i = city->areas().size();
+    while (i--)
+    {
+        Area& area = *city->areas()[i];
+        if (!regionsOverlap(area.footprint(), region))
+            continue;
+
+        SavedArea saved;
+        saved.type = area.type();
+        saved.u0 = area.footprint().u0;
+        saved.v0 = area.footprint().v0;
+        saved.sizeU = area.footprint().sizeU;
+        saved.sizeV = area.footprint().sizeV;
+        overlapped.push_back(saved);
+        if (capture)
+            m_removed.push_back(std::move(saved));
+        city->removeArea(area);
+    }
+
+    m_leftovers.clear();
+    for (SavedArea const& saved: overlapped)
+    {
+        AreaType const* savedType = nullptr;
+        try
+        {
+            savedType = &simulation.script().getAreaType(saved.type);
+        }
+        catch (...)
+        {
+            continue;
+        }
+
+        MapRegion const footprint = makeRegion(
+            saved.u0, saved.v0, saved.u0 + int32_t(saved.sizeU),
+            saved.v0 + int32_t(saved.sizeV));
+        for (MapRegion const& piece: subtract(footprint, region))
+        {
+            if (piece.empty())
+                continue;
+            m_leftovers.push_back(city->addArea(*savedType, piece).id());
+        }
+    }
 
     Area& area = city->addArea(*type, region);
     m_areaId = area.id();
@@ -752,13 +875,33 @@ void AddAreaCommand::undo(Simulation& simulation)
     if (city == nullptr)
         return;
 
-    for (auto& it: city->areas())
-    {
-        if (it->id() == m_areaId)
+    auto const dropById = [city](uint32_t id) {
+        for (auto& it: city->areas())
         {
-            city->removeArea(*it);
-            return;
+            if (it->id() == id)
+            {
+                city->removeArea(*it);
+                return;
+            }
         }
+    };
+
+    dropById(m_areaId);
+    for (uint32_t id: m_leftovers)
+        dropById(id);
+    m_leftovers.clear();
+
+    for (SavedArea const& saved: m_removed)
+    {
+        try
+        {
+            AreaType const& type = simulation.script().getAreaType(saved.type);
+            city->addArea(type, makeRegion(saved.u0, saved.v0,
+                                           saved.u0 + int32_t(saved.sizeU),
+                                           saved.v0 + int32_t(saved.sizeV)));
+        }
+        catch (...)
+        {}
     }
 }
 

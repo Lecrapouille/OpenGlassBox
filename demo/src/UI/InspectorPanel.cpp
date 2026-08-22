@@ -10,6 +10,9 @@
 #include "OpenGlassBox/Simulation.hpp"
 
 #include <algorithm>
+#include <map>
+#include <string>
+#include <vector>
 
 namespace ogb {
 namespace ui {
@@ -66,12 +69,13 @@ static void drawRules(RuleContainer const& rules, uint32_t ticks)
         return;
     }
 
-    if (!ImGui::BeginTable("rules", 3,
+    if (!ImGui::BeginTable("rules", 4,
                            ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
                            ImGuiTableFlags_SizingStretchProp))
         return;
 
     ImGui::TableSetupColumn("rule");
+    ImGui::TableSetupColumn("does");
     ImGui::TableSetupColumn("every");
     ImGui::TableSetupColumn("in");
     ImGui::TableHeadersRow();
@@ -89,6 +93,24 @@ static void drawRules(RuleContainer const& rules, uint32_t ticks)
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
         ImGui::TextUnformatted(rule->type().c_str());
+
+        // The name a script gives a rule says nothing about what it does, so
+        // spell out the commands it runs, in order.
+        ImGui::TableNextColumn();
+        std::string commands;
+        for (IRuleCommand* command: rule->commands())
+        {
+            if (command == nullptr)
+                continue;
+            if (!commands.empty())
+                commands += ", ";
+            commands += command->type();
+        }
+        if (commands.empty())
+            ImGui::TextDisabled("nothing");
+        else
+            ImGui::TextWrapped("%s", commands.c_str());
+
         ImGui::TableNextColumn();
         ImGui::Text("%u tick%s", rate, (rate > 1u) ? "s" : "");
         ImGui::TableNextColumn();
@@ -107,6 +129,99 @@ static void drawRules(RuleContainer const& rules, uint32_t ticks)
 }
 
 // ----------------------------------------------------------------------------
+//! \brief One line of an agent listing: what it is, what it carries and how
+//! far it still has to go.
+// ----------------------------------------------------------------------------
+static void drawAgentLine(Agent const& agent)
+{
+    std::string carried;
+    for (Resource const& resource: agent.resources())
+    {
+        if (resource.getAmount() == 0u)
+            continue;
+        if (!carried.empty())
+            carried += ", ";
+        carried += std::to_string(resource.getAmount()) + " " + resource.type();
+    }
+    if (carried.empty())
+        carried = "empty";
+
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn();
+    ImGui::TextColored(
+        ImGui::ColorConvertU32ToFloat4(theme::fromScript(agent.color())),
+        "%s #%u", agent.type().c_str(), agent.id());
+    ImGui::TableNextColumn();
+    ImGui::TextUnformatted(carried.c_str());
+    ImGui::TableNextColumn();
+    ImGui::TextUnformatted(agent.searchTarget().c_str());
+    ImGui::TableNextColumn();
+    if (agent.currentWay() == nullptr)
+        ImGui::TextDisabled("waiting");
+    else
+        ImGui::Text("%.1f s", agent.remainingCost());
+}
+
+// ----------------------------------------------------------------------------
+//! \brief The agents this Unit sent out and the agents on their way to it.
+//!
+//! The engine deletes an Agent the moment it unloads, so there is no such
+//! thing as a population sitting inside a building. What a building does have
+//! is traffic: what left it and what is coming.
+// ----------------------------------------------------------------------------
+static void drawUnitAgents(City& city, Unit const& unit)
+{
+    std::vector<Agent const*> outbound;
+    std::vector<Agent const*> inbound;
+
+    for (auto const& agent: city.agents())
+    {
+        if (agent->owner() == &unit)
+        {
+            outbound.push_back(agent.get());
+            continue;
+        }
+        if (agent->route().destination == &unit)
+        {
+            inbound.push_back(agent.get());
+        }
+    }
+
+    ImGui::Text("%zu agent(s) sent out, %zu on their way in", outbound.size(),
+                inbound.size());
+
+    if (outbound.empty() && inbound.empty())
+    {
+        ImGui::TextDisabled("No traffic. Either no rule of this building has\n"
+                            "fired yet, or every agent it made has arrived.");
+        return;
+    }
+
+    ImGuiTableFlags const flags = ImGuiTableFlags_Borders |
+                                  ImGuiTableFlags_RowBg |
+                                  ImGuiTableFlags_SizingStretchProp;
+
+    auto const table = [&](char const* id, char const* first,
+                           std::vector<Agent const*> const& agents) {
+        if (agents.empty())
+            return;
+        if (!ImGui::BeginTable(id, 4, flags))
+            return;
+        ImGui::TableSetupColumn(first);
+        ImGui::TableSetupColumn("carries");
+        ImGui::TableSetupColumn("looks for");
+        ImGui::TableSetupColumn("left");
+        ImGui::TableHeadersRow();
+        for (Agent const* agent: agents)
+            drawAgentLine(*agent);
+        ImGui::EndTable();
+    };
+
+    table("outbound", "sent out", outbound);
+    table("inbound", "coming in", inbound);
+}
+
+// ----------------------------------------------------------------------------
 void InspectorPanel::draw(Simulation& simulation, game::DebugState& state,
                           game::RuleTrace const& trace)
 {
@@ -119,8 +234,8 @@ void InspectorPanel::draw(Simulation& simulation, game::DebugState& state,
     switch (state.selection.kind)
     {
     case game::Selection::Kind::None:
-        ImGui::TextDisabled("Click a unit, an agent, a road, a node or a cell\n"
-                            "on the map to inspect it.");
+        ImGui::TextDisabled("Click a building, an agent, a road, a node, a zone\n"
+                            "or a cell on the map to inspect it.");
         break;
     case game::Selection::Kind::Unit:
         drawUnit(simulation, state, trace);
@@ -133,6 +248,9 @@ void InspectorPanel::draw(Simulation& simulation, game::DebugState& state,
         break;
     case game::Selection::Kind::Way:
         drawWay(state);
+        break;
+    case game::Selection::Kind::Area:
+        drawArea(simulation, state);
         break;
     case game::Selection::Kind::Cell:
         drawCell(simulation, state);
@@ -154,10 +272,43 @@ void InspectorPanel::drawUnit(Simulation& simulation, game::DebugState& state,
     }
 
     ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(theme::fromScript(unit->color())),
-                       "Unit %s", unit->type().c_str());
+                       "Unit %s #%u", unit->type().c_str(), unit->id());
     ImGui::TextDisabled("city %s, cell (%d, %d), radius %u",
                         state.selection.city.c_str(), unit->mapU(), unit->mapV(),
                         unit->mapRadius());
+
+    auto const cityIt = simulation.cities().find(state.selection.city);
+    City* const city =
+        (cityIt == simulation.cities().end()) ? nullptr : cityIt->second.get();
+
+    if (city != nullptr)
+    {
+        // Which zone the building stands in decides which area rules may
+        // upgrade or demolish it, so it belongs next to its own rules.
+        std::string zones;
+        for (auto const& area: city->areas())
+        {
+            if (!area->contains(unit->mapU(), unit->mapV()))
+                continue;
+            if (!zones.empty())
+                zones += ", ";
+            zones += area->type();
+        }
+        if (zones.empty())
+            ImGui::TextDisabled("outside any zone");
+        else
+            ImGui::TextDisabled("in zone %s", zones.c_str());
+    }
+
+    if (unit->node() != nullptr)
+    {
+        ImGui::TextDisabled("on node #%u", unit->node()->id());
+    }
+    else if (unit->way() != nullptr)
+    {
+        ImGui::TextDisabled("on %s #%u at %.0f%%", unit->way()->type().c_str(),
+                            unit->way()->id(), 100.0f * unit->wayOffset());
+    }
 
     if (!unit->hasWays())
     {
@@ -181,6 +332,12 @@ void InspectorPanel::drawUnit(Simulation& simulation, game::DebugState& state,
         {
             ImGui::BulletText("%s", target.c_str());
         }
+    }
+
+    ImGui::SeparatorText("Agents");
+    if (city != nullptr)
+    {
+        drawUnitAgents(*city, *unit);
     }
 
     ImGui::SeparatorText("Rules");
@@ -253,23 +410,8 @@ void InspectorPanel::drawAgent(Simulation& simulation, game::DebugState& state)
     }
     else
     {
-        ImGui::SeparatorText("Current road");
-        ImGui::Text("%s, %.0f%% travelled", way->type().c_str(),
+        ImGui::Text("on %s, %.0f%% travelled", way->type().c_str(),
                     100.0f * agent->offset());
-        ImGui::Text("free flow %.2f s, now %.2f s", way->freeFlowTime(),
-                    way->travelTime());
-
-        float const saturation = way->saturation();
-        char overlay[64];
-        std::snprintf(overlay, sizeof(overlay), "%.0f / %.0f agents",
-                      way->flow(), way->capacity());
-        ImGui::Text("saturation");
-        ImGui::SameLine(120.0f);
-        ImGui::PushStyleColor(ImGuiCol_PlotHistogram,
-                              ImGui::ColorConvertU32ToFloat4(
-                                  theme::congestionColor(saturation)));
-        ImGui::ProgressBar(std::min(1.0f, saturation), ImVec2(-1.0f, 0.0f), overlay);
-        ImGui::PopStyleColor();
     }
 
     ImGui::SeparatorText("Itinerary");
@@ -364,6 +506,71 @@ void InspectorPanel::drawWay(game::DebugState& state)
                               theme::congestionColor(saturation)));
     ImGui::ProgressBar(std::min(1.0f, saturation), ImVec2(-1.0f, 0.0f), overlay);
     ImGui::PopStyleColor();
+}
+
+// ----------------------------------------------------------------------------
+void InspectorPanel::drawArea(Simulation& simulation, game::DebugState& state)
+{
+    Area* const area = state.selection.area;
+    if (area == nullptr)
+    {
+        state.selection.clear();
+        return;
+    }
+
+    MapRegion const& footprint = area->footprint();
+
+    ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(theme::fromScript(area->color())),
+                       "Zone %s #%u", area->type().c_str(), area->id());
+    ImGui::TextDisabled("city %s, %u x %u cells from (%d, %d)",
+                        state.selection.city.c_str(), footprint.sizeU,
+                        footprint.sizeV, footprint.u0, footprint.v0);
+
+    std::vector<Unit*> const units = area->unitsInside();
+
+    ImGui::SeparatorText("Buildings inside");
+    if (units.empty())
+    {
+        ImGui::TextDisabled("Empty. An area rule has to spawn something, and\n"
+                            "its conditions are listed below.");
+    }
+    else
+    {
+        // Grouped by type: what matters about a zone is its mix, not the
+        // identity of each building, which the Units themselves report.
+        std::map<std::string, uint32_t> counts;
+        for (Unit const* unit: units)
+            ++counts[unit->type()];
+
+        for (auto const& it: counts)
+        {
+            ImGui::BulletText("%u x %s", it.second, it.first.c_str());
+        }
+        ImGui::TextDisabled("%zu building(s) on %llu cell(s)", units.size(),
+                            (unsigned long long)footprint.area());
+    }
+
+    ImGui::SeparatorText("Rules");
+    drawRules(area->rules(), area->ticks());
+
+    ImGui::SeparatorText("Cell under the zone");
+    auto const it = simulation.cities().find(state.selection.city);
+    if (it == simulation.cities().end())
+        return;
+
+    City& city = *it->second;
+    ImGui::TextDisabled("cell (%d, %d)", state.selection.u, state.selection.v);
+    for (auto& mapIt: city.maps())
+    {
+        Map& map = *mapIt.second;
+        ImGui::TextColored(
+            ImGui::ColorConvertU32ToFloat4(theme::fromScript(map.color())),
+            "%s", map.type().c_str());
+        ImGui::SameLine(120.0f);
+        ImGui::Text(": %u / %u",
+                    map.getResource(state.selection.u, state.selection.v),
+                    map.getCapacity());
+    }
 }
 
 // ----------------------------------------------------------------------------

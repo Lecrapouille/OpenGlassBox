@@ -173,41 +173,71 @@ ImU32 congestionColor(float ratio, float alpha)
     return IM_COL32(int(r * 255.0f), int(g * 255.0f), 60, int(alpha * 255.0f));
 }
 
-// ----------------------------------------------------------------------------
-ImU32 canvasBackground(uint32_t hourOfDay)
-{
-    // Night, dawn, day, dusk. The canvas stays dark enough for the maps to
-    // read, the tint is just enough to feel the clock.
-    struct Stop { uint32_t hour; int r; int g; int b; };
-    static Stop const STOPS[] = {
-        {  0u, 12, 14, 22 },
-        {  5u, 18, 16, 28 },
-        {  7u, 36, 28, 32 },
-        {  9u, 24, 26, 31 },
-        { 17u, 24, 26, 31 },
-        { 19u, 38, 24, 22 },
-        { 21u, 16, 14, 24 },
-        { 24u, 12, 14, 22 },
-    };
+namespace {
 
-    uint32_t const hour = hourOfDay % 24u;
-    Stop const* a = &STOPS[0];
-    Stop const* b = &STOPS[1];
-    for (size_t i = 0u; i + 1u < sizeof(STOPS) / sizeof(STOPS[0]); ++i)
+struct ColorStop { float hour; int r; int g; int b; };
+
+ImU32 lerpStops(ColorStop const* stops, size_t count, float hourOfDay)
+{
+    float hour = hourOfDay;
+    while (hour < 0.0f)
+        hour += 24.0f;
+    while (hour >= 24.0f)
+        hour -= 24.0f;
+
+    ColorStop const* a = &stops[0];
+    ColorStop const* b = &stops[1];
+    for (size_t i = 0u; i + 1u < count; ++i)
     {
-        if (hour >= STOPS[i].hour)
+        if (hour >= stops[i].hour)
         {
-            a = &STOPS[i];
-            b = &STOPS[i + 1u];
+            a = &stops[i];
+            b = &stops[i + 1u];
         }
     }
 
-    float const span = float(b->hour - a->hour);
-    float const t = (span <= 0.0f) ? 0.0f : float(hour - a->hour) / span;
+    float const span = b->hour - a->hour;
+    float const t = (span <= 0.0f) ? 0.0f : (hour - a->hour) / span;
     int const r = int(float(a->r) + t * float(b->r - a->r));
     int const g = int(float(a->g) + t * float(b->g - a->g));
     int const bl = int(float(a->b) + t * float(b->b - a->b));
     return IM_COL32(r, g, bl, 255);
+}
+
+} // namespace
+
+// ----------------------------------------------------------------------------
+ImU32 canvasBackground(float hourOfDay)
+{
+    // Night, dawn, day, dusk. Day is clearly brighter than night so the clock
+    // is readable on the canvas, while staying dark enough for the maps.
+    static ColorStop const STOPS[] = {
+        {  0.0f,  10,  14,  32 },
+        {  5.0f,  22,  18,  40 },
+        {  6.5f,  72,  42,  38 },
+        {  8.0f,  52,  62,  78 },
+        { 12.0f,  62,  74,  92 },
+        { 16.0f,  58,  68,  86 },
+        { 18.5f,  86,  48,  36 },
+        { 20.5f,  28,  22,  40 },
+        { 24.0f,  10,  14,  32 },
+    };
+    return lerpStops(STOPS, sizeof(STOPS) / sizeof(STOPS[0]), hourOfDay);
+}
+
+// ----------------------------------------------------------------------------
+ImU32 clockHudColor(float hourOfDay)
+{
+    static ColorStop const STOPS[] = {
+        {  0.0f, 170, 186, 220 },
+        {  6.0f, 240, 196, 150 },
+        {  8.0f, 248, 244, 228 },
+        { 17.0f, 248, 244, 228 },
+        { 19.0f, 244, 186, 140 },
+        { 21.0f, 180, 190, 220 },
+        { 24.0f, 170, 186, 220 },
+    };
+    return lerpStops(STOPS, sizeof(STOPS) / sizeof(STOPS[0]), hourOfDay);
 }
 
 } // namespace theme

@@ -6,6 +6,7 @@
 
 #include "Editor/Editor.hpp"
 #include "UI/CityViewer.hpp"
+#include "UI/Panels.hpp"
 #include "UI/Theme.hpp"
 #include "OpenGlassBox/Simulation.hpp"
 
@@ -63,6 +64,92 @@ static void nameCombo(char const* label, float width, Container const& container
 }
 
 // ----------------------------------------------------------------------------
+void Editor::drawBrushSlider(float width)
+{
+    ImGui::SetNextItemWidth(width);
+    ImGui::SliderInt("##brush", &m_brush, 1, 32, "brush: %d");
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip(
+            "Side, in cells, of the square a single click covers.\n"
+            "A drag covers the rectangle spanned by the brush at both ends.");
+    }
+}
+
+// ----------------------------------------------------------------------------
+//! \brief Width left on the row started by the last widget, or zero when the
+//! next widget would not fit in it.
+// ----------------------------------------------------------------------------
+static float roomOnRow(float wanted)
+{
+    float const right = ImGui::GetWindowPos().x - ImGui::GetScrollX() +
+                        ImGui::GetWindowContentRegionMax().x;
+    float const left = ImGui::GetItemRectMax().x + ImGui::GetStyle().ItemSpacing.x;
+    return ((right - left) >= wanted) ? (right - left) : 0.0f;
+}
+
+// ----------------------------------------------------------------------------
+void Editor::drawZoneOptions(Simulation& simulation)
+{
+    nameCombo("##areatype", 150.0f, simulation.script().areaTypes(), m_areaType);
+
+    float const room = roomOnRow(120.0f);
+    if (room > 0.0f)
+        ImGui::SameLine();
+    drawBrushSlider((room > 0.0f) ? room : -1.0f);
+}
+
+// ----------------------------------------------------------------------------
+void Editor::drawPaintOptions(Simulation& simulation, game::DebugState& state,
+                              City* city)
+{
+    int capacity = 100;
+    if (city != nullptr)
+    {
+        nameCombo("##map", 150.0f, city->maps(), m_map);
+        if (!m_map.empty())
+        {
+            state.primaryLayer = m_map;
+            state.layer(m_map).visible = true;
+        }
+
+        auto const it = city->maps().find(m_map);
+        if (it != city->maps().end())
+            capacity = int(std::max(1u, it->second->getCapacity()));
+    }
+
+    float room = roomOnRow(140.0f);
+    if (room > 0.0f)
+        ImGui::SameLine();
+    ImGui::SetNextItemWidth((room > 0.0f) ? room : -1.0f);
+    ImGui::SliderInt("##amount", &m_paintAmount, 0, capacity, "value: %d");
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Amount written on every cell of the brush.");
+
+    room = roomOnRow(140.0f);
+    if (room > 0.0f)
+        ImGui::SameLine();
+    drawBrushSlider((room > 0.0f) ? room : -1.0f);
+
+    // Which map to paint and which map to look at is the same choice, so the
+    // layers hang off the Maps tool instead of a panel of their own.
+    ui::LayersPanel{}.drawColumn(simulation, state, -1.0f);
+}
+
+// ----------------------------------------------------------------------------
+void Editor::brushRectangle(int32_t& u0, int32_t& v0, int32_t& u1,
+                            int32_t& v1) const
+{
+    int32_t const half = (m_brush - 1) / 2;
+    int32_t const rest = (m_brush - 1) - half;
+
+    u0 = std::min(m_dragU, m_dragU2) - half;
+    v0 = std::min(m_dragV, m_dragV2) - half;
+    u1 = std::max(m_dragU, m_dragU2) + rest;
+    v1 = std::max(m_dragV, m_dragV2) + rest;
+}
+
+// ----------------------------------------------------------------------------
 void Editor::setTool(EditTool tool)
 {
     m_tool = tool;
@@ -80,6 +167,19 @@ void Editor::reset()
     m_wayType.clear();
     m_unitType.clear();
     m_map.clear();
+    m_areaType.clear();
+}
+
+// ----------------------------------------------------------------------------
+void Editor::clearCity(Simulation& simulation, game::DebugState& state)
+{
+    City* city = targetCity(simulation);
+    if (city == nullptr)
+        return;
+
+    city->clear();
+    m_stack.clear();
+    state.selection.clear();
 }
 
 // ----------------------------------------------------------------------------
@@ -134,8 +234,25 @@ void Editor::refreshTargets(Simulation& simulation)
 }
 
 // ----------------------------------------------------------------------------
-Vector3f Editor::snap(Simulation& simulation, ImVec2 const& world) const
+Vector3f Editor::snap(Simulation& simulation, ui::CityViewer& viewer,
+                      ImVec2 const& world) const
 {
+    City* city = targetCity(simulation);
+    if (city != nullptr)
+    {
+        Node* node = viewer.pickNode(*city, world, TOOL_PICK_PIXELS);
+        if (node != nullptr)
+            return node->position();
+
+        float offset = 0.5f;
+        Way* way = viewer.pickWay(*city, world, TOOL_PICK_PIXELS, offset);
+        if (way != nullptr)
+        {
+            return way->position1() +
+                   (way->position2() - way->position1()) * offset;
+        }
+    }
+
     if (!m_snapToGrid)
         return Vector3f(world.x, world.y, 0.0f);
 
@@ -155,11 +272,11 @@ std::string Editor::hint() const
     case EditTool::Building:
         return "click a road to build a " + m_unitType;
     case EditTool::Paint:
-        return "drag a rectangle to paint " + m_map;
+        return "click or drag to paint " + m_map;
     case EditTool::Zone:
-        return "drag a rectangle to paint a " + m_areaType + " zone";
+        return "click or drag to paint a " + m_areaType + " zone";
     case EditTool::Bulldozer:
-        return "click a building or a road to demolish it";
+        return "click a building, a road or a node";
     case EditTool::Select:
         break;
     }
@@ -188,30 +305,65 @@ void Editor::drawToolbar(Simulation& simulation, game::DebugState& state)
         { EditTool::Road, "Roads",
           "Drag to lay a road. Ends snap to the world grid and to nearby nodes." },
         { EditTool::Zone, "Zones",
-          "Drag a rectangle to paint a zone. Area rules grow buildings inside." },
+          "Click or drag to paint a zone. Its rules grow buildings inside it.\n"
+          "Painting over another zone re-zones only the cells you paint." },
         { EditTool::Building, "Buildings",
           "Click a road to place a building without splitting it." },
         { EditTool::Paint, "Maps",
-          "Drag a rectangle to write a resource on map cells." },
+          "Click or drag to write a resource on map cells, and pick which\n"
+          "maps are drawn." },
         { EditTool::Bulldozer, "Demolish",
           "Click a building, road or orphan node. Clear empties the city." },
     };
 
+    bool const hasAreas = !simulation.script().areaTypes().empty();
+    bool const hasMaps = (city != nullptr) && !city->maps().empty();
+
     ImGui::BeginChild("ToolRail", ImVec2(96.0f, 0.0f), true);
+
+    // Running the simulation and editing it are the two things the player does
+    // with this rail, so Play sits on top of the tools rather than in a panel
+    // on the other side of the window.
+    bool const paused = simulation.paused();
+    if (!paused)
+    {
+        ImGui::PushStyleColor(ImGuiCol_Button,
+                              ImGui::ColorConvertU32ToFloat4(theme::SUCCESS));
+    }
+    if (ImGui::Button(paused ? "Play" : "Pause", ImVec2(-1.0f, 0.0f)))
+        simulation.setPaused(!paused);
+    if (!paused)
+        ImGui::PopStyleColor();
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Run or hold the simulation. Shortcut: space.");
+    ImGui::Separator();
+
     for (auto const& entry: ENTRIES)
     {
+        bool const disabled =
+            (entry.tool == EditTool::Zone && !hasAreas) ||
+            (entry.tool == EditTool::Paint && !hasMaps);
         bool const active = (m_tool == entry.tool);
         if (active)
         {
             ImGui::PushStyleColor(ImGuiCol_Button,
                                   ImGui::ColorConvertU32ToFloat4(theme::ACCENT));
         }
+        ImGui::BeginDisabled(disabled);
         if (ImGui::Button(entry.label, ImVec2(-1.0f, 0.0f)))
             setTool(entry.tool);
+        ImGui::EndDisabled();
         if (active)
             ImGui::PopStyleColor();
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("%s", entry.tooltip);
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+        {
+            if (entry.tool == EditTool::Zone && !hasAreas)
+                ImGui::SetTooltip("No zone in this ruleset.");
+            else if (entry.tool == EditTool::Paint && !hasMaps)
+                ImGui::SetTooltip("No map in this ruleset.");
+            else
+                ImGui::SetTooltip("%s", entry.tooltip);
+        }
     }
 
     ImGui::Separator();
@@ -238,43 +390,37 @@ void Editor::drawToolbar(Simulation& simulation, game::DebugState& state)
         else
             nameCombo("##path", 100.0f, city->paths(), m_path);
         ImGui::SameLine();
-        ImGui::Checkbox("Snap", &m_snapToGrid);
+        ImGui::Checkbox("Snap grid", &m_snapToGrid);
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip(
+                "Align freehand road ends to the city grid.\n"
+                "Roads and nodes under the cursor are always preferred.");
+        }
+        ImGui::SameLine();
+        ImGui::Checkbox("Traffic colors", &state.showTraffic);
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Color roads by congestion (free to jammed).");
         break;
     case EditTool::Building:
         nameCombo("##unittype", 160.0f, simulation.script().unitTypes(), m_unitType);
         break;
     case EditTool::Zone:
-        nameCombo("##areatype", 160.0f, simulation.script().areaTypes(), m_areaType);
+        drawZoneOptions(simulation);
         break;
     case EditTool::Paint:
-        if (city != nullptr)
-            nameCombo("##map", 140.0f, city->maps(), m_map);
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(140.0f);
-        {
-            int capacity = 100;
-            if (city != nullptr)
-            {
-                auto it = city->maps().find(m_map);
-                if (it != city->maps().end())
-                    capacity = int(std::max(1u, it->second->getCapacity()));
-            }
-            ImGui::SliderInt("##amount", &m_paintAmount, 0, capacity, "%d");
-        }
+        drawPaintOptions(simulation, state, city);
         break;
     case EditTool::Bulldozer:
+        ImGui::TextDisabled("Click a building, road or node");
+        ImGui::SameLine();
         if (ImGui::Button("Clear city"))
         {
-            if (city != nullptr)
-            {
-                city->clear();
-                m_stack.clear();
-                state.selection.clear();
-            }
+            clearCity(simulation, state);
         }
         if (ImGui::IsItemHovered())
         {
-            ImGui::SetTooltip("Remove roads, buildings, agents and zones.\n"
+            ImGui::SetTooltip("Remove every road, building, agent and zone.\n"
                               "The ruleset stays. This cannot be undone.");
         }
         break;
@@ -283,7 +429,6 @@ void Editor::drawToolbar(Simulation& simulation, game::DebugState& state)
         break;
     }
 
-    (void)state;
 }
 
 // ----------------------------------------------------------------------------
@@ -343,7 +488,7 @@ void Editor::handleRoad(Simulation& simulation, ui::CityViewer& viewer, bool hov
     if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
     {
         m_dragging = true;
-        m_dragStart = snap(simulation, viewer.mouseWorld());
+        m_dragStart = snap(simulation, viewer, viewer.mouseWorld());
         m_dragEnd = m_dragStart;
         return;
     }
@@ -351,7 +496,7 @@ void Editor::handleRoad(Simulation& simulation, ui::CityViewer& viewer, bool hov
     if (!m_dragging)
         return;
 
-    m_dragEnd = snap(simulation, viewer.mouseWorld());
+    m_dragEnd = snap(simulation, viewer, viewer.mouseWorld());
 
     if (!ImGui::IsMouseReleased(ImGuiMouseButton_Left))
         return;
@@ -400,7 +545,7 @@ void Editor::handleBuilding(Simulation& simulation, ui::CityViewer& viewer)
 }
 
 // ----------------------------------------------------------------------------
-void Editor::handlePaint(Simulation& simulation, game::DebugState& state, bool hovered)
+bool Editor::trackBrushDrag(game::DebugState& state, bool hovered)
 {
     if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
         state.hasHoveredCell)
@@ -411,11 +556,11 @@ void Editor::handlePaint(Simulation& simulation, game::DebugState& state, bool h
         m_dragV = state.hoveredV;
         m_dragU2 = m_dragU;
         m_dragV2 = m_dragV;
-        return;
+        return false;
     }
 
     if (!m_dragging)
-        return;
+        return false;
 
     // Keep the last cell that was actually inside the city, so that dragging
     // past the edge clamps instead of cancelling the stroke.
@@ -426,16 +571,42 @@ void Editor::handlePaint(Simulation& simulation, game::DebugState& state, bool h
     }
 
     if (!ImGui::IsMouseReleased(ImGuiMouseButton_Left))
-        return;
+        return false;
 
+    // The stroke is committed on release only: a plain click and a drag then
+    // go through the very same command, instead of the click applying a first
+    // one-cell edit that the release would immediately stack a second one on.
     m_dragging = false;
-    if (!m_dragValid)
+    return m_dragValid;
+}
+
+// ----------------------------------------------------------------------------
+void Editor::handlePaint(Simulation& simulation, game::DebugState& state, bool hovered)
+{
+    if (m_map.empty())
+        return;
+    if (!trackBrushDrag(state, hovered))
         return;
 
-    m_stack.push(simulation,
-                 std::make_unique<PaintResourceCommand>(
-                     m_city, m_map, m_dragU, m_dragV, m_dragU2, m_dragV2,
-                     uint32_t(m_paintAmount)));
+    int32_t u0, v0, u1, v1;
+    brushRectangle(u0, v0, u1, v1);
+
+    if (!m_stack.push(simulation,
+                      std::make_unique<PaintResourceCommand>(
+                          m_city, m_map, u0, v0, u1, v1,
+                          uint32_t(m_paintAmount))))
+    {
+        return;
+    }
+
+    // Show the result in the Inspector: a single cell of a large city is a
+    // fraction of a pixel on screen, so the numbers are the only feedback that
+    // is readable at any zoom.
+    state.selection.clear();
+    state.selection.kind = game::Selection::Kind::Cell;
+    state.selection.city = m_city;
+    state.selection.u = m_dragU;
+    state.selection.v = m_dragV;
 }
 
 // ----------------------------------------------------------------------------
@@ -443,39 +614,36 @@ void Editor::handleZone(Simulation& simulation, game::DebugState& state, bool ho
 {
     if (m_areaType.empty())
         return;
+    if (!trackBrushDrag(state, hovered))
+        return;
 
-    if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
-        state.hasHoveredCell)
+    int32_t u0, v0, u1, v1;
+    brushRectangle(u0, v0, u1, v1);
+
+    auto command = std::make_unique<AddAreaCommand>(m_city, m_areaType,
+                                                    u0, v0, u1, v1);
+    AddAreaCommand const* const applied = command.get();
+    if (!m_stack.push(simulation, std::move(command)))
+        return;
+
+    // The command stack owns the command now, so reading back the identifier
+    // of the Area it created is safe.
+    City* city = targetCity(simulation);
+    if (city == nullptr)
+        return;
+
+    for (auto& area: city->areas())
     {
-        m_dragging = true;
-        m_dragValid = true;
-        m_dragU = state.hoveredU;
-        m_dragV = state.hoveredV;
-        m_dragU2 = m_dragU;
-        m_dragV2 = m_dragV;
-        return;
+        if (area->id() != applied->createdAreaId())
+            continue;
+
+        state.selection.clear();
+        state.selection.kind = game::Selection::Kind::Area;
+        state.selection.city = m_city;
+        state.selection.area = area.get();
+        state.showAreas = true;
+        break;
     }
-
-    if (!m_dragging)
-        return;
-
-    if (state.hasHoveredCell)
-    {
-        m_dragU2 = state.hoveredU;
-        m_dragV2 = state.hoveredV;
-    }
-
-    if (!ImGui::IsMouseReleased(ImGuiMouseButton_Left))
-        return;
-
-    m_dragging = false;
-    if (!m_dragValid)
-        return;
-
-    m_stack.push(simulation,
-                 std::make_unique<AddAreaCommand>(
-                     m_city, m_areaType, int32_t(m_dragU), int32_t(m_dragV),
-                     int32_t(m_dragU2), int32_t(m_dragV2)));
 }
 
 // ----------------------------------------------------------------------------
@@ -516,31 +684,31 @@ void Editor::handleBulldozer(Simulation& simulation, ui::CityViewer& viewer)
         return;
     }
 
-    float offset = 0.0f;
-    Way* way = viewer.pickWay(*city, world, TOOL_PICK_PIXELS, offset);
-    if (way != nullptr)
+    Node* node = viewer.pickNode(*city, world, TOOL_PICK_PIXELS);
+    if ((node != nullptr) && (node->path() != nullptr))
     {
-        Path* path = way->from().path();
-        if (path == nullptr)
-            return;
-
-        m_stack.push(simulation, std::make_unique<RemoveWayCommand>(
-                                     m_city, path->type(), way->id()));
+        m_stack.push(simulation,
+                     std::make_unique<RemoveNodeCommand>(
+                         m_city, node->path()->type(), node->id()));
         return;
     }
 
-    Node* node = viewer.pickNode(*city, world, TOOL_PICK_PIXELS);
-    if ((node == nullptr) || (node->path() == nullptr) || node->hasWays())
+    float offset = 0.0f;
+    Way* way = viewer.pickWay(*city, world, TOOL_PICK_PIXELS, offset);
+    if (way == nullptr)
         return;
 
-    m_stack.push(simulation,
-                 std::make_unique<RemoveNodeCommand>(
-                     m_city, node->path()->type(), node->id()));
+    Path* path = way->from().path();
+    if (path == nullptr)
+        return;
+
+    m_stack.push(simulation, std::make_unique<RemoveWayCommand>(
+                                 m_city, path->type(), way->id()));
 }
 
 // ----------------------------------------------------------------------------
-void Editor::drawPreview(Simulation& simulation, ui::CityViewer& viewer,
-                         ImDrawList* drawList)
+void Editor::drawPreview(Simulation& simulation, game::DebugState& state,
+                         ui::CityViewer& viewer, ImDrawList* drawList)
 {
     City* city = targetCity(simulation);
     if ((city == nullptr) || (m_tool == EditTool::Select))
@@ -552,52 +720,122 @@ void Editor::drawPreview(Simulation& simulation, ui::CityViewer& viewer,
     {
     case EditTool::Road:
     {
-        if (!m_dragging)
+        if (m_dragging)
+        {
+            ImVec2 const a = viewer.worldToScreen(m_dragStart);
+            ImVec2 const b = viewer.worldToScreen(m_dragEnd);
+            drawList->AddLine(a, b, preview, 3.0f);
+            drawList->AddCircleFilled(a, 5.0f, preview);
+            drawList->AddCircleFilled(b, 5.0f, preview);
+
+            char label[48];
+            std::snprintf(label, sizeof(label), "%.0f m",
+                          magnitude(m_dragEnd - m_dragStart));
+            drawList->AddText(ImVec2(b.x + 10.0f, b.y - 8.0f), preview, label);
             break;
+        }
 
-        ImVec2 const a = viewer.worldToScreen(m_dragStart);
-        ImVec2 const b = viewer.worldToScreen(m_dragEnd);
-        drawList->AddLine(a, b, preview, 3.0f);
-        drawList->AddCircleFilled(a, 5.0f, preview);
-        drawList->AddCircleFilled(b, 5.0f, preview);
+        ImVec2 const world = viewer.mouseWorld();
+        Node* node = viewer.pickNode(*city, world, TOOL_PICK_PIXELS);
+        if (node != nullptr)
+        {
+            drawList->AddCircle(viewer.worldToScreen(node->position()),
+                                8.0f, preview, 0, 2.5f);
+            ImGui::SetTooltip("node #%u", node->id());
+            break;
+        }
 
-        // The length matters: it is what the free flow travel time is computed
-        // from, and therefore how attractive the new road will be.
-        char label[48];
-        std::snprintf(label, sizeof(label), "%.0f m",
-                      magnitude(m_dragEnd - m_dragStart));
-        drawList->AddText(ImVec2(b.x + 10.0f, b.y - 8.0f), preview, label);
+        float offset = 0.5f;
+        Way* way = viewer.pickWay(*city, world, TOOL_PICK_PIXELS, offset);
+        if (way != nullptr)
+        {
+            Vector3f const p = way->position1() +
+                               (way->position2() - way->position1()) * offset;
+            drawList->AddLine(viewer.worldToScreen(way->position1()),
+                              viewer.worldToScreen(way->position2()),
+                              preview, 5.0f);
+            drawList->AddCircleFilled(viewer.worldToScreen(p), 6.0f, preview);
+            ImGui::SetTooltip("%s · %.0f m", way->type().c_str(),
+                              way->magnitude());
+            break;
+        }
+
+        // Over open ground, show the node the click would create, at the very
+        // place the snapping would put it.
+        Vector3f const snapped = snap(simulation, viewer, world);
+        ImVec2 const centre = viewer.worldToScreen(snapped);
+        drawList->AddCircleFilled(centre, 4.0f, preview);
+        drawList->AddCircle(centre, 9.0f, preview, 0, 1.5f);
         break;
     }
     case EditTool::Zone:
     case EditTool::Paint:
     {
-        if (!m_dragging)
+        int32_t u0 = 0;
+        int32_t v0 = 0;
+        int32_t u1 = 0;
+        int32_t v1 = 0;
+        bool show = false;
+
+        if (m_dragging)
+        {
+            brushRectangle(u0, v0, u1, v1);
+            show = true;
+        }
+        else if (state.hasHoveredCell)
+        {
+            int32_t const half = (m_brush - 1) / 2;
+            int32_t const rest = (m_brush - 1) - half;
+            u0 = state.hoveredU - half;
+            v0 = state.hoveredV - half;
+            u1 = state.hoveredU + rest;
+            v1 = state.hoveredV + rest;
+            show = true;
+        }
+
+        if (!show)
             break;
 
-        int32_t const u0 = std::min(m_dragU, m_dragU2);
-        int32_t const v0 = std::min(m_dragV, m_dragV2);
-        int32_t const u1 = std::max(m_dragU, m_dragU2);
-        int32_t const v1 = std::max(m_dragV, m_dragV2);
+        uint32_t fillColor = 0x56AADE;
+        float fillAlpha = 0.20f;
+        if (m_tool == EditTool::Zone)
+        {
+            try
+            {
+                AreaType const& areaType =
+                    simulation.script().getAreaType(m_areaType);
+                fillColor = areaType.color;
+                fillAlpha = 0.28f;
+            }
+            catch (...)
+            {}
+        }
 
         ImVec2 const p0 = viewer.worldToScreen(
             city->world().mapPosition2world(u0, v0));
         ImVec2 const p1 = viewer.worldToScreen(
             city->world().mapPosition2world(u1 + 1, v1 + 1));
 
-        drawList->AddRectFilled(p0, p1, theme::fromScript(0x56AADE, 0.20f));
+        drawList->AddRectFilled(p0, p1, theme::fromScript(fillColor, fillAlpha));
         drawList->AddRect(p0, p1, preview, 0.0f, 0, 2.0f);
 
         char label[64];
-        std::snprintf(label, sizeof(label), "%d x %d cells -> %d",
-                      u1 - u0 + 1, v1 - v0 + 1, m_paintAmount);
+        if (m_tool == EditTool::Paint)
+        {
+            std::snprintf(label, sizeof(label), "%d x %d cells -> %d",
+                          u1 - u0 + 1, v1 - v0 + 1, m_paintAmount);
+        }
+        else
+        {
+            std::snprintf(label, sizeof(label), "%d x %d cells -> %s",
+                          u1 - u0 + 1, v1 - v0 + 1, m_areaType.c_str());
+        }
         drawList->AddText(ImVec2(p0.x + 4.0f, p0.y - 18.0f), preview, label);
         break;
     }
     case EditTool::Building:
     case EditTool::Bulldozer:
     {
-        // Show what the click would act on before it is made.
         ImVec2 const world = viewer.mouseWorld();
 
         if (m_tool == EditTool::Bulldozer)
@@ -607,6 +845,14 @@ void Editor::drawPreview(Simulation& simulation, ui::CityViewer& viewer,
             {
                 drawList->AddCircle(viewer.worldToScreen(unit->position()),
                                     12.0f, theme::FAILURE, 0, 2.5f);
+                break;
+            }
+
+            Node* node = viewer.pickNode(*city, world, TOOL_PICK_PIXELS);
+            if (node != nullptr)
+            {
+                drawList->AddCircle(viewer.worldToScreen(node->position()),
+                                    10.0f, theme::FAILURE, 0, 2.5f);
                 break;
             }
         }

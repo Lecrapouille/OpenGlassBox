@@ -85,10 +85,11 @@ public:
     Way* nearestWay(Vector3f const& world, float& offset) const;
 
     // -------------------------------------------------------------------------
-    //! \brief A cell of the footprint that does not already hold a Unit of the
-    //! given type. Returns false when the Area is full of them.
+    //! \brief A cell of the footprint that holds no Unit at all, whatever its
+    //! type: two buildings do not share a cell. Returns false when the Area is
+    //! full.
     // -------------------------------------------------------------------------
-    bool findFreeCell(std::string const& unitType, int32_t& u, int32_t& v) const;
+    bool findFreeCell(int32_t& u, int32_t& v) const;
 
 private:
 

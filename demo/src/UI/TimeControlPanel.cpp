@@ -6,7 +6,6 @@
 
 #include "UI/Panels.hpp"
 #include "UI/Theme.hpp"
-#include "Game/RuleTrace.hpp"
 #include "OpenGlassBox/Simulation.hpp"
 
 namespace ogb {
@@ -28,22 +27,26 @@ uint32_t TimeControlPanel::takePendingSteps()
 }
 
 // ----------------------------------------------------------------------------
-void TimeControlPanel::draw(Simulation& simulation, game::DebugState& state,
-                            game::RuleTrace& trace)
+void TimeControlPanel::draw(Simulation& simulation)
 {
-    if (!ImGui::Begin("Time"))
+    if (!ImGui::Begin("Simulation clock"))
     {
         ImGui::End();
         return;
     }
 
-    bool const paused = simulation.paused();
-
-    if (ImGui::Button(paused ? "Play" : "Pause", ImVec2(80.0f, 0.0f)))
-    {
-        simulation.setPaused(!paused);
-    }
+    SimulationClock const& clock = simulation.clock();
+    ImGui::Text("%02u:%02u", clock.hourOfDay(), clock.minuteOfHour());
     ImGui::SameLine();
+    ImGui::TextDisabled("Jour %u  tick %llu",
+                        clock.day(),
+                        (unsigned long long)simulation.totalTicks());
+
+    bool const paused = simulation.paused();
+    ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+    ImGui::TextWrapped("%s. Play and Pause sit at the top of the map toolbar.",
+                       paused ? "Paused" : "Running");
+    ImGui::PopStyleColor();
 
     ImGui::BeginDisabled(!paused);
     if (ImGui::Button("Step"))
@@ -65,8 +68,6 @@ void TimeControlPanel::draw(Simulation& simulation, game::DebugState& state,
     float const right = ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
     for (size_t i = 0u; i < IM_ARRAYSIZE(SPEEDS); ++i)
     {
-        // The panel is docked on a side that the user is free to shrink, so the
-        // row of buttons wraps instead of running past the edge.
         if (i != 0u)
         {
             float const width = ImGui::CalcTextSize(SPEED_LABELS[i]).x +
@@ -95,11 +96,7 @@ void TimeControlPanel::draw(Simulation& simulation, game::DebugState& state,
         }
     }
 
-    ImGui::SeparatorText("Clock");
-    SimulationClock const& clock = simulation.clock();
-    ImGui::Text("tick %llu  day %u  %02u:%02u",
-                (unsigned long long)simulation.totalTicks(),
-                clock.day(), clock.hourOfDay(), clock.minuteOfHour());
+    ImGui::SeparatorText("Tick rate");
 
     float ticksPerSecond = simulation.config().ticksPerSecond;
     ImGui::SetNextItemWidth(-140.0f);
@@ -126,53 +123,6 @@ void TimeControlPanel::draw(Simulation& simulation, game::DebugState& state,
         ImGui::SetTooltip(
             "Upper bound on the ticks run in a single frame. Without it, a\n"
             "stall would be followed by an unbounded catch-up.");
-    }
-
-    ImGui::SeparatorText("Traffic");
-    float smoothing = simulation.config().trafficSmoothing;
-    ImGui::SetNextItemWidth(-140.0f);
-    if (ImGui::SliderFloat("flow smoothing", &smoothing, 0.005f, 1.0f, "%.3f",
-                           ImGuiSliderFlags_Logarithmic))
-    {
-        simulation.config().trafficSmoothing = smoothing;
-        for (auto& it: simulation.cities())
-        {
-            it.second->config().trafficSmoothing = smoothing;
-        }
-    }
-    if (ImGui::IsItemHovered())
-    {
-        ImGui::SetTooltip(
-            "Step of the moving average applied to the traffic flow.\n"
-            "Set it to one to route on the raw instantaneous count and\n"
-            "watch the whole population swing from one route to the other\n"
-            "and back: that oscillation is exactly what the smoothing damps.");
-    }
-
-    int recalc = int(simulation.config().pathRecalcTicks);
-    ImGui::SetNextItemWidth(-140.0f);
-    if (ImGui::SliderInt("path recalc", &recalc, 1, 400))
-    {
-        simulation.config().pathRecalcTicks = uint32_t(recalc);
-    }
-    if (ImGui::IsItemHovered())
-    {
-        ImGui::SetTooltip(
-            "How often, in ticks, an Agent recomputes its remaining itinerary.\n"
-            "Routing on every node is expensive and makes the population swing.");
-    }
-
-    float deviation = simulation.config().pathCostDeviation;
-    ImGui::SetNextItemWidth(-140.0f);
-    if (ImGui::SliderFloat("cost deviation", &deviation, 0.0f, 1.0f, "%.2f"))
-    {
-        simulation.config().pathCostDeviation = deviation;
-    }
-    if (ImGui::IsItemHovered())
-    {
-        ImGui::SetTooltip(
-            "Relative increase of the remaining itinerary cost that forces an\n"
-            "Agent to recompute immediately. Zero means always recompute.");
     }
 
     ImGui::End();

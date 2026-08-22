@@ -114,14 +114,25 @@ Path* Unit::path() const
 void Unit::translate(Vector3f const& direction)
 {
     // A Unit sitting on a Node or a Way follows it: the City translates the
-    // Path, which moves the Nodes, and the Unit reads the new position.
-    if (m_node != nullptr)
+    // Path, which moves the Nodes, and the Unit reads the new position. One
+    // that was given a footprint of its own keeps it and shifts with the City.
+    if (m_placed)
+        m_position += direction;
+    else if (m_node != nullptr)
         m_position = m_node->position();
     else if (m_way != nullptr)
         m_position = m_way->positionAt(m_offset);
     else
         m_position += direction;
 
+    refreshMapPosition();
+}
+
+// -----------------------------------------------------------------------------
+void Unit::placeAt(Vector3f const& position)
+{
+    m_position = position;
+    m_placed = true;
     refreshMapPosition();
 }
 

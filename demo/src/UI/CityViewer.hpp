@@ -92,6 +92,12 @@ public:
     // ------------------------------------------------------------------------
     Unit* pickUnit(City& city, ImVec2 const& world, float pixels) const;
 
+    // ------------------------------------------------------------------------
+    //! \brief Agent of the given city closest to a world position, within a
+    //! tolerance in pixels.
+    // ------------------------------------------------------------------------
+    Agent* pickAgent(City& city, ImVec2 const& world, float pixels) const;
+
 private:
 
     // ------------------------------------------------------------------------
@@ -107,25 +113,41 @@ private:
     // ------------------------------------------------------------------------
     void pick(Simulation& simulation, game::DebugState& state, ImVec2 const& screen);
 
+    // ------------------------------------------------------------------------
+    //! \brief Entity under the given canvas position, without writing state.
+    // ------------------------------------------------------------------------
+    game::Selection pickAt(Simulation& simulation, game::DebugState const& state,
+                           ImVec2 const& screen) const;
+
     void drawMaps(World& world, game::DebugState const& state);
     void drawPaths(City& city, game::DebugState const& state);
     void drawUnits(City& city, game::DebugState const& state);
     void drawAgents(City& city, game::DebugState const& state);
     void drawCityFrame(City& city, game::DebugState const& state);
     void drawAreas(City& city);
-    void drawSelectionOverlay(Simulation& simulation, game::DebugState const& state);
+    void drawSelectionOverlay(Simulation& simulation, game::DebugState const& state,
+                              editor::Editor const& editor);
+    void drawInspectHover(Simulation& simulation, game::DebugState const& state,
+                          editor::Editor const& editor);
     void drawLegend(game::DebugState const& state);
     void drawToolbar(Simulation& simulation, game::DebugState& state, editor::Editor& editor);
 
     // ------------------------------------------------------------------------
     //! \brief Update state.hoveredCell from the mouse position.
+    //! \param[in] hovered: whether the mouse is over the canvas surface. It is
+    //! passed in rather than queried again: a window stops reporting itself as
+    //! hovered on the very frame an item of it becomes active, which is exactly
+    //! the frame the brushes need the cell on.
     // ------------------------------------------------------------------------
-    void updateHover(Simulation& simulation, game::DebugState& state);
+    void updateHover(Simulation& simulation, game::DebugState& state,
+                     bool hovered);
 
     // ------------------------------------------------------------------------
     //! \brief Tooltip listing the value of every Map on the hovered cell.
     // ------------------------------------------------------------------------
-    void drawHoverTooltip(Simulation& simulation, game::DebugState const& state);
+    void drawHoverTooltip(Simulation& simulation, game::DebugState const& state,
+                          editor::Editor const& editor);
+    void drawDisplayToggles(game::DebugState& state);
     void drawClockHud(Simulation const& simulation);
     void drawHint(editor::Editor const& editor);
 

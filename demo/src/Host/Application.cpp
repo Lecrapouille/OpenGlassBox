@@ -7,7 +7,9 @@
 #include "Host/Application.hpp"
 
 #include <chrono>
+#include <cstdlib>
 #include <iostream>
+#include <string>
 
 namespace ogb {
 namespace host {
@@ -82,6 +84,18 @@ bool Application::initializeGLFW()
     glfwSetErrorCallback([](int code, char const* description) {
         std::cerr << "GLFW error " << code << ": " << description << std::endl;
     });
+
+    // GLFW picks Wayland whenever it is available, and a Wayland window cannot
+    // be driven by xdotool or captured by window id. OGB_PLATFORM=x11 forces
+    // XWayland, which is what makes scripted runs and screenshots possible.
+    char const* platform = std::getenv("OGB_PLATFORM");
+    if (platform != nullptr)
+    {
+        if (std::string(platform) == "x11")
+            glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
+        else if (std::string(platform) == "wayland")
+            glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_WAYLAND);
+    }
 
     if (glfwInit() == GLFW_FALSE)
     {

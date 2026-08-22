@@ -1,5 +1,6 @@
-# Simplified Chicago arteries (not the Scilab chisincen.net).
-# Pair with chicago.ogc.
+# Chicago road network imported from CiudadSim examples/chisincen.net
+# (546 nodes, 2176 directed links).
+# Pair with chicago.ogs.
 
 resources
 	resource Water

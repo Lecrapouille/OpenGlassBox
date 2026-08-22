@@ -23,19 +23,25 @@
 
 namespace ogb {
 namespace game { class RuleTrace; }
+namespace editor { class Editor; }
 
 namespace ui {
 class CityViewer;
 
 // ****************************************************************************
-//! \brief Lists every Map of every City and lets one be designated as the main
-//! heatmap while the others become overlays.
+//! \brief One-click heatmap picker: click a map name to show it as the main
+//! layer. Lives next to the Maps tool of the toolbar, since choosing which map
+//! to look at and choosing which map to paint is the same decision.
 // ****************************************************************************
 class LayersPanel
 {
 public:
 
-    void draw(Simulation& simulation, game::DebugState& state);
+    // ------------------------------------------------------------------------
+    //! \brief One map per row, the controls of every row aligned in columns.
+    //! \param[in] width: width in pixels of the column of rows.
+    // ------------------------------------------------------------------------
+    void drawColumn(Simulation& simulation, game::DebugState& state, float width);
 };
 
 // ****************************************************************************
@@ -56,6 +62,7 @@ private:
     void drawNode(game::DebugState& state);
     void drawWay(game::DebugState& state);
     void drawCell(Simulation& simulation, game::DebugState& state);
+    void drawArea(Simulation& simulation, game::DebugState& state);
 };
 
 // ****************************************************************************
@@ -124,13 +131,15 @@ private:
 };
 
 // ****************************************************************************
-//! \brief Pause, step and speed of the simulation, plus the traffic tuning.
+//! \brief The in-game clock and how fast it advances: stepping while paused,
+//! time scale and tick rate. Play and Pause live on the map toolbar, next to
+//! the tools they interact with.
 // ****************************************************************************
 class TimeControlPanel
 {
 public:
 
-    void draw(Simulation& simulation, game::DebugState& state, game::RuleTrace& trace);
+    void draw(Simulation& simulation);
 
     // ------------------------------------------------------------------------
     //! \brief Number of ticks the user asked to run while paused. Consumed by

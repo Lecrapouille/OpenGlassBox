@@ -74,8 +74,13 @@ public:
     //! \brief Draw what the current tool is about to do: the rubber band of a
     //! road, the rectangle of the brush, the target of the bulldozer.
     // ------------------------------------------------------------------------
-    void drawPreview(Simulation& simulation, ui::CityViewer& viewer,
-                     ImDrawList* drawList);
+    void drawPreview(Simulation& simulation, game::DebugState& state,
+                     ui::CityViewer& viewer, ImDrawList* drawList);
+
+    // ------------------------------------------------------------------------
+    //! \brief Empty the target city. Cannot be undone.
+    // ------------------------------------------------------------------------
+    void clearCity(Simulation& simulation, game::DebugState& state);
 
     void undo(Simulation& simulation) { m_stack.undo(simulation); }
     void redo(Simulation& simulation) { m_stack.redo(simulation); }
@@ -120,13 +125,38 @@ private:
     //! \brief Round a world position to the grid of the target city, so that
     //! roads drawn by hand stay aligned.
     // ------------------------------------------------------------------------
-    Vector3f snap(Simulation& simulation, ImVec2 const& world) const;
+    Vector3f snap(Simulation& simulation, ui::CityViewer& viewer,
+                  ImVec2 const& world) const;
 
     void handleRoad(Simulation& simulation, ui::CityViewer& viewer, bool hovered);
     void handleBuilding(Simulation& simulation, ui::CityViewer& viewer);
     void handlePaint(Simulation& simulation, game::DebugState& state, bool hovered);
     void handleZone(Simulation& simulation, game::DebugState& state, bool hovered);
     void handleBulldozer(Simulation& simulation, ui::CityViewer& viewer);
+
+    // ------------------------------------------------------------------------
+    //! \brief Follow the rectangular drag shared by the zone and the map
+    //! brushes.
+    //! \return true on the frame the stroke is finished and has to be applied.
+    // ------------------------------------------------------------------------
+    bool trackBrushDrag(game::DebugState& state, bool hovered);
+
+    // ------------------------------------------------------------------------
+    //! \brief Rectangle of cells the current stroke covers, the brush size
+    //! included. A click with a brush of one cell gives a single cell.
+    // ------------------------------------------------------------------------
+    void brushRectangle(int32_t& u0, int32_t& v0, int32_t& u1, int32_t& v1) const;
+
+    void drawBrushSlider(float width);
+
+    // ------------------------------------------------------------------------
+    //! \brief Options of the zone and map brushes. They are laid out on one row
+    //! when the canvas is wide enough and stacked otherwise, because the map
+    //! panel can be docked in a column narrower than the controls.
+    // ------------------------------------------------------------------------
+    void drawZoneOptions(Simulation& simulation);
+    void drawPaintOptions(Simulation& simulation, game::DebugState& state,
+                          City* city);
 
 private:
 
@@ -143,6 +173,10 @@ private:
     std::string m_areaType;
 
     int m_paintAmount = 10;
+    //! \brief Side, in cells, of the square a single click of the zone or map
+    //! brush covers. One cell of a large city is sub-pixel on screen, so a
+    //! wider default is what makes an edit visible.
+    int m_brush = 4;
     bool m_snapToGrid = true;
 
     //! \brief State of the drag in progress, for the road and the brush.

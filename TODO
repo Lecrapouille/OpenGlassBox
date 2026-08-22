@@ -1,20 +1,26 @@
 A FAIRE:
 - Richesse ?
 - Zoom des plots
-
-
-- Changer les extensions des fichiers scripts de .txt en .ogs.
-- Ameliorer GlassBoxApp::buildDemoWorld() => mettre dans les fichiers scripts.
-- Sauvegarder la ville
-- Bugs TestCity.txt: zones commerciale n'est pas alignés, les routes ne sont pas alignées avec la souris.
-- Ajouter ville rectangulaire comme JPQ, chicago
-- Bulldozer les noeuds: ca laisse des points blancs
-- Editer le script depuis la GUI
-- Afficher les heures
 - On ne peut pas relier les villes entre elles ?
-- Mettre a jour le README
-- Couche layers pas tres UX
 - Sortir Dijkstra de OpenGlassBox: en faire une classe abstraire (Traffic ?) et implementer dans la demo
 - Implementer ForthScript
 - On ne peut pas relier les villes entre elles ?
 - 1 application = 1 ville. 2 applications = 2 villes qui se voient et communiquent.
+- actuellement a 8h du matin les gens sortent de chez eux a 19h ils rentrent. Ils ne vont pas manger.
+Il faut creer des restau et de plus il faudrait randomiser qu'ils soient en vacances, font du shopping,
+etc ... => regles d'economie ?
+
+Chicago: ca tourne a 6 FPS
+
+Creer une simulation
+- Home
+- Agents: argent, faim, vont manger a midi et apres le boulot
+- Restaurant: a besoin de x personnes, supprimme la faim
+- usine qui coupe du bois: a besoin de x personnes, foret/arbres et produit du bois, creer secheresse, argent
+- usine qui cree des meubles: a besoin de x personnes, de bois et produit des meubles, creer polution, argent
+- foret a besoin d'eau
+- entreprise:
+
+Deplacer node
+bulldozer la carte entiere => bug road
+manquer zone vide

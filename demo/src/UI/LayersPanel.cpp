@@ -8,6 +8,7 @@
 #include "UI/Theme.hpp"
 #include "OpenGlassBox/Simulation.hpp"
 
+#include <algorithm>
 #include <set>
 
 namespace ogb {
@@ -20,119 +21,166 @@ static char const* modeName(game::LayerMode mode)
 {
     switch (mode)
     {
-    case game::LayerMode::Heatmap: return "Heatmap";
-    case game::LayerMode::Contour: return "Contour";
-    case game::LayerMode::Value: return "Value";
+    case game::LayerMode::Heatmap: return "Heat";
+    case game::LayerMode::Contour: return "Line";
+    case game::LayerMode::Value: return "Val";
     }
     return "?";
 }
 
 // ----------------------------------------------------------------------------
-void LayersPanel::draw(Simulation& simulation, game::DebugState& state)
+static void collectMapNames(Simulation& simulation, std::set<std::string>& names)
 {
-    if (!ImGui::Begin("Layers"))
-    {
-        ImGui::End();
-        return;
-    }
-
-    ImGui::SeparatorText("Display");
-    ImGui::Checkbox("Grid", &state.showGrid);
-    ImGui::Checkbox("Paths", &state.showPaths);
-    ImGui::Checkbox("Units", &state.showUnits);
-    ImGui::Checkbox("Areas", &state.showAreas);
-    ImGui::Checkbox("Agents", &state.showAgents);
-    ImGui::Checkbox("Traffic", &state.showTraffic);
-    ImGui::Checkbox("Labels", &state.showLabels);
-
-    std::set<std::string> names;
     for (auto& it: simulation.cities())
     {
         for (auto& map: it.second->maps())
-        {
             names.insert(map.second->type());
+    }
+}
+
+// ----------------------------------------------------------------------------
+//! \brief One map: visibility, colour, name, opacity and drawing mode. Each
+//! control sits in its own table column so that they line up from row to row.
+// ----------------------------------------------------------------------------
+static void drawLayerRow(Simulation& simulation, game::DebugState& state,
+                         std::string const& name)
+{
+    ImGui::PushID(name.c_str());
+
+    game::LayerSettings& settings = state.layer(name);
+
+    uint32_t color = 0xFFFFFF;
+    uint64_t total = 0u;
+    for (auto& it: simulation.cities())
+    {
+        auto const map = it.second->maps().find(name);
+        if (map != it.second->maps().end())
+        {
+            color = map->second->color();
+            total += map->second->totalResource();
         }
     }
 
-    ImGui::SeparatorText("Maps");
+    float const rowHeight = ImGui::GetFrameHeight();
+
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn();
+    ImGui::Checkbox("##visible", &settings.visible);
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Show or hide this map.");
+
+    ImGui::TableNextColumn();
+    ImGui::ColorButton("##color",
+                       ImGui::ColorConvertU32ToFloat4(theme::fromScript(color)),
+                       ImGuiColorEditFlags_NoTooltip |
+                           ImGuiColorEditFlags_NoDragDrop,
+                       ImVec2(rowHeight, rowHeight));
+
+    ImGui::TableNextColumn();
+    bool const isPrimary = (state.primaryLayer == name);
+    if (isPrimary)
+    {
+        ImGui::PushStyleColor(ImGuiCol_Button,
+                              ImGui::ColorConvertU32ToFloat4(theme::ACCENT));
+    }
+    if (ImGui::Button(name.c_str(), ImVec2(-1.0f, 0.0f)))
+    {
+        if (ImGui::GetIO().KeyAlt)
+        {
+            state.soloLayer =
+                (state.soloLayer == name) ? std::string() : name;
+        }
+        else
+        {
+            state.primaryLayer = name;
+            settings.visible = true;
+            if (state.soloLayer == name)
+                state.soloLayer.clear();
+        }
+    }
+    if (isPrimary)
+        ImGui::PopStyleColor();
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip(
+            "Show %s as the main heatmap.\n"
+            "Alt+click to show only this map.\n"
+            "total: %llu",
+            name.c_str(), (unsigned long long)total);
+    }
+
+    ImGui::TableNextColumn();
+    ImGui::SetNextItemWidth(-1.0f);
+    ImGui::SliderFloat("##opacity", &settings.opacity, 0.05f, 1.0f, "%.1f");
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Layer opacity.");
+
+    ImGui::TableNextColumn();
+    ImGui::SetNextItemWidth(-1.0f);
+    if (ImGui::BeginCombo("##mode", modeName(settings.mode)))
+    {
+        game::LayerMode const modes[] = {
+            game::LayerMode::Heatmap, game::LayerMode::Contour,
+            game::LayerMode::Value
+        };
+        for (game::LayerMode mode: modes)
+        {
+            if (ImGui::Selectable(modeName(mode), settings.mode == mode))
+                settings.mode = mode;
+        }
+        ImGui::EndCombo();
+    }
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip(
+            "Heat = filled cells, Line = contours, Val = numeric labels "
+            "(main layer only).");
+    }
+
+    ImGui::PopID();
+}
+
+// ----------------------------------------------------------------------------
+void LayersPanel::drawColumn(Simulation& simulation, game::DebugState& state,
+                             float width)
+{
+    std::set<std::string> names;
+    collectMapNames(simulation, names);
     if (names.empty())
     {
-        ImGui::TextDisabled("No map. Load a ruleset.");
-        ImGui::End();
+        ImGui::TextDisabled("No map in this ruleset.");
         return;
     }
 
-    ImGui::TextDisabled("Visible + which map is the main heatmap.");
-    ImGui::Separator();
+    // Beyond a handful of maps the column would eat the canvas, so it scrolls
+    // instead of growing.
+    float const rowHeight = ImGui::GetFrameHeightWithSpacing();
+    size_t const visibleRows = std::min<size_t>(names.size(), 5u);
+    float const height = rowHeight * float(visibleRows + 1u);
+
+    ImGuiTableFlags const flags = ImGuiTableFlags_SizingFixedFit |
+                                  ImGuiTableFlags_RowBg |
+                                  ImGuiTableFlags_ScrollY;
+
+    // A width of zero lets the table take all the room the caller has left.
+    float const outerWidth = (width > 0.0f) ? width : 0.0f;
+    if (!ImGui::BeginTable("layers", 5, flags, ImVec2(outerWidth, height)))
+        return;
+
+    ImGui::TableSetupScrollFreeze(0, 1);
+    ImGui::TableSetupColumn("##visible", ImGuiTableColumnFlags_WidthFixed,
+                            ImGui::GetFrameHeight());
+    ImGui::TableSetupColumn("##color", ImGuiTableColumnFlags_WidthFixed,
+                            ImGui::GetFrameHeight());
+    ImGui::TableSetupColumn("layer", ImGuiTableColumnFlags_WidthStretch);
+    ImGui::TableSetupColumn("opacity", ImGuiTableColumnFlags_WidthFixed, 72.0f);
+    ImGui::TableSetupColumn("mode", ImGuiTableColumnFlags_WidthFixed, 62.0f);
+    ImGui::TableHeadersRow();
 
     for (std::string const& name: names)
-    {
-        ImGui::PushID(name.c_str());
+        drawLayerRow(simulation, state, name);
 
-        game::LayerSettings& settings = state.layer(name);
-
-        uint32_t color = 0xFFFFFF;
-        uint64_t total = 0u;
-        for (auto& it: simulation.cities())
-        {
-            auto const map = it.second->maps().find(name);
-            if (map != it.second->maps().end())
-            {
-                color = map->second->color();
-                total += map->second->totalResource();
-            }
-        }
-
-        ImGui::ColorButton("##color",
-                           ImGui::ColorConvertU32ToFloat4(theme::fromScript(color)),
-                           ImGuiColorEditFlags_NoTooltip |
-                           ImGuiColorEditFlags_NoDragDrop,
-                           ImVec2(14.0f, 14.0f));
-        ImGui::SameLine();
-
-        bool const isPrimary = (state.primaryLayer == name);
-        if (ImGui::RadioButton("##primary", isPrimary))
-        {
-            state.primaryLayer = isPrimary ? std::string() : name;
-        }
-        if (ImGui::IsItemHovered())
-        {
-            ImGui::SetTooltip("Show %s as the main heatmap", name.c_str());
-        }
-        ImGui::SameLine();
-
-        ImGui::Checkbox(name.c_str(), &settings.visible);
-
-        if (ImGui::TreeNode("…"))
-        {
-            ImGui::SetNextItemWidth(-90.0f);
-            ImGui::SliderFloat("opacity", &settings.opacity, 0.05f, 1.0f, "%.2f");
-
-            ImGui::SetNextItemWidth(-90.0f);
-            if (ImGui::BeginCombo("mode", modeName(settings.mode)))
-            {
-                game::LayerMode const modes[] = {
-                    game::LayerMode::Heatmap, game::LayerMode::Contour,
-                    game::LayerMode::Value
-                };
-                for (game::LayerMode mode: modes)
-                {
-                    if (ImGui::Selectable(modeName(mode), settings.mode == mode))
-                    {
-                        settings.mode = mode;
-                    }
-                }
-                ImGui::EndCombo();
-            }
-
-            ImGui::TextDisabled("total: %llu", (unsigned long long)total);
-            ImGui::TreePop();
-        }
-
-        ImGui::PopID();
-    }
-
-    ImGui::End();
+    ImGui::EndTable();
 }
 } // namespace ui
 } // namespace ogb

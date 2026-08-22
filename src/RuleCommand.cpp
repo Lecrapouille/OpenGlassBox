@@ -101,14 +101,42 @@ std::string RuleCommandTest::type()
 }
 
 //------------------------------------------------------------------------------
-bool RuleCommandAgent::validate(RuleContext& /*context*/)
+bool RuleCommandAgent::validate(RuleContext& context)
 {
-    return true;
+    if ((context.unit == nullptr) || (context.city == nullptr))
+        return false;
+
+    if (!context.unit->hasWays())
+        return false;
+
+    Resources probe;
+    for (auto const& resource: m_resources.container())
+    {
+        if (context.unit->resources().getAmount(resource.type()) <
+            resource.getAmount())
+        {
+            return false;
+        }
+        probe.addResource(resource.type(), resource.getAmount());
+    }
+
+    for (auto& unit: context.city->units())
+    {
+        if (unit->type() != m_target)
+            continue;
+        if (unit->accepts(m_target, probe))
+            return true;
+    }
+
+    return false;
 }
 
 //------------------------------------------------------------------------------
 void RuleCommandAgent::execute(RuleContext& context)
 {
+    if ((context.unit == nullptr) || (context.city == nullptr))
+        return;
+
     if (context.unit->hasWays())
     {
         context.city->addAgent(*this, *(context.unit), m_resources, m_target);
@@ -188,38 +216,50 @@ bool RuleCommandSpawn::validate(RuleContext& context)
         return false;
 
     int32_t u = 0, v = 0;
-    return context.area->findFreeCell(m_unitType.name, u, v);
+    if (!context.area->findFreeCell(u, v))
+        return false;
+
+    if (m_placement != Placement::NearestWay)
+        return true;
+
+    // A building has to be reachable. Without a road, no Agent could ever
+    // leave it or deliver to it, and the Area would keep growing ghosts.
+    float offset = 0.5f;
+    Way const* way =
+        context.area->nearestWay(context.area->cellWorldPosition(u, v), offset);
+    return (way != nullptr) && (way->from().path() != nullptr);
 }
 
 //------------------------------------------------------------------------------
 void RuleCommandSpawn::execute(RuleContext& context)
 {
+    if ((context.area == nullptr) || (context.city == nullptr))
+        return;
+
     int32_t u = 0, v = 0;
-    if (!context.area->findFreeCell(m_unitType.name, u, v))
+    if (!context.area->findFreeCell(u, v))
         return;
 
     Vector3f const world = context.area->cellWorldPosition(u, v);
 
-    if (m_placement == Placement::NearestWay)
+    if (m_placement != Placement::NearestWay)
     {
-        float offset = 0.5f;
-        Way* way = context.area->nearestWay(world, offset);
-        if (way == nullptr)
-        {
-            context.city->addUnit(m_unitType, world);
-            return;
-        }
-        Path* path = way->from().path();
-        if (path == nullptr)
-        {
-            context.city->addUnit(m_unitType, world);
-            return;
-        }
-        context.city->addUnit(m_unitType, *path, *way, offset);
+        context.city->addUnit(m_unitType, world);
         return;
     }
 
-    context.city->addUnit(m_unitType, world);
+    float offset = 0.5f;
+    Way* way = context.area->nearestWay(world, offset);
+    Path* path = (way == nullptr) ? nullptr : way->from().path();
+    if ((way == nullptr) || (path == nullptr))
+        return;
+
+    // The Way is how the building reaches the network, not where it stands: it
+    // keeps the cell the Area picked for it. Reading the cell of the road
+    // instead would leave that cell free, and the next tick would grow another
+    // building on the very same spot.
+    Unit& unit = context.city->addUnit(m_unitType, *path, *way, offset);
+    unit.placeAt(world);
 }
 
 //------------------------------------------------------------------------------

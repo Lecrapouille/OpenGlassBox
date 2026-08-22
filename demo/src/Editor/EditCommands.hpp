@@ -268,7 +268,10 @@ private:
 };
 
 // ============================================================================
-//! \brief Demolish an isolated node (no remaining ways).
+//! \brief Demolish a node and, if any, its incident segments.
+//!
+//! Undoing restores the node and the segments. Units and Agents that sat on
+//! them are gone, the same way they are after a road demolition.
 // ============================================================================
 class RemoveNodeCommand: public ICommand
 {
@@ -279,13 +282,25 @@ public:
     bool redo(Simulation& simulation) override;
     void undo(Simulation& simulation) override;
     std::string label() const override;
+    void onWorldRebuilt() override { m_captured = false; m_ways.clear(); }
 
 private:
+
+    struct WaySnapshot
+    {
+        uint32_t id = 0u;
+        std::string type;
+        uint32_t fromId = 0u;
+        uint32_t toId = 0u;
+        Vector3f fromPosition;
+        Vector3f toPosition;
+    };
 
     std::string m_city;
     std::string m_path;
     uint32_t m_nodeId;
     Vector3f m_position;
+    std::vector<WaySnapshot> m_ways;
     bool m_captured = false;
 };
 
@@ -328,6 +343,11 @@ private:
 
 // ============================================================================
 //! \brief Paint an Area over a rectangle of cells.
+//!
+//! Areas do not overlap: painting Commercial over a corner of a Residential
+//! rectangle re-zones exactly the cells painted. The part of the old Area that
+//! survives is put back as up to four rectangles, which is what lets a zone be
+//! converted piece by piece instead of being wiped out whole.
 // ============================================================================
 class AddAreaCommand: public ICommand
 {
@@ -339,9 +359,27 @@ public:
     bool redo(Simulation& simulation) override;
     void undo(Simulation& simulation) override;
     std::string label() const override;
-    void onWorldRebuilt() override { m_areaId = NO_ID; }
+    void onWorldRebuilt() override
+    {
+        m_areaId = NO_ID;
+        m_removed.clear();
+        m_leftovers.clear();
+    }
+
+    //! \brief Identifier of the Area this command added, so that the caller can
+    //! select it. Only meaningful once redo() has succeeded.
+    uint32_t createdAreaId() const { return m_areaId; }
 
 private:
+
+    struct SavedArea
+    {
+        std::string type;
+        int32_t u0 = 0;
+        int32_t v0 = 0;
+        uint32_t sizeU = 0u;
+        uint32_t sizeV = 0u;
+    };
 
     std::string m_city;
     std::string m_areaType;
@@ -350,6 +388,11 @@ private:
     int32_t m_u1;
     int32_t m_v1;
     uint32_t m_areaId = NO_ID;
+    //! \brief The Areas this command re-zoned, as they were before it ran.
+    std::vector<SavedArea> m_removed;
+    //! \brief Identifiers of the rectangles added back for the parts of those
+    //! Areas the new one does not cover.
+    std::vector<uint32_t> m_leftovers;
 };
 } // namespace editor
 } // namespace ogb

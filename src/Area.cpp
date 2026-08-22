@@ -104,12 +104,12 @@ Way* Area::nearestWay(Vector3f const& world, float& offset) const
 }
 
 // -----------------------------------------------------------------------------
-bool Area::findFreeCell(std::string const& unitType, int32_t& u, int32_t& v) const
+bool Area::findFreeCell(int32_t& u, int32_t& v) const
 {
     if (m_footprint.empty())
         return false;
 
-    std::vector<Unit*> const occupied = unitsInside(unitType);
+    std::vector<Unit*> const occupied = unitsInside(std::string());
 
     auto taken = [&](int32_t cu, int32_t cv) {
         for (Unit* unit: occupied)

@@ -58,6 +58,73 @@ void TrafficPanel::draw(Simulation& simulation, game::DebugState& state)
         return;
     }
 
+    ImGui::SeparatorText("Routing");
+    float smoothing = simulation.config().trafficSmoothing;
+    ImGui::SetNextItemWidth(-140.0f);
+    if (ImGui::SliderFloat("flow smoothing", &smoothing, 0.005f, 1.0f, "%.3f",
+                           ImGuiSliderFlags_Logarithmic))
+    {
+        simulation.config().trafficSmoothing = smoothing;
+        for (auto& it: simulation.cities())
+            it.second->config().trafficSmoothing = smoothing;
+    }
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip(
+            "Step of the moving average applied to the traffic flow.\n"
+            "Set it to one to route on the raw instantaneous count.");
+    }
+
+    int recalc = int(simulation.config().pathRecalcTicks);
+    ImGui::SetNextItemWidth(-140.0f);
+    if (ImGui::SliderInt("path recalc", &recalc, 1, 400))
+    {
+        simulation.config().pathRecalcTicks = uint32_t(recalc);
+    }
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip(
+            "How often, in ticks, an Agent recomputes its remaining itinerary.");
+    }
+
+    float deviation = simulation.config().pathCostDeviation;
+    ImGui::SetNextItemWidth(-140.0f);
+    if (ImGui::SliderFloat("cost deviation", &deviation, 0.0f, 1.0f, "%.2f"))
+    {
+        simulation.config().pathCostDeviation = deviation;
+    }
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip(
+            "Relative increase of the remaining itinerary cost that forces an\n"
+            "Agent to recompute immediately. Zero means always recompute.");
+    }
+
+    ImGui::SeparatorText("Congestion");
+    ImGui::Checkbox("Color roads", &state.showTraffic);
+    {
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        ImVec2 const origin = ImGui::GetCursorScreenPos();
+        float const width = ImGui::GetContentRegionAvail().x;
+        float const height = 10.0f;
+        for (int i = 0; i < 32; ++i)
+        {
+            float const t0 = float(i) / 32.0f;
+            float const t1 = float(i + 1) / 32.0f;
+            drawList->AddRectFilled(
+                ImVec2(origin.x + t0 * width, origin.y),
+                ImVec2(origin.x + t1 * width, origin.y + height),
+                theme::congestionColor(t0));
+        }
+        ImGui::Dummy(ImVec2(width, height));
+        ImGui::TextDisabled("free");
+        ImGui::SameLine();
+        float const jammedWidth = ImGui::CalcTextSize("jammed").x;
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() +
+                             std::max(0.0f, ImGui::GetContentRegionAvail().x - jammedWidth));
+        ImGui::TextDisabled("jammed");
+    }
+
     std::vector<WayRow> rows;
     float totalTime = 0.0f;
     float freeFlowTotal = 0.0f;

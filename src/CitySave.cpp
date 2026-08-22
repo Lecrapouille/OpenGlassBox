@@ -5,16 +5,19 @@
 //-----------------------------------------------------------------------------
 
 #include "OpenGlassBox/CitySave.hpp"
-#include "OpenGlassBox/Simulation.hpp"
-#include "OpenGlassBox/Script/Lexer.hpp"
 
 #include <cstdint>
 #include <cstdio>
 #include <fstream>
 #include <sstream>
 
-namespace ogb {
-namespace {
+#include "OpenGlassBox/Script/Lexer.hpp"
+#include "OpenGlassBox/Simulation.hpp"
+
+namespace ogb
+{
+namespace
+{
 
 uint32_t rotr(uint32_t value, uint32_t bits)
 {
@@ -40,7 +43,7 @@ std::string sha256(std::string const& input)
     };
 
     std::vector<uint8_t> data(input.begin(), input.end());
-    uint64_t const bitLen = uint64_t(data.size()) * 8u;
+    uint64_t const bitLen = data.size() * 8u;
     data.push_back(0x80u);
     while ((data.size() % 64u) != 56u)
         data.push_back(0u);
@@ -56,7 +59,8 @@ std::string sha256(std::string const& input)
         for (size_t i = 0u; i < 16u; ++i)
         {
             size_t const o = chunk + i * 4u;
-            w[i] = (uint32_t(data[o]) << 24u) | (uint32_t(data[o + 1u]) << 16u) |
+            w[i] = (uint32_t(data[o]) << 24u) |
+                   (uint32_t(data[o + 1u]) << 16u) |
                    (uint32_t(data[o + 2u]) << 8u) | uint32_t(data[o + 3u]);
         }
         for (size_t i = 16u; i < 64u; ++i)
@@ -78,11 +82,23 @@ std::string sha256(std::string const& input)
             uint32_t const S0 = rotr(a, 2u) ^ rotr(a, 13u) ^ rotr(a, 22u);
             uint32_t const maj = (a & b) ^ (a & c) ^ (b & c);
             uint32_t const temp2 = S0 + maj;
-            hh = g; g = f; f = e; e = d + temp1;
-            d = c; c = b; b = a; a = temp1 + temp2;
+            hh = g;
+            g = f;
+            f = e;
+            e = d + temp1;
+            d = c;
+            c = b;
+            b = a;
+            a = temp1 + temp2;
         }
-        h[0] += a; h[1] += b; h[2] += c; h[3] += d;
-        h[4] += e; h[5] += f; h[6] += g; h[7] += hh;
+        h[0] += a;
+        h[1] += b;
+        h[2] += c;
+        h[3] += d;
+        h[4] += e;
+        h[5] += f;
+        h[6] += g;
+        h[7] += hh;
     }
 
     char hex[65];
@@ -100,7 +116,7 @@ std::string fileBasename(std::string const& path)
 void writeResources(std::ostream& out, Resources const& resources)
 {
     out << "[";
-    for (Resource const& resource: resources.container())
+    for (Resource const& resource : resources.container())
     {
         if (resource.getAmount() == 0u)
             continue;
@@ -114,7 +130,8 @@ bool expect(Lexer& lexer, char const* word, std::string& error)
     Token const token = lexer.next();
     if (token.text != word)
     {
-        error = "Expected '" + std::string(word) + "' but read '" + token.text + "'";
+        error = "Expected '" + std::string(word) + "' but read '" + token.text +
+                "'";
         return false;
     }
     return true;
@@ -231,10 +248,11 @@ bool parseHeader(Lexer& lexer, CitySaveHeader& header, std::string& error)
 std::vector<std::string> usedTypes(Simulation const& simulation)
 {
     std::vector<std::string> names;
-    auto const add = [&](std::string const& name) {
+    auto const add = [&](std::string const& name)
+    {
         if (name.empty())
             return;
-        for (std::string const& existing: names)
+        for (std::string const& existing : names)
         {
             if (existing == name)
                 return;
@@ -242,20 +260,20 @@ std::vector<std::string> usedTypes(Simulation const& simulation)
         names.push_back(name);
     };
 
-    for (auto const& cityIt: simulation.cities())
+    for (auto const& cityIt : simulation.cities())
     {
         City const& city = *cityIt.second;
-        for (auto const& pathIt: city.paths())
+        for (auto const& pathIt : city.paths())
         {
             add(pathIt.second->type());
-            for (auto const& way: pathIt.second->ways())
+            for (auto const& way : pathIt.second->ways())
                 add(way->type());
         }
-        for (auto const& unit: city.units())
+        for (auto const& unit : city.units())
             add(unit->type());
-        for (auto const& area: city.areas())
+        for (auto const& area : city.areas())
             add(area->type());
-        for (auto const& agent: city.agents())
+        for (auto const& agent : city.agents())
             add(agent->type());
     }
     return names;
@@ -263,12 +281,54 @@ std::vector<std::string> usedTypes(Simulation const& simulation)
 
 bool typeExists(Script const& script, std::string const& name)
 {
-    try { script.getPathType(name); return true; } catch (...) {}
-    try { script.getWayType(name); return true; } catch (...) {}
-    try { script.getUnitType(name); return true; } catch (...) {}
-    try { script.getAreaType(name); return true; } catch (...) {}
-    try { script.getAgentType(name); return true; } catch (...) {}
-    try { script.getMapType(name); return true; } catch (...) {}
+    try
+    {
+        script.getPathType(name);
+        return true;
+    }
+    catch (...)
+    {
+    }
+    try
+    {
+        script.getWayType(name);
+        return true;
+    }
+    catch (...)
+    {
+    }
+    try
+    {
+        script.getUnitType(name);
+        return true;
+    }
+    catch (...)
+    {
+    }
+    try
+    {
+        script.getAreaType(name);
+        return true;
+    }
+    catch (...)
+    {
+    }
+    try
+    {
+        script.getAgentType(name);
+        return true;
+    }
+    catch (...)
+    {
+    }
+    try
+    {
+        script.getMapType(name);
+        return true;
+    }
+    catch (...)
+    {
+    }
     return false;
 }
 
@@ -292,7 +352,8 @@ std::string CitySave::hashFile(std::string const& path)
 }
 
 // -----------------------------------------------------------------------------
-bool CitySave::peekHeader(std::string const& path, CitySaveHeader& header,
+bool CitySave::peekHeader(std::string const& path,
+                          CitySaveHeader& header,
                           std::string& error)
 {
     Lexer lexer;
@@ -325,8 +386,10 @@ bool CitySave::matchesRuleset(CitySaveHeader const& header,
 }
 
 // -----------------------------------------------------------------------------
-bool CitySave::write(std::string const& path, Simulation const& simulation,
-                     std::string const& rulesetPath, std::string& error)
+bool CitySave::write(std::string const& path,
+                     Simulation const& simulation,
+                     std::string const& rulesetPath,
+                     std::string& error)
 {
     std::ofstream out(path);
     if (!out)
@@ -340,7 +403,7 @@ bool CitySave::write(std::string const& path, Simulation const& simulation,
     out << "\truleset " << fileBasename(rulesetPath) << "\n";
     out << "\thash " << hash << "\n";
     out << "\ttypes [";
-    for (std::string const& type: usedTypes(simulation))
+    for (std::string const& type : usedTypes(simulation))
         out << " " << type;
     out << " ]\nend\n\n";
 
@@ -356,27 +419,27 @@ bool CitySave::write(std::string const& path, Simulation const& simulation,
     writeResources(out, city.globals());
     out << "\n";
 
-    for (auto const& pathIt: city.paths())
+    for (auto const& pathIt : city.paths())
     {
         Path const& road = *pathIt.second;
         out << "path " << road.type() << "\n";
-        for (auto const& node: road.nodes())
+        for (auto const& node : road.nodes())
         {
             int32_t u = 0;
             int32_t v = 0;
             city.world().world2mapPosition(node->position(), u, v);
             out << "\tnode " << node->id() << " " << u << " " << v << "\n";
         }
-        for (auto const& way: road.ways())
+        for (auto const& way : road.ways())
         {
             out << "\tway " << way->id() << " " << way->type() << " "
-                << way->from().id() << " " << way->to().id()
-                << " flow " << way->flow() << "\n";
+                << way->from().id() << " " << way->to().id() << " flow "
+                << way->flow() << "\n";
         }
         out << "end\n";
     }
 
-    for (auto const& unit: city.units())
+    for (auto const& unit : city.units())
     {
         out << "unit " << unit->type();
         if (unit->way() != nullptr)
@@ -399,24 +462,24 @@ bool CitySave::write(std::string const& path, Simulation const& simulation,
         out << "\n";
     }
 
-    for (auto const& area: city.areas())
+    for (auto const& area : city.areas())
     {
         MapRegion const& region = area->footprint();
         out << "area " << area->type() << " " << region.u0 << " " << region.v0
             << " " << region.sizeU << " " << region.sizeV << "\n";
     }
 
-    for (auto const& mapIt: city.maps())
+    for (auto const& mapIt : city.maps())
     {
         Map const& map = *mapIt.second;
         out << "map " << map.type() << "\n";
-        map.forEachCell([&](int32_t u, int32_t v, uint32_t amount) {
-            out << "\tcell " << u << " " << v << " " << amount << "\n";
-        });
+        map.forEachCell(
+            [&](int32_t u, int32_t v, uint32_t amount)
+            { out << "\tcell " << u << " " << v << " " << amount << "\n"; });
         out << "end\n";
     }
 
-    for (auto const& agent: city.agents())
+    for (auto const& agent : city.agents())
     {
         out << "agent " << agent->type() << " to " << agent->searchTarget()
             << " pos " << agent->position().x << " " << agent->position().y
@@ -434,7 +497,8 @@ bool CitySave::write(std::string const& path, Simulation const& simulation,
 }
 
 // -----------------------------------------------------------------------------
-bool CitySave::read(std::string const& filePath, Simulation& simulation,
+bool CitySave::read(std::string const& filePath,
+                    Simulation& simulation,
                     std::string& error)
 {
     Lexer lexer;
@@ -448,7 +512,7 @@ bool CitySave::read(std::string const& filePath, Simulation& simulation,
     if (!parseHeader(lexer, header, error))
         return false;
 
-    for (std::string const& type: header.types)
+    for (std::string const& type : header.types)
     {
         if (!typeExists(simulation.script(), type))
         {
@@ -480,11 +544,12 @@ bool CitySave::read(std::string const& filePath, Simulation& simulation,
                 return false;
             uint32_t sizeU = 0u;
             uint32_t sizeV = 0u;
-            if (!readUint(lexer, sizeU, error) || !readUint(lexer, sizeV, error))
+            if (!readUint(lexer, sizeU, error) ||
+                !readUint(lexer, sizeV, error))
                 return false;
-            city = &simulation.addCity(name.text, Vector3f(0.0f, 0.0f, 0.0f),
-                                       sizeU, sizeV);
-            for (auto const& it: script.mapTypes())
+            city = &simulation.addCity(
+                name.text, Vector3f(0.0f, 0.0f, 0.0f), sizeU, sizeV);
+            for (auto const& it : script.mapTypes())
                 city->addMap(*it.second);
         }
         else if (token.text == "globals")
@@ -514,12 +579,13 @@ bool CitySave::read(std::string const& filePath, Simulation& simulation,
                     uint32_t id = 0u;
                     int32_t u = 0;
                     int32_t v = 0;
-                    if (!readUint(lexer, id, error) || !readInt(lexer, u, error) ||
-                        !readInt(lexer, v, error))
+                    if (!readUint(lexer, id, error) ||
+                        !readInt(lexer, u, error) || !readInt(lexer, v, error))
                     {
                         return false;
                     }
-                    currentPath->addNode(id, city->world().mapPosition2world(u, v));
+                    currentPath->addNode(id,
+                                         city->world().mapPosition2world(u, v));
                 }
                 else if (kind.text == "way")
                 {
@@ -529,7 +595,8 @@ bool CitySave::read(std::string const& filePath, Simulation& simulation,
                     if (!readUint(lexer, id, error))
                         return false;
                     Token const type = lexer.next();
-                    if (!readUint(lexer, from, error) || !readUint(lexer, to, error))
+                    if (!readUint(lexer, from, error) ||
+                        !readUint(lexer, to, error))
                     {
                         return false;
                     }
@@ -540,8 +607,8 @@ bool CitySave::read(std::string const& filePath, Simulation& simulation,
                         error = "Unknown node in way";
                         return false;
                     }
-                    Way& way = currentPath->addWay(id, script.getWayType(type.text),
-                                                   *n1, *n2);
+                    Way& way = currentPath->addWay(
+                        id, script.getWayType(type.text), *n1, *n2);
                     if (lexer.peek().text == "flow")
                     {
                         lexer.next();
@@ -576,7 +643,8 @@ bool CitySave::read(std::string const& filePath, Simulation& simulation,
                 lexer.next();
                 uint32_t wayId = 0u;
                 float offset = 0.5f;
-                if (!readUint(lexer, wayId, error) || !readFloat(lexer, offset, error))
+                if (!readUint(lexer, wayId, error) ||
+                    !readFloat(lexer, offset, error))
                     return false;
                 Way* way = path->way(wayId);
                 if (way == nullptr)
@@ -584,8 +652,8 @@ bool CitySave::read(std::string const& filePath, Simulation& simulation,
                     error = "Unknown way for unit";
                     return false;
                 }
-                unit = &city->addUnit(script.getUnitType(type.text), *path, *way,
-                                      offset);
+                unit = &city->addUnit(
+                    script.getUnitType(type.text), *path, *way, offset);
             }
             else if ((where.text == "on") && (lexer.peek().text == "node"))
             {
@@ -640,7 +708,8 @@ bool CitySave::read(std::string const& filePath, Simulation& simulation,
             uint32_t sizeU = 0u;
             uint32_t sizeV = 0u;
             if (!readInt(lexer, u0, error) || !readInt(lexer, v0, error) ||
-                !readUint(lexer, sizeU, error) || !readUint(lexer, sizeV, error))
+                !readUint(lexer, sizeU, error) ||
+                !readUint(lexer, sizeV, error))
             {
                 return false;
             }
@@ -734,7 +803,8 @@ bool CitySave::read(std::string const& filePath, Simulation& simulation,
                 }
             }
             Agent& agent = city->addAgent(script.getAgentType(type.text),
-                                          *city->units().front(), cargo,
+                                          *city->units().front(),
+                                          cargo,
                                           target.text);
             Way* way = nullptr;
             Node* last = nullptr;

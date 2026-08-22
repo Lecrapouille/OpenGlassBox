@@ -417,7 +417,7 @@ TEST(TestsCity, RemoveNodeTakesTheUnitsSittingOnIt)
 }
 
 // -----------------------------------------------------------------------------
-TEST(TestsCity, RemoveWayTakesTheAgentsTravellingOnIt)
+TEST(TestsCity, RemovingTheLastWayTakesTheAgentsWithIt)
 {
     TestWorld cityWorld("Paris", 8u, 8u);
     City& city = cityWorld.city;
@@ -432,17 +432,81 @@ TEST(TestsCity, RemoveWayTakesTheAgentsTravellingOnIt)
     Way& way = path.addWay(wayType, n1, n2);
 
     Unit& unit = city.addUnit(unitType, n1);
+    unit.resources().setCapacity("People", 10u);
     Resources resources;
+    resources.addResource("People", 2u);
     city.addAgent(agentType, unit, resources, "Home");
     ASSERT_EQ(city.agents().size(), 1u);
 
-    // The Agent has not moved yet, so it holds no Way: bulldozing the road
-    // leaves it alone.
+    // n1 survives because it carries the building, but it no longer leads
+    // anywhere: an Agent standing there could neither move nor deliver, so it
+    // goes with the road rather than float over the map.
     city.removeWay(path, way);
-    ASSERT_EQ(city.agents().size(), 1u);
     ASSERT_EQ(path.ways().size(), 0u);
-
-    // But it does hold the node it starts from, so removing that takes it.
-    city.removeNode(path, n1);
     ASSERT_EQ(city.agents().size(), 0u);
+}
+
+// -----------------------------------------------------------------------------
+TEST(TestsCity, RemovingOneWayKeepsTheAgentsOnTheRest)
+{
+    TestWorld cityWorld("Paris", 8u, 8u);
+    City& city = cityWorld.city;
+    PathType pathType("Road");
+    WayType wayType("Dirt", 0xAAAAAA);
+    UnitType unitType("Home");
+    AgentType agentType("Worker", 10.0f, 1u, 0xFFFFFF);
+
+    Path& path = city.addPath(pathType);
+    Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
+    Node& n2 = path.addNode(Vector3f(10.0f, 0.0f, 0.0f));
+    Node& n3 = path.addNode(Vector3f(20.0f, 0.0f, 0.0f));
+    path.addWay(wayType, n1, n2);
+    Way& far = path.addWay(wayType, n2, n3);
+
+    Unit& unit = city.addUnit(unitType, n1);
+    unit.resources().setCapacity("People", 10u);
+    Resources resources;
+    resources.addResource("People", 2u);
+    city.addAgent(agentType, unit, resources, "Home");
+    ASSERT_EQ(city.agents().size(), 1u);
+
+    // The Agent waits on n1, which keeps a road: demolishing the far segment
+    // only invalidates its itinerary.
+    city.removeWay(path, far);
+    ASSERT_EQ(path.ways().size(), 1u);
+    ASSERT_EQ(city.agents().size(), 1u);
+    ASSERT_EQ(city.agents()[0]->lastNode(), &n1);
+}
+
+// -----------------------------------------------------------------------------
+TEST(TestsCity, RemovingANodeLeavesNoAgentPointingAtIt)
+{
+    TestWorld cityWorld("Paris", 8u, 8u);
+    City& city = cityWorld.city;
+    PathType pathType("Road");
+    WayType wayType("Dirt", 0xAAAAAA);
+    UnitType unitType("Home");
+    AgentType agentType("Worker", 10.0f, 1u, 0xFFFFFF);
+
+    Path& path = city.addPath(pathType);
+    Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
+    Node& n2 = path.addNode(Vector3f(10.0f, 0.0f, 0.0f));
+    path.addWay(wayType, n1, n2);
+
+    Unit& unit = city.addUnit(unitType, n2);
+    unit.resources().setCapacity("People", 10u);
+    Resources resources;
+    resources.addResource("People", 2u);
+    city.addAgent(agentType, unit, resources, "Home");
+    ASSERT_EQ(city.agents().size(), 1u);
+
+    // The Agent was standing on n2. Demolishing it used to leave the Agent
+    // holding a pointer on freed memory, and the next tick read through it.
+    city.removeNode(path, n2);
+    ASSERT_EQ(city.agents().size(), 0u);
+    ASSERT_EQ(city.units().size(), 0u);
+    ASSERT_EQ(path.nodes().size(), 0u);
+
+    // Nothing dangles: a tick over the emptied city has to be harmless.
+    city.update(1.0f);
 }
