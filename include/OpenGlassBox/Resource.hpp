@@ -5,6 +5,10 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file Resource.hpp
+//! \brief A single resource stock identified by type, amount and capacity.
+
+
 #ifndef OPEN_GLASSBOX_RESOURCE_HPP
 #  define OPEN_GLASSBOX_RESOURCE_HPP
 

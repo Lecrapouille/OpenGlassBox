@@ -5,6 +5,10 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file City.hpp
+//! \brief An administrative region: road network, buildings, agents and map ownership.
+
+
 #ifndef OPEN_GLASSBOX_CITY_HPP
 #  define OPEN_GLASSBOX_CITY_HPP
 
@@ -240,6 +244,7 @@ public:
     //! \brief Return global resources.
     // -------------------------------------------------------------------------
     Resources& globals() { return m_globals; }
+    Resources const& globals() const { return m_globals; }
 
     // -------------------------------------------------------------------------
     //! \brief Return the collection of Maps of the World. They are shared with
@@ -286,6 +291,20 @@ public:
     Agents const& agents() const { return m_agents; }
 
     Areas const& areas() const { return m_areas; }
+
+    IRouter& router() { return m_dijkstra; }
+    IRouter const& router() const { return m_dijkstra; }
+
+    // -------------------------------------------------------------------------
+    //! \brief Empty the city: agents, units, areas, paths and globals. Maps
+    //! of the World stay: they are shared. The ruleset is not touched.
+    // -------------------------------------------------------------------------
+    void clear();
+
+    // -------------------------------------------------------------------------
+    //! \brief After a Way was removed, drop Nodes that no longer have a Way.
+    // -------------------------------------------------------------------------
+    void removeOrphanNodes(Path& path);
 
 private:
 

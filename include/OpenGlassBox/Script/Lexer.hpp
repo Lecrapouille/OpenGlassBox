@@ -4,6 +4,10 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file Lexer.hpp
+//! \brief Tokenizer that splits a simulation script into positioned tokens.
+
+
 #ifndef OPEN_GLASSBOX_SCRIPT_LEXER_HPP
 #  define OPEN_GLASSBOX_SCRIPT_LEXER_HPP
 

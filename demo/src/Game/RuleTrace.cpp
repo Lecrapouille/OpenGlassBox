@@ -4,14 +4,14 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
-#include "Core/RuleTrace.hpp"
+#include "Game/RuleTrace.hpp"
 
 #include "OpenGlassBox/City.hpp"
 #include "OpenGlassBox/Map.hpp"
 #include "OpenGlassBox/Unit.hpp"
 
 namespace ogb {
-namespace core {
+namespace game {
 
 
 // ----------------------------------------------------------------------------
@@ -95,5 +95,5 @@ void RuleTrace::onRuleExecuted(IRule::Trace const& trace)
         m_head = (m_head + 1u) % CAPACITY;
     }
 }
-} // namespace core
+} // namespace game
 } // namespace ogb

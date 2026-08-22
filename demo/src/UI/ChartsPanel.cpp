@@ -10,6 +10,7 @@
 
 #include <implot.h>
 
+#include <algorithm>
 #include <map>
 
 namespace ogb {
@@ -17,14 +18,14 @@ namespace ui {
 
 
 // ----------------------------------------------------------------------------
-core::TimeSeries& ChartsPanel::series(std::string const& group, std::string const& name)
+game::TimeSeries& ChartsPanel::series(std::string const& group, std::string const& name)
 {
     auto& groupSeries = m_series[group];
     auto const it = groupSeries.find(name);
     if (it != groupSeries.end())
         return it->second;
 
-    return groupSeries.emplace(name, core::TimeSeries(name)).first->second;
+    return groupSeries.emplace(name, game::TimeSeries(name)).first->second;
 }
 
 // ----------------------------------------------------------------------------
@@ -45,6 +46,10 @@ void ChartsPanel::sample(Simulation& simulation)
 
     m_first_sample = false;
     m_last_sample_tick = tick;
+
+    float const ticksPerMinute =
+        float(std::max(1u, simulation.clock().ticksPerMinute()));
+    float const hours = float(tick) / (ticksPerMinute * 60.0f);
 
     // Totals per map, summed over the cities so that the curve tracks the
     // resource of the whole world.
@@ -76,24 +81,24 @@ void ChartsPanel::sample(Simulation& simulation)
 
     for (auto const& it: mapTotals)
     {
-        series("Maps", it.first).push(tick, it.second);
+        series("Maps", it.first).pushHours(hours, it.second);
     }
     for (auto const& it: agentCounts)
     {
-        series("Agents", it.first).push(tick, it.second);
+        series("Agents", it.first).pushHours(hours, it.second);
     }
     for (auto const& it: globals)
     {
-        series("Globals", it.first).push(tick, it.second);
+        series("Globals", it.first).pushHours(hours, it.second);
     }
 
-    series("Agents", "total").push(tick, agents);
+    series("Agents", "total").pushHours(hours, agents);
     series("Traffic", "total travel time")
-        .push(tick, TrafficPanel::totalTravelTime(simulation));
+        .pushHours(hours, TrafficPanel::totalTravelTime(simulation));
 }
 
 // ----------------------------------------------------------------------------
-void ChartsPanel::draw(Simulation& simulation, core::DebugState& state)
+void ChartsPanel::draw(Simulation& simulation, game::DebugState& state)
 {
     if (!ImGui::Begin("Charts"))
     {
@@ -125,16 +130,16 @@ void ChartsPanel::draw(Simulation& simulation, core::DebugState& state)
         ImGui::PushID(group.first.c_str());
         if (ImPlot::BeginPlot("##plot", ImVec2(-1.0f, 190.0f)))
         {
-            ImPlot::SetupAxes("tick", nullptr,
+            ImPlot::SetupAxes("hours", nullptr,
                               ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
 
             for (auto& entry: group.second)
             {
-                core::TimeSeries const& serie = entry.second;
+                game::TimeSeries const& serie = entry.second;
                 if (serie.empty())
                     continue;
 
-                ImPlot::PlotLine(serie.name().c_str(), serie.ticks(),
+                ImPlot::PlotLine(serie.name().c_str(), serie.hours(),
                                  serie.values(), int(serie.size()));
             }
 

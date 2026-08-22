@@ -5,6 +5,10 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file Rule.hpp
+//! \brief Rule base classes and map, unit and area rule implementations.
+
+
 #ifndef OPEN_GLASSBOX_RULE_HPP
 #  define OPEN_GLASSBOX_RULE_HPP
 

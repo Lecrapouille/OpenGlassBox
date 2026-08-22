@@ -173,5 +173,42 @@ ImU32 congestionColor(float ratio, float alpha)
     return IM_COL32(int(r * 255.0f), int(g * 255.0f), 60, int(alpha * 255.0f));
 }
 
+// ----------------------------------------------------------------------------
+ImU32 canvasBackground(uint32_t hourOfDay)
+{
+    // Night, dawn, day, dusk. The canvas stays dark enough for the maps to
+    // read, the tint is just enough to feel the clock.
+    struct Stop { uint32_t hour; int r; int g; int b; };
+    static Stop const STOPS[] = {
+        {  0u, 12, 14, 22 },
+        {  5u, 18, 16, 28 },
+        {  7u, 36, 28, 32 },
+        {  9u, 24, 26, 31 },
+        { 17u, 24, 26, 31 },
+        { 19u, 38, 24, 22 },
+        { 21u, 16, 14, 24 },
+        { 24u, 12, 14, 22 },
+    };
+
+    uint32_t const hour = hourOfDay % 24u;
+    Stop const* a = &STOPS[0];
+    Stop const* b = &STOPS[1];
+    for (size_t i = 0u; i + 1u < sizeof(STOPS) / sizeof(STOPS[0]); ++i)
+    {
+        if (hour >= STOPS[i].hour)
+        {
+            a = &STOPS[i];
+            b = &STOPS[i + 1u];
+        }
+    }
+
+    float const span = float(b->hour - a->hour);
+    float const t = (span <= 0.0f) ? 0.0f : float(hour - a->hour) / span;
+    int const r = int(float(a->r) + t * float(b->r - a->r));
+    int const g = int(float(a->g) + t * float(b->g - a->g));
+    int const bl = int(float(a->b) + t * float(b->b - a->b));
+    return IM_COL32(r, g, bl, 255);
+}
+
 } // namespace theme
 } // namespace ogb

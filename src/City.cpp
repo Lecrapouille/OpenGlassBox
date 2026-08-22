@@ -268,6 +268,15 @@ static void removeAgentsIf(Agents& agents, City::Listener& listener,
 // -----------------------------------------------------------------------------
 void City::removeWay(Path& path, Way& way)
 {
+    City* neighbor = m_world.cityAt(way.from().position());
+    if ((neighbor == nullptr) || (neighbor == this))
+        neighbor = m_world.cityAt(way.to().position());
+    if ((neighbor != nullptr) && (neighbor != this) &&
+        !m_world.listener().allowWayRemoved(*this, *neighbor, way))
+    {
+        return;
+    }
+
     size_t i = m_units.size();
     while (i--)
     {
@@ -279,6 +288,38 @@ void City::removeWay(Path& path, Way& way)
                    [&way](Agent const& agent) { return agent.uses(way); });
 
     path.removeWay(way);
+    removeOrphanNodes(path);
+}
+
+// -----------------------------------------------------------------------------
+void City::removeOrphanNodes(Path& path)
+{
+    size_t i = path.nodes().size();
+    while (i--)
+    {
+        Node& node = *path.nodes()[i];
+        if (node.hasWays())
+            continue;
+        if (!node.units().empty())
+            continue;
+        path.removeNode(node);
+    }
+}
+
+// -----------------------------------------------------------------------------
+void City::clear()
+{
+    while (!m_agents.empty())
+    {
+        m_listener->onAgentRemoved(*m_agents.back());
+        m_agents.pop_back();
+    }
+    while (!m_units.empty())
+        removeUnit(*m_units.back());
+    while (!m_areas.empty())
+        removeArea(*m_areas.back());
+    m_paths.clear();
+    m_globals = Resources();
 }
 
 // -----------------------------------------------------------------------------

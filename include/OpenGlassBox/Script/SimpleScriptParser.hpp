@@ -4,6 +4,10 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file SimpleScriptParser.hpp
+//! \brief Parser of the historical keyword-based OpenGlassBox script language.
+
+
 #ifndef OPEN_GLASSBOX_SCRIPT_SIMPLE_SCRIPT_PARSER_HPP
 #  define OPEN_GLASSBOX_SCRIPT_SIMPLE_SCRIPT_PARSER_HPP
 

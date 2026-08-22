@@ -4,10 +4,14 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file Theme.hpp
+//! \brief Dark ImGui theme, fonts and color helpers for the demo UI.
+
+
 #ifndef OPEN_GLASSBOX_DEMO_THEME_HPP
 #  define OPEN_GLASSBOX_DEMO_THEME_HPP
 
-#  include "Application/OpenGL.hpp"
+#  include "Host/OpenGL.hpp"
 
 namespace ogb {
 namespace theme {
@@ -20,6 +24,11 @@ ImU32 const FAILURE = IM_COL32(224, 108, 117, 255);
 ImU32 const MUTED = IM_COL32(150, 155, 165, 255);
 //! \brief Background of the map canvas.
 ImU32 const CANVAS_BACKGROUND = IM_COL32(24, 26, 31, 255);
+
+// ----------------------------------------------------------------------------
+//! \brief Canvas colour that follows the in-game hour: night, dawn, day, dusk.
+// ----------------------------------------------------------------------------
+ImU32 canvasBackground(uint32_t hourOfDay);
 //! \brief Grid lines drawn over the maps.
 ImU32 const GRID_LINE = IM_COL32(255, 255, 255, 18);
 ImU32 const GRID_LINE_STRONG = IM_COL32(255, 255, 255, 40);

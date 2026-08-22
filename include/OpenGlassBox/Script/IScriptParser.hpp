@@ -4,6 +4,10 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file IScriptParser.hpp
+//! \brief Parser interface, parse errors and factory for script language backends.
+
+
 #ifndef OPEN_GLASSBOX_SCRIPT_ISCRIPT_PARSER_HPP
 #  define OPEN_GLASSBOX_SCRIPT_ISCRIPT_PARSER_HPP
 

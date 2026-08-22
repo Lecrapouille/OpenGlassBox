@@ -1,3 +1,7 @@
+# TestCity recipe: Maps (Water, Grass, Pollution, Desirability),
+# Units RCI (Home / Work / Shop), Agents as commuters, AreaRules for growth.
+# Pair with test_city.ogc.
+
 resources
 	resource Water
 	resource Grass

@@ -4,6 +4,10 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file TimeSeries.hpp
+//! \brief Named time series sampled from the simulation for chart panels.
+
+
 #ifndef OPEN_GLASSBOX_DEMO_TIME_SERIES_HPP
 #  define OPEN_GLASSBOX_DEMO_TIME_SERIES_HPP
 
@@ -12,7 +16,7 @@
 #  include <vector>
 
 namespace ogb {
-namespace core {
+namespace game {
 
 
 // ****************************************************************************
@@ -43,6 +47,11 @@ public:
     // ------------------------------------------------------------------------
     void push(uint64_t tick, float value)
     {
+        pushHours(float(tick), value);
+    }
+
+    void pushHours(float hours, float value)
+    {
         if (m_ticks.size() >= CAPACITY)
         {
             size_t const keep = CAPACITY / 2u;
@@ -50,7 +59,7 @@ public:
             m_values.erase(m_values.begin(), m_values.end() - long(keep));
         }
 
-        m_ticks.push_back(float(tick));
+        m_ticks.push_back(hours);
         m_values.push_back(value);
     }
 
@@ -66,6 +75,7 @@ public:
     //! \brief Same element type as values() so that both can be handed to
     //! ImPlot::PlotLine, whose two arrays must share the same type.
     float const* ticks() const { return m_ticks.data(); }
+    float const* hours() const { return m_ticks.data(); }
     float const* values() const { return m_values.data(); }
     float last() const { return m_values.empty() ? 0.0f : m_values.back(); }
 
@@ -75,7 +85,7 @@ private:
     std::vector<float> m_ticks;
     std::vector<float> m_values;
 };
-} // namespace core
+} // namespace game
 } // namespace ogb
 
 #endif

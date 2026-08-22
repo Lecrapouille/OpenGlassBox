@@ -4,6 +4,10 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file ScriptDefinitions.hpp
+//! \brief Owned catalogue of types and rules produced by a parsed script.
+
+
 #ifndef OPEN_GLASSBOX_SCRIPT_DEFINITIONS_HPP
 #  define OPEN_GLASSBOX_SCRIPT_DEFINITIONS_HPP
 

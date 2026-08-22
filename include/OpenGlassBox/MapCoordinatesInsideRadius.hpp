@@ -5,6 +5,10 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file MapCoordinatesInsideRadius.hpp
+//! \brief Lookup table of grid cells lying within a circular radius.
+
+
 #ifndef OPEN_GLASSBOX_MAPCOORDINATESINSIDERADIUS_HPP
 #  define OPEN_GLASSBOX_MAPCOORDINATESINSIDERADIUS_HPP
 

@@ -4,6 +4,10 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file RuleTrace.hpp
+//! \brief Records rule execution attempts for the rule log and inspector.
+
+
 #ifndef OPEN_GLASSBOX_DEMO_RULE_TRACE_HPP
 #  define OPEN_GLASSBOX_DEMO_RULE_TRACE_HPP
 
@@ -14,7 +18,7 @@
 #  include <vector>
 
 namespace ogb {
-namespace core {
+namespace game {
 
 
 // ****************************************************************************
@@ -112,7 +116,7 @@ private:
     bool m_recording = false;
     bool m_failures_only = true;
 };
-} // namespace core
+} // namespace game
 } // namespace ogb
 
 #endif

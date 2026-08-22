@@ -6,7 +6,7 @@
 
 #include "UI/Panels.hpp"
 #include "UI/Theme.hpp"
-#include "Core/RuleTrace.hpp"
+#include "Game/RuleTrace.hpp"
 #include "OpenGlassBox/Simulation.hpp"
 
 #include <algorithm>
@@ -107,8 +107,8 @@ static void drawRules(RuleContainer const& rules, uint32_t ticks)
 }
 
 // ----------------------------------------------------------------------------
-void InspectorPanel::draw(Simulation& simulation, core::DebugState& state,
-                          core::RuleTrace const& trace)
+void InspectorPanel::draw(Simulation& simulation, game::DebugState& state,
+                          game::RuleTrace const& trace)
 {
     if (!ImGui::Begin("Inspector"))
     {
@@ -118,20 +118,23 @@ void InspectorPanel::draw(Simulation& simulation, core::DebugState& state,
 
     switch (state.selection.kind)
     {
-    case core::Selection::Kind::None:
-        ImGui::TextDisabled("Click a unit, an agent, a node or a cell\n"
+    case game::Selection::Kind::None:
+        ImGui::TextDisabled("Click a unit, an agent, a road, a node or a cell\n"
                             "on the map to inspect it.");
         break;
-    case core::Selection::Kind::Unit:
+    case game::Selection::Kind::Unit:
         drawUnit(simulation, state, trace);
         break;
-    case core::Selection::Kind::Agent:
+    case game::Selection::Kind::Agent:
         drawAgent(simulation, state);
         break;
-    case core::Selection::Kind::Node:
+    case game::Selection::Kind::Node:
         drawNode(state);
         break;
-    case core::Selection::Kind::Cell:
+    case game::Selection::Kind::Way:
+        drawWay(state);
+        break;
+    case game::Selection::Kind::Cell:
         drawCell(simulation, state);
         break;
     }
@@ -140,8 +143,8 @@ void InspectorPanel::draw(Simulation& simulation, core::DebugState& state,
 }
 
 // ----------------------------------------------------------------------------
-void InspectorPanel::drawUnit(Simulation& simulation, core::DebugState& state,
-                              core::RuleTrace const& trace)
+void InspectorPanel::drawUnit(Simulation& simulation, game::DebugState& state,
+                              game::RuleTrace const& trace)
 {
     Unit* const unit = state.selection.unit;
     if (unit == nullptr)
@@ -197,7 +200,7 @@ void InspectorPanel::drawUnit(Simulation& simulation, core::DebugState& state,
     size_t index = trace.size();
     while ((index-- > 0u) && (shown < 6))
     {
-        core::RuleEvent const& event = trace.at(index);
+        game::RuleEvent const& event = trace.at(index);
         if (event.entity != entity)
             continue;
         if (event.city != state.selection.city)
@@ -227,7 +230,7 @@ void InspectorPanel::drawUnit(Simulation& simulation, core::DebugState& state,
 }
 
 // ----------------------------------------------------------------------------
-void InspectorPanel::drawAgent(Simulation& simulation, core::DebugState& state)
+void InspectorPanel::drawAgent(Simulation& simulation, game::DebugState& state)
 {
     Agent* const agent = state.selection.resolveAgent(simulation);
     if (agent == nullptr)
@@ -296,7 +299,7 @@ void InspectorPanel::drawAgent(Simulation& simulation, core::DebugState& state)
 }
 
 // ----------------------------------------------------------------------------
-void InspectorPanel::drawNode(core::DebugState& state)
+void InspectorPanel::drawNode(game::DebugState& state)
 {
     Node* const node = state.selection.node;
     if (node == nullptr)
@@ -334,7 +337,37 @@ void InspectorPanel::drawNode(core::DebugState& state)
 }
 
 // ----------------------------------------------------------------------------
-void InspectorPanel::drawCell(Simulation& simulation, core::DebugState& state)
+void InspectorPanel::drawWay(game::DebugState& state)
+{
+    Way* const way = state.selection.way;
+    if (way == nullptr)
+    {
+        state.selection.clear();
+        return;
+    }
+
+    ImGui::Text("Way %s #%u", way->type().c_str(), way->id());
+    ImGui::TextDisabled("city %s", state.selection.city.c_str());
+    ImGui::Text("from node #%u to #%u, %.1f long",
+                way->from().id(), way->to().id(), way->magnitude());
+    ImGui::Text("free flow %.2f s, now %.2f s", way->freeFlowTime(),
+                way->travelTime());
+
+    float const saturation = way->saturation();
+    char overlay[64];
+    std::snprintf(overlay, sizeof(overlay), "%.0f / %.0f agents",
+                  way->flow(), way->capacity());
+    ImGui::Text("saturation");
+    ImGui::SameLine(120.0f);
+    ImGui::PushStyleColor(ImGuiCol_PlotHistogram,
+                          ImGui::ColorConvertU32ToFloat4(
+                              theme::congestionColor(saturation)));
+    ImGui::ProgressBar(std::min(1.0f, saturation), ImVec2(-1.0f, 0.0f), overlay);
+    ImGui::PopStyleColor();
+}
+
+// ----------------------------------------------------------------------------
+void InspectorPanel::drawCell(Simulation& simulation, game::DebugState& state)
 {
     auto const it = simulation.cities().find(state.selection.city);
     if (it == simulation.cities().end())

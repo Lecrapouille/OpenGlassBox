@@ -4,11 +4,11 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
-#include "Core/DebugState.hpp"
+#include "Game/DebugState.hpp"
 #include "OpenGlassBox/Simulation.hpp"
 
 namespace ogb {
-namespace core {
+namespace game {
 
 
 // ----------------------------------------------------------------------------
@@ -29,5 +29,5 @@ Agent* Selection::resolveAgent(Simulation& simulation) const
 
     return nullptr;
 }
-} // namespace core
+} // namespace game
 } // namespace ogb

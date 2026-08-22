@@ -1,0 +1,160 @@
+# Simplified Chicago arteries (not the Scilab chisincen.net).
+# Pair with chicago.ogc.
+
+resources
+	resource Water
+	resource Grass
+	resource People
+	resource Money
+	resource Goods
+	resource Power
+	resource Pollution
+	resource Trash
+	resource Happiness
+end
+
+paths
+	path Road color 0xAAAAAA
+end
+
+segments
+	segment Dirt color 0xAAAAAA speed 30 capacity 20 beta 4
+end
+
+agents
+	agent People color 0xFFFF00 speed 10
+	agent Worker color 0xFFFFFF speed 10
+	agent Shopper color 0xFFAA00 speed 12
+end
+
+rules
+
+	mapRule CreateGrass
+		rate 7
+		map Water remove 10 randomTilesPercent 90
+		map Grass add 1
+	end
+
+	mapRule SpreadPollution
+		rate 15
+		map Pollution add 1
+	end
+
+	mapRule CleanPollution
+		rate 20
+		map Pollution remove 1
+	end
+
+	mapRule DropDesirability
+		rate 10
+		map Pollution greater 20
+		map Desirability remove 2
+	end
+
+	mapRule RaiseDesirability
+		rate 25
+		map Pollution less 5
+		map Desirability add 1
+	end
+
+	unitRule SendPeopleToWork
+		rate 20
+		hour between 8 18
+		local People remove 1
+		agent Worker to Work add [ People 1 ]
+	end
+
+	unitRule SendPeopleToHome
+		rate 40
+		hour between 18 22
+		local People remove 1
+		agent People to Home add [ People 1 ]
+	end
+
+	unitRule ProduceGoods
+		rate 10
+		hour between 8 18
+		local People greater 0
+		local Goods add 1
+		map Pollution add 4
+		global Money add 1
+	end
+
+	unitRule UsePeopleToWater
+		rate 5
+		local People greater 1
+		map Water add 30
+	end
+
+	unitRule ShopForGoods
+		rate 30
+		hour between 10 20
+		local People greater 0
+		global Money greater 0
+		agent Shopper to Shop add [ People 1 ]
+	end
+
+	unitRule SellGoods
+		rate 8
+		local Goods remove 1
+		global Money add 2
+		local Happiness add 1
+	end
+
+	unitRule ReceiveShopper
+		rate 15
+		local People greater 0
+		local People remove 1
+		agent People to Home add [ People 1 ]
+	end
+
+	unitRule CollectTrash
+		rate 40
+		map Trash remove 2
+	end
+
+	areaRule GrowHomes
+		rate 80
+		count Home less 10
+		spawn Home at nearestWay
+	end
+
+	areaRule GrowShops
+		rate 120
+		count Shop less 3
+		global Money greater 5
+		spawn Shop at nearestWay
+	end
+
+	areaRule AbandonHomes
+		rate 100
+		map Desirability less 2
+		count Home greater 2
+		destroy Home
+	end
+
+end
+
+units
+
+	unit Home color 0xFF00FF mapRadius 1 rules [ SendPeopleToWork ShopForGoods ] targets [ Home ] caps [ People 4 Happiness 10 ] resources [ People 4 ]
+
+	unit Work color 0x00AAFF mapRadius 3 rules [ SendPeopleToHome ProduceGoods UsePeopleToWater ] targets [ Work ] caps [ People 4 Goods 20 ] resources [ ]
+
+	unit Shop color 0xFFAA00 mapRadius 2 rules [ SellGoods ReceiveShopper CollectTrash ] targets [ Shop ] caps [ People 6 Goods 30 Happiness 20 ] resources [ ]
+
+end
+
+maps
+	map Water color 0x0000FF capacity 100 rules [  ]
+	map Grass color 0x00FF00 capacity 10 rules [ CreateGrass ]
+	map Pollution color 0x555555 capacity 80 rules [ SpreadPollution ]
+	map Desirability color 0x88FF88 capacity 50 rules [ DropDesirability RaiseDesirability ]
+	map Trash color 0x886644 capacity 40 rules [  ]
+	map Power color 0xFFFF66 capacity 100 rules [  ]
+end
+
+areas
+	area Residential color 0x44AA44 rules [ GrowHomes AbandonHomes ]
+	area Commercial color 0xDDAA44 rules [ GrowShops ]
+end

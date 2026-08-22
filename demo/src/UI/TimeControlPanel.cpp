@@ -6,7 +6,7 @@
 
 #include "UI/Panels.hpp"
 #include "UI/Theme.hpp"
-#include "Core/RuleTrace.hpp"
+#include "Game/RuleTrace.hpp"
 #include "OpenGlassBox/Simulation.hpp"
 
 namespace ogb {
@@ -28,8 +28,8 @@ uint32_t TimeControlPanel::takePendingSteps()
 }
 
 // ----------------------------------------------------------------------------
-void TimeControlPanel::draw(Simulation& simulation, core::DebugState& state,
-                            core::RuleTrace& trace)
+void TimeControlPanel::draw(Simulation& simulation, game::DebugState& state,
+                            game::RuleTrace& trace)
 {
     if (!ImGui::Begin("Time"))
     {

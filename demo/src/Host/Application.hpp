@@ -4,16 +4,20 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file Application.hpp
+//! \brief GLFW window, OpenGL context and main loop for the demo application.
+
+
 #ifndef OPEN_GLASSBOX_DEMO_APPLICATION_HPP
 #  define OPEN_GLASSBOX_DEMO_APPLICATION_HPP
 
-#  include "Application/DearImGuiApplication.hpp"
+#  include "Host/DearImGuiApplication.hpp"
 
 #  include <memory>
 #  include <string>
 
 namespace ogb {
-namespace application {
+namespace host {
 
 
 // ****************************************************************************
@@ -140,7 +144,7 @@ private:
     bool m_halted = false;
     std::unique_ptr<DearImGuiApplication> m_imgui;
 };
-} // namespace application
+} // namespace host
 } // namespace ogb
 
 #endif

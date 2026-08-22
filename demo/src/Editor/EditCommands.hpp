@@ -4,6 +4,10 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file EditCommands.hpp
+//! \brief Undoable commands that mutate the map through the editor.
+
+
 #ifndef OPEN_GLASSBOX_DEMO_EDIT_COMMANDS_HPP
 #  define OPEN_GLASSBOX_DEMO_EDIT_COMMANDS_HPP
 
@@ -19,7 +23,7 @@
 
 
 namespace ogb {
-namespace core {
+namespace editor {
 
 
 //! \brief Stands for "no identifier yet". Identifiers are handed out by the
@@ -264,6 +268,28 @@ private:
 };
 
 // ============================================================================
+//! \brief Demolish an isolated node (no remaining ways).
+// ============================================================================
+class RemoveNodeCommand: public ICommand
+{
+public:
+
+    RemoveNodeCommand(std::string city, std::string path, uint32_t nodeId);
+
+    bool redo(Simulation& simulation) override;
+    void undo(Simulation& simulation) override;
+    std::string label() const override;
+
+private:
+
+    std::string m_city;
+    std::string m_path;
+    uint32_t m_nodeId;
+    Vector3f m_position;
+    bool m_captured = false;
+};
+
+// ============================================================================
 //! \brief Paint an amount of resource over a rectangle of Map cells.
 //!
 //! The previous content of the rectangle is copied before being overwritten,
@@ -325,7 +351,7 @@ private:
     int32_t m_v1;
     uint32_t m_areaId = NO_ID;
 };
-} // namespace core
+} // namespace editor
 } // namespace ogb
 
 #endif

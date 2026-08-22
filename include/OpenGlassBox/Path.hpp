@@ -5,6 +5,10 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file Path.hpp
+//! \brief Road network model: paths, nodes, ways and graph editing operations.
+
+
 #ifndef OPEN_GLASSBOX_PATH_HPP
 #  define OPEN_GLASSBOX_PATH_HPP
 
@@ -189,11 +193,13 @@ public:
     //! \brief Return the origin node.
     // -------------------------------------------------------------------------
     Node& from() { return *m_from; }
+    Node const& from() const { return *m_from; }
 
     // -------------------------------------------------------------------------
     //! \brief Return the destination node.
     // -------------------------------------------------------------------------
     Node& to() { return *m_to; }
+    Node const& to() const { return *m_to; }
 
     // -------------------------------------------------------------------------
     //! \brief Return the position of the origin node.
@@ -262,6 +268,7 @@ public:
     //! \brief Smoothed number of Agents carried by this segment.
     // -------------------------------------------------------------------------
     float flow() const { return m_flow; }
+    void setFlow(float flow) { m_flow = (flow < 0.0f) ? 0.0f : flow; }
 
     // -------------------------------------------------------------------------
     //! \brief Number of Agents currently on this segment.
@@ -421,6 +428,7 @@ public:
     //! \brief Getter: return the type of Path.
     // -------------------------------------------------------------------------
     std::string const& type() const { return m_type.name; }
+    PathType const& pathType() const { return m_type; }
 
     // -------------------------------------------------------------------------
     //! \brief Return the list of nodes.

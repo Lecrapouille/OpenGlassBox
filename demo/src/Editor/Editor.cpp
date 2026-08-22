@@ -4,7 +4,7 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
-#include "Core/Editor.hpp"
+#include "Editor/Editor.hpp"
 #include "UI/CityViewer.hpp"
 #include "UI/Theme.hpp"
 #include "OpenGlassBox/Simulation.hpp"
@@ -14,7 +14,7 @@
 #include <cstdio>
 
 namespace ogb {
-namespace core {
+namespace editor {
 using namespace ogb::theme;
 
 
@@ -86,8 +86,15 @@ void Editor::reset()
 City* Editor::targetCity(Simulation& simulation) const
 {
     auto const& cities = simulation.cities();
-    auto it = cities.find(m_city);
-    return (it == cities.end()) ? nullptr : it->second.get();
+    if (cities.empty())
+        return nullptr;
+    if (!m_city.empty())
+    {
+        auto it = cities.find(m_city);
+        if (it != cities.end())
+            return it->second.get();
+    }
+    return cities.begin()->second.get();
 }
 
 // ----------------------------------------------------------------------------
@@ -129,17 +136,13 @@ void Editor::refreshTargets(Simulation& simulation)
 // ----------------------------------------------------------------------------
 Vector3f Editor::snap(Simulation& simulation, ImVec2 const& world) const
 {
-    City* city = const_cast<Editor*>(this)->targetCity(simulation);
-    if (!m_snapToGrid || (city == nullptr))
+    if (!m_snapToGrid)
         return Vector3f(world.x, world.y, 0.0f);
 
-    float const side = city->gridCellSize();
-    float const x = city->position().x +
-                    std::round((world.x - city->position().x) / side) * side;
-    float const y = city->position().y +
-                    std::round((world.y - city->position().y) / side) * side;
-
-    return Vector3f(x, y, 0.0f);
+    int32_t u = 0;
+    int32_t v = 0;
+    simulation.world().world2mapPosition(Vector3f(world.x, world.y, 0.0f), u, v);
+    return simulation.world().mapPosition2world(u, v);
 }
 
 // ----------------------------------------------------------------------------
@@ -165,9 +168,12 @@ std::string Editor::hint() const
 }
 
 // ----------------------------------------------------------------------------
-void Editor::drawToolbar(Simulation& simulation, DebugState& state)
+void Editor::drawToolbar(Simulation& simulation, game::DebugState& state)
 {
     refreshTargets(simulation);
+    City* city = targetCity(simulation);
+    if (city != nullptr)
+        m_city = city->name();
 
     struct Entry
     {
@@ -177,25 +183,21 @@ void Editor::drawToolbar(Simulation& simulation, DebugState& state)
     };
 
     static Entry const ENTRIES[] = {
-        { EditTool::Select, "Select",
-          "Click to inspect a building, an agent, a node or a cell." },
-        { EditTool::Road, "Road",
-          "Drag between two points to lay a segment. The ends snap to the\n"
-          "nearby nodes, so a road drawn across another one joins it." },
-        { EditTool::Building, "Build",
-          "Click on a road to place a building along it, without splitting\n"
-          "the segment into extra nodes." },
-        { EditTool::Zone, "Zone",
-          "Drag a rectangle to paint an Area. Area rules then spawn,\n"
-          "upgrade and destroy buildings inside it." },
-        { EditTool::Paint, "Paint",
-          "Drag a rectangle to set an amount of resource on the cells of a\n"
-          "map. Handy to seed a simulation and watch the rules take over." },
-        { EditTool::Bulldozer, "Bulldoze",
-          "Click to demolish the building or the road under the cursor.\n"
-          "The agents travelling on it are removed with it." },
+        { EditTool::Select, "Inspect",
+          "Click a building, agent, road, node or cell." },
+        { EditTool::Road, "Roads",
+          "Drag to lay a road. Ends snap to the world grid and to nearby nodes." },
+        { EditTool::Zone, "Zones",
+          "Drag a rectangle to paint a zone. Area rules grow buildings inside." },
+        { EditTool::Building, "Buildings",
+          "Click a road to place a building without splitting it." },
+        { EditTool::Paint, "Maps",
+          "Drag a rectangle to write a resource on map cells." },
+        { EditTool::Bulldozer, "Demolish",
+          "Click a building, road or orphan node. Clear empties the city." },
     };
 
+    ImGui::BeginChild("ToolRail", ImVec2(96.0f, 0.0f), true);
     for (auto const& entry: ENTRIES)
     {
         bool const active = (m_tool == entry.tool);
@@ -204,121 +206,88 @@ void Editor::drawToolbar(Simulation& simulation, DebugState& state)
             ImGui::PushStyleColor(ImGuiCol_Button,
                                   ImGui::ColorConvertU32ToFloat4(theme::ACCENT));
         }
-        if (ImGui::Button(entry.label))
-        {
+        if (ImGui::Button(entry.label, ImVec2(-1.0f, 0.0f)))
             setTool(entry.tool);
-        }
         if (active)
-        {
             ImGui::PopStyleColor();
-        }
         if (ImGui::IsItemHovered())
-        {
             ImGui::SetTooltip("%s", entry.tooltip);
-        }
-        ImGui::SameLine();
     }
 
-    ImGui::TextDisabled("|");
-    ImGui::SameLine();
-
+    ImGui::Separator();
     ImGui::BeginDisabled(!m_stack.canUndo());
-    if (ImGui::Button("Undo"))
-    {
+    if (ImGui::Button("Undo", ImVec2(-1.0f, 0.0f)))
         undo(simulation);
-    }
     ImGui::EndDisabled();
-    if (ImGui::IsItemHovered() && m_stack.canUndo())
-    {
-        ImGui::SetTooltip("undo %s  (Ctrl+Z)", m_stack.undoLabel().c_str());
-    }
-    ImGui::SameLine();
-
     ImGui::BeginDisabled(!m_stack.canRedo());
-    if (ImGui::Button("Redo"))
-    {
+    if (ImGui::Button("Redo", ImVec2(-1.0f, 0.0f)))
         redo(simulation);
-    }
     ImGui::EndDisabled();
-    if (ImGui::IsItemHovered() && m_stack.canRedo())
-    {
-        ImGui::SetTooltip("redo %s  (Ctrl+Y)", m_stack.redoLabel().c_str());
-    }
-
-    // Only the settings the armed tool actually uses, so the toolbar does not
-    // turn into a wall of combos.
-    City* city = targetCity(simulation);
-    if ((m_tool == EditTool::Select) || (city == nullptr))
-    {
-        ImGui::Separator();
-        return;
-    }
+    ImGui::EndChild();
 
     ImGui::SameLine();
-    ImGui::TextDisabled("|");
-    ImGui::SameLine();
-    nameCombo("##city", 90.0f, simulation.cities(), m_city);
-    if (ImGui::IsItemHovered())
-    {
-        ImGui::SetTooltip("City the tool acts on.");
-    }
+    ImGui::BeginGroup();
 
     switch (m_tool)
     {
     case EditTool::Road:
+        nameCombo("##waytype", 140.0f, simulation.script().wayTypes(), m_wayType);
         ImGui::SameLine();
-        nameCombo("##path", 90.0f, city->paths(), m_path);
-        ImGui::SameLine();
-        nameCombo("##waytype", 110.0f, simulation.script().wayTypes(), m_wayType);
+        if (!city || city->paths().empty())
+            nameCombo("##path", 100.0f, simulation.script().pathTypes(), m_path);
+        else
+            nameCombo("##path", 100.0f, city->paths(), m_path);
         ImGui::SameLine();
         ImGui::Checkbox("Snap", &m_snapToGrid);
-        if (ImGui::IsItemHovered())
-        {
-            ImGui::SetTooltip("Round the ends to the grid of the city.");
-        }
         break;
-
     case EditTool::Building:
-        ImGui::SameLine();
-        nameCombo("##unittype", 110.0f, simulation.script().unitTypes(), m_unitType);
+        nameCombo("##unittype", 160.0f, simulation.script().unitTypes(), m_unitType);
         break;
-
     case EditTool::Zone:
-        ImGui::SameLine();
-        nameCombo("##areatype", 110.0f, simulation.script().areaTypes(), m_areaType);
+        nameCombo("##areatype", 160.0f, simulation.script().areaTypes(), m_areaType);
         break;
-
     case EditTool::Paint:
+        if (city != nullptr)
+            nameCombo("##map", 140.0f, city->maps(), m_map);
         ImGui::SameLine();
-        nameCombo("##map", 110.0f, city->maps(), m_map);
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(120.0f);
+        ImGui::SetNextItemWidth(140.0f);
         {
-            auto it = city->maps().find(m_map);
-            int const capacity =
-                (it == city->maps().end())
-                    ? 100
-                    : int(std::max(1u, it->second->getCapacity()));
+            int capacity = 100;
+            if (city != nullptr)
+            {
+                auto it = city->maps().find(m_map);
+                if (it != city->maps().end())
+                    capacity = int(std::max(1u, it->second->getCapacity()));
+            }
             ImGui::SliderInt("##amount", &m_paintAmount, 0, capacity, "%d");
         }
+        break;
+    case EditTool::Bulldozer:
+        if (ImGui::Button("Clear city"))
+        {
+            if (city != nullptr)
+            {
+                city->clear();
+                m_stack.clear();
+                state.selection.clear();
+            }
+        }
         if (ImGui::IsItemHovered())
         {
-            ImGui::SetTooltip("Amount written on each cell of the rectangle.");
+            ImGui::SetTooltip("Remove roads, buildings, agents and zones.\n"
+                              "The ruleset stays. This cannot be undone.");
         }
         break;
-
     case EditTool::Select:
-    case EditTool::Bulldozer:
+        ImGui::TextDisabled("Inspect: click the map");
         break;
     }
-
-    ImGui::Separator();
 
     (void)state;
 }
 
 // ----------------------------------------------------------------------------
-bool Editor::onCanvas(Simulation& simulation, DebugState& state,
+bool Editor::onCanvas(Simulation& simulation, game::DebugState& state,
                       ui::CityViewer& viewer, bool hovered)
 {
     // The shortcuts work whatever the armed tool: undoing is not an edit.
@@ -431,10 +400,10 @@ void Editor::handleBuilding(Simulation& simulation, ui::CityViewer& viewer)
 }
 
 // ----------------------------------------------------------------------------
-void Editor::handlePaint(Simulation& simulation, DebugState& state, bool hovered)
+void Editor::handlePaint(Simulation& simulation, game::DebugState& state, bool hovered)
 {
     if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
-        state.hasHoveredCell && (state.hoveredCity == m_city))
+        state.hasHoveredCell)
     {
         m_dragging = true;
         m_dragValid = true;
@@ -450,7 +419,7 @@ void Editor::handlePaint(Simulation& simulation, DebugState& state, bool hovered
 
     // Keep the last cell that was actually inside the city, so that dragging
     // past the edge clamps instead of cancelling the stroke.
-    if (state.hasHoveredCell && (state.hoveredCity == m_city))
+    if (state.hasHoveredCell)
     {
         m_dragU2 = state.hoveredU;
         m_dragV2 = state.hoveredV;
@@ -470,13 +439,13 @@ void Editor::handlePaint(Simulation& simulation, DebugState& state, bool hovered
 }
 
 // ----------------------------------------------------------------------------
-void Editor::handleZone(Simulation& simulation, DebugState& state, bool hovered)
+void Editor::handleZone(Simulation& simulation, game::DebugState& state, bool hovered)
 {
     if (m_areaType.empty())
         return;
 
     if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
-        state.hasHoveredCell && (state.hoveredCity == m_city))
+        state.hasHoveredCell)
     {
         m_dragging = true;
         m_dragValid = true;
@@ -490,7 +459,7 @@ void Editor::handleZone(Simulation& simulation, DebugState& state, bool hovered)
     if (!m_dragging)
         return;
 
-    if (state.hasHoveredCell && (state.hoveredCity == m_city))
+    if (state.hasHoveredCell)
     {
         m_dragU2 = state.hoveredU;
         m_dragV2 = state.hoveredV;
@@ -549,15 +518,24 @@ void Editor::handleBulldozer(Simulation& simulation, ui::CityViewer& viewer)
 
     float offset = 0.0f;
     Way* way = viewer.pickWay(*city, world, TOOL_PICK_PIXELS, offset);
-    if (way == nullptr)
+    if (way != nullptr)
+    {
+        Path* path = way->from().path();
+        if (path == nullptr)
+            return;
+
+        m_stack.push(simulation, std::make_unique<RemoveWayCommand>(
+                                     m_city, path->type(), way->id()));
+        return;
+    }
+
+    Node* node = viewer.pickNode(*city, world, TOOL_PICK_PIXELS);
+    if ((node == nullptr) || (node->path() == nullptr) || node->hasWays())
         return;
 
-    Path* path = way->from().path();
-    if (path == nullptr)
-        return;
-
-    m_stack.push(simulation, std::make_unique<RemoveWayCommand>(
-                                 m_city, path->type(), way->id()));
+    m_stack.push(simulation,
+                 std::make_unique<RemoveNodeCommand>(
+                     m_city, node->path()->type(), node->id()));
 }
 
 // ----------------------------------------------------------------------------
@@ -714,5 +692,5 @@ void Editor::drawHistoryPanel(Simulation& simulation)
 
     ImGui::End();
 }
-} // namespace core
+} // namespace editor
 } // namespace ogb

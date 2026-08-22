@@ -5,6 +5,10 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file MapRandomCoordinates.hpp
+//! \brief Shuffled cell coordinates used to iterate maps in random order.
+
+
 #ifndef OPEN_GLASSBOX_MAPRANDOMCOORDINATES_HPP
 #  define OPEN_GLASSBOX_MAPRANDOMCOORDINATES_HPP
 

@@ -5,6 +5,10 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file Types.hpp
+//! \brief Descriptor structs for script-defined paths, ways, units, maps and rules.
+
+
 #ifndef OPEN_GLASSBOX_TYPES_HPP
 #  define OPEN_GLASSBOX_TYPES_HPP
 

@@ -7,17 +7,21 @@
 // https://github.com/Lecrapouille/BlackThorn
 //-----------------------------------------------------------------------------
 
+//! \file DearImGuiApplication.hpp
+//! \brief ImGui frame setup: docking layout, menus, dialogs and status bar.
+
+
 #ifndef OPEN_GLASSBOX_DEMO_DEAR_IMGUI_APPLICATION_HPP
 #  define OPEN_GLASSBOX_DEMO_DEAR_IMGUI_APPLICATION_HPP
 
-#  include "Application/OpenGL.hpp"
+#  include "Host/OpenGL.hpp"
 
 #  include <functional>
 #  include <string>
 #  include <vector>
 
 namespace ogb {
-namespace application {
+namespace host {
 
 
 // ****************************************************************************
@@ -169,7 +173,7 @@ private:
     //! the callback has to outlive the frame that asked for them.
     std::vector<FileDialogRequest> m_open_dialogs;
 };
-} // namespace application
+} // namespace host
 } // namespace ogb
 
 #endif

@@ -5,6 +5,10 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file RuleCommand.hpp
+//! \brief Commands executed by rules: add, remove, spawn, test, upgrade and more.
+
+
 #ifndef OPEN_GLASSBOX_RULE_COMMAND_HPP
 #  define OPEN_GLASSBOX_RULE_COMMAND_HPP
 

@@ -4,6 +4,10 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file SimulationClock.hpp
+//! \brief In-game clock derived from the simulation tick counter.
+
+
 #ifndef OPEN_GLASSBOX_SIMULATION_CLOCK_HPP
 #  define OPEN_GLASSBOX_SIMULATION_CLOCK_HPP
 
@@ -34,6 +38,7 @@ public:
     //! \brief Advance the calendar by one simulation tick.
     //--------------------------------------------------------------------------
     void tick() { ++m_ticks; }
+    void setTicks(uint64_t ticks) { m_ticks = ticks; }
 
     //--------------------------------------------------------------------------
     //! \brief Number of ticks elapsed since the beginning of the simulation.

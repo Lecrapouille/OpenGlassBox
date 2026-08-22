@@ -16,19 +16,19 @@ using namespace ogb::theme;
 
 
 // ----------------------------------------------------------------------------
-static char const* modeName(core::LayerMode mode)
+static char const* modeName(game::LayerMode mode)
 {
     switch (mode)
     {
-    case core::LayerMode::Heatmap: return "Heatmap";
-    case core::LayerMode::Contour: return "Contour";
-    case core::LayerMode::Value: return "Value";
+    case game::LayerMode::Heatmap: return "Heatmap";
+    case game::LayerMode::Contour: return "Contour";
+    case game::LayerMode::Value: return "Value";
     }
     return "?";
 }
 
 // ----------------------------------------------------------------------------
-void LayersPanel::draw(Simulation& simulation, core::DebugState& state)
+void LayersPanel::draw(Simulation& simulation, game::DebugState& state)
 {
     if (!ImGui::Begin("Layers"))
     {
@@ -36,8 +36,15 @@ void LayersPanel::draw(Simulation& simulation, core::DebugState& state)
         return;
     }
 
-    // A map name may exist in several cities; the settings are shared, which is
-    // what one wants when comparing two cities side by side.
+    ImGui::SeparatorText("Display");
+    ImGui::Checkbox("Grid", &state.showGrid);
+    ImGui::Checkbox("Paths", &state.showPaths);
+    ImGui::Checkbox("Units", &state.showUnits);
+    ImGui::Checkbox("Areas", &state.showAreas);
+    ImGui::Checkbox("Agents", &state.showAgents);
+    ImGui::Checkbox("Traffic", &state.showTraffic);
+    ImGui::Checkbox("Labels", &state.showLabels);
+
     std::set<std::string> names;
     for (auto& it: simulation.cities())
     {
@@ -47,44 +54,32 @@ void LayersPanel::draw(Simulation& simulation, core::DebugState& state)
         }
     }
 
+    ImGui::SeparatorText("Maps");
     if (names.empty())
     {
-        ImGui::TextDisabled("No map. Load a simulation script.");
+        ImGui::TextDisabled("No map. Load a ruleset.");
         ImGui::End();
         return;
     }
 
-    ImGui::TextDisabled("The main layer fills the cells, the others are drawn "
-                        "inset so that they stay readable when superimposed.");
+    ImGui::TextDisabled("Visible + which map is the main heatmap.");
     ImGui::Separator();
-
-    if (!state.soloLayer.empty())
-    {
-        ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(theme::ACCENT),
-                           "Solo: %s", state.soloLayer.c_str());
-        ImGui::SameLine();
-        if (ImGui::SmallButton("Exit solo"))
-        {
-            state.soloLayer.clear();
-        }
-        ImGui::Separator();
-    }
 
     for (std::string const& name: names)
     {
         ImGui::PushID(name.c_str());
 
-        core::LayerSettings& settings = state.layer(name);
+        game::LayerSettings& settings = state.layer(name);
 
-        // Color swatch, so that the legend of the canvas is right here.
         uint32_t color = 0xFFFFFF;
+        uint64_t total = 0u;
         for (auto& it: simulation.cities())
         {
             auto const map = it.second->maps().find(name);
             if (map != it.second->maps().end())
             {
                 color = map->second->color();
-                break;
+                total += map->second->totalResource();
             }
         }
 
@@ -108,47 +103,32 @@ void LayersPanel::draw(Simulation& simulation, core::DebugState& state)
 
         ImGui::Checkbox(name.c_str(), &settings.visible);
 
-        ImGui::SameLine(ImGui::GetContentRegionAvail().x - 44.0f);
-        bool const isSolo = (state.soloLayer == name);
-        if (ImGui::SmallButton(isSolo ? "unsolo" : "solo"))
+        if (ImGui::TreeNode("…"))
         {
-            state.soloLayer = isSolo ? std::string() : name;
-        }
+            ImGui::SetNextItemWidth(-90.0f);
+            ImGui::SliderFloat("opacity", &settings.opacity, 0.05f, 1.0f, "%.2f");
 
-        ImGui::Indent();
-        ImGui::SetNextItemWidth(-90.0f);
-        ImGui::SliderFloat("opacity", &settings.opacity, 0.05f, 1.0f, "%.2f");
-
-        ImGui::SetNextItemWidth(-90.0f);
-        if (ImGui::BeginCombo("mode", modeName(settings.mode)))
-        {
-            core::LayerMode const modes[] = { core::LayerMode::Heatmap, core::LayerMode::Contour,
-                                        core::LayerMode::Value };
-            for (core::LayerMode mode: modes)
+            ImGui::SetNextItemWidth(-90.0f);
+            if (ImGui::BeginCombo("mode", modeName(settings.mode)))
             {
-                if (ImGui::Selectable(modeName(mode), settings.mode == mode))
+                game::LayerMode const modes[] = {
+                    game::LayerMode::Heatmap, game::LayerMode::Contour,
+                    game::LayerMode::Value
+                };
+                for (game::LayerMode mode: modes)
                 {
-                    settings.mode = mode;
+                    if (ImGui::Selectable(modeName(mode), settings.mode == mode))
+                    {
+                        settings.mode = mode;
+                    }
                 }
+                ImGui::EndCombo();
             }
-            ImGui::EndCombo();
+
+            ImGui::TextDisabled("total: %llu", (unsigned long long)total);
+            ImGui::TreePop();
         }
 
-        // Total held by this map, all cities together: a quick way to see a
-        // resource being exhausted.
-        uint64_t total = 0u;
-        for (auto& it: simulation.cities())
-        {
-            auto const map = it.second->maps().find(name);
-            if (map != it.second->maps().end())
-            {
-                total += map->second->totalResource();
-            }
-        }
-        ImGui::TextDisabled("total: %llu", (unsigned long long)total);
-
-        ImGui::Unindent();
-        ImGui::Separator();
         ImGui::PopID();
     }
 

@@ -7,7 +7,7 @@
 // https://github.com/Lecrapouille/BlackThorn
 //-----------------------------------------------------------------------------
 
-#include "Application/DearImGuiApplication.hpp"
+#include "Host/DearImGuiApplication.hpp"
 #include "UI/Theme.hpp"
 
 #include <ImGuiFileDialog.h>
@@ -16,7 +16,7 @@
 #include <fstream>
 
 namespace ogb {
-namespace application {
+namespace host {
 using namespace ogb::theme;
 
 
@@ -280,5 +280,5 @@ void DearImGuiApplication::drawStatusBar() const
     ImGui::End();
     ImGui::PopStyleVar(3);
 }
-} // namespace application
+} // namespace host
 } // namespace ogb

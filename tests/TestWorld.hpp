@@ -4,6 +4,10 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file TestWorld.hpp
+//! \brief Minimal test fixture holding one world and one city for unit tests.
+
+
 #ifndef OPEN_GLASSBOX_TESTS_TEST_WORLD_HPP
 #  define OPEN_GLASSBOX_TESTS_TEST_WORLD_HPP
 

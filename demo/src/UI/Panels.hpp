@@ -4,12 +4,16 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file Panels.hpp
+//! \brief Dockable debug panels: layers, inspector, charts, traffic and time.
+
+
 #ifndef OPEN_GLASSBOX_DEMO_PANELS_HPP
 #  define OPEN_GLASSBOX_DEMO_PANELS_HPP
 
-#  include "Application/OpenGL.hpp"
-#  include "Core/DebugState.hpp"
-#  include "Core/TimeSeries.hpp"
+#  include "Host/OpenGL.hpp"
+#  include "Game/DebugState.hpp"
+#  include "Game/TimeSeries.hpp"
 #  include "OpenGlassBox/Simulation.hpp"
 
 #  include <map>
@@ -18,7 +22,7 @@
 #  include <vector>
 
 namespace ogb {
-namespace core { class RuleTrace; }
+namespace game { class RuleTrace; }
 
 namespace ui {
 class CityViewer;
@@ -31,7 +35,7 @@ class LayersPanel
 {
 public:
 
-    void draw(Simulation& simulation, core::DebugState& state);
+    void draw(Simulation& simulation, game::DebugState& state);
 };
 
 // ****************************************************************************
@@ -42,15 +46,27 @@ class InspectorPanel
 {
 public:
 
-    void draw(Simulation& simulation, core::DebugState& state, core::RuleTrace const& trace);
+    void draw(Simulation& simulation, game::DebugState& state, game::RuleTrace const& trace);
 
 private:
 
-    void drawUnit(Simulation& simulation, core::DebugState& state,
-                  core::RuleTrace const& trace);
-    void drawAgent(Simulation& simulation, core::DebugState& state);
-    void drawNode(core::DebugState& state);
-    void drawCell(Simulation& simulation, core::DebugState& state);
+    void drawUnit(Simulation& simulation, game::DebugState& state,
+                  game::RuleTrace const& trace);
+    void drawAgent(Simulation& simulation, game::DebugState& state);
+    void drawNode(game::DebugState& state);
+    void drawWay(game::DebugState& state);
+    void drawCell(Simulation& simulation, game::DebugState& state);
+};
+
+// ****************************************************************************
+//! \brief Editable source of the open ruleset (.ogs). Apply reparses and
+//! keeps the city when every type still in use is still defined.
+// ****************************************************************************
+class ScriptPanel
+{
+public:
+
+    void draw(std::string& text, bool& applyRequested, std::string const& status);
 };
 
 // ****************************************************************************
@@ -64,7 +80,7 @@ class RuleLogPanel
 {
 public:
 
-    void draw(Simulation& simulation, core::DebugState& state, core::RuleTrace& trace);
+    void draw(Simulation& simulation, game::DebugState& state, game::RuleTrace& trace);
 
 private:
 
@@ -88,19 +104,19 @@ public:
     // ------------------------------------------------------------------------
     void sample(Simulation& simulation);
 
-    void draw(Simulation& simulation, core::DebugState& state);
+    void draw(Simulation& simulation, game::DebugState& state);
 
     void clear();
 
 private:
 
-    core::TimeSeries& series(std::string const& group, std::string const& name);
+    game::TimeSeries& series(std::string const& group, std::string const& name);
 
 private:
 
     //! \brief Histories by group ("Maps", "Agents", "Globals", "Traffic") then
     //! by quantity name.
-    std::map<std::string, std::map<std::string, core::TimeSeries>> m_series;
+    std::map<std::string, std::map<std::string, game::TimeSeries>> m_series;
     //! \brief Interval in ticks between two samples, to keep long runs cheap.
     int m_sample_period = 5;
     uint64_t m_last_sample_tick = 0u;
@@ -114,7 +130,7 @@ class TimeControlPanel
 {
 public:
 
-    void draw(Simulation& simulation, core::DebugState& state, core::RuleTrace& trace);
+    void draw(Simulation& simulation, game::DebugState& state, game::RuleTrace& trace);
 
     // ------------------------------------------------------------------------
     //! \brief Number of ticks the user asked to run while paused. Consumed by
@@ -136,7 +152,7 @@ class TrafficPanel
 {
 public:
 
-    void draw(Simulation& simulation, core::DebugState& state);
+    void draw(Simulation& simulation, game::DebugState& state);
 
     // ------------------------------------------------------------------------
     //! \brief Total travel time of the network, the sum over the Ways of the

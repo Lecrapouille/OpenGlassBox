@@ -50,7 +50,7 @@ float TrafficPanel::totalTravelTime(Simulation& simulation)
 }
 
 // ----------------------------------------------------------------------------
-void TrafficPanel::draw(Simulation& simulation, core::DebugState& state)
+void TrafficPanel::draw(Simulation& simulation, game::DebugState& state)
 {
     if (!ImGui::Begin("Traffic"))
     {

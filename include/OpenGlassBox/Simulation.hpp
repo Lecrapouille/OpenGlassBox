@@ -5,6 +5,10 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file Simulation.hpp
+//! \brief Simulation entry point: cities, time control and attached script.
+
+
 #ifndef OPEN_GLASSBOX_SIMULATION_HPP
 #define OPEN_GLASSBOX_SIMULATION_HPP
 
@@ -102,6 +106,7 @@ public:
     //! \brief Number of ticks run since the beginning of the simulation.
     // -------------------------------------------------------------------------
     uint64_t totalTicks() const { return m_totalTicks; }
+    void setTotalTicks(uint64_t ticks) { m_totalTicks = ticks; }
 
     SimulationClock const& clock() const { return m_world.clock(); }
 

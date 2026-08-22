@@ -5,6 +5,10 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file RuleValue.hpp
+//! \brief Values read or written by rules: local, global and per-map quantities.
+
+
 #ifndef OPEN_GLASSBOX_RULE_VALUE_HPP
 #  define OPEN_GLASSBOX_RULE_VALUE_HPP
 

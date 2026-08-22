@@ -4,18 +4,22 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file Editor.hpp
+//! \brief Interactive map editor: tools, previews and command history.
+
+
 #ifndef OPEN_GLASSBOX_DEMO_EDITOR_HPP
 #  define OPEN_GLASSBOX_DEMO_EDITOR_HPP
 
-#  include "Application/OpenGL.hpp"
-#  include "Core/EditCommands.hpp"
-#  include "Core/DebugState.hpp"
+#  include "Host/OpenGL.hpp"
+#  include "Editor/EditCommands.hpp"
+#  include "Game/DebugState.hpp"
 #  include "OpenGlassBox/Simulation.hpp"
 
 namespace ogb {
 namespace ui { class CityViewer; }
 
-namespace core {
+namespace editor {
 
 // ============================================================================
 //! \brief What a click on the map does.
@@ -51,7 +55,7 @@ public:
     //! \brief Row of tool buttons and their settings, drawn in the toolbar of
     //! the map panel.
     // ------------------------------------------------------------------------
-    void drawToolbar(Simulation& simulation, DebugState& state);
+    void drawToolbar(Simulation& simulation, game::DebugState& state);
 
     // ------------------------------------------------------------------------
     //! \brief The undo history, as a dockable panel.
@@ -63,7 +67,7 @@ public:
     //! took the click, so the viewer knows not to also treat it as a selection.
     //! \param[in] hovered: whether the mouse is over the canvas.
     // ------------------------------------------------------------------------
-    bool onCanvas(Simulation& simulation, DebugState& state, ui::CityViewer& viewer,
+    bool onCanvas(Simulation& simulation, game::DebugState& state, ui::CityViewer& viewer,
                   bool hovered);
 
     // ------------------------------------------------------------------------
@@ -120,8 +124,8 @@ private:
 
     void handleRoad(Simulation& simulation, ui::CityViewer& viewer, bool hovered);
     void handleBuilding(Simulation& simulation, ui::CityViewer& viewer);
-    void handlePaint(Simulation& simulation, DebugState& state, bool hovered);
-    void handleZone(Simulation& simulation, DebugState& state, bool hovered);
+    void handlePaint(Simulation& simulation, game::DebugState& state, bool hovered);
+    void handleZone(Simulation& simulation, game::DebugState& state, bool hovered);
     void handleBulldozer(Simulation& simulation, ui::CityViewer& viewer);
 
 private:
@@ -152,7 +156,7 @@ private:
     int32_t m_dragV2 = 0;
     bool m_dragValid = false;
 };
-} // namespace core
+} // namespace editor
 } // namespace ogb
 
 #endif

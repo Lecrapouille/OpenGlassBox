@@ -72,6 +72,17 @@ void Agent::translate(Vector3f const direction)
 }
 
 //------------------------------------------------------------------------------
+void Agent::relocate(Vector3f const& position, Way* way, float offset, Node* last)
+{
+    setCurrentWay(way);
+    m_position = position;
+    m_offset = offset;
+    m_lastNode = last;
+    m_nextNode = last;
+    m_route = Route{};
+}
+
+//------------------------------------------------------------------------------
 bool Agent::uses(Way const& way) const
 {
     if (m_currentWay == &way)

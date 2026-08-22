@@ -1,0 +1,6 @@
+{
+    "sonarlint.rules": {},
+    "sonarlint.pathToCompileCommands": "${workspaceFolder}/compile_commands.json",
+    "sonarlint.disableTelemetry": true,
+    "sonarlint.output.showVerboseLogs": true
+}

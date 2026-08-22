@@ -5,6 +5,10 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file Resources.hpp
+//! \brief Container of several resource stocks carried by units or agents.
+
+
 #ifndef OPEN_GLASSBOX_RESOURCES_HPP
 #  define OPEN_GLASSBOX_RESOURCES_HPP
 

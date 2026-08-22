@@ -5,6 +5,10 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file Unit.hpp
+//! \brief Buildings attached to nodes or roads, running unit rules each tick.
+
+
 #ifndef OPEN_GLASSBOX_UNIT_HPP
 #  define OPEN_GLASSBOX_UNIT_HPP
 
@@ -56,6 +60,7 @@ public:
 
     inline std::string const& type() const { return m_type.name; }
     inline Resources& resources() { return m_resources; }
+    inline Resources const& resources() const { return m_resources; }
     inline Vector3f const& position() const { return m_position; }
     inline uint32_t color() const { return m_type.color; }
 

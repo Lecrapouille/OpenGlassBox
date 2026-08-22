@@ -5,6 +5,10 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file Config.hpp
+//! \brief Default simulation constants and the runtime SimulationConfig settings.
+
+
 #ifndef OPEN_GLASSBOX_CONFIG_HPP
 #  define OPEN_GLASSBOX_CONFIG_HPP
 

@@ -10,8 +10,8 @@
 static std::string testCityPath()
 {
     char const* candidates[] = {
-        "../demo/data/Simulations/TestCity.txt",
-        "demo/data/Simulations/TestCity.txt",
+        "../demo/data/Simulations/test_city.ogs",
+        "demo/data/Simulations/test_city.ogs",
     };
     for (char const* path: candidates)
     {

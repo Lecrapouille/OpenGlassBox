@@ -5,6 +5,10 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file Map.hpp
+//! \brief Grid-backed resource layer shared by cities on the world map.
+
+
 #ifndef OPEN_GLASSBOX_MAP_HPP
 #  define OPEN_GLASSBOX_MAP_HPP
 

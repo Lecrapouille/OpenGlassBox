@@ -4,16 +4,20 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file CityViewer.hpp
+//! \brief Interactive map canvas: rendering, picking, zoom and pan.
+
+
 #ifndef OPEN_GLASSBOX_DEMO_CITY_VIEWER_HPP
 #  define OPEN_GLASSBOX_DEMO_CITY_VIEWER_HPP
 
-#  include "Application/OpenGL.hpp"
-#  include "Core/DebugState.hpp"
+#  include "Host/OpenGL.hpp"
+#  include "Game/DebugState.hpp"
 #  include "OpenGlassBox/Simulation.hpp"
 #  include "OpenGlassBox/Vector.hpp"
 
 namespace ogb {
-namespace core { class Editor; }
+namespace editor { class Editor; }
 
 namespace ui {
 
@@ -34,7 +38,7 @@ public:
     //! \param[in,out] editor: the armed tool, which gets first refusal on the
     //! mouse.
     // ------------------------------------------------------------------------
-    void draw(Simulation& simulation, core::DebugState& state, core::Editor& editor);
+    void draw(Simulation& simulation, game::DebugState& state, editor::Editor& editor);
 
     // ------------------------------------------------------------------------
     //! \brief Frame the whole simulation in the view. Called on startup and by
@@ -94,34 +98,36 @@ private:
     //! \brief Pan with the middle button, zoom with the wheel centered on the
     //! cursor, and pick the entity under a left click.
     // ------------------------------------------------------------------------
-    void handleInputs(Simulation& simulation, core::DebugState& state, core::Editor& editor);
+    void handleInputs(Simulation& simulation, game::DebugState& state, editor::Editor& editor);
 
     // ------------------------------------------------------------------------
     //! \brief Select the entity closest to the given canvas position, within a
     //! tolerance in pixels. Units win over Agents, which win over Nodes, and a
     //! click on nothing falls back on the grid cell.
     // ------------------------------------------------------------------------
-    void pick(Simulation& simulation, core::DebugState& state, ImVec2 const& screen);
+    void pick(Simulation& simulation, game::DebugState& state, ImVec2 const& screen);
 
-    void drawMaps(World& world, core::DebugState const& state);
-    void drawPaths(City& city, core::DebugState const& state);
-    void drawUnits(City& city, core::DebugState const& state);
-    void drawAgents(City& city, core::DebugState const& state);
-    void drawCityFrame(City& city, core::DebugState const& state);
+    void drawMaps(World& world, game::DebugState const& state);
+    void drawPaths(City& city, game::DebugState const& state);
+    void drawUnits(City& city, game::DebugState const& state);
+    void drawAgents(City& city, game::DebugState const& state);
+    void drawCityFrame(City& city, game::DebugState const& state);
     void drawAreas(City& city);
-    void drawSelectionOverlay(Simulation& simulation, core::DebugState const& state);
-    void drawLegend(core::DebugState const& state);
-    void drawToolbar(Simulation& simulation, core::DebugState& state, core::Editor& editor);
+    void drawSelectionOverlay(Simulation& simulation, game::DebugState const& state);
+    void drawLegend(game::DebugState const& state);
+    void drawToolbar(Simulation& simulation, game::DebugState& state, editor::Editor& editor);
 
     // ------------------------------------------------------------------------
     //! \brief Update state.hoveredCell from the mouse position.
     // ------------------------------------------------------------------------
-    void updateHover(Simulation& simulation, core::DebugState& state);
+    void updateHover(Simulation& simulation, game::DebugState& state);
 
     // ------------------------------------------------------------------------
     //! \brief Tooltip listing the value of every Map on the hovered cell.
     // ------------------------------------------------------------------------
-    void drawHoverTooltip(Simulation& simulation, core::DebugState const& state);
+    void drawHoverTooltip(Simulation& simulation, game::DebugState const& state);
+    void drawClockHud(Simulation const& simulation);
+    void drawHint(editor::Editor const& editor);
 
 private:
 

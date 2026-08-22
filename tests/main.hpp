@@ -18,6 +18,9 @@
 // along with SimForth.  If not, see <http://www.gnu.org/licenses/>.
 //==============================================================================
 
+//! \file main.hpp
+//! \brief Google Test/Mock harness shared by the OpenGlassBox unit tests.
+
 #ifndef MAIN_HPP
 #  define MAIN_HPP
 

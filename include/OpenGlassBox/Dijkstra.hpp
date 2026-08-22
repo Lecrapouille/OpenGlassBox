@@ -5,6 +5,10 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file Dijkstra.hpp
+//! \brief Shortest-path routing over the road graph, with congestion-aware costs.
+
+
 #ifndef OPEN_GLASSBOX_DIJKSTRA_HPP
 #  define OPEN_GLASSBOX_DIJKSTRA_HPP
 
@@ -41,38 +45,45 @@ struct Route
 };
 
 //==============================================================================
+//! \brief How Agents find a destination. The demo and a later assignment
+//! solver can swap the implementation without touching City or Agent.
+//==============================================================================
+class IRouter
+{
+public:
+
+    virtual ~IRouter() = default;
+
+    virtual Route findRoute(Node& fromNode, std::string const& searchTarget,
+                            Resources const& resources) = 0;
+    virtual float shortestPathCost(Node& fromNode,
+                                   std::string const& searchTarget,
+                                   Resources const& resources) = 0;
+    virtual Node* findNextPoint(Node& fromNode, std::string& searchTarget,
+                                Resources& resources) = 0;
+    virtual void setRandomSeed(unsigned seed) { (void)seed; }
+};
+
+//==============================================================================
 //! \brief Best-first search toward the nearest Unit accepting the carried
 //! resources, with a travel-time cost (BPR) rather than a length.
 //==============================================================================
-class Dijkstra
+class Dijkstra: public IRouter
 {
 public:
 
     Dijkstra();
 
-    //--------------------------------------------------------------------------
-    //! \brief Compute a complete itinerary from \c fromNode. Returns an empty
-    //! route (found=false) when nothing accepts the resources; the caller then
-    //! typically wanders to a random neighbour.
-    //--------------------------------------------------------------------------
     Route findRoute(Node& fromNode, std::string const& searchTarget,
-                    Resources const& resources);
+                    Resources const& resources) override;
 
-    //--------------------------------------------------------------------------
-    //! \brief First Node of findRoute, kept for the tests that check one-hop
-    //! decisions. On failure, a random neighbour.
-    //--------------------------------------------------------------------------
     Node* findNextPoint(Node& fromNode, std::string& searchTarget,
-                        Resources& resources);
+                        Resources& resources) override;
 
-    //--------------------------------------------------------------------------
-    //! \brief Travel time of the cheapest itinerary, or a large value when
-    //! none exists. Used by the relative gap diagnostic.
-    //--------------------------------------------------------------------------
     float shortestPathCost(Node& fromNode, std::string const& searchTarget,
-                           Resources const& resources);
+                           Resources const& resources) override;
 
-    void setRandomSeed(unsigned seed);
+    void setRandomSeed(unsigned seed) override;
 
     Node* randomNeighbor(Node& fromNode);
 
@@ -82,13 +93,13 @@ private:
     Route reconstruct(Node& fromNode, Node* goalNode, Unit* destination,
                       Way* approachWay, float approachOffset, float cost) const;
 
-private:
-
     std::unordered_set<Node*> m_closedSet;
     std::map<Node*, Node*>    m_cameFrom;
     std::map<Node*, float>    m_scoreFromStart;
     std::mt19937              m_rng;
 };
+
+using AStarRouter = Dijkstra;
 
 } // namespace ogb
 

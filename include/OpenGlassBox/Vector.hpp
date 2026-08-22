@@ -5,6 +5,10 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file Vector.hpp
+//! \brief Lightweight 3D vector type and basic arithmetic helpers.
+
+
 #ifndef OPEN_GLASSBOX_VECTOR_HPP
 #  define OPEN_GLASSBOX_VECTOR_HPP
 

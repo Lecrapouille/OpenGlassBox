@@ -4,6 +4,10 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file MapRegion.hpp
+//! \brief Axis-aligned rectangle of grid cells belonging to a city.
+
+
 #ifndef OPEN_GLASSBOX_MAP_REGION_HPP
 #  define OPEN_GLASSBOX_MAP_REGION_HPP
 

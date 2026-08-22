@@ -4,13 +4,13 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
-#include "Application/Application.hpp"
+#include "Host/Application.hpp"
 
 #include <chrono>
 #include <iostream>
 
 namespace ogb {
-namespace application {
+namespace host {
 
 
 //! \brief Upper bound on the frame duration handed to onUpdate(). Without it,
@@ -222,5 +222,5 @@ bool Application::run()
     teardown();
     return true;
 }
-} // namespace application
+} // namespace host
 } // namespace ogb

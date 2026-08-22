@@ -4,6 +4,10 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file DebugState.hpp
+//! \brief Shared debug UI state: selection, layer visibility and display options.
+
+
 #ifndef OPEN_GLASSBOX_DEMO_DEBUG_STATE_HPP
 #  define OPEN_GLASSBOX_DEMO_DEBUG_STATE_HPP
 
@@ -15,7 +19,7 @@
 
 
 namespace ogb {
-namespace core {
+namespace game {
 
 
 // ****************************************************************************
@@ -59,6 +63,7 @@ struct Selection
         Unit,
         Node,
         Agent,
+        Way,
         Cell,
     };
 
@@ -67,6 +72,7 @@ struct Selection
     std::string city;
     Unit* unit = nullptr;
     Node* node = nullptr;
+    Way* way = nullptr;
     //! \brief Agent::id() of the selected Agent.
     uint32_t agentId = 0u;
     int32_t u = 0;
@@ -130,7 +136,7 @@ struct DebugState
         return (it == layers.end()) || it->second.visible;
     }
 };
-} // namespace core
+} // namespace game
 } // namespace ogb
 
 #endif

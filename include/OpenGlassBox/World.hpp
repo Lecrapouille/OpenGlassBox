@@ -4,6 +4,10 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file World.hpp
+//! \brief Shared world grid: maps, cities and coordinate conversions.
+
+
 #ifndef OPEN_GLASSBOX_WORLD_HPP
 #  define OPEN_GLASSBOX_WORLD_HPP
 
@@ -24,15 +28,50 @@ namespace ogb {
 //! buildings. What it administers on the grid is a region, and that is what
 //! bounds the rules run on its behalf.
 //==============================================================================
+//==============================================================================
+//! \brief A road that is about to be laid, before it is split at city borders.
+//==============================================================================
+struct WayProposal
+{
+    Vector3f from;
+    Vector3f to;
+    std::string wayType;
+};
+
 class World
 {
 public:
+
+    //--------------------------------------------------------------------------
+    //! \brief Diplomacy of roads that cross a city border. The default
+    //! implementation accepts everything, which is what a single-city demo
+    //! wants. A later host can refuse, or ask another process.
+    //--------------------------------------------------------------------------
+    class Listener
+    {
+    public:
+
+        virtual ~Listener() = default;
+        virtual bool allowWayAcross(City& /*owner*/, City& /*neighbor*/,
+                                    WayProposal const& /*proposal*/)
+        {
+            return true;
+        }
+        virtual bool allowWayRemoved(City& /*owner*/, City& /*neighbor*/,
+                                     Way& /*way*/)
+        {
+            return true;
+        }
+    };
 
     // -------------------------------------------------------------------------
     //! \brief Create an empty world. The config gives the size of a cell and
     //! the settings every City inherits.
     // -------------------------------------------------------------------------
     explicit World(SimulationConfig const& config = {});
+
+    void setListener(Listener& listener) { m_listener = &listener; }
+    Listener& listener() { return *m_listener; }
 
     // -------------------------------------------------------------------------
     //! \brief Create the Map holding the given resource type, or return the one
@@ -107,6 +146,21 @@ public:
     Cities& cities() { return m_cities; }
     Cities const& cities() const { return m_cities; }
 
+    // -------------------------------------------------------------------------
+    //! \brief The City whose region contains the world position, or nullptr.
+    // -------------------------------------------------------------------------
+    City* cityAt(Vector3f const& world);
+    City const* cityAt(Vector3f const& world) const;
+
+    // -------------------------------------------------------------------------
+    //! \brief Lay a road from A to B, split at every city border. Each piece
+    //! is owned by the city that contains its midpoint. Neighbours are asked
+    //! through Listener before a foreign piece is created.
+    //! \return false when a neighbour refused.
+    // -------------------------------------------------------------------------
+    bool addRoad(City& owner, std::string const& pathType, WayType const& wayType,
+                 Vector3f const& from, Vector3f const& to);
+
 private:
 
     //! \brief Settings shared by the whole world.
@@ -118,6 +172,8 @@ private:
     Maps             m_maps;
     //! \brief The regions the world is divided into.
     Cities           m_cities;
+    Listener         m_defaultListener;
+    Listener*        m_listener = &m_defaultListener;
 };
 
 } // namespace ogb

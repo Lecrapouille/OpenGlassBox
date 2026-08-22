@@ -108,4 +108,156 @@ Vector3f World::mapPosition2world(int32_t u, int32_t v) const
     return Vector3f(float(u) * size, float(v) * size, 0.0f);
 }
 
+// -----------------------------------------------------------------------------
+City* World::cityAt(Vector3f const& world)
+{
+    int32_t u = 0;
+    int32_t v = 0;
+    world2mapPosition(world, u, v);
+    for (auto& it: m_cities)
+    {
+        if (it.second->region().contains(u, v))
+            return it.second.get();
+    }
+    return nullptr;
+}
+
+// -----------------------------------------------------------------------------
+City const* World::cityAt(Vector3f const& world) const
+{
+    int32_t u = 0;
+    int32_t v = 0;
+    world2mapPosition(world, u, v);
+    for (auto const& it: m_cities)
+    {
+        if (it.second->region().contains(u, v))
+            return it.second.get();
+    }
+    return nullptr;
+}
+
+namespace {
+
+bool clipToBox(Vector3f const& a, Vector3f const& b, float x0, float y0,
+               float x1, float y1, float& tEnter, float& tLeave)
+{
+    float t0 = 0.0f;
+    float t1 = 1.0f;
+    float const dx = b.x - a.x;
+    float const dy = b.y - a.y;
+
+    auto const clip = [&](float p, float q) -> bool {
+        if (std::fabs(p) < 1e-8f)
+            return q >= 0.0f;
+        float const r = q / p;
+        if (p < 0.0f)
+        {
+            if (r > t1)
+                return false;
+            if (r > t0)
+                t0 = r;
+        }
+        else
+        {
+            if (r < t0)
+                return false;
+            if (r < t1)
+                t1 = r;
+        }
+        return true;
+    };
+
+    if (!clip(-dx, a.x - x0) || !clip(dx, x1 - a.x) ||
+        !clip(-dy, a.y - y0) || !clip(dy, y1 - a.y))
+    {
+        return false;
+    }
+
+    tEnter = t0;
+    tLeave = t1;
+    return tLeave > tEnter;
+}
+
+Node& ensureNode(Path& path, Vector3f const& position)
+{
+    for (auto& node: path.nodes())
+    {
+        if (magnitude(node->position() - position) < 1.5f)
+            return *node;
+    }
+    return path.addNode(position);
+}
+
+} // namespace
+
+// -----------------------------------------------------------------------------
+bool World::addRoad(City& owner, std::string const& pathType, WayType const& wayType,
+                    Vector3f const& from, Vector3f const& to)
+{
+    WayProposal const proposal{ from, to, wayType.name };
+
+    struct Piece
+    {
+        City* city;
+        Vector3f a;
+        Vector3f b;
+    };
+    std::vector<Piece> pieces;
+
+    for (auto& it: m_cities)
+    {
+        City& city = *it.second;
+        MapRegion const region = city.region();
+        Vector3f const p0 = mapPosition2world(region.u0, region.v0);
+        Vector3f const p1 = mapPosition2world(region.u1(), region.v1());
+        float t0 = 0.0f;
+        float t1 = 1.0f;
+        if (!clipToBox(from, to, p0.x, p0.y, p1.x, p1.y, t0, t1))
+            continue;
+
+        Vector3f const a = from + (to - from) * t0;
+        Vector3f const b = from + (to - from) * t1;
+        if (magnitude(b - a) < 1e-3f)
+            continue;
+
+        if ((&city != &owner) &&
+            !m_listener->allowWayAcross(owner, city, proposal))
+        {
+            return false;
+        }
+
+        pieces.push_back({ &city, a, b });
+    }
+
+    if (pieces.empty())
+    {
+        // Entirely outside every city: still give it to the requester.
+        pieces.push_back({ &owner, from, to });
+    }
+
+    for (Piece const& piece: pieces)
+    {
+        Path* path = nullptr;
+        auto const found = piece.city->paths().find(pathType);
+        if (found != piece.city->paths().end())
+        {
+            path = found->second.get();
+        }
+        else
+        {
+            auto const ownerPath = owner.paths().find(pathType);
+            if (ownerPath == owner.paths().end())
+                continue;
+            path = &piece.city->addPath(ownerPath->second->pathType());
+        }
+
+        Node& n1 = ensureNode(*path, piece.a);
+        Node& n2 = ensureNode(*path, piece.b);
+        if (&n1 != &n2)
+            path->addWay(wayType, n1, n2);
+    }
+
+    return true;
+}
+
 } // namespace ogb

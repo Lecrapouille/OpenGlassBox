@@ -6,7 +6,7 @@
 
 #include "UI/Panels.hpp"
 #include "UI/Theme.hpp"
-#include "Core/RuleTrace.hpp"
+#include "Game/RuleTrace.hpp"
 #include "OpenGlassBox/Simulation.hpp"
 
 #include <algorithm>
@@ -35,8 +35,8 @@ static bool containsInsensitive(std::string const& haystack, char const* needle)
 }
 
 // ----------------------------------------------------------------------------
-void RuleLogPanel::draw(Simulation& simulation, core::DebugState& state,
-                        core::RuleTrace& trace)
+void RuleLogPanel::draw(Simulation& simulation, game::DebugState& state,
+                        game::RuleTrace& trace)
 {
     if (!ImGui::Begin("Rule Log"))
     {
@@ -112,7 +112,7 @@ void RuleLogPanel::draw(Simulation& simulation, core::DebugState& state,
 
         for (size_t i = 0u; i < trace.size(); ++i)
         {
-            core::RuleEvent const& event = trace.at(i);
+            game::RuleEvent const& event = trace.at(i);
 
             if (event.success && !m_show_success)
                 continue;

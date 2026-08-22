@@ -4,14 +4,14 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
-#include "Core/EditCommands.hpp"
+#include "Editor/EditCommands.hpp"
 #include "OpenGlassBox/Simulation.hpp"
 
 #include <algorithm>
 #include <cstdio>
 
 namespace ogb {
-namespace core {
+namespace editor {
 
 
 // ----------------------------------------------------------------------------
@@ -554,6 +554,52 @@ std::string RemoveWayCommand::label() const
 }
 
 // =============================================================================
+// REMOVE NODE
+// =============================================================================
+
+// ----------------------------------------------------------------------------
+RemoveNodeCommand::RemoveNodeCommand(std::string city, std::string path,
+                                     uint32_t nodeId)
+    : m_city(std::move(city)),
+      m_path(std::move(path)),
+      m_nodeId(nodeId)
+{}
+
+// ----------------------------------------------------------------------------
+bool RemoveNodeCommand::redo(Simulation& simulation)
+{
+    City* city = findCity(simulation, m_city);
+    Path* path = findPath(simulation, m_city, m_path);
+    if ((city == nullptr) || (path == nullptr))
+        return false;
+
+    Node* node = path->node(m_nodeId);
+    if ((node == nullptr) || node->hasWays())
+        return false;
+
+    m_position = node->position();
+    m_captured = true;
+    city->removeNode(*path, *node);
+    return true;
+}
+
+// ----------------------------------------------------------------------------
+void RemoveNodeCommand::undo(Simulation& simulation)
+{
+    Path* path = findPath(simulation, m_city, m_path);
+    if ((path == nullptr) || !m_captured)
+        return;
+
+    path->addNode(m_nodeId, m_position);
+}
+
+// ----------------------------------------------------------------------------
+std::string RemoveNodeCommand::label() const
+{
+    return "bulldoze node";
+}
+
+// =============================================================================
 // PAINT RESOURCE
 // =============================================================================
 
@@ -720,5 +766,5 @@ std::string AddAreaCommand::label() const
 {
     return "zone " + m_areaType;
 }
-} // namespace core
+} // namespace editor
 } // namespace ogb

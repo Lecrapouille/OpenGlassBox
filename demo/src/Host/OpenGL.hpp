@@ -4,6 +4,10 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file OpenGL.hpp
+//! \brief Single include point for GLEW, GLFW, ImGui and ImPlot in the demo.
+
+
 #ifndef OPEN_GLASSBOX_DEMO_OPENGL_HPP
 #  define OPEN_GLASSBOX_DEMO_OPENGL_HPP
 

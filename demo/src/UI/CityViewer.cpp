@@ -6,7 +6,7 @@
 
 #include "UI/CityViewer.hpp"
 #include "UI/Theme.hpp"
-#include "Core/Editor.hpp"
+#include "Editor/Editor.hpp"
 #include "OpenGlassBox/Simulation.hpp"
 
 #include <algorithm>
@@ -110,7 +110,7 @@ void CityViewer::frameAll(Simulation& simulation)
 }
 
 // ----------------------------------------------------------------------------
-void CityViewer::draw(Simulation& simulation, core::DebugState& state, core::Editor& editor)
+void CityViewer::draw(Simulation& simulation, game::DebugState& state, editor::Editor& editor)
 {
     if (!ImGui::Begin("Map"))
     {
@@ -120,8 +120,9 @@ void CityViewer::draw(Simulation& simulation, core::DebugState& state, core::Edi
 
     drawToolbar(simulation, state, editor);
 
+    SimulationClock const& clock = simulation.clock();
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-    ImGui::PushStyleColor(ImGuiCol_ChildBg, theme::CANVAS_BACKGROUND);
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, theme::canvasBackground(clock.hourOfDay()));
     ImGui::BeginChild("Canvas", ImVec2(0.0f, 0.0f), true,
                       ImGuiWindowFlags_NoScrollbar |
                       ImGuiWindowFlags_NoScrollWithMouse |
@@ -176,16 +177,19 @@ void CityViewer::draw(Simulation& simulation, core::DebugState& state, core::Edi
 
     drawLegend(state);
     drawHoverTooltip(simulation, state);
+    drawClockHud(simulation);
+    drawHint(editor);
 
     ImGui::EndChild();
     ImGui::PopStyleColor();
     ImGui::PopStyleVar();
+    ImGui::EndGroup();
     ImGui::End();
 }
 
 // ----------------------------------------------------------------------------
-void CityViewer::drawToolbar(Simulation& simulation, core::DebugState& state,
-                             core::Editor& editor)
+void CityViewer::drawToolbar(Simulation& simulation, game::DebugState& state,
+                             editor::Editor& editor)
 {
     editor.drawToolbar(simulation, state);
 
@@ -198,33 +202,13 @@ void CityViewer::drawToolbar(Simulation& simulation, core::DebugState& state,
     ImGui::SetNextItemWidth(140.0f);
     ImGui::SliderFloat("Zoom", &m_zoom, MIN_ZOOM, MAX_ZOOM, "%.2f",
                        ImGuiSliderFlags_Logarithmic);
-    ImGui::SameLine();
-
-    ImGui::Checkbox("Grid", &state.showGrid);
-    ImGui::SameLine();
-    ImGui::Checkbox("Paths", &state.showPaths);
-    ImGui::SameLine();
-    ImGui::Checkbox("Units", &state.showUnits);
-    ImGui::SameLine();
-    ImGui::Checkbox("Areas", &state.showAreas);
-    ImGui::SameLine();
-    ImGui::Checkbox("Agents", &state.showAgents);
-    ImGui::SameLine();
-    ImGui::Checkbox("Traffic", &state.showTraffic);
-    if (ImGui::IsItemHovered())
-    {
-        ImGui::SetTooltip("Color and thicken the roads by their flow over\n"
-                          "capacity ratio, from green to red.");
-    }
-    ImGui::SameLine();
-    ImGui::Checkbox("Labels", &state.showLabels);
 
     ImGui::Separator();
 }
 
 // ----------------------------------------------------------------------------
-void CityViewer::handleInputs(Simulation& simulation, core::DebugState& state,
-                              core::Editor& editor)
+void CityViewer::handleInputs(Simulation& simulation, game::DebugState& state,
+                              editor::Editor& editor)
 {
     // The child window is not a widget, so claim the area explicitly to know
     // whether the mouse belongs to us.
@@ -380,13 +364,13 @@ Unit* CityViewer::pickUnit(City& city, ImVec2 const& world, float pixels) const
 }
 
 // ----------------------------------------------------------------------------
-void CityViewer::pick(Simulation& simulation, core::DebugState& state,
+void CityViewer::pick(Simulation& simulation, game::DebugState& state,
                       ImVec2 const& screen)
 {
     float bestDistance = PICK_RADIUS * PICK_RADIUS;
-    core::Selection best;
+    game::Selection best;
 
-    auto const consider = [&](ImVec2 const& position, core::Selection candidate) {
+    auto const consider = [&](ImVec2 const& position, game::Selection candidate) {
         float const dx = position.x - screen.x;
         float const dy = position.y - screen.y;
         float const distance = dx * dx + dy * dy;
@@ -405,8 +389,8 @@ void CityViewer::pick(Simulation& simulation, core::DebugState& state,
         {
             for (auto& unit: city.units())
             {
-                core::Selection candidate;
-                candidate.kind = core::Selection::Kind::Unit;
+                game::Selection candidate;
+                candidate.kind = game::Selection::Kind::Unit;
                 candidate.city = city.name();
                 candidate.unit = unit.get();
                 consider(worldToScreen(unit->position()), candidate);
@@ -417,8 +401,8 @@ void CityViewer::pick(Simulation& simulation, core::DebugState& state,
         {
             for (auto& agent: city.agents())
             {
-                core::Selection candidate;
-                candidate.kind = core::Selection::Kind::Agent;
+                game::Selection candidate;
+                candidate.kind = game::Selection::Kind::Agent;
                 candidate.city = city.name();
                 candidate.agentId = agent->id();
                 consider(worldToScreen(agent->position()), candidate);
@@ -431,28 +415,47 @@ void CityViewer::pick(Simulation& simulation, core::DebugState& state,
             {
                 for (auto& node: path.second->nodes())
                 {
-                    core::Selection candidate;
-                    candidate.kind = core::Selection::Kind::Node;
+                    game::Selection candidate;
+                    candidate.kind = game::Selection::Kind::Node;
                     candidate.city = city.name();
                     candidate.node = node.get();
                     consider(worldToScreen(node->position()), candidate);
                 }
             }
         }
+
     }
 
-    if (best.kind != core::Selection::Kind::None)
+    if (best.kind != game::Selection::Kind::None)
     {
         state.selection = std::move(best);
         return;
+    }
+
+    if (state.showPaths)
+    {
+        ImVec2 const world = screenToWorld(screen);
+        for (auto& it: simulation.cities())
+        {
+            float offset = 0.0f;
+            Way* way = pickWay(*it.second, world, PICK_RADIUS, offset);
+            if (way == nullptr)
+                continue;
+            game::Selection selected;
+            selected.kind = game::Selection::Kind::Way;
+            selected.city = it.second->name();
+            selected.way = way;
+            state.selection = selected;
+            return;
+        }
     }
 
     // Nothing close enough: fall back on the grid cell, which is still useful
     // to read the maps.
     if (state.hasHoveredCell)
     {
-        core::Selection cell;
-        cell.kind = core::Selection::Kind::Cell;
+        game::Selection cell;
+        cell.kind = game::Selection::Kind::Cell;
         cell.city = state.hoveredCity;
         cell.u = state.hoveredU;
         cell.v = state.hoveredV;
@@ -465,7 +468,7 @@ void CityViewer::pick(Simulation& simulation, core::DebugState& state,
 }
 
 // ----------------------------------------------------------------------------
-void CityViewer::updateHover(Simulation& simulation, core::DebugState& state)
+void CityViewer::updateHover(Simulation& simulation, game::DebugState& state)
 {
     state.hasHoveredCell = false;
 
@@ -492,7 +495,7 @@ void CityViewer::updateHover(Simulation& simulation, core::DebugState& state)
 }
 
 // ----------------------------------------------------------------------------
-void CityViewer::drawMaps(World& world, core::DebugState const& state)
+void CityViewer::drawMaps(World& world, game::DebugState const& state)
 {
     m_splitter.SetCurrentChannel(m_draw_list, CHANNEL_MAPS);
 
@@ -506,8 +509,8 @@ void CityViewer::drawMaps(World& world, core::DebugState const& state)
             continue;
 
         auto const settings = state.layers.find(map.type());
-        core::LayerSettings const options =
-            (settings != state.layers.end()) ? settings->second : core::LayerSettings();
+        game::LayerSettings const options =
+            (settings != state.layers.end()) ? settings->second : game::LayerSettings();
 
         bool const primary = (state.primaryLayer == map.type()) ||
                              (state.soloLayer == map.type());
@@ -525,7 +528,7 @@ void CityViewer::drawMaps(World& world, core::DebugState const& state)
 
                 switch (options.mode)
                 {
-                case core::LayerMode::Heatmap:
+                case game::LayerMode::Heatmap:
                 {
                     // A non primary map is drawn thinner so that several of
                     // them stay readable when superimposed.
@@ -536,14 +539,14 @@ void CityViewer::drawMaps(World& world, core::DebugState const& state)
                         theme::fromScript(map.color(), ratio * options.opacity));
                     break;
                 }
-                case core::LayerMode::Contour:
+                case game::LayerMode::Contour:
                     m_draw_list->AddRect(
                         p0, p1,
                         theme::fromScript(map.color(), options.opacity),
                         0.0f, 0, 1.0f + 2.0f * ratio);
                     break;
 
-                case core::LayerMode::Value:
+                case game::LayerMode::Value:
                 {
                     if (pixels < 22.0f)
                         break;
@@ -562,7 +565,7 @@ void CityViewer::drawMaps(World& world, core::DebugState const& state)
 }
 
 // ----------------------------------------------------------------------------
-void CityViewer::drawCityFrame(City& city, core::DebugState const& state)
+void CityViewer::drawCityFrame(City& city, game::DebugState const& state)
 {
     m_splitter.SetCurrentChannel(m_draw_list, CHANNEL_GRID);
 
@@ -637,7 +640,7 @@ void CityViewer::drawAreas(City& city)
 }
 
 // ----------------------------------------------------------------------------
-void CityViewer::drawPaths(City& city, core::DebugState const& state)
+void CityViewer::drawPaths(City& city, game::DebugState const& state)
 {
     if (!state.showPaths)
         return;
@@ -690,7 +693,7 @@ void CityViewer::drawPaths(City& city, core::DebugState const& state)
 }
 
 // ----------------------------------------------------------------------------
-void CityViewer::drawUnits(City& city, core::DebugState const& state)
+void CityViewer::drawUnits(City& city, game::DebugState const& state)
 {
     if (!state.showUnits)
         return;
@@ -724,7 +727,7 @@ void CityViewer::drawUnits(City& city, core::DebugState const& state)
 }
 
 // ----------------------------------------------------------------------------
-void CityViewer::drawAgents(City& city, core::DebugState const& state)
+void CityViewer::drawAgents(City& city, game::DebugState const& state)
 {
     if (!state.showAgents)
         return;
@@ -741,12 +744,12 @@ void CityViewer::drawAgents(City& city, core::DebugState const& state)
 
 // ----------------------------------------------------------------------------
 void CityViewer::drawSelectionOverlay(Simulation& simulation,
-                                      core::DebugState const& state)
+                                      game::DebugState const& state)
 {
     m_splitter.SetCurrentChannel(m_draw_list, CHANNEL_OVERLAY);
 
-    core::Selection const& selection = state.selection;
-    if (selection.kind == core::Selection::Kind::None)
+    game::Selection const& selection = state.selection;
+    if (selection.kind == game::Selection::Kind::None)
         return;
 
     auto const cityIt = simulation.cities().find(selection.city);
@@ -758,7 +761,7 @@ void CityViewer::drawSelectionOverlay(Simulation& simulation,
 
     switch (selection.kind)
     {
-    case core::Selection::Kind::Unit:
+    case game::Selection::Kind::Unit:
     {
         if (selection.unit == nullptr)
             break;
@@ -781,7 +784,7 @@ void CityViewer::drawSelectionOverlay(Simulation& simulation,
         }
         break;
     }
-    case core::Selection::Kind::Node:
+    case game::Selection::Kind::Node:
     {
         if (selection.node == nullptr)
             break;
@@ -789,7 +792,7 @@ void CityViewer::drawSelectionOverlay(Simulation& simulation,
                                NODE_RADIUS + 6.0f, highlight, 0, 2.0f);
         break;
     }
-    case core::Selection::Kind::Agent:
+    case game::Selection::Kind::Agent:
     {
         Agent const* const agent = selection.resolveAgent(simulation);
         if (agent == nullptr)
@@ -828,7 +831,7 @@ void CityViewer::drawSelectionOverlay(Simulation& simulation,
         }
         break;
     }
-    case core::Selection::Kind::Cell:
+    case game::Selection::Kind::Cell:
     {
         float const side = city.gridCellSize();
         ImVec2 const p0 = worldToScreen(
@@ -837,13 +840,22 @@ void CityViewer::drawSelectionOverlay(Simulation& simulation,
         m_draw_list->AddRect(p0, p1, highlight, 0.0f, 0, 2.5f);
         break;
     }
-    case core::Selection::Kind::None:
+    case game::Selection::Kind::Way:
+    {
+        if (selection.way == nullptr)
+            break;
+        ImVec2 const a = worldToScreen(selection.way->position1());
+        ImVec2 const b = worldToScreen(selection.way->position2());
+        m_draw_list->AddLine(a, b, highlight, 5.0f);
+        break;
+    }
+    case game::Selection::Kind::None:
         break;
     }
 }
 
 // ----------------------------------------------------------------------------
-void CityViewer::drawLegend(core::DebugState const& state)
+void CityViewer::drawLegend(game::DebugState const& state)
 {
     if (!state.showTraffic)
         return;
@@ -871,7 +883,7 @@ void CityViewer::drawLegend(core::DebugState const& state)
 }
 
 // ----------------------------------------------------------------------------
-void CityViewer::drawHoverTooltip(Simulation& simulation, core::DebugState const& state)
+void CityViewer::drawHoverTooltip(Simulation& simulation, game::DebugState const& state)
 {
     if (!state.hasHoveredCell)
         return;
@@ -906,6 +918,35 @@ void CityViewer::drawHoverTooltip(Simulation& simulation, core::DebugState const
     }
 
     ImGui::EndTooltip();
+}
+
+// ----------------------------------------------------------------------------
+void CityViewer::drawClockHud(Simulation const& simulation)
+{
+    SimulationClock const& clock = simulation.clock();
+    char line[48];
+    std::snprintf(line, sizeof(line), "Jour %u  %02u:%02u",
+                  clock.day(), clock.hourOfDay(), clock.minuteOfHour());
+
+    ImVec2 const pos(m_canvas_origin.x + 12.0f, m_canvas_origin.y + 10.0f);
+    m_draw_list->AddText(ImVec2(pos.x + 1.0f, pos.y + 1.0f),
+                         IM_COL32(0, 0, 0, 180), line);
+    m_draw_list->AddText(pos, IM_COL32(240, 236, 220, 230), line);
+}
+
+// ----------------------------------------------------------------------------
+void CityViewer::drawHint(editor::Editor const& editor)
+{
+    std::string const hint = editor.hint();
+    if (hint.empty())
+        return;
+
+    ImVec2 const size = ImGui::CalcTextSize(hint.c_str());
+    ImVec2 const pos(m_canvas_origin.x + 12.0f,
+                     m_canvas_origin.y + m_canvas_size.y - size.y - 14.0f);
+    m_draw_list->AddText(ImVec2(pos.x + 1.0f, pos.y + 1.0f),
+                         IM_COL32(0, 0, 0, 180), hint.c_str());
+    m_draw_list->AddText(pos, theme::ACCENT, hint.c_str());
 }
 } // namespace ui
 } // namespace ogb

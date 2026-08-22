@@ -5,6 +5,10 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file ScriptParser.hpp
+//! \brief Script holder that loads simulation definitions through pluggable parsers.
+
+
 #ifndef OPEN_GLASSBOX_SCRIPT_HPP
 #  define OPEN_GLASSBOX_SCRIPT_HPP
 

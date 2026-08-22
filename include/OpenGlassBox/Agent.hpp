@@ -5,6 +5,10 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file Agent.hpp
+//! \brief Travelling entities that follow roads and deliver resources between units.
+
+
 #ifndef OPEN_GLASSBOX_AGENT_HPP
 #  define OPEN_GLASSBOX_AGENT_HPP
 
@@ -50,6 +54,7 @@ public:
     Resources const& carried() const { return m_resources; }
 
     void translate(Vector3f const direction);
+    void relocate(Vector3f const& position, Way* way, float offset, Node* last);
 
     bool uses(Way const& way) const;
     bool uses(Node const& node) const;

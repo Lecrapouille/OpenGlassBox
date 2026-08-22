@@ -4,6 +4,10 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+//! \file Area.hpp
+//! \brief Rectangular zones painted on the map grid, with optional area rules.
+
+
 #ifndef OPEN_GLASSBOX_AREA_HPP
 #  define OPEN_GLASSBOX_AREA_HPP
 

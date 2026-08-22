@@ -84,13 +84,17 @@ Run the demo (from the project root, after `make`):
 
 ```sh
 ./build/OpenGlassBox-demo
-./build/OpenGlassBox-demo Simulations/Braess.txt
+./build/OpenGlassBox-demo braess.ogc
 ```
 
-The simulation starts paused. Use the Time panel to play, step ticks, and change the speed from x0.25 to x16. File → Open loads another script; the current file is also watched on disk and hot-reloaded.
+The simulation starts paused. Use the Time panel to play, step ticks, and change the speed from x0.25 to x16. One window is one city. File → Open ruleset (`.ogs`) starts an empty city; File → Open city / Save city uses a `.ogc` (geometry + live state + hash of the ruleset). The Script panel can Apply a reparse without dropping the city when the types still placed still exist.
 
-- Default script: `demo/data/Simulations/TestCity.txt` (Home / Work / Shop, areas, BPR traffic).
-- `demo/data/Simulations/Braess.txt`: four-node network that exhibits the Braess paradox. Watch the Traffic panel for the relative gap and the total travel time.
+- Default: `demo/data/Simulations/test_city.ogs` + `test_city.ogc` (Home / Work / Shop, areas, BPR traffic).
+- `braess.ogs` / `braess.ogc`: four-node Braess paradox. Watch the Traffic panel for Relgap and total travel time.
+- `regular.ogs` / `regular.ogc`: CiudadSim-style `Regular(6,6)` grid, bidirectional ways.
+- `chicago.ogs` / `chicago.ogc`: simplified arteries (not the Scilab 546-node network).
+
+The language of `.ogs` is specified in [`demo/data/Simulations/README.md`](demo/data/Simulations/README.md).
 
 (Optional) Run unit tests with code coverage:
 
@@ -126,28 +130,73 @@ Changes made compared to the original source code:
   - `Point` and `Segment` are now `Node` and `Way` (better aligned with graph theory terminology).
   - `ResourceBinCollection` is now `Resources`.
   - `SimulationDefinitionLoader` is now `ScriptParser`.
-- The original project did not implement the `Area` class (a.k.a. `Zone`). OpenGlassBox now has `Area` / `AreaRule` with `spawn`, `upgrade`, `destroy` and `count` commands.
+- The original project did not implement the `Area` class (a.k.a. `Zone`). OpenGlassBox now has `Area` / `AreaRule` with `spawn`, `upgrade`, `destroy` and `count` commands. Areas and Units are decoupled: a zone is a rectangle of cells; a building is not a graph node.
 - A `Unit` used to be forced onto a `Path` `Node`, which exploded the graph. A Unit now has its own position and an optional anchor on a `Way` (offset) or a `Node`.
-- The original project implemented a dynamic A* algorithm in `Path::FindNextPoint`. Routing now minimises BPR travel times (inspired by [CiudadSim](https://www.rocq.inria.fr/metalau/ciudadsim)), with MSA flow smoothing and a cached itinerary per Agent.
+- The original project implemented a dynamic A* algorithm in `Path::FindNextPoint`. Routing implements `IRouter` (`Dijkstra` / `AStarRouter`) and minimises BPR travel times. Flow on each Way is an exponential moving average, **not** the MSA solver of CiudadSim (see below).
+- Two files: `.ogs` (ruleset) and `.ogc` (one save: header with ruleset hash + types, geometry, live state). There is no third “world” file.
+- One application window holds one city. A `World` may still contain several cities; a road that crosses a border is split, each piece owned by the city that contains its midpoint, after `World::Listener` authorises it. Dijkstra stays intra-Path: an agent does not walk into the neighbouring city by itself.
 - I implemented a script parser behind `IScriptParser`, so a Forth backend can be plugged in later without touching the engine.
 - The original project had no unit tests or comments. I added both.
 - Since I was more interested in the simulation than in rendering:
   - dependencies on the Unity engine and its decorator classes were not ported;
   - the library was separated from the demo application;
-  - the demo uses GLFW + OpenGL 3.3 + Dear ImGui (docking) instead of a full game engine such as Unity.
+  - the demo uses GLFW + OpenGL 3.3 + Dear ImGui (docking) instead of a full game engine such as Unity. There is no SDL.
 
 ## Using the demo application
 
-- Tools in the map toolbar let you lay roads, place buildings along a Way (without splitting it), paint resource maps, paint Areas and bulldoze, all with undo/redo.
-- File → Open loads a simulation script. The current script is also watched on disk and hot-reloaded.
-- The simulation script is located at `demo/data/Simulations/TestCity.txt`. `Braess.txt` is a four-node network that exhibits the Braess paradox.
-- Time, Layers, Inspector, Rule Log, Charts and Traffic panels are dockable. Pause, step ticks, and change the speed from x0.25 to x16.
+- A SimCity-style rail on the left of the map: Inspect, Roads, Zones, Buildings, Maps, Demolish. The palette under the rail lists the types from the open `.ogs`. Undo / Redo sit on the rail. Demolish can Clear city (ruleset kept).
+- Roads snap to the world grid. Zones and map paint drag as soon as the canvas is hovered. Inspect can pick a Way. Bulldoze removes orphan nodes.
+- File → New city / Open ruleset (`.ogs`), Open city / Save city (`.ogc`). The Script panel edits the `.ogs` and Apply reparses it.
+- Time, Layers, Inspector, Rule Log, Charts, Traffic and Script are dockable. The canvas HUD shows `Jour N  HH:MM` and tints night / dawn / day / dusk. Charts use game hours on the X axis.
+
+## Traffic: BPR, MSA, and what OpenGlassBox actually does
+
+**BPR** (Bureau of Public Roads), already the cost of a `Way` (`Way::travelTime`):
+
+$$\displaystyle t(f) = t_0 \left(1 + 0.15 \left(\frac{f}{c}\right)^{\beta}\right)$$
+
+**MSA** as in CiudadSim (assignment solver, **not implemented**). At iteration \(k\), \(y^k\) is an all-or-nothing assignment onto shortest paths, then
+
+$$\displaystyle f^{k+1} = (1-\lambda_k)\, f^k + \lambda_k\, y^k,\qquad \lambda_k = \frac{1}{k}$$
+
+**OpenGlassBox** instead smooths the live count of agents \(n\) on the Way with a fixed \(\alpha\) (default \(0{,}05\)):
+
+$$\displaystyle f \leftarrow (1-\alpha)\, f + \alpha\, n$$
+
+This is not a \(1/k\) average and it does not converge to a Wardrop equilibrium: it **damps** the A↔B oscillation.
+
+**Relgap** in the Traffic panel is a diagnostic, not a solver stopping rule:
+
+$$\displaystyle \mathrm{Relgap} = \frac{\mathrm{TSTT} - \mathrm{SPTT}}{\mathrm{TSTT}}$$
+
+`City` owns an `IRouter` (`findRoute`, `shortestPathCost`). Swap the implementation without touching Agents.
+
+## For authors who want their own SimCity
+
+GlassBox (Willmott, GDC 2012) is **data**, not a tree of `Update()` objects. Four families: Maps (2D fields), Units (buildings with bounded bins), Agents (mobiles that carry resources), Paths (the pipe). Areas (RCI zones) were in the talk and missing from MultiAgentSimulation; they are here. The demo is a **host**: gameplay lives in the `.ogs`. The more stable the language and the `.ogc` save, the less C++ you need to touch.
+
+Already in this tree:
+
+- `.ogs` language (see `demo/data/Simulations/README.md`)
+- `.ogc` save with a ruleset fingerprint
+- `IRouter` for another pathfinder
+- `World::Listener` (`allowWayAcross` / `allowWayRemoved`) for road diplomacy
+- TestCity as a documented recipe
+
+Later, without doing it in this lot:
+
+- Register custom `IRuleCommand` implementations from C++ without forking the parser
+- Freeze a query API for the UI (map totals, agents by type, Relgap, budget)
+- Service networks as their own `Path` (water, power), or the convention “one Map = one coverage”
+- Occupancy / queues on a Way (original GlassBox: the agent *is* the traffic)
+- Staged construction (`upgrade` exists; a timer / Money cost does not)
+- Deterministic seed + replay for rule debugging
 
 ## Future ideas
 
 - Import [OpenStreetMap](https://www.openstreetmap.org) maps.
 - Implement ideas from [Exploring SimCity: A Conscious Process of Discovery](https://youtu.be/eZfj7LEFT98).
-- Parallelize the simulation: dispatch work across CPU cores (e.g. with OpenMP) or distribute it over the network (peer-to-peer).
+- Parallelize the simulation: dispatch work across CPU cores (e.g. with OpenMP) or distribute it over the network (peer-to-peer). `World::Listener` is the hook; real IPC is out of scope here.
 - Attach `Agent` objects directly to `Way` segments; for cars, track the distance to the next `Agent`.
 - Display and edit a SimCity-like city as a spreadsheet: insert and edit cells to define simulation rules. This project could be merged with [SimTaDyn](https://github.com/Lecrapouille/SimTaDyn).
 
