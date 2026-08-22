@@ -10,6 +10,8 @@
 //! \brief Look up a name, throwing a message that says what was missing rather
 //! than the bare "map::at" the standard library would give.
 // -----------------------------------------------------------------------------
+namespace ogb {
+
 template<class T>
 static T const& lookup(std::map<std::string, std::unique_ptr<T>> const& container,
                        std::string const& id, char const* what)
@@ -249,3 +251,5 @@ bool ScriptDefinitions::empty() const
            m_ruleMaps.empty() && m_ruleUnits.empty() && m_ruleAreas.empty() &&
            m_areaTypes.empty();
 }
+
+} // namespace ogb

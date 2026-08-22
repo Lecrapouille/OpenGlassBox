@@ -12,6 +12,9 @@
 #include <vector>
 
 namespace ogb {
+namespace ui {
+using namespace ogb::theme;
+
 
 // ----------------------------------------------------------------------------
 //! \brief One row of the ranking of the busiest segments.
@@ -47,7 +50,7 @@ float TrafficPanel::totalTravelTime(Simulation& simulation)
 }
 
 // ----------------------------------------------------------------------------
-void TrafficPanel::draw(Simulation& simulation, DebugState& state)
+void TrafficPanel::draw(Simulation& simulation, core::DebugState& state)
 {
     if (!ImGui::Begin("Traffic"))
     {
@@ -187,5 +190,5 @@ void TrafficPanel::draw(Simulation& simulation, DebugState& state)
 
     ImGui::End();
 }
-
+} // namespace ui
 } // namespace ogb

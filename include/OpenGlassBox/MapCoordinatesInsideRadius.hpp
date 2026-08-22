@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
+// Copyright (c) 2020-2026 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Based on https://github.com/federicodangelo/MultiAgentSimulation
 // Distributed under MIT License.
@@ -11,6 +11,8 @@
 #  include <vector>
 #  include <map>
 #  include <cstdint>
+
+namespace ogb {
 
 //==============================================================================
 //! \brief Utility class computing cell indices of a Map given a position and a
@@ -110,5 +112,7 @@ private:
     int32_t m_minV;
     int32_t m_maxV;
 };
+
+} // namespace ogb
 
 #endif

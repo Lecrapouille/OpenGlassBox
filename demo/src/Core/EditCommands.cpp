@@ -11,6 +11,8 @@
 #include <cstdio>
 
 namespace ogb {
+namespace core {
+
 
 // ----------------------------------------------------------------------------
 //! \brief Look up a Path, returning nullptr rather than throwing: a command can
@@ -718,5 +720,5 @@ std::string AddAreaCommand::label() const
 {
     return "zone " + m_areaType;
 }
-
+} // namespace core
 } // namespace ogb

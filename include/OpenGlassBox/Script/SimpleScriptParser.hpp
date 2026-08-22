@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
+// Copyright (c) 2020-2026 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
@@ -9,6 +9,8 @@
 
 #  include "OpenGlassBox/Script/IScriptParser.hpp"
 #  include "OpenGlassBox/Script/Lexer.hpp"
+
+namespace ogb {
 
 //==============================================================================
 //! \brief Parser of the historical keyword based language of OpenGlassBox.
@@ -147,5 +149,7 @@ private:
     ScriptDefinitions* m_definitions = nullptr;
     std::vector<ParseError> m_errors;
 };
+
+} // namespace ogb
 
 #endif

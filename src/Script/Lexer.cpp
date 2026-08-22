@@ -11,6 +11,8 @@
 
 //! \brief Characters that are a token on their own even when written against a
 //! word. Writing "[People 1]" then reads the same as "[ People 1 ]".
+namespace ogb {
+
 static bool isDelimiter(char c)
 {
     return (c == '[') || (c == ']');
@@ -168,3 +170,5 @@ std::string Lexer::sourceLine(uint32_t line) const
 
     return m_lines[line - 1u];
 }
+
+} // namespace ogb

@@ -16,6 +16,9 @@
 #include <fstream>
 
 namespace ogb {
+namespace application {
+using namespace ogb::theme;
+
 
 //! \brief Height of the status bar, in unscaled pixels.
 static constexpr float STATUS_BAR_HEIGHT = 26.0f;
@@ -277,5 +280,5 @@ void DearImGuiApplication::drawStatusBar() const
     ImGui::End();
     ImGui::PopStyleVar(3);
 }
-
+} // namespace application
 } // namespace ogb

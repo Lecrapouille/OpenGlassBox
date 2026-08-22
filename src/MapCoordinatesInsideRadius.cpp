@@ -13,6 +13,8 @@
 //------------------------------------------------------------------------------
 
 // Will be used to obtain a seed for the random number engine
+namespace ogb {
+
 static std::random_device rd;
 // Standard mersenne_twister_engine seeded with rd()
 static std::mt19937 generator(rd());
@@ -101,3 +103,5 @@ bool MapCoordinatesInsideRadius::next(int32_t& u, int32_t& v)
     u = v = 0;
     return false;
 }
+
+} // namespace ogb

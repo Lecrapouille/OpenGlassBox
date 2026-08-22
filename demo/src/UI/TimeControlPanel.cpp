@@ -10,6 +10,9 @@
 #include "OpenGlassBox/Simulation.hpp"
 
 namespace ogb {
+namespace ui {
+using namespace ogb::theme;
+
 
 //! \brief Speeds offered as one-click buttons.
 static float const SPEEDS[] = { 0.25f, 0.5f, 1.0f, 2.0f, 4.0f, 8.0f, 16.0f };
@@ -25,8 +28,8 @@ uint32_t TimeControlPanel::takePendingSteps()
 }
 
 // ----------------------------------------------------------------------------
-void TimeControlPanel::draw(Simulation& simulation, DebugState& state,
-                            RuleTrace& trace)
+void TimeControlPanel::draw(Simulation& simulation, core::DebugState& state,
+                            core::RuleTrace& trace)
 {
     if (!ImGui::Begin("Time"))
     {
@@ -174,5 +177,5 @@ void TimeControlPanel::draw(Simulation& simulation, DebugState& state,
 
     ImGui::End();
 }
-
+} // namespace ui
 } // namespace ogb

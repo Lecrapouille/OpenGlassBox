@@ -9,6 +9,8 @@
 #include <cmath>
 
 // -----------------------------------------------------------------------------
+namespace ogb {
+
 World::World(SimulationConfig const& config)
     : m_config(config),
       m_clock(config.ticksPerMinute)
@@ -105,3 +107,5 @@ Vector3f World::mapPosition2world(int32_t u, int32_t v) const
 
     return Vector3f(float(u) * size, float(v) * size, 0.0f);
 }
+
+} // namespace ogb

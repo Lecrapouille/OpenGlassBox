@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
+// Copyright (c) 2020-2026 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Based on https://github.com/federicodangelo/MultiAgentSimulation
 // Distributed under MIT License.
@@ -11,6 +11,8 @@
 #  include <string>
 #  include <cstdint> // uint32_t
 #  include <iostream> // operator<<
+
+namespace ogb {
 
 //==============================================================================
 //! \brief Type of Resource ("Water", "Oil", "Electricity", "Citizen" ...)
@@ -115,5 +117,7 @@ protected:
     //! \brief Current amount of resources.
     uint32_t     m_amount = 0u;
 };
+
+} // namespace ogb
 
 #endif

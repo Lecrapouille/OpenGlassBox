@@ -1,10 +1,7 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
+// Copyright (c) 2020-2026 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Distributed under MIT License.
-//
-// Adapted from the Oakular application layer of
-// https://github.com/Lecrapouille/BlackThorn
 //-----------------------------------------------------------------------------
 
 #ifndef OPEN_GLASSBOX_DEMO_APPLICATION_HPP
@@ -16,6 +13,8 @@
 #  include <string>
 
 namespace ogb {
+namespace application {
+
 
 // ****************************************************************************
 //! \brief Host of the demo: owns the GLFW window, the OpenGL context and the
@@ -141,7 +140,7 @@ private:
     bool m_halted = false;
     std::unique_ptr<DearImGuiApplication> m_imgui;
 };
-
+} // namespace application
 } // namespace ogb
 
 #endif

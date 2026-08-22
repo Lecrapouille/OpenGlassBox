@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
+// Copyright (c) 2020-2026 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Based on https://github.com/federicodangelo/MultiAgentSimulation
 // Distributed under MIT License.
@@ -9,6 +9,8 @@
 #  define OPEN_GLASSBOX_CONFIG_HPP
 
 #include <cstdint>
+
+namespace ogb {
 
 //==============================================================================
 //! \brief Default values for SimulationConfig.
@@ -82,5 +84,7 @@ struct SimulationConfig
     //--------------------------------------------------------------------------
     float tickDuration() const { return 1.0f / ticksPerSecond; }
 };
+
+} // namespace ogb
 
 #endif

@@ -8,6 +8,8 @@
 #include "OpenGlassBox/Simulation.hpp"
 
 namespace ogb {
+namespace core {
+
 
 // ----------------------------------------------------------------------------
 Agent* Selection::resolveAgent(Simulation& simulation) const
@@ -27,5 +29,5 @@ Agent* Selection::resolveAgent(Simulation& simulation) const
 
     return nullptr;
 }
-
+} // namespace core
 } // namespace ogb

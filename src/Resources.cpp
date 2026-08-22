@@ -8,6 +8,8 @@
 #include "OpenGlassBox/Resources.hpp"
 
 // -----------------------------------------------------------------------------
+namespace ogb {
+
 Resource& Resources::addResource(ResourceType const& type, uint32_t const amount)
 {
     Resource& res = findOrAddResource(type);
@@ -162,3 +164,5 @@ std::ostream& operator<<(std::ostream& os, Resources const& resources)
         os << "  " << it;
     return os;
 }
+
+} // namespace ogb

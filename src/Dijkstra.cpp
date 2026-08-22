@@ -11,6 +11,8 @@
 #include <queue>
 #include <limits>
 
+namespace ogb {
+
 namespace
 {
     struct QueueEntry
@@ -225,3 +227,5 @@ float Dijkstra::heuristic(Node& p1, Node& p2, float maxFreeFlowSpeed) const
 {
     return magnitude(p2.position() - p1.position()) / maxFreeFlowSpeed;
 }
+
+} // namespace ogb

@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
+// Copyright (c) 2020-2026 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Based on https://github.com/federicodangelo/MultiAgentSimulation
 // Distributed under MIT License.
@@ -9,6 +9,8 @@
 #  define OPEN_GLASSBOX_TYPES_HPP
 
 #  include "OpenGlassBox/Resources.hpp"
+
+namespace ogb {
 
 //==========================================================================
 //! This file defines all types holding information after the parsing of a
@@ -260,5 +262,7 @@ public:
     uint32_t               color;
     std::vector<RuleArea*> rules;
 };
+
+} // namespace ogb
 
 #endif

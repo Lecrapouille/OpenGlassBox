@@ -12,6 +12,9 @@
 #include <algorithm>
 
 namespace ogb {
+namespace ui {
+using namespace ogb::theme;
+
 
 // ----------------------------------------------------------------------------
 //! \brief Draw one resource as a labelled progress bar, which reads much faster
@@ -104,8 +107,8 @@ static void drawRules(RuleContainer const& rules, uint32_t ticks)
 }
 
 // ----------------------------------------------------------------------------
-void InspectorPanel::draw(Simulation& simulation, DebugState& state,
-                          RuleTrace const& trace)
+void InspectorPanel::draw(Simulation& simulation, core::DebugState& state,
+                          core::RuleTrace const& trace)
 {
     if (!ImGui::Begin("Inspector"))
     {
@@ -115,20 +118,20 @@ void InspectorPanel::draw(Simulation& simulation, DebugState& state,
 
     switch (state.selection.kind)
     {
-    case Selection::Kind::None:
+    case core::Selection::Kind::None:
         ImGui::TextDisabled("Click a unit, an agent, a node or a cell\n"
                             "on the map to inspect it.");
         break;
-    case Selection::Kind::Unit:
+    case core::Selection::Kind::Unit:
         drawUnit(simulation, state, trace);
         break;
-    case Selection::Kind::Agent:
+    case core::Selection::Kind::Agent:
         drawAgent(simulation, state);
         break;
-    case Selection::Kind::Node:
+    case core::Selection::Kind::Node:
         drawNode(state);
         break;
-    case Selection::Kind::Cell:
+    case core::Selection::Kind::Cell:
         drawCell(simulation, state);
         break;
     }
@@ -137,8 +140,8 @@ void InspectorPanel::draw(Simulation& simulation, DebugState& state,
 }
 
 // ----------------------------------------------------------------------------
-void InspectorPanel::drawUnit(Simulation& simulation, DebugState& state,
-                              RuleTrace const& trace)
+void InspectorPanel::drawUnit(Simulation& simulation, core::DebugState& state,
+                              core::RuleTrace const& trace)
 {
     Unit* const unit = state.selection.unit;
     if (unit == nullptr)
@@ -194,7 +197,7 @@ void InspectorPanel::drawUnit(Simulation& simulation, DebugState& state,
     size_t index = trace.size();
     while ((index-- > 0u) && (shown < 6))
     {
-        RuleEvent const& event = trace.at(index);
+        core::RuleEvent const& event = trace.at(index);
         if (event.entity != entity)
             continue;
         if (event.city != state.selection.city)
@@ -224,7 +227,7 @@ void InspectorPanel::drawUnit(Simulation& simulation, DebugState& state,
 }
 
 // ----------------------------------------------------------------------------
-void InspectorPanel::drawAgent(Simulation& simulation, DebugState& state)
+void InspectorPanel::drawAgent(Simulation& simulation, core::DebugState& state)
 {
     Agent* const agent = state.selection.resolveAgent(simulation);
     if (agent == nullptr)
@@ -293,7 +296,7 @@ void InspectorPanel::drawAgent(Simulation& simulation, DebugState& state)
 }
 
 // ----------------------------------------------------------------------------
-void InspectorPanel::drawNode(DebugState& state)
+void InspectorPanel::drawNode(core::DebugState& state)
 {
     Node* const node = state.selection.node;
     if (node == nullptr)
@@ -331,7 +334,7 @@ void InspectorPanel::drawNode(DebugState& state)
 }
 
 // ----------------------------------------------------------------------------
-void InspectorPanel::drawCell(Simulation& simulation, DebugState& state)
+void InspectorPanel::drawCell(Simulation& simulation, core::DebugState& state)
 {
     auto const it = simulation.cities().find(state.selection.city);
     if (it == simulation.cities().end())
@@ -365,5 +368,5 @@ void InspectorPanel::drawCell(Simulation& simulation, DebugState& state)
     ImGui::SeparatorText("City globals");
     drawResources("Globals", city.globals().container());
 }
-
+} // namespace ui
 } // namespace ogb

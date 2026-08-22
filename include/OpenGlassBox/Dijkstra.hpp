@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
+// Copyright (c) 2020-2026 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Based on https://github.com/federicodangelo/MultiAgentSimulation
 // Distributed under MIT License.
@@ -13,6 +13,8 @@
 #  include <unordered_set>
 #  include <map>
 #  include <vector>
+
+namespace ogb {
 
 class Unit;
 
@@ -87,5 +89,7 @@ private:
     std::map<Node*, float>    m_scoreFromStart;
     std::mt19937              m_rng;
 };
+
+} // namespace ogb
 
 #endif

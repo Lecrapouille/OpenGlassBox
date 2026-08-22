@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
+// Copyright (c) 2020-2026 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
@@ -14,6 +14,8 @@
 #  include <vector>
 
 namespace ogb {
+namespace core {
+
 
 // ****************************************************************************
 //! \brief One recorded attempt to run a rule, flattened into plain strings so
@@ -110,7 +112,7 @@ private:
     bool m_recording = false;
     bool m_failures_only = true;
 };
-
+} // namespace core
 } // namespace ogb
 
 #endif

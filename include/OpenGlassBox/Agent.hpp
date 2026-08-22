@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
+// Copyright (c) 2020-2026 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Based on https://github.com/federicodangelo/MultiAgentSimulation
 // Distributed under MIT License.
@@ -11,6 +11,8 @@
 #  include "OpenGlassBox/Config.hpp"
 #  include "OpenGlassBox/Dijkstra.hpp"
 #  include "OpenGlassBox/Path.hpp"
+
+namespace ogb {
 
 class Unit;
 
@@ -84,5 +86,7 @@ private:
 };
 
 using Agents = std::vector<std::unique_ptr<Agent>>;
+
+} // namespace ogb
 
 #endif

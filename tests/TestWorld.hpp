@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
+// Copyright (c) 2020-2026 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
@@ -8,6 +8,8 @@
 #  define OPEN_GLASSBOX_TESTS_TEST_WORLD_HPP
 
 #  include "OpenGlassBox/World.hpp"
+
+using namespace ogb;
 
 //==============================================================================
 //! \brief A world holding a single city, so that a test needing just a city can

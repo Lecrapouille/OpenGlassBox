@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
+// Copyright (c) 2020-2026 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Based on https://github.com/federicodangelo/MultiAgentSimulation
 // Distributed under MIT License.
@@ -10,6 +10,8 @@
 
 #  include "OpenGlassBox/ScriptParser.hpp"
 #  include "OpenGlassBox/World.hpp"
+
+namespace ogb {
 
 //==============================================================================
 //! \brief Entry point class managing (add, get, remove) a collection of Cities
@@ -162,5 +164,7 @@ private:
     uint64_t      m_totalTicks = 0u;
     Simulation::Listener *m_listener;
 };
+
+} // namespace ogb
 
 #endif

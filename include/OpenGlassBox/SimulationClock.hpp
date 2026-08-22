@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
+// Copyright (c) 2020-2026 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
@@ -8,6 +8,8 @@
 #  define OPEN_GLASSBOX_SIMULATION_CLOCK_HPP
 
 #  include <cstdint>
+
+namespace ogb {
 
 //==============================================================================
 //! \brief Calendar of a Simulation, derived from the number of ticks elapsed.
@@ -91,5 +93,7 @@ private:
     uint64_t m_ticks = 0u;
     uint32_t m_ticksPerMinute = 20u;
 };
+
+} // namespace ogb
 
 #endif

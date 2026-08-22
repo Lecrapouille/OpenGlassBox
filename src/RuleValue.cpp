@@ -8,6 +8,8 @@
 #include "OpenGlassBox/RuleValue.hpp"
 #include "OpenGlassBox/City.hpp"
 
+namespace ogb {
+
 uint32_t RuleValueGlobal::get(RuleContext& context)
 {
     return context.globals->getAmount(m_resource.type());
@@ -89,3 +91,5 @@ std::string const& RuleValueMap::type() const
 {
     return m_mapId;
 }
+
+} // namespace ogb

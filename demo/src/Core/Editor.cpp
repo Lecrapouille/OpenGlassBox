@@ -14,6 +14,9 @@
 #include <cstdio>
 
 namespace ogb {
+namespace core {
+using namespace ogb::theme;
+
 
 //! \brief How close, in pixels, a click has to land on a road or a building for
 //! a tool to act on it.
@@ -316,7 +319,7 @@ void Editor::drawToolbar(Simulation& simulation, DebugState& state)
 
 // ----------------------------------------------------------------------------
 bool Editor::onCanvas(Simulation& simulation, DebugState& state,
-                      CityViewer& viewer, bool hovered)
+                      ui::CityViewer& viewer, bool hovered)
 {
     // The shortcuts work whatever the armed tool: undoing is not an edit.
     ImGuiIO& io = ImGui::GetIO();
@@ -366,7 +369,7 @@ bool Editor::onCanvas(Simulation& simulation, DebugState& state,
 }
 
 // ----------------------------------------------------------------------------
-void Editor::handleRoad(Simulation& simulation, CityViewer& viewer, bool hovered)
+void Editor::handleRoad(Simulation& simulation, ui::CityViewer& viewer, bool hovered)
 {
     if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
     {
@@ -393,7 +396,7 @@ void Editor::handleRoad(Simulation& simulation, CityViewer& viewer, bool hovered
 }
 
 // ----------------------------------------------------------------------------
-void Editor::handleBuilding(Simulation& simulation, CityViewer& viewer)
+void Editor::handleBuilding(Simulation& simulation, ui::CityViewer& viewer)
 {
     City* city = targetCity(simulation);
     ImVec2 const world = viewer.mouseWorld();
@@ -507,7 +510,7 @@ void Editor::handleZone(Simulation& simulation, DebugState& state, bool hovered)
 }
 
 // ----------------------------------------------------------------------------
-void Editor::handleBulldozer(Simulation& simulation, CityViewer& viewer)
+void Editor::handleBulldozer(Simulation& simulation, ui::CityViewer& viewer)
 {
     City* city = targetCity(simulation);
     ImVec2 const world = viewer.mouseWorld();
@@ -558,7 +561,7 @@ void Editor::handleBulldozer(Simulation& simulation, CityViewer& viewer)
 }
 
 // ----------------------------------------------------------------------------
-void Editor::drawPreview(Simulation& simulation, CityViewer& viewer,
+void Editor::drawPreview(Simulation& simulation, ui::CityViewer& viewer,
                          ImDrawList* drawList)
 {
     City* city = targetCity(simulation);
@@ -711,5 +714,5 @@ void Editor::drawHistoryPanel(Simulation& simulation)
 
     ImGui::End();
 }
-
+} // namespace core
 } // namespace ogb

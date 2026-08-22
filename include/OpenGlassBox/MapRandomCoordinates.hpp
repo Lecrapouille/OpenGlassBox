@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
+// Copyright (c) 2020-2026 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Based on https://github.com/federicodangelo/MultiAgentSimulation
 // Distributed under MIT License.
@@ -10,6 +10,8 @@
 
 #  include <vector>
 #  include <stdint.h>
+
+namespace ogb {
 
 //==============================================================================
 //! \brief
@@ -42,5 +44,7 @@ private:
     std::vector<uint32_t> m_randomCoordinates;
     std::vector<uint32_t> m_returnedCoordinates;
 };
+
+} // namespace ogb
 
 #endif

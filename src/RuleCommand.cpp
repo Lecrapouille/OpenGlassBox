@@ -14,6 +14,8 @@
 #include <sstream>
 
 //------------------------------------------------------------------------------
+namespace ogb {
+
 bool RuleCommandAdd::validate(RuleContext& context)
 {
     return m_target.get(context) < m_target.capacity(context);
@@ -283,3 +285,5 @@ std::string RuleCommandDestroy::type()
 {
     return "Destroy " + m_unitType;
 }
+
+} // namespace ogb

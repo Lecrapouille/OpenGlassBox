@@ -12,6 +12,8 @@
 #include <iostream>
 #include <limits>
 
+namespace ogb {
+
 namespace
 {
     static const float MIN_WAY_MAGNITUDE = 1e-6f;
@@ -366,3 +368,5 @@ void Agent::moveTowardsNextNode(float dt)
 
     m_position = m_currentWay->positionAt(m_offset);
 }
+
+} // namespace ogb

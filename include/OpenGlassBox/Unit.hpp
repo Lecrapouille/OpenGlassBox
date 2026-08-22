@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
+// Copyright (c) 2020-2026 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Based on https://github.com/federicodangelo/MultiAgentSimulation
 // Distributed under MIT License.
@@ -10,6 +10,8 @@
 
 #  include "OpenGlassBox/Path.hpp"
 #  include "OpenGlassBox/Rule.hpp"
+
+namespace ogb {
 
 class RuleUnit;
 class City;
@@ -144,5 +146,7 @@ private:
 };
 
 using Units = std::vector<std::unique_ptr<Unit>>;
+
+} // namespace ogb
 
 #endif

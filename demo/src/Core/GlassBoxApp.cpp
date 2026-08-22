@@ -31,6 +31,9 @@
 #endif
 
 namespace ogb {
+namespace core {
+using namespace ogb::theme;
+
 
 namespace {
 
@@ -181,7 +184,7 @@ static int64_t modificationTime(std::string const& path)
 
 // ----------------------------------------------------------------------------
 GlassBoxApp::GlassBoxApp(Options options)
-    : Application(options.width, options.height, "OpenGlassBox"),
+    : application::Application(options.width, options.height, "OpenGlassBox"),
       m_options(std::move(options)),
       m_data_paths(buildDataPaths(m_options.dataPath))
 {}
@@ -384,7 +387,7 @@ void GlassBoxApp::watchScriptFile(float dt)
 // ----------------------------------------------------------------------------
 void GlassBoxApp::openScriptDialog()
 {
-    FileDialogRequest request;
+    application::FileDialogRequest request;
     request.key = OPEN_SCRIPT_DIALOG;
     request.title = "Open a simulation script";
     request.filters = ".txt,.*";
@@ -855,5 +858,5 @@ void GlassBoxApp::onDrawStatusBar()
         ImGui::TextDisabled("%s", m_script_path.c_str());
     }
 }
-
+} // namespace core
 } // namespace ogb

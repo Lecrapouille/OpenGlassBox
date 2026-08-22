@@ -1,6 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
-// https://github.com/Lecrapouille/OpenGlassBox
+// Copyright (c) 2020-2026 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
@@ -8,17 +7,16 @@
 #ifndef OPEN_GLASSBOX_DEMO_DEBUG_STATE_HPP
 #  define OPEN_GLASSBOX_DEMO_DEBUG_STATE_HPP
 
+#  include "OpenGlassBox/Simulation.hpp"
+
 #  include <cstdint>
 #  include <map>
 #  include <string>
 
-class Unit;
-class Node;
-class Agent;
-class City;
-class Simulation;
 
 namespace ogb {
+namespace core {
+
 
 // ****************************************************************************
 //! \brief How a Map is painted over the grid.
@@ -132,7 +130,7 @@ struct DebugState
         return (it == layers.end()) || it->second.visible;
     }
 };
-
+} // namespace core
 } // namespace ogb
 
 #endif

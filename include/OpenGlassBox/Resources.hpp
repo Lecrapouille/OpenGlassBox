@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
+// Copyright (c) 2020-2026 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Based on https://github.com/federicodangelo/MultiAgentSimulation
 // Distributed under MIT License.
@@ -10,6 +10,8 @@
 
 #  include "OpenGlassBox/Resource.hpp"
 #  include <vector>
+
+namespace ogb {
 
 //==============================================================================
 //! \brief Resources come in a container. This class manages a collection of
@@ -167,5 +169,7 @@ private:
 
     std::vector<Resource> m_bin;
 };
+
+} // namespace ogb
 
 #endif

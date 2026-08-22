@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
+// Copyright (c) 2020-2026 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
@@ -10,10 +10,11 @@
 #  include "OpenGlassBox/MapRegion.hpp"
 #  include "OpenGlassBox/Rule.hpp"
 #  include "OpenGlassBox/Vector.hpp"
-
 #  include <memory>
 #  include <string>
 #  include <vector>
+
+namespace ogb {
 
 class City;
 class Unit;
@@ -96,5 +97,7 @@ private:
 };
 
 using Areas = std::vector<std::unique_ptr<Area>>;
+
+} // namespace ogb
 
 #endif

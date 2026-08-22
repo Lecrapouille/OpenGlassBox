@@ -11,6 +11,8 @@
 #include "OpenGlassBox/Unit.hpp"
 
 namespace ogb {
+namespace core {
+
 
 // ----------------------------------------------------------------------------
 RuleTrace::~RuleTrace()
@@ -93,5 +95,5 @@ void RuleTrace::onRuleExecuted(IRule::Trace const& trace)
         m_head = (m_head + 1u) % CAPACITY;
     }
 }
-
+} // namespace core
 } // namespace ogb

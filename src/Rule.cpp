@@ -8,4 +8,8 @@
 #include "OpenGlassBox/Rule.hpp"
 
 //------------------------------------------------------------------------------
+namespace ogb {
+
 IRule::Listener* IRule::s_listener = nullptr;
+
+} // namespace ogb

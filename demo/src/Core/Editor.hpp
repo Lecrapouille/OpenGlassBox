@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
+// Copyright (c) 2020-2026 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
@@ -10,15 +10,12 @@
 #  include "Application/OpenGL.hpp"
 #  include "Core/EditCommands.hpp"
 #  include "Core/DebugState.hpp"
-
-class Simulation;
-class City;
-class Way;
-class Node;
+#  include "OpenGlassBox/Simulation.hpp"
 
 namespace ogb {
+namespace ui { class CityViewer; }
 
-class CityViewer;
+namespace core {
 
 // ============================================================================
 //! \brief What a click on the map does.
@@ -66,14 +63,14 @@ public:
     //! took the click, so the viewer knows not to also treat it as a selection.
     //! \param[in] hovered: whether the mouse is over the canvas.
     // ------------------------------------------------------------------------
-    bool onCanvas(Simulation& simulation, DebugState& state, CityViewer& viewer,
+    bool onCanvas(Simulation& simulation, DebugState& state, ui::CityViewer& viewer,
                   bool hovered);
 
     // ------------------------------------------------------------------------
     //! \brief Draw what the current tool is about to do: the rubber band of a
     //! road, the rectangle of the brush, the target of the bulldozer.
     // ------------------------------------------------------------------------
-    void drawPreview(Simulation& simulation, CityViewer& viewer,
+    void drawPreview(Simulation& simulation, ui::CityViewer& viewer,
                      ImDrawList* drawList);
 
     void undo(Simulation& simulation) { m_stack.undo(simulation); }
@@ -121,11 +118,11 @@ private:
     // ------------------------------------------------------------------------
     Vector3f snap(Simulation& simulation, ImVec2 const& world) const;
 
-    void handleRoad(Simulation& simulation, CityViewer& viewer, bool hovered);
-    void handleBuilding(Simulation& simulation, CityViewer& viewer);
+    void handleRoad(Simulation& simulation, ui::CityViewer& viewer, bool hovered);
+    void handleBuilding(Simulation& simulation, ui::CityViewer& viewer);
     void handlePaint(Simulation& simulation, DebugState& state, bool hovered);
     void handleZone(Simulation& simulation, DebugState& state, bool hovered);
-    void handleBulldozer(Simulation& simulation, CityViewer& viewer);
+    void handleBulldozer(Simulation& simulation, ui::CityViewer& viewer);
 
 private:
 
@@ -155,7 +152,7 @@ private:
     int32_t m_dragV2 = 0;
     bool m_dragValid = false;
 };
-
+} // namespace core
 } // namespace ogb
 
 #endif

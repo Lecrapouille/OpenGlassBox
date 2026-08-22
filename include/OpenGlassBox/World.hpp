@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
+// Copyright (c) 2020-2026 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
@@ -9,6 +9,8 @@
 
 #  include "OpenGlassBox/City.hpp"
 #  include "OpenGlassBox/SimulationClock.hpp"
+
+namespace ogb {
 
 //==============================================================================
 //! \brief The shared ground every City is founded on.
@@ -117,5 +119,7 @@ private:
     //! \brief The regions the world is divided into.
     Cities           m_cities;
 };
+
+} // namespace ogb
 
 #endif

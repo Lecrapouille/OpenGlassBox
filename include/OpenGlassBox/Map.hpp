@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
+// Copyright (c) 2020-2026 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Based on https://github.com/federicodangelo/MultiAgentSimulation
 // Distributed under MIT License.
@@ -13,11 +13,12 @@
 #  include "OpenGlassBox/MapRegion.hpp"
 #  include "OpenGlassBox/Rule.hpp"
 #  include "OpenGlassBox/Vector.hpp"
-
 #  include <array>
 #  include <map>
 #  include <memory>
 #  include <unordered_map>
+
+namespace ogb {
 
 class City;
 class World;
@@ -242,5 +243,7 @@ private:
 };
 
 using Maps = std::map<std::string, std::unique_ptr<Map>>;
+
+} // namespace ogb
 
 #endif

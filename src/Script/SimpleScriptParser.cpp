@@ -16,6 +16,8 @@
 // =============================================================================
 
 // -----------------------------------------------------------------------------
+namespace ogb {
+
 std::string ParseError::format() const
 {
     std::ostringstream stream;
@@ -1589,3 +1591,5 @@ std::unique_ptr<IScriptParser> makeScriptParser(std::string const& filename)
     // its extension, which is why this is a factory and not a constructor.
     return std::unique_ptr<IScriptParser>(new SimpleScriptParser());
 }
+
+} // namespace ogb

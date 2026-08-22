@@ -2,9 +2,6 @@
 // Copyright (c) 2020 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Distributed under MIT License.
-//
-// Adapted from the Oakular application layer of
-// https://github.com/Lecrapouille/BlackThorn
 //-----------------------------------------------------------------------------
 
 #include "Application/Application.hpp"
@@ -13,6 +10,8 @@
 #include <iostream>
 
 namespace ogb {
+namespace application {
+
 
 //! \brief Upper bound on the frame duration handed to onUpdate(). Without it,
 //! a breakpoint or a window drag would hand over a huge delta and make the
@@ -209,6 +208,7 @@ bool Application::run()
         auto const now = std::chrono::steady_clock::now();
         float dt = std::chrono::duration<float>(now - previous).count();
         previous = now;
+
         if (dt > MAX_FRAME_TIME)
         {
             dt = MAX_FRAME_TIME;
@@ -222,5 +222,5 @@ bool Application::run()
     teardown();
     return true;
 }
-
+} // namespace application
 } // namespace ogb

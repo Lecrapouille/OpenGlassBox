@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
+// Copyright (c) 2020-2026 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Based on https://github.com/federicodangelo/MultiAgentSimulation
 // Distributed under MIT License.
@@ -11,6 +11,8 @@
 #  include "OpenGlassBox/Types.hpp"
 #  include "OpenGlassBox/SimulationClock.hpp"
 #  include <cstdlib>
+
+namespace ogb {
 
 class City;
 class Unit;
@@ -368,5 +370,7 @@ public:
         IRule::reset(type.rate, type.commands);
     }
 };
+
+} // namespace ogb
 
 #endif

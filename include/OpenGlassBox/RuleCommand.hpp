@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
+// Copyright (c) 2020-2026 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Based on https://github.com/federicodangelo/MultiAgentSimulation
 // Distributed under MIT License.
@@ -9,6 +9,8 @@
 #  define OPEN_GLASSBOX_RULE_COMMAND_HPP
 
 #  include "OpenGlassBox/Rule.hpp"
+
+namespace ogb {
 
 //==============================================================================
 //! \brief
@@ -294,5 +296,7 @@ private:
 
     std::string m_unitType;
 };
+
+} // namespace ogb
 
 #endif

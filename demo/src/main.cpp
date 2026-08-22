@@ -36,7 +36,7 @@ static void usage(char const* program)
 //! \brief Parse the command line into the application options.
 //! \return false when the program shall exit without running.
 //------------------------------------------------------------------------------
-static bool parseArguments(int argc, char* argv[], ogb::GlassBoxApp::Options& options,
+static bool parseArguments(int argc, char* argv[], ogb::core::GlassBoxApp::Options& options,
                            int& exitCode)
 {
     for (int i = 1; i < argc; ++i)
@@ -96,13 +96,13 @@ static bool parseArguments(int argc, char* argv[], ogb::GlassBoxApp::Options& op
 //------------------------------------------------------------------------------
 int main(int argc, char* argv[])
 {
-    ogb::GlassBoxApp::Options options;
+    ogb::core::GlassBoxApp::Options options;
     int exitCode = EXIT_SUCCESS;
 
     if (!parseArguments(argc, argv, options, exitCode))
         return exitCode;
 
-    ogb::GlassBoxApp application(std::move(options));
+    ogb::core::GlassBoxApp application(std::move(options));
     if (!application.run())
     {
         std::cerr << "Failure: " << application.error() << std::endl;

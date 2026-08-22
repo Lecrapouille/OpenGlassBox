@@ -15,6 +15,8 @@
 //! parse succeeded. A script that fails to load therefore leaves the simulation
 //! that is already running exactly as it was.
 // -----------------------------------------------------------------------------
+namespace ogb {
+
 template<class Load>
 static bool loadInto(ScriptDefinitions& definitions,
                      std::vector<ParseError>& errors,
@@ -86,3 +88,5 @@ std::string Script::formatErrors() const
 
     return stream.str();
 }
+
+} // namespace ogb

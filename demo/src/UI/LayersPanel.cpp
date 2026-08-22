@@ -11,21 +11,24 @@
 #include <set>
 
 namespace ogb {
+namespace ui {
+using namespace ogb::theme;
+
 
 // ----------------------------------------------------------------------------
-static char const* modeName(LayerMode mode)
+static char const* modeName(core::LayerMode mode)
 {
     switch (mode)
     {
-    case LayerMode::Heatmap: return "Heatmap";
-    case LayerMode::Contour: return "Contour";
-    case LayerMode::Value: return "Value";
+    case core::LayerMode::Heatmap: return "Heatmap";
+    case core::LayerMode::Contour: return "Contour";
+    case core::LayerMode::Value: return "Value";
     }
     return "?";
 }
 
 // ----------------------------------------------------------------------------
-void LayersPanel::draw(Simulation& simulation, DebugState& state)
+void LayersPanel::draw(Simulation& simulation, core::DebugState& state)
 {
     if (!ImGui::Begin("Layers"))
     {
@@ -71,7 +74,7 @@ void LayersPanel::draw(Simulation& simulation, DebugState& state)
     {
         ImGui::PushID(name.c_str());
 
-        LayerSettings& settings = state.layer(name);
+        core::LayerSettings& settings = state.layer(name);
 
         // Color swatch, so that the legend of the canvas is right here.
         uint32_t color = 0xFFFFFF;
@@ -119,9 +122,9 @@ void LayersPanel::draw(Simulation& simulation, DebugState& state)
         ImGui::SetNextItemWidth(-90.0f);
         if (ImGui::BeginCombo("mode", modeName(settings.mode)))
         {
-            LayerMode const modes[] = { LayerMode::Heatmap, LayerMode::Contour,
-                                        LayerMode::Value };
-            for (LayerMode mode: modes)
+            core::LayerMode const modes[] = { core::LayerMode::Heatmap, core::LayerMode::Contour,
+                                        core::LayerMode::Value };
+            for (core::LayerMode mode: modes)
             {
                 if (ImGui::Selectable(modeName(mode), settings.mode == mode))
                 {
@@ -151,5 +154,5 @@ void LayersPanel::draw(Simulation& simulation, DebugState& state)
 
     ImGui::End();
 }
-
+} // namespace ui
 } // namespace ogb

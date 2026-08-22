@@ -9,6 +9,8 @@
 #include <limits> // std::numeric_limits<uint32_t>::max()
 
 // -----------------------------------------------------------------------------
+namespace ogb {
+
 const uint32_t Resource::MAX_CAPACITY = std::numeric_limits<uint32_t>::max();
 
 // -----------------------------------------------------------------------------
@@ -64,3 +66,5 @@ std::ostream& operator<<(std::ostream& os, Resource const& resource)
        << resource.m_amount << "/" << resource.m_capacity;
     return os;
 }
+
+} // namespace ogb

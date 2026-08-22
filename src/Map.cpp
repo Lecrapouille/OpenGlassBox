@@ -12,6 +12,8 @@
 #include <algorithm>
 
 // -----------------------------------------------------------------------------
+namespace ogb {
+
 Map::Map(MapType const& type, World& world)
     : m_type(type), m_world(world)
 {
@@ -276,3 +278,5 @@ void Map::executeRule(RuleMap& rule, City& city)
         }
     }
 }
+
+} // namespace ogb

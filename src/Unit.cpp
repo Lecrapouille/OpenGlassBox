@@ -11,6 +11,8 @@
 #include <algorithm>
 
 // -----------------------------------------------------------------------------
+namespace ogb {
+
 void Unit::bind(City& city)
 {
     m_context.unit = this;
@@ -154,3 +156,5 @@ bool Unit::accepts(std::string const& searchTarget, Resources const& resourcesTo
             ((find(m_type.targets.begin(), m_type.targets.end(), searchTarget)
               != m_type.targets.end()));
 }
+
+} // namespace ogb

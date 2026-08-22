@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
+// Copyright (c) 2020-2026 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Based on https://github.com/federicodangelo/MultiAgentSimulation
 // Distributed under MIT License.
@@ -10,6 +10,8 @@
 
 #  include "OpenGlassBox/City.hpp"
 #  include "OpenGlassBox/Script/IScriptParser.hpp"
+
+namespace ogb {
 
 //==============================================================================
 //! \brief Holds what a simulation script defined and knows how to load one.
@@ -138,5 +140,7 @@ private:
     ScriptDefinitions m_definitions;
     std::vector<ParseError> m_errors;
 };
+
+} // namespace ogb
 
 #endif

@@ -15,6 +15,9 @@
 #include <limits>
 
 namespace ogb {
+namespace ui {
+using namespace ogb::theme;
+
 
 //! \brief Bounds of the zoom, in pixels per world unit.
 static constexpr float MIN_ZOOM = 0.05f;
@@ -107,7 +110,7 @@ void CityViewer::frameAll(Simulation& simulation)
 }
 
 // ----------------------------------------------------------------------------
-void CityViewer::draw(Simulation& simulation, DebugState& state, Editor& editor)
+void CityViewer::draw(Simulation& simulation, core::DebugState& state, core::Editor& editor)
 {
     if (!ImGui::Begin("Map"))
     {
@@ -181,8 +184,8 @@ void CityViewer::draw(Simulation& simulation, DebugState& state, Editor& editor)
 }
 
 // ----------------------------------------------------------------------------
-void CityViewer::drawToolbar(Simulation& simulation, DebugState& state,
-                             Editor& editor)
+void CityViewer::drawToolbar(Simulation& simulation, core::DebugState& state,
+                             core::Editor& editor)
 {
     editor.drawToolbar(simulation, state);
 
@@ -220,8 +223,8 @@ void CityViewer::drawToolbar(Simulation& simulation, DebugState& state,
 }
 
 // ----------------------------------------------------------------------------
-void CityViewer::handleInputs(Simulation& simulation, DebugState& state,
-                              Editor& editor)
+void CityViewer::handleInputs(Simulation& simulation, core::DebugState& state,
+                              core::Editor& editor)
 {
     // The child window is not a widget, so claim the area explicitly to know
     // whether the mouse belongs to us.
@@ -377,13 +380,13 @@ Unit* CityViewer::pickUnit(City& city, ImVec2 const& world, float pixels) const
 }
 
 // ----------------------------------------------------------------------------
-void CityViewer::pick(Simulation& simulation, DebugState& state,
+void CityViewer::pick(Simulation& simulation, core::DebugState& state,
                       ImVec2 const& screen)
 {
     float bestDistance = PICK_RADIUS * PICK_RADIUS;
-    Selection best;
+    core::Selection best;
 
-    auto const consider = [&](ImVec2 const& position, Selection candidate) {
+    auto const consider = [&](ImVec2 const& position, core::Selection candidate) {
         float const dx = position.x - screen.x;
         float const dy = position.y - screen.y;
         float const distance = dx * dx + dy * dy;
@@ -402,8 +405,8 @@ void CityViewer::pick(Simulation& simulation, DebugState& state,
         {
             for (auto& unit: city.units())
             {
-                Selection candidate;
-                candidate.kind = Selection::Kind::Unit;
+                core::Selection candidate;
+                candidate.kind = core::Selection::Kind::Unit;
                 candidate.city = city.name();
                 candidate.unit = unit.get();
                 consider(worldToScreen(unit->position()), candidate);
@@ -414,8 +417,8 @@ void CityViewer::pick(Simulation& simulation, DebugState& state,
         {
             for (auto& agent: city.agents())
             {
-                Selection candidate;
-                candidate.kind = Selection::Kind::Agent;
+                core::Selection candidate;
+                candidate.kind = core::Selection::Kind::Agent;
                 candidate.city = city.name();
                 candidate.agentId = agent->id();
                 consider(worldToScreen(agent->position()), candidate);
@@ -428,8 +431,8 @@ void CityViewer::pick(Simulation& simulation, DebugState& state,
             {
                 for (auto& node: path.second->nodes())
                 {
-                    Selection candidate;
-                    candidate.kind = Selection::Kind::Node;
+                    core::Selection candidate;
+                    candidate.kind = core::Selection::Kind::Node;
                     candidate.city = city.name();
                     candidate.node = node.get();
                     consider(worldToScreen(node->position()), candidate);
@@ -438,7 +441,7 @@ void CityViewer::pick(Simulation& simulation, DebugState& state,
         }
     }
 
-    if (best.kind != Selection::Kind::None)
+    if (best.kind != core::Selection::Kind::None)
     {
         state.selection = std::move(best);
         return;
@@ -448,8 +451,8 @@ void CityViewer::pick(Simulation& simulation, DebugState& state,
     // to read the maps.
     if (state.hasHoveredCell)
     {
-        Selection cell;
-        cell.kind = Selection::Kind::Cell;
+        core::Selection cell;
+        cell.kind = core::Selection::Kind::Cell;
         cell.city = state.hoveredCity;
         cell.u = state.hoveredU;
         cell.v = state.hoveredV;
@@ -462,7 +465,7 @@ void CityViewer::pick(Simulation& simulation, DebugState& state,
 }
 
 // ----------------------------------------------------------------------------
-void CityViewer::updateHover(Simulation& simulation, DebugState& state)
+void CityViewer::updateHover(Simulation& simulation, core::DebugState& state)
 {
     state.hasHoveredCell = false;
 
@@ -489,7 +492,7 @@ void CityViewer::updateHover(Simulation& simulation, DebugState& state)
 }
 
 // ----------------------------------------------------------------------------
-void CityViewer::drawMaps(World& world, DebugState const& state)
+void CityViewer::drawMaps(World& world, core::DebugState const& state)
 {
     m_splitter.SetCurrentChannel(m_draw_list, CHANNEL_MAPS);
 
@@ -503,8 +506,8 @@ void CityViewer::drawMaps(World& world, DebugState const& state)
             continue;
 
         auto const settings = state.layers.find(map.type());
-        LayerSettings const options =
-            (settings != state.layers.end()) ? settings->second : LayerSettings();
+        core::LayerSettings const options =
+            (settings != state.layers.end()) ? settings->second : core::LayerSettings();
 
         bool const primary = (state.primaryLayer == map.type()) ||
                              (state.soloLayer == map.type());
@@ -522,7 +525,7 @@ void CityViewer::drawMaps(World& world, DebugState const& state)
 
                 switch (options.mode)
                 {
-                case LayerMode::Heatmap:
+                case core::LayerMode::Heatmap:
                 {
                     // A non primary map is drawn thinner so that several of
                     // them stay readable when superimposed.
@@ -533,14 +536,14 @@ void CityViewer::drawMaps(World& world, DebugState const& state)
                         theme::fromScript(map.color(), ratio * options.opacity));
                     break;
                 }
-                case LayerMode::Contour:
+                case core::LayerMode::Contour:
                     m_draw_list->AddRect(
                         p0, p1,
                         theme::fromScript(map.color(), options.opacity),
                         0.0f, 0, 1.0f + 2.0f * ratio);
                     break;
 
-                case LayerMode::Value:
+                case core::LayerMode::Value:
                 {
                     if (pixels < 22.0f)
                         break;
@@ -559,7 +562,7 @@ void CityViewer::drawMaps(World& world, DebugState const& state)
 }
 
 // ----------------------------------------------------------------------------
-void CityViewer::drawCityFrame(City& city, DebugState const& state)
+void CityViewer::drawCityFrame(City& city, core::DebugState const& state)
 {
     m_splitter.SetCurrentChannel(m_draw_list, CHANNEL_GRID);
 
@@ -634,7 +637,7 @@ void CityViewer::drawAreas(City& city)
 }
 
 // ----------------------------------------------------------------------------
-void CityViewer::drawPaths(City& city, DebugState const& state)
+void CityViewer::drawPaths(City& city, core::DebugState const& state)
 {
     if (!state.showPaths)
         return;
@@ -687,7 +690,7 @@ void CityViewer::drawPaths(City& city, DebugState const& state)
 }
 
 // ----------------------------------------------------------------------------
-void CityViewer::drawUnits(City& city, DebugState const& state)
+void CityViewer::drawUnits(City& city, core::DebugState const& state)
 {
     if (!state.showUnits)
         return;
@@ -721,7 +724,7 @@ void CityViewer::drawUnits(City& city, DebugState const& state)
 }
 
 // ----------------------------------------------------------------------------
-void CityViewer::drawAgents(City& city, DebugState const& state)
+void CityViewer::drawAgents(City& city, core::DebugState const& state)
 {
     if (!state.showAgents)
         return;
@@ -738,12 +741,12 @@ void CityViewer::drawAgents(City& city, DebugState const& state)
 
 // ----------------------------------------------------------------------------
 void CityViewer::drawSelectionOverlay(Simulation& simulation,
-                                      DebugState const& state)
+                                      core::DebugState const& state)
 {
     m_splitter.SetCurrentChannel(m_draw_list, CHANNEL_OVERLAY);
 
-    Selection const& selection = state.selection;
-    if (selection.kind == Selection::Kind::None)
+    core::Selection const& selection = state.selection;
+    if (selection.kind == core::Selection::Kind::None)
         return;
 
     auto const cityIt = simulation.cities().find(selection.city);
@@ -755,7 +758,7 @@ void CityViewer::drawSelectionOverlay(Simulation& simulation,
 
     switch (selection.kind)
     {
-    case Selection::Kind::Unit:
+    case core::Selection::Kind::Unit:
     {
         if (selection.unit == nullptr)
             break;
@@ -778,7 +781,7 @@ void CityViewer::drawSelectionOverlay(Simulation& simulation,
         }
         break;
     }
-    case Selection::Kind::Node:
+    case core::Selection::Kind::Node:
     {
         if (selection.node == nullptr)
             break;
@@ -786,7 +789,7 @@ void CityViewer::drawSelectionOverlay(Simulation& simulation,
                                NODE_RADIUS + 6.0f, highlight, 0, 2.0f);
         break;
     }
-    case Selection::Kind::Agent:
+    case core::Selection::Kind::Agent:
     {
         Agent const* const agent = selection.resolveAgent(simulation);
         if (agent == nullptr)
@@ -825,7 +828,7 @@ void CityViewer::drawSelectionOverlay(Simulation& simulation,
         }
         break;
     }
-    case Selection::Kind::Cell:
+    case core::Selection::Kind::Cell:
     {
         float const side = city.gridCellSize();
         ImVec2 const p0 = worldToScreen(
@@ -834,13 +837,13 @@ void CityViewer::drawSelectionOverlay(Simulation& simulation,
         m_draw_list->AddRect(p0, p1, highlight, 0.0f, 0, 2.5f);
         break;
     }
-    case Selection::Kind::None:
+    case core::Selection::Kind::None:
         break;
     }
 }
 
 // ----------------------------------------------------------------------------
-void CityViewer::drawLegend(DebugState const& state)
+void CityViewer::drawLegend(core::DebugState const& state)
 {
     if (!state.showTraffic)
         return;
@@ -868,7 +871,7 @@ void CityViewer::drawLegend(DebugState const& state)
 }
 
 // ----------------------------------------------------------------------------
-void CityViewer::drawHoverTooltip(Simulation& simulation, DebugState const& state)
+void CityViewer::drawHoverTooltip(Simulation& simulation, core::DebugState const& state)
 {
     if (!state.hasHoveredCell)
         return;
@@ -904,5 +907,5 @@ void CityViewer::drawHoverTooltip(Simulation& simulation, DebugState const& stat
 
     ImGui::EndTooltip();
 }
-
+} // namespace ui
 } // namespace ogb

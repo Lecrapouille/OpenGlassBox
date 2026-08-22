@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
+// Copyright (c) 2020-2026 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Based on https://github.com/federicodangelo/MultiAgentSimulation
 // Distributed under MIT License.
@@ -14,6 +14,8 @@
 #  include <map>
 #  include <vector>
 #  include <memory>
+
+namespace ogb {
 
 class Way;
 class Path;
@@ -468,5 +470,7 @@ private:
 };
 
 using Paths = std::map<std::string, std::unique_ptr<Path>>;
+
+} // namespace ogb
 
 #endif

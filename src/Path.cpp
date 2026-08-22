@@ -15,6 +15,8 @@
 // =============================================================================
 
 // -----------------------------------------------------------------------------
+namespace ogb {
+
 Node::Node(uint32_t id, Vector3f const& position)
     : m_id(id), m_position(position)
 {}
@@ -78,7 +80,7 @@ Way::Way(uint32_t id, WayType const& type, Node& node1, Node& node2)
 // -----------------------------------------------------------------------------
 void Way::updateMagnitude()
 {
-    m_magnitude = ::magnitude(m_to->position() - m_from->position());
+    m_magnitude = ogb::magnitude(m_to->position() - m_from->position());
 
     // A type with a nonsensical speed would give an infinite or negative travel
     // time and poison the whole routing, so fall back on the length.
@@ -325,3 +327,5 @@ void Path::translate(Vector3f const direction)
         it->updateMagnitude();
     }
 }
+
+} // namespace ogb

@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
+// Copyright (c) 2020-2026 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
@@ -7,6 +7,8 @@
 #ifndef OPEN_GLASSBOX_DEMO_EDIT_COMMANDS_HPP
 #  define OPEN_GLASSBOX_DEMO_EDIT_COMMANDS_HPP
 
+#  include "OpenGlassBox/Path.hpp"
+#  include "OpenGlassBox/Simulation.hpp"
 #  include "OpenGlassBox/Vector.hpp"
 
 #  include <cstdint>
@@ -15,13 +17,10 @@
 #  include <string>
 #  include <vector>
 
-class Simulation;
-class City;
-class Path;
-class Node;
-class Way;
 
 namespace ogb {
+namespace core {
+
 
 //! \brief Stands for "no identifier yet". Identifiers are handed out by the
 //! engine on the first run of a command and replayed by the redos, so they need
@@ -326,7 +325,7 @@ private:
     int32_t m_v1;
     uint32_t m_areaId = NO_ID;
 };
-
+} // namespace core
 } // namespace ogb
 
 #endif

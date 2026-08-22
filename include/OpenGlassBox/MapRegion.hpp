@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
+// Copyright (c) 2020-2026 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
@@ -8,6 +8,8 @@
 #  define OPEN_GLASSBOX_MAP_REGION_HPP
 
 #  include <cstdint>
+
+namespace ogb {
 
 //==============================================================================
 //! \brief A rectangle of cells on the world grid, in cell coordinates.
@@ -55,5 +57,7 @@ struct MapRegion
 
     bool empty() const { return (sizeU == 0u) || (sizeV == 0u); }
 };
+
+} // namespace ogb
 
 #endif

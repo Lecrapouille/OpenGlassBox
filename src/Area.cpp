@@ -12,6 +12,8 @@
 #include <limits>
 
 // -----------------------------------------------------------------------------
+namespace ogb {
+
 Area::Area(uint32_t id, AreaType const& type, MapRegion const& footprint, City& city)
     : m_id(id), m_type(type), m_footprint(footprint), m_city(city)
 {
@@ -153,3 +155,5 @@ bool Area::findFreeCell(std::string const& unitType, int32_t& u, int32_t& v) con
     v = bestV;
     return true;
 }
+
+} // namespace ogb

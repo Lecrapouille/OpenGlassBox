@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
+// Copyright (c) 2020-2026 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
@@ -10,17 +10,17 @@
 #  include "Application/OpenGL.hpp"
 #  include "Core/DebugState.hpp"
 #  include "Core/TimeSeries.hpp"
+#  include "OpenGlassBox/Simulation.hpp"
 
 #  include <map>
 #  include <memory>
 #  include <string>
 #  include <vector>
 
-class Simulation;
-
 namespace ogb {
+namespace core { class RuleTrace; }
 
-class RuleTrace;
+namespace ui {
 class CityViewer;
 
 // ****************************************************************************
@@ -31,7 +31,7 @@ class LayersPanel
 {
 public:
 
-    void draw(Simulation& simulation, DebugState& state);
+    void draw(Simulation& simulation, core::DebugState& state);
 };
 
 // ****************************************************************************
@@ -42,15 +42,15 @@ class InspectorPanel
 {
 public:
 
-    void draw(Simulation& simulation, DebugState& state, RuleTrace const& trace);
+    void draw(Simulation& simulation, core::DebugState& state, core::RuleTrace const& trace);
 
 private:
 
-    void drawUnit(Simulation& simulation, DebugState& state,
-                  RuleTrace const& trace);
-    void drawAgent(Simulation& simulation, DebugState& state);
-    void drawNode(DebugState& state);
-    void drawCell(Simulation& simulation, DebugState& state);
+    void drawUnit(Simulation& simulation, core::DebugState& state,
+                  core::RuleTrace const& trace);
+    void drawAgent(Simulation& simulation, core::DebugState& state);
+    void drawNode(core::DebugState& state);
+    void drawCell(Simulation& simulation, core::DebugState& state);
 };
 
 // ****************************************************************************
@@ -64,7 +64,7 @@ class RuleLogPanel
 {
 public:
 
-    void draw(Simulation& simulation, DebugState& state, RuleTrace& trace);
+    void draw(Simulation& simulation, core::DebugState& state, core::RuleTrace& trace);
 
 private:
 
@@ -88,19 +88,19 @@ public:
     // ------------------------------------------------------------------------
     void sample(Simulation& simulation);
 
-    void draw(Simulation& simulation, DebugState& state);
+    void draw(Simulation& simulation, core::DebugState& state);
 
     void clear();
 
 private:
 
-    TimeSeries& series(std::string const& group, std::string const& name);
+    core::TimeSeries& series(std::string const& group, std::string const& name);
 
 private:
 
     //! \brief Histories by group ("Maps", "Agents", "Globals", "Traffic") then
     //! by quantity name.
-    std::map<std::string, std::map<std::string, TimeSeries>> m_series;
+    std::map<std::string, std::map<std::string, core::TimeSeries>> m_series;
     //! \brief Interval in ticks between two samples, to keep long runs cheap.
     int m_sample_period = 5;
     uint64_t m_last_sample_tick = 0u;
@@ -114,7 +114,7 @@ class TimeControlPanel
 {
 public:
 
-    void draw(Simulation& simulation, DebugState& state, RuleTrace& trace);
+    void draw(Simulation& simulation, core::DebugState& state, core::RuleTrace& trace);
 
     // ------------------------------------------------------------------------
     //! \brief Number of ticks the user asked to run while paused. Consumed by
@@ -136,7 +136,7 @@ class TrafficPanel
 {
 public:
 
-    void draw(Simulation& simulation, DebugState& state);
+    void draw(Simulation& simulation, core::DebugState& state);
 
     // ------------------------------------------------------------------------
     //! \brief Total travel time of the network, the sum over the Ways of the
@@ -145,7 +145,7 @@ public:
     // ------------------------------------------------------------------------
     static float totalTravelTime(Simulation& simulation);
 };
-
+} // namespace ui
 } // namespace ogb
 
 #endif

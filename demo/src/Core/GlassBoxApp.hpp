@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
+// Copyright (c) 2020-2026 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
@@ -21,12 +21,14 @@
 #  include <vector>
 
 namespace ogb {
+namespace core {
+
 
 // ****************************************************************************
 //! \brief The demo: owns the simulation, the debug panels and the wiring
 //! between them.
 // ****************************************************************************
-class GlassBoxApp: public Application
+class GlassBoxApp: public application::Application
 {
 public:
 
@@ -128,14 +130,14 @@ private:
     DebugState m_state;
     RuleTrace m_trace;
 
-    CityViewer m_viewer;
+    ui::CityViewer m_viewer;
     Editor m_editor;
-    LayersPanel m_layers;
-    InspectorPanel m_inspector;
-    RuleLogPanel m_rule_log;
-    ChartsPanel m_charts;
-    TimeControlPanel m_time;
-    TrafficPanel m_traffic;
+    ui::LayersPanel m_layers;
+    ui::InspectorPanel m_inspector;
+    ui::RuleLogPanel m_rule_log;
+    ui::ChartsPanel m_charts;
+    ui::TimeControlPanel m_time;
+    ui::TrafficPanel m_traffic;
 
     //! \brief Path of the script currently loaded, for the title and the reload.
     std::string m_script_path;
@@ -164,7 +166,7 @@ private:
     //! \brief Ticks run during the last frame, shown in the status bar.
     uint64_t m_ticks_last_frame = 0u;
 };
-
+} // namespace core
 } // namespace ogb
 
 #endif

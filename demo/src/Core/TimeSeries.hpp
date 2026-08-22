@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
+// Copyright (c) 2020-2026 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
@@ -12,6 +12,8 @@
 #  include <vector>
 
 namespace ogb {
+namespace core {
+
 
 // ****************************************************************************
 //! \brief A bounded history of one scalar quantity, laid out so that it can be
@@ -73,7 +75,7 @@ private:
     std::vector<float> m_ticks;
     std::vector<float> m_values;
 };
-
+} // namespace core
 } // namespace ogb
 
 #endif

@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
+// Copyright (c) 2020-2026 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
@@ -9,21 +9,13 @@
 
 #  include "Application/OpenGL.hpp"
 #  include "Core/DebugState.hpp"
+#  include "OpenGlassBox/Simulation.hpp"
 #  include "OpenGlassBox/Vector.hpp"
 
-class Simulation;
-class World;
-class City;
-class Map;
-class Path;
-class Unit;
-class Agent;
-class Way;
-class Node;
-
 namespace ogb {
+namespace core { class Editor; }
 
-class Editor;
+namespace ui {
 
 // ****************************************************************************
 //! \brief The map view: an ImGui child window whose content is drawn with an
@@ -42,7 +34,7 @@ public:
     //! \param[in,out] editor: the armed tool, which gets first refusal on the
     //! mouse.
     // ------------------------------------------------------------------------
-    void draw(Simulation& simulation, DebugState& state, Editor& editor);
+    void draw(Simulation& simulation, core::DebugState& state, core::Editor& editor);
 
     // ------------------------------------------------------------------------
     //! \brief Frame the whole simulation in the view. Called on startup and by
@@ -102,34 +94,34 @@ private:
     //! \brief Pan with the middle button, zoom with the wheel centered on the
     //! cursor, and pick the entity under a left click.
     // ------------------------------------------------------------------------
-    void handleInputs(Simulation& simulation, DebugState& state, Editor& editor);
+    void handleInputs(Simulation& simulation, core::DebugState& state, core::Editor& editor);
 
     // ------------------------------------------------------------------------
     //! \brief Select the entity closest to the given canvas position, within a
     //! tolerance in pixels. Units win over Agents, which win over Nodes, and a
     //! click on nothing falls back on the grid cell.
     // ------------------------------------------------------------------------
-    void pick(Simulation& simulation, DebugState& state, ImVec2 const& screen);
+    void pick(Simulation& simulation, core::DebugState& state, ImVec2 const& screen);
 
-    void drawMaps(World& world, DebugState const& state);
-    void drawPaths(City& city, DebugState const& state);
-    void drawUnits(City& city, DebugState const& state);
-    void drawAgents(City& city, DebugState const& state);
-    void drawCityFrame(City& city, DebugState const& state);
+    void drawMaps(World& world, core::DebugState const& state);
+    void drawPaths(City& city, core::DebugState const& state);
+    void drawUnits(City& city, core::DebugState const& state);
+    void drawAgents(City& city, core::DebugState const& state);
+    void drawCityFrame(City& city, core::DebugState const& state);
     void drawAreas(City& city);
-    void drawSelectionOverlay(Simulation& simulation, DebugState const& state);
-    void drawLegend(DebugState const& state);
-    void drawToolbar(Simulation& simulation, DebugState& state, Editor& editor);
+    void drawSelectionOverlay(Simulation& simulation, core::DebugState const& state);
+    void drawLegend(core::DebugState const& state);
+    void drawToolbar(Simulation& simulation, core::DebugState& state, core::Editor& editor);
 
     // ------------------------------------------------------------------------
     //! \brief Update state.hoveredCell from the mouse position.
     // ------------------------------------------------------------------------
-    void updateHover(Simulation& simulation, DebugState& state);
+    void updateHover(Simulation& simulation, core::DebugState& state);
 
     // ------------------------------------------------------------------------
     //! \brief Tooltip listing the value of every Map on the hovered cell.
     // ------------------------------------------------------------------------
-    void drawHoverTooltip(Simulation& simulation, DebugState const& state);
+    void drawHoverTooltip(Simulation& simulation, core::DebugState const& state);
 
 private:
 
@@ -163,7 +155,7 @@ private:
     static constexpr int REFRAME_FRAMES = 4;
     int m_frames_to_reframe = REFRAME_FRAMES;
 };
-
+} // namespace ui
 } // namespace ogb
 
 #endif

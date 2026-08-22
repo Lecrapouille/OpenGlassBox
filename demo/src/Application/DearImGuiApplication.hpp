@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
+// Copyright (c) 2020-2026 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Distributed under MIT License.
 //
@@ -17,6 +17,8 @@
 #  include <vector>
 
 namespace ogb {
+namespace application {
+
 
 // ****************************************************************************
 //! \brief A file dialog a panel asks the host to open.
@@ -167,7 +169,7 @@ private:
     //! the callback has to outlive the frame that asked for them.
     std::vector<FileDialogRequest> m_open_dialogs;
 };
-
+} // namespace application
 } // namespace ogb
 
 #endif

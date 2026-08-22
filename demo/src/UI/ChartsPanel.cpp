@@ -13,16 +13,18 @@
 #include <map>
 
 namespace ogb {
+namespace ui {
+
 
 // ----------------------------------------------------------------------------
-TimeSeries& ChartsPanel::series(std::string const& group, std::string const& name)
+core::TimeSeries& ChartsPanel::series(std::string const& group, std::string const& name)
 {
     auto& groupSeries = m_series[group];
     auto const it = groupSeries.find(name);
     if (it != groupSeries.end())
         return it->second;
 
-    return groupSeries.emplace(name, TimeSeries(name)).first->second;
+    return groupSeries.emplace(name, core::TimeSeries(name)).first->second;
 }
 
 // ----------------------------------------------------------------------------
@@ -91,7 +93,7 @@ void ChartsPanel::sample(Simulation& simulation)
 }
 
 // ----------------------------------------------------------------------------
-void ChartsPanel::draw(Simulation& simulation, DebugState& state)
+void ChartsPanel::draw(Simulation& simulation, core::DebugState& state)
 {
     if (!ImGui::Begin("Charts"))
     {
@@ -128,7 +130,7 @@ void ChartsPanel::draw(Simulation& simulation, DebugState& state)
 
             for (auto& entry: group.second)
             {
-                TimeSeries const& serie = entry.second;
+                core::TimeSeries const& serie = entry.second;
                 if (serie.empty())
                     continue;
 
@@ -143,5 +145,5 @@ void ChartsPanel::draw(Simulation& simulation, DebugState& state)
 
     ImGui::End();
 }
-
+} // namespace ui
 } // namespace ogb

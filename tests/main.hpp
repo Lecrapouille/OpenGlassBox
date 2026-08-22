@@ -1,6 +1,6 @@
 //==============================================================================
 // SimForth: A Forth for SimTaDyn.
-// Copyright 2018-2020 Quentin Quadrat <lecrapouille@gmail.com>
+// Copyright 2018-2026 Quentin Quadrat <lecrapouille@gmail.com>
 //
 // This file is part of SimForth.
 //
@@ -24,7 +24,10 @@
 #  include <gmock/gmock.h>
 #  include <gtest/gtest.h>
 
+#  include "OpenGlassBox/Config.hpp"
+
 using namespace ::testing;
+using namespace ogb;
 
 // Set interpreter quiet
 #  define QUIET(interpreter) \

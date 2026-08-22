@@ -12,6 +12,8 @@
 #include <cmath>
 
 //------------------------------------------------------------------------------
+namespace ogb {
+
 Simulation::Simulation(uint32_t gridSizeU, uint32_t gridSizeV,
                        SimulationConfig const& config)
     : m_world(config),
@@ -110,3 +112,5 @@ City const& Simulation::getCity(std::string const& name) const
 {
     return m_world.getCity(name);
 }
+
+} // namespace ogb

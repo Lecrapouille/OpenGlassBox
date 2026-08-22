@@ -14,6 +14,9 @@
 #include <cstring>
 
 namespace ogb {
+namespace ui {
+using namespace ogb::theme;
+
 
 // ----------------------------------------------------------------------------
 static bool containsInsensitive(std::string const& haystack, char const* needle)
@@ -32,8 +35,8 @@ static bool containsInsensitive(std::string const& haystack, char const* needle)
 }
 
 // ----------------------------------------------------------------------------
-void RuleLogPanel::draw(Simulation& simulation, DebugState& state,
-                        RuleTrace& trace)
+void RuleLogPanel::draw(Simulation& simulation, core::DebugState& state,
+                        core::RuleTrace& trace)
 {
     if (!ImGui::Begin("Rule Log"))
     {
@@ -109,7 +112,7 @@ void RuleLogPanel::draw(Simulation& simulation, DebugState& state,
 
         for (size_t i = 0u; i < trace.size(); ++i)
         {
-            RuleEvent const& event = trace.at(i);
+            core::RuleEvent const& event = trace.at(i);
 
             if (event.success && !m_show_success)
                 continue;
@@ -157,5 +160,5 @@ void RuleLogPanel::draw(Simulation& simulation, DebugState& state,
 
     ImGui::End();
 }
-
+} // namespace ui
 } // namespace ogb

@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
+// Copyright (c) 2020-2026 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
@@ -10,6 +10,8 @@
 #  include <cstdint>
 #  include <string>
 #  include <vector>
+
+namespace ogb {
 
 //==============================================================================
 //! \brief A word of a simulation script together with where it was written.
@@ -114,5 +116,7 @@ private:
     //! truncated script still reports a sensible place.
     Token m_end;
 };
+
+} // namespace ogb
 
 #endif

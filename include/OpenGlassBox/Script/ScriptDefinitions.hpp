@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
+// Copyright (c) 2020-2026 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
@@ -11,12 +11,13 @@
 #  include "OpenGlassBox/RuleCommand.hpp"
 #  include "OpenGlassBox/RuleValue.hpp"
 #  include "OpenGlassBox/Types.hpp"
-
 #  include <map>
 #  include <memory>
 #  include <stdexcept>
 #  include <string>
 #  include <vector>
+
+namespace ogb {
 
 //==============================================================================
 //! \brief Everything a simulation script defines: the types the entities refer
@@ -156,5 +157,7 @@ private:
     std::vector<std::unique_ptr<IRuleCommand>> m_commands;
     std::vector<std::unique_ptr<IRuleValue>> m_values;
 };
+
+} // namespace ogb
 
 #endif

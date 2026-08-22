@@ -11,6 +11,8 @@
 #include <algorithm>
 
 // -----------------------------------------------------------------------------
+namespace ogb {
+
 City::City(std::string const& name, Vector3f position, uint32_t sizeU,
            uint32_t sizeV, World& world)
     : m_name(name),
@@ -308,3 +310,5 @@ void City::removeNode(Path& path, Node& node)
 
     path.removeNode(node);
 }
+
+} // namespace ogb

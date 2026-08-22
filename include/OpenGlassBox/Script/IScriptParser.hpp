@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
+// Copyright (c) 2020-2026 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
@@ -8,10 +8,11 @@
 #  define OPEN_GLASSBOX_SCRIPT_ISCRIPT_PARSER_HPP
 
 #  include "OpenGlassBox/Script/ScriptDefinitions.hpp"
-
 #  include <memory>
 #  include <string>
 #  include <vector>
+
+namespace ogb {
 
 //==============================================================================
 //! \brief One thing wrong with a script, and where.
@@ -82,5 +83,7 @@ public:
 //! refusing, since that is what every script in the wild is written in.
 //==============================================================================
 std::unique_ptr<IScriptParser> makeScriptParser(std::string const& filename);
+
+} // namespace ogb
 
 #endif
