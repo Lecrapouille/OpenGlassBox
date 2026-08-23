@@ -11,6 +11,7 @@
 #include "OpenGlassBox/World.hpp"
 #include "OpenGlassBox/Vector.hpp"
 #include <algorithm>
+#include <utility>
 #include <vector>
 
 // -----------------------------------------------------------------------------
@@ -179,6 +180,7 @@ Unit& City::addUnit(UnitType const& type, Node& node)
     m_units.push_back(std::make_unique<Unit>(type, node, *this));
     Unit& unit = *(m_units.back());
     unit.setId(m_nextUnitId++);
+    unit.desynchronise();
     m_listener->onUnitAdded(unit);
     return unit;
 }
@@ -189,6 +191,7 @@ Unit& City::addUnit(UnitType const& type, Path& /*path*/, Way& way, float offset
     m_units.push_back(std::make_unique<Unit>(type, way, offset, *this));
     Unit& unit = *(m_units.back());
     unit.setId(m_nextUnitId++);
+    unit.desynchronise();
     m_listener->onUnitAdded(unit);
     return unit;
 }
@@ -199,6 +202,7 @@ Unit& City::addUnit(UnitType const& type, Vector3f const& position)
     m_units.push_back(std::make_unique<Unit>(type, position, *this));
     Unit& unit = *(m_units.back());
     unit.setId(m_nextUnitId++);
+    unit.desynchronise();
     m_listener->onUnitAdded(unit);
     return unit;
 }
@@ -227,10 +231,11 @@ Agent& City::addAgent(AgentType const& type, Unit& owner, Resources const& resou
 // -----------------------------------------------------------------------------
 void City::removeUnit(Unit& unit)
 {
+    // The Agents point at the building both as the one that sent them out and
+    // as the destination of their itinerary. Both have to go before it does.
     for (auto& agent: m_agents)
     {
-        if (agent->owner() == &unit)
-            agent->detachOwner();
+        agent->forget(unit);
     }
 
     m_listener->onUnitRemoved(unit);
@@ -300,6 +305,51 @@ void City::removeWay(Path& path, Way& way)
     path.removeWay(way);
     removeOrphanNodes(path);
     dropStrandedAgents();
+}
+
+// -----------------------------------------------------------------------------
+Node& City::splitWay(Path& path, Way& way, float offset)
+{
+    if (offset <= 0.0f)
+        return way.from();
+    if (offset >= 1.0f)
+        return way.to();
+
+    // Where the buildings stand has to be read before the segment is shortened,
+    // and reanchor() mutates the very list being walked.
+    std::vector<std::pair<Unit*, float>> anchored;
+    anchored.reserve(way.units().size());
+    for (Unit* unit: way.units())
+        anchored.emplace_back(unit, unit->wayOffset());
+
+    // The Agents hold the segment and an offset along it, both of which mean
+    // something else once it is half as long. They keep their position and the
+    // next tick routes them over the graph as it now is.
+    for (auto& agent: m_agents)
+    {
+        agent->forget(way);
+        agent->invalidateRoute();
+    }
+
+    Node& junction = path.splitWay(way, offset);
+
+    // splitWay() keeps the first half in place and creates the second one.
+    Way* second = nullptr;
+    for (Way* incident: junction.ways())
+    {
+        if (incident != &way)
+            second = incident;
+    }
+
+    for (auto const& it: anchored)
+    {
+        if (it.second <= offset)
+            it.first->reanchor(way, it.second / offset);
+        else if (second != nullptr)
+            it.first->reanchor(*second, (it.second - offset) / (1.0f - offset));
+    }
+
+    return junction;
 }
 
 // -----------------------------------------------------------------------------

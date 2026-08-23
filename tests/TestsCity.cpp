@@ -214,6 +214,79 @@ TEST(TestsCity, AddUnitOnWayDoesNotSplitRoad)
 }
 
 // -----------------------------------------------------------------------------
+// Cutting a segment is how the Buildings tool turns a spot on a street into an
+// address: the junction is a Node, and agents only ever stop at nodes.
+TEST(TestsCity, SplitWayCutsTheSegmentInTwo)
+{
+    TestWorld cityWorld("Paris");
+    City& city = cityWorld.city;
+    Path& path = city.addPath(PathType("Road"));
+    Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
+    Node& n2 = path.addNode(Vector3f(10.0f, 0.0f, 0.0f));
+    Way& way = path.addWay(WayType("Dirt", 0xAAAAAA), n1, n2);
+
+    Node& junction = city.splitWay(path, way, 0.5f);
+
+    ASSERT_EQ(path.nodes().size(), 3u);
+    ASSERT_EQ(path.ways().size(), 2u);
+    ASSERT_EQ(int32_t(junction.position().x), 5);
+    ASSERT_EQ(junction.ways().size(), 2u);
+    // The first half was shortened rather than replaced.
+    ASSERT_EQ(&way.from(), &n1);
+    ASSERT_EQ(&way.to(), &junction);
+    ASSERT_EQ(int32_t(way.magnitude()), 5);
+}
+
+// -----------------------------------------------------------------------------
+// A building already standing along the street has to end up on the half that
+// runs under it, otherwise it addresses a segment that stops short of it.
+TEST(TestsCity, SplitWayKeepsTheBuildingsWhereTheyStand)
+{
+    TestWorld cityWorld("Paris");
+    City& city = cityWorld.city;
+    Path& path = city.addPath(PathType("Road"));
+    Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
+    Node& n2 = path.addNode(Vector3f(10.0f, 0.0f, 0.0f));
+    Way& way = path.addWay(WayType("Dirt", 0xAAAAAA), n1, n2);
+
+    Unit& near = city.addUnit(UnitType("Home"), path, way, 0.2f);
+    Unit& far = city.addUnit(UnitType("Home"), path, way, 0.8f);
+
+    Node& junction = city.splitWay(path, way, 0.5f);
+
+    Way* second = nullptr;
+    for (Way* incident: junction.ways())
+    {
+        if (incident != &way)
+            second = incident;
+    }
+    ASSERT_NE(second, nullptr);
+
+    ASSERT_EQ(near.way(), &way);
+    ASSERT_EQ(far.way(), second);
+    ASSERT_EQ(way.units().size(), 1u);
+    ASSERT_EQ(second->units().size(), 1u);
+    ASSERT_EQ(int32_t(near.position().x + 0.5f), 2);
+    ASSERT_EQ(int32_t(far.position().x + 0.5f), 8);
+}
+
+// -----------------------------------------------------------------------------
+TEST(TestsCity, SplitWayOnAnExtremityCutsNothing)
+{
+    TestWorld cityWorld("Paris");
+    City& city = cityWorld.city;
+    Path& path = city.addPath(PathType("Road"));
+    Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
+    Node& n2 = path.addNode(Vector3f(10.0f, 0.0f, 0.0f));
+    Way& way = path.addWay(WayType("Dirt", 0xAAAAAA), n1, n2);
+
+    ASSERT_EQ(&city.splitWay(path, way, 0.0f), &n1);
+    ASSERT_EQ(&city.splitWay(path, way, 1.0f), &n2);
+    ASSERT_EQ(path.nodes().size(), 2u);
+    ASSERT_EQ(path.ways().size(), 1u);
+}
+
+// -----------------------------------------------------------------------------
 TEST(TestsCity, translate)
 {
     TestWorld cityWorld("Paris");

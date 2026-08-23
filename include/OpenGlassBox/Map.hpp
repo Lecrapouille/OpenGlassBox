@@ -77,6 +77,15 @@ public:
                          MapRegion const& region);
 
     // -------------------------------------------------------------------------
+    //! \brief How many cells the radius of (u,v) covers inside the region.
+    //!
+    //! getResource() over a radius sums that many cells, so this is what turns
+    //! the capacity of one cell into the capacity of what a rule reads.
+    // -------------------------------------------------------------------------
+    uint32_t cellsInRadius(int32_t const u, int32_t const v,
+                           uint32_t const radius, MapRegion const& region);
+
+    // -------------------------------------------------------------------------
     //! \brief Maximum amount a single cell may hold.
     // -------------------------------------------------------------------------
     uint32_t getCapacity() const { return m_type.capacity; }

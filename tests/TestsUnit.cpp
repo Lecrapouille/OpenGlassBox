@@ -17,6 +17,58 @@ static SimulationConfig smallCells()
 }
 
 // -----------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+//! \brief Two buildings put up at the same instant must not run their rules on
+//! the same tick, or the whole city leaves home at once at eight sharp. The
+//! phase comes from the seed, so a run stays reproducible.
+TEST(TestsUnit, RulesOfTwoUnitsDoNotFallOnTheSameTick)
+{
+    SimulationConfig config;
+    config.randomSeed = 1234u;
+
+    TestWorld cityWorld("Paris", 8u, 8u, Vector3f(0.0f, 0.0f, 0.0f), config);
+    City& city = cityWorld.city;
+
+    UnitType type("Home");
+    type.rules.push_back(nullptr);
+
+    std::vector<uint32_t> phases;
+    for (uint32_t i = 0u; i < 6u; ++i)
+    {
+        Unit& unit = city.addUnit(type, Vector3f(float(i), 0.0f, 0.0f));
+        phases.push_back(unit.ticks());
+        // One game hour at most, so that a rule counted in days cannot fire
+        // the moment the building goes up.
+        ASSERT_LT(unit.ticks(), 60u * config.ticksPerMinute);
+    }
+
+    // Not all the same. Two out of six may collide; six identical values would
+    // mean no phase at all.
+    uint32_t identical = 0u;
+    for (uint32_t const phase: phases)
+        identical += uint32_t(phase == phases[0]);
+    ASSERT_LT(identical, phases.size());
+
+    // Same seed, same phases: a bug reported on a run can be replayed.
+    TestWorld twin("Paris", 8u, 8u, Vector3f(0.0f, 0.0f, 0.0f), config);
+    for (uint32_t i = 0u; i < phases.size(); ++i)
+    {
+        Unit& unit = twin.city.addUnit(type, Vector3f(float(i), 0.0f, 0.0f));
+        ASSERT_EQ(unit.ticks(), phases[i]);
+    }
+
+    // Another seed, another set.
+    config.randomSeed = 99u;
+    TestWorld other("Paris", 8u, 8u, Vector3f(0.0f, 0.0f, 0.0f), config);
+    uint32_t same = 0u;
+    for (uint32_t i = 0u; i < phases.size(); ++i)
+    {
+        Unit& unit = other.city.addUnit(type, Vector3f(float(i), 0.0f, 0.0f));
+        same += uint32_t(unit.ticks() == phases[i]);
+    }
+    ASSERT_LT(same, phases.size());
+}
+
 TEST(TestsUnit, Constructor)
 {
     TestWorld cityWorld("Paris", 4u, 4u,

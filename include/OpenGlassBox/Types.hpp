@@ -44,6 +44,9 @@ public:
 
     std::string                name;
     uint32_t                   rate = 1u; // Unit: [simulation ticks]
+    //! \brief Period written as a duration of game time. Zero when the script
+    //! gave a number of ticks instead. See IRule::periodTicks.
+    uint32_t                   rateMinutes = 0u;
     bool                       randomTiles = false;
     uint32_t                   randomTilesPercent = 10u;
     std::vector<IRuleCommand*> commands; // Shall not be free and pointer stay valid.
@@ -67,6 +70,9 @@ public:
 
     std::string                name;
     uint32_t                   rate = 1u; // Unit: [simulation ticks]
+    //! \brief Period written as a duration of game time. Zero when the script
+    //! gave a number of ticks instead. See IRule::periodTicks.
+    uint32_t                   rateMinutes = 0u;
     RuleUnit*                  onFail = nullptr;
     std::vector<IRuleCommand*> commands; // Shall not be free and pointer stay valid.
 };
@@ -245,6 +251,9 @@ public:
 
     std::string                name;
     uint32_t                   rate = 1u;
+    //! \brief Period written as a duration of game time. Zero when the script
+    //! gave a number of ticks instead. See IRule::periodTicks.
+    uint32_t                   rateMinutes = 0u;
     std::vector<IRuleCommand*> commands;
 };
 

@@ -41,6 +41,20 @@ public:
     void setTicks(uint64_t ticks) { m_ticks = ticks; }
 
     //--------------------------------------------------------------------------
+    //! \brief Move the calendar to a date and a time of day. A simulation that
+    //! opens at midnight makes the player wait height game hours before anybody
+    //! leaves for work, so both the save format and the demo need to say when
+    //! the city wakes up.
+    //--------------------------------------------------------------------------
+    void setTimeOfDay(uint32_t day, uint32_t hour, uint32_t minute)
+    {
+        uint64_t const minutes =
+            (uint64_t(day) * 24u + uint64_t(hour % 24u)) * 60u +
+            uint64_t(minute % 60u);
+        m_ticks = minutes * uint64_t(m_ticksPerMinute);
+    }
+
+    //--------------------------------------------------------------------------
     //! \brief Number of ticks elapsed since the beginning of the simulation.
     //--------------------------------------------------------------------------
     uint64_t ticks() const { return m_ticks; }

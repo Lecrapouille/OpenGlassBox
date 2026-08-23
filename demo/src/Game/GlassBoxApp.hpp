@@ -18,6 +18,7 @@
 #  include "UI/CityViewer.hpp"
 #  include "UI/Panels.hpp"
 
+#  include "OpenGlassBox/CitySave.hpp"
 #  include "OpenGlassBox/Simulation.hpp"
 
 #  include <memory>
@@ -77,6 +78,17 @@ private:
     void openCityDialog();
     void saveCityDialog();
     void watchScriptFile(float dt);
+    void drawScriptPanel();
+
+    //! \brief Read the fingerprints the Script panel shows. Hashing a file is
+    //! not free, so it is done when asked rather than every frame.
+    void computeChecksum();
+
+    //! \brief Whether a save may be opened against the ruleset on disk. A
+    //! mismatch is normally a hard refusal; the player can waive it while
+    //! writing a ruleset, and then it is only reported.
+    bool acceptRuleset(CitySaveHeader const& header,
+                       std::string const& rulesetPath, std::string& error);
 
 private:
 
@@ -102,6 +114,15 @@ private:
     std::string m_reload_notice;
     float m_reload_notice_timer = 0.0f;
     bool m_show_about = false;
+    //! \brief Whether the error popup is already up, so that an error raised
+    //! again on the next frame cannot pin the application behind a modal.
+    bool m_script_error_shown = false;
+
+    ui::ScriptPanel::Checksum m_checksum;
+    //! \brief Waive the fingerprint check when opening a save. Off by default:
+    //! a stale save rebuilt against a ruleset that moved is a city whose
+    //! buildings no longer mean what they meant.
+    bool m_ignore_hash = false;
 
     int64_t m_script_mtime = 0;
     float m_watch_timer = 0.0f;

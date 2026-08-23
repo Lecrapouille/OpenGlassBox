@@ -62,6 +62,27 @@ Unit::Unit(UnitType const& type, Vector3f const& position, City& city)
 }
 
 // -----------------------------------------------------------------------------
+void Unit::desynchronise()
+{
+    if (m_context.city == nullptr)
+        return;
+
+    uint32_t const perMinute = (m_context.clock != nullptr)
+                               ? m_context.clock->ticksPerMinute()
+                               : 1u;
+    uint32_t const spread = std::max(1u, perMinute * 60u);
+
+    // A cheap integer hash, so that consecutive identifiers do not come out as
+    // consecutive phases.
+    uint32_t hash = m_context.city->config().randomSeed ^ (m_id * 2654435761u);
+    hash ^= hash >> 15;
+    hash *= 2246822519u;
+    hash ^= hash >> 13;
+
+    m_ticks = hash % spread;
+}
+
+// -----------------------------------------------------------------------------
 Unit::~Unit()
 {
     detach();
@@ -137,6 +158,22 @@ void Unit::placeAt(Vector3f const& position)
 }
 
 // -----------------------------------------------------------------------------
+void Unit::reanchor(Way& way, float offset)
+{
+    detach();
+
+    m_way = &way;
+    m_offset = std::min(1.0f, std::max(0.0f, offset));
+    m_way->addUnit(*this);
+
+    if (!m_placed)
+    {
+        m_position = m_way->positionAt(m_offset);
+        refreshMapPosition();
+    }
+}
+
+// -----------------------------------------------------------------------------
 void Unit::refreshMapPosition()
 {
     if (m_context.city != nullptr)
@@ -150,10 +187,14 @@ void Unit::executeRules()
     if (m_context.city != nullptr)
         m_context.clock = &m_context.city->world().clock();
 
+    uint32_t const perMinute = (m_context.clock != nullptr)
+                               ? m_context.clock->ticksPerMinute()
+                               : 1u;
+
     size_t i = m_type.rules.size();
     while (i--)
     {
-        if (m_ticks % m_type.rules[i]->rate() == 0u)
+        if (m_ticks % m_type.rules[i]->periodTicks(perMinute) == 0u)
         {
             m_type.rules[i]->execute(m_context);
         }

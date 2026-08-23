@@ -1,44 +1,15 @@
-A FAIRE:
-- Richesse ?
-- Zoom des plots
-- On ne peut pas relier les villes entre elles ?
-- Sortir Dijkstra de OpenGlassBox: en faire une classe abstraire (Traffic ?) et implementer dans la demo
-- Implementer ForthScript
-- On ne peut pas relier les villes entre elles ?
-- 1 application = 1 ville. 2 applications = 2 villes qui se voient et communiquent.
-- actuellement a 8h du matin les gens sortent de chez eux a 19h ils rentrent. Ils ne vont pas manger.
-Il faut creer des restau et de plus il faudrait randomiser qu'ils soient en vacances, font du shopping,
-etc ... => regles d'economie ?
+Ok regarde il y a plusieurs bugs. qq2.ogc et qq.ogc sont des fichiers enregistrés l'un avec 1 zone Residential et l'autres avec 2 zones Residential.
+Quen je les charge, les agents ne sortent jamais de chez eux. Quand j'avais construit qq.ogc, les gens vont vers Work mais j'ai eu 5 types de souci ensuite:
 
-Chicago: ca tourne a 6 FPS
+Le premier souci: les agents quand ils arrivent dans Work, se teleportent depuis Node 0 et vont toujours vers Work, se teleportent vont vers Work etc boucle infinie.
+Le deuxieme souci: quand ils sont dans work, l'inspecteur affiche que les Goods ne sont jamais créés: le compteur ne s'incremente jamais.
+Le troisieme souci: les agents quittent Work apres 18h mais je pensais que les agents allaient partir une fois les Goods produits pour les transporter vers Shop. Mais peut etre que si les agents partent l'usine s'arrete.
+Le quatrieme souci: les agents quittent Work apres 18h mais ne sortent pas du noeud Work mais depuis un autre Node.
+Le cinquieme souci: quand les agents quittent Work, ils transportent des Goods mais vont vers maison et jamais vers Shop. Quand les premiers agents
+entrent dans les maisons, cette derniere devient pleine mais les agents suivants ne changent pas de trajectoire et vont vers la meme maison puis le premier souci apparait: ils se teleportent vers un autre noeud quand ils entrent dans la maison.
 
-Creer une simulation
-- Home
-- Agents: argent, faim, vont manger a midi et apres le boulot
-- Restaurant: a besoin de x personnes, supprimme la faim
-- usine qui coupe du bois: a besoin de x personnes, foret/arbres et produit du bois, creer secheresse, argent
-- usine qui cree des meubles: a besoin de x personnes, de bois et produit des meubles, creer polution, argent
-- foret a besoin d'eau
-- entreprise:
+Mon impothese est qu'il y a un souci avec les index des noeuds. Que peut etre qu'avant de deplacer un agent il faut faire une planication global afin que 2 agents n'aillent pas au meme point si un building est rempli, sinon ca fait des agents qui cherchent des endroits mais tournent en rond (ce qui est bien mais pourraient aussi rester chez eux). Ca peut etre une grosse modification de code. L'autre bug sur les Goods est peut etre qu'il y a un bug avec les unitRule. Les "hour between 10 20" me semble pas tres aléatoire car je pense que quand il est 10h paf tout le monde sort.
 
-Deplacer node
-bulldozer la carte entiere => bug road
-manquer zone vide
+Concernant les regles de Desirability: ameliore car c'est beaucoup trop rapide, en quelques heures ca se construit et se detruit, regle pour que ca se compte en jours. Il manque le reglage de l'heure de depart de la simulation, ca nous fait attendre longtemps avant que les agents sortent. Ajoute un bouton "x32" apres "x16".
 
-Ok ameliore un peu les regles de Desirability car c'est beaucoup trop rapide, en quelques heures ca se construit et se detruit, regle pour que ca se compte en jours.
-Il y a toujours le bug ou deux groupe d'agents vont vers la meme maison. le premier groupe entre puis quand le deuxieme arrive les agents se teleportent vers le noeud avant la maison.
-ca boucle indefiniment. Les agents devraient trouver un autre chemin.
-Dans la tooltip de l'inspecteur il faudrait afficher les agents dans les buildings et la capacite.
-Dans la tooltip de l'inspecteur il faudrait afficher les noms des regles quand c'est possible (zones et areas).
-Dans la tooltip de l'inspecteur il faudrait afficher ce que les agents transportent.
-le dernier zone reste bleue.
-
-Dans l'inspecteur tableau rules il faut ajouter des colonnes pour hour, remove, add
-
-On dirait que les biens goods ne sont pas bien créés
-
-Quand on croise deux routes ca ne cree pas de carrefour
-
-Le route builder est tres mauvais.
-Il faut pouvoir construire des routes avec des noeuds.
-Il faut pouvoir construire des routes avec des noeuds.
+Regle ces soucis par ordre croissant de difficultés et allant du plus deterministe au plus aleatoire à tester.

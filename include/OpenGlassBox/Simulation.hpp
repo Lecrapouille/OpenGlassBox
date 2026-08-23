@@ -109,6 +109,7 @@ public:
     void setTotalTicks(uint64_t ticks) { m_totalTicks = ticks; }
 
     SimulationClock const& clock() const { return m_world.clock(); }
+    SimulationClock& clock() { return m_world.clock(); }
 
     // -------------------------------------------------------------------------
     //! \brief Relative gap of the current assignment against the shortest

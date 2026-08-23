@@ -77,26 +77,60 @@ TEST(TestsCitySave, MissingTypeIsRefused)
     ASSERT_NE(error.find("Asphalt"), std::string::npos);
 }
 
+//! \brief Every shipped save opens against the ruleset it names. Which one that
+//! is comes from the header rather than from a table here: a city saved from
+//! the demo records whatever ruleset was open at the time, and hard coding the
+//! pairs only made this test fail whenever one of them was re-saved.
 TEST(TestsCitySave, LoadShippedBraessAndGrids)
 {
-    struct Case { char const* ogs; char const* ogc; };
-    Case const cases[] = {
-        { "demo/data/Simulations/braess.ogs", "demo/data/Simulations/braess.ogc" },
-        { "demo/data/Simulations/regular.ogs", "demo/data/Simulations/regular.ogc" },
-        { "demo/data/Simulations/chicago.ogs", "demo/data/Simulations/chicago.ogc" },
+    char const* const saves[] = {
+        "demo/data/Simulations/braess.ogc",
+        "demo/data/Simulations/regular.ogc",
+        "demo/data/Simulations/chicago.ogc",
     };
 
-    for (Case const& c: cases)
+    for (char const* save: saves)
     {
-        Simulation simulation;
-        ASSERT_TRUE(simulation.script().parse(c.ogs)) << c.ogs;
         CitySaveHeader header;
         std::string error;
-        ASSERT_TRUE(CitySave::peekHeader(c.ogc, header, error)) << error;
-        ASSERT_TRUE(CitySave::matchesRuleset(header, c.ogs, error)) << error;
-        ASSERT_TRUE(CitySave::read(c.ogc, simulation, error)) << c.ogc << ": " << error;
-        ASSERT_FALSE(simulation.cities().empty()) << c.ogc;
+        ASSERT_TRUE(CitySave::peekHeader(save, header, error)) << error;
+
+        std::string const ruleset = "demo/data/Simulations/" + header.ruleset;
+        Simulation simulation;
+        ASSERT_TRUE(simulation.script().parse(ruleset)) << ruleset;
+        ASSERT_TRUE(CitySave::matchesRuleset(header, ruleset, error)) << error;
+        ASSERT_TRUE(CitySave::read(save, simulation, error)) << save << ": " << error;
+        ASSERT_FALSE(simulation.cities().empty()) << save;
     }
+}
+
+//------------------------------------------------------------------------------
+//! \brief A save records what a building holds, never how much it can hold: the
+//! capacities belong to the ruleset. Loading used to assign the whole bin, so
+//! every building came back with a capacity of zero and refused every Agent and
+//! every rule that adds anything.
+TEST(TestsCitySave, LoadedUnitsKeepTheCapacitiesOfTheirType)
+{
+    Simulation simulation;
+    ASSERT_TRUE(simulation.script().parse(testCityRuleset()));
+
+    std::string error;
+    ASSERT_TRUE(CitySave::read(testCitySave(), simulation, error)) << error;
+
+    City& city = *simulation.cities().begin()->second;
+    uint32_t checked = 0u;
+    for (auto& unit: city.units())
+    {
+        UnitType const& type = simulation.script().getUnitType(unit->type());
+        for (Resource const& capped: type.resources.container())
+        {
+            ASSERT_EQ(unit->resources().getCapacity(capped.type()),
+                      capped.getCapacity())
+                << unit->type() << " lost the capacity of " << capped.type();
+            ++checked;
+        }
+    }
+    ASSERT_GT(checked, 0u);
 }
 
 TEST(TestsCitySave, HashMismatch)

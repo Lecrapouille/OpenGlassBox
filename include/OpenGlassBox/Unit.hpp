@@ -129,6 +129,19 @@ public:
     void setId(uint32_t id) { m_id = id; }
 
     // -------------------------------------------------------------------------
+    //! \brief Offset the rule counter so that this Unit does not run its rules
+    //! on the same tick as every other one.
+    //!
+    //! Every Unit used to start counting at zero, so at ten in the morning the
+    //! whole city left home at the same instant. The offset is derived from the
+    //! identifier of the Unit and from SimulationConfig::randomSeed, which
+    //! keeps a run reproducible, and it never exceeds one game hour so that a
+    //! rule counted in days cannot fire the moment a building is put up.
+    //! Call it once, after setId().
+    // -------------------------------------------------------------------------
+    void desynchronise();
+
+    // -------------------------------------------------------------------------
     //! \brief Refresh the cell this Unit acts on after the City has moved.
     // -------------------------------------------------------------------------
     void refreshMapPosition();
@@ -140,6 +153,14 @@ public:
     //! cells away.
     // -------------------------------------------------------------------------
     void placeAt(Vector3f const& position);
+
+    // -------------------------------------------------------------------------
+    //! \brief Move the anchor onto another Way, at the given offset. Splitting
+    //! a segment in two leaves the buildings along it anchored to a segment
+    //! that no longer runs under them, and this is how City::splitWay puts them
+    //! back where they stand. A Unit placed by an Area keeps its footprint.
+    // -------------------------------------------------------------------------
+    void reanchor(Way& way, float offset);
 
 private:
 

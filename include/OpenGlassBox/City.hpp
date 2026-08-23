@@ -184,6 +184,20 @@ public:
     void removeNode(Path& path, Node& node);
 
     // -------------------------------------------------------------------------
+    //! \brief Cut a segment in two at the given offset and give back the
+    //! junction, which is a Node an Agent can stop at and a Unit can sit on.
+    //!
+    //! Path::splitWay only rewires the graph. Here the Units that stood along
+    //! the segment are moved onto the half that now runs under them, and the
+    //! Agents driving on it let go and route again from where they are, so that
+    //! none of them is left addressing a segment that stops short of it.
+    //!
+    //! \return the junction, or the extremity of the segment when the offset
+    //! falls on one, in which case nothing was cut.
+    // -------------------------------------------------------------------------
+    Node& splitWay(Path& path, Way& way, float offset);
+
+    // -------------------------------------------------------------------------
     //! \brief Translate the position of the City inside the world coordinate.
     //! This also change the position of Path, Unit, Agent ... hold by the City.
     // -------------------------------------------------------------------------

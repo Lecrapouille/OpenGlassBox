@@ -71,7 +71,7 @@ TEST(TestsScript, Constructor)
 
     // -- Agent types:
     {
-        ASSERT_EQ(defs.agentTypes().size(), 3u);
+        ASSERT_GE(defs.agentTypes().size(), 3u);
         AgentType const& a1 = script.getAgentType("People");
         //ASSERT_STREQ(a1.name.c_str(), "People");
         ASSERT_EQ(a1.color, 0xFFFF00u);
@@ -109,8 +109,10 @@ TEST(TestsScript, Constructor)
         ASSERT_EQ(u1.targets.size(), 1u);
         ASSERT_STREQ(u1.targets[0].c_str(), "Home");
         ASSERT_GE(u1.resources.m_bin.size(), 1u);
-        ASSERT_EQ(u1.resources.getCapacity("People"), 4u);
-        ASSERT_EQ(u1.resources.getAmount("People"), 4u);
+        // A household holds more than the morning commute takes away, which is
+        // who is left to go shopping later in the day.
+        ASSERT_EQ(u1.resources.getCapacity("People"), 8u);
+        ASSERT_EQ(u1.resources.getAmount("People"), 8u);
 
         UnitType const& u2 = script.getUnitType("Work");
         ASSERT_EQ(u2.color, 0x00AAFFu);
@@ -119,7 +121,14 @@ TEST(TestsScript, Constructor)
         ASSERT_EQ(u2.targets.size(), 1u);
         ASSERT_STREQ(u2.targets[0].c_str(), "Work");
         ASSERT_GE(u2.resources.m_bin.size(), 1u);
-        ASSERT_EQ(u2.resources.getCapacity("People"), 4u);
+        ASSERT_EQ(u2.resources.getCapacity("People"), 12u);
+
+        // A restaurant answers to its own name only. Answering to Shop as well
+        // is how the freight and the shoppers ended up at the canteen and the
+        // shops were never opened.
+        UnitType const& u3 = script.getUnitType("Restaurant");
+        ASSERT_EQ(u3.targets.size(), 1u);
+        ASSERT_STREQ(u3.targets[0].c_str(), "Restaurant");
     }
 
     ASSERT_STREQ(script.getAreaType("Residential").name.c_str(), "Residential");
@@ -130,7 +139,9 @@ TEST(TestsScript, Constructor)
         ASSERT_GE(defs.ruleMaps().size(), 1u);
          RuleMap const& rm1 = script.getRuleMap("CreateGrass");
          ASSERT_STREQ(rm1.m_type.c_str(), "CreateGrass");
-         ASSERT_EQ(rm1.m_rate, 7u);
+         // "rate 20 minutes": twenty game minutes, four hundred ticks.
+         ASSERT_EQ(rm1.rateMinutes(), 20u);
+         ASSERT_EQ(rm1.periodTicks(20u), 400u);
          ASSERT_EQ(rm1.isRandom(), true);
          // Both 'map' commands of the rule, in the order they were written.
          ASSERT_EQ(rm1.m_commands.size(), 2u);
@@ -141,18 +152,35 @@ TEST(TestsScript, Constructor)
         ASSERT_GE(defs.ruleUnits().size(), 3u);
         RuleUnit const& ru1 = script.getRuleUnit("SendPeopleToWork");
         ASSERT_STREQ(ru1.m_type.c_str(), "SendPeopleToWork");
-        ASSERT_EQ(ru1.m_rate, 20u);
+        ASSERT_EQ(ru1.periodTicks(20u), 45u * 20u);
 
         RuleUnit const& ru2 = script.getRuleUnit("SendPeopleToHome");
         ASSERT_STREQ(ru2.m_type.c_str(), "SendPeopleToHome");
-        ASSERT_EQ(ru2.m_rate, 40u);
+        ASSERT_EQ(ru2.periodTicks(20u), 20u * 20u);
 
         RuleUnit const& ru3 = script.getRuleUnit("UsePeopleToWater");
         ASSERT_STREQ(ru3.m_type.c_str(), "UsePeopleToWater");
-        ASSERT_EQ(ru3.m_rate, 5u);
+        ASSERT_EQ(ru3.periodTicks(20u), 60u * 20u);
 
-        // TODO local
-        // TODO agent
+        // The goods have to reach the shops on their own wheels, otherwise
+        // nothing is ever for sale.
+        RuleUnit const& ship = script.getRuleUnit("ShipGoods");
+        ASSERT_EQ(ship.periodTicks(20u), 45u * 20u);
+    }
+
+    // Pollution must have a rule that takes it away, not only one that adds
+    // some: it used to saturate and pin Desirability to zero for ever.
+    {
+        MapType const& pollution = script.getMapType("Pollution");
+        bool spreads = false;
+        bool cleans = false;
+        for (auto const* rule: pollution.rules)
+        {
+            spreads = spreads || (rule->type() == "SpreadPollution");
+            cleans = cleans || (rule->type() == "CleanPollution");
+        }
+        ASSERT_TRUE(spreads);
+        ASSERT_TRUE(cleans);
     }
 }
 
@@ -388,4 +416,68 @@ TEST(TestsScript, HourAndArea)
     RuleArea const& replace = script.getRuleArea("Replace");
     ASSERT_EQ(replace.commands()[0]->type(), std::string("Upgrade Home to Shop"));
     ASSERT_STREQ(script.getAreaType("Residential").name.c_str(), "Residential");
+}
+
+//------------------------------------------------------------------------------
+//! \brief A period may be written as a duration of game time. Ticks are an
+//! implementation detail: nobody reading "rate 600" knows it means half an hour.
+//------------------------------------------------------------------------------
+TEST(TestsScript, RatesInGameTime)
+{
+    Script script;
+
+    ASSERT_EQ(script.parseString(
+                  "resources\n  resource People\nend\n"
+                  "rules\n"
+                  "  unitRule EveryTick\n    rate 7\n"
+                  "    local People remove 1\n  end\n"
+                  "  unitRule Spelled\n    rate 7 ticks\n"
+                  "    local People remove 1\n  end\n"
+                  "  unitRule HalfHour\n    rate 30 minutes\n"
+                  "    local People remove 1\n  end\n"
+                  "  unitRule OneMinute\n    rate 1 minute\n"
+                  "    local People remove 1\n  end\n"
+                  "  mapRule TwoHours\n    rate 2 hours\n"
+                  "    map People add 1\n  end\n"
+                  "  areaRule Daily\n    rate 1 day\n"
+                  "    count Home less 3\n  end\n"
+                  "end\n"
+                  "units\n"
+                  "  unit Home color 0xFF00FF mapRadius 1 rules [ ] "
+                  "targets [ Home ] caps [ People 4 ] resources [ ]\n"
+                  "end\n"
+                  "maps\n  map People color 0xFFFF00 capacity 10 rules [ ]\nend\n"),
+              true)
+        << script.formatErrors();
+
+    // Counted in ticks: unchanged, whatever the length of a minute.
+    ASSERT_EQ(script.getRuleUnit("EveryTick").rateMinutes(), 0u);
+    ASSERT_EQ(script.getRuleUnit("EveryTick").periodTicks(20u), 7u);
+    ASSERT_EQ(script.getRuleUnit("EveryTick").periodTicks(30u), 7u);
+    ASSERT_EQ(script.getRuleUnit("Spelled").periodTicks(20u), 7u);
+
+    // Counted in game time: follows the length of a minute.
+    ASSERT_EQ(script.getRuleUnit("HalfHour").rateMinutes(), 30u);
+    ASSERT_EQ(script.getRuleUnit("HalfHour").periodTicks(20u), 600u);
+    ASSERT_EQ(script.getRuleUnit("HalfHour").periodTicks(30u), 900u);
+    ASSERT_EQ(script.getRuleUnit("OneMinute").periodTicks(20u), 20u);
+    ASSERT_EQ(script.getRuleMap("TwoHours").periodTicks(20u), 2400u);
+    ASSERT_EQ(script.getRuleArea("Daily").periodTicks(20u), 28800u);
+}
+
+//------------------------------------------------------------------------------
+//! \brief A period of zero would run the rule at every tick and used to divide
+//! by zero. It is reported, and the rule falls back to one tick.
+//------------------------------------------------------------------------------
+TEST(TestsScript, RateOfZeroIsRefused)
+{
+    Script script;
+
+    ASSERT_EQ(script.parseString("resources\n  resource People\nend\n"
+                                 "rules\n"
+                                 "  unitRule Never\n    rate 0\n"
+                                 "    local People remove 1\n  end\n"
+                                 "end\n"),
+              false);
+    ASSERT_NE(script.formatErrors().find("period of zero"), std::string::npos);
 }

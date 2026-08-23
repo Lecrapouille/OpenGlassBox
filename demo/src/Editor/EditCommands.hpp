@@ -179,8 +179,10 @@ private:
 // ============================================================================
 //! \brief Place a building on a road.
 //!
-//! A Unit sits on a Node, so dropping one in the middle of a segment splits it
-//! and the undo has to put the two halves back together.
+//! Dropping one in the middle of a segment cuts it in two and puts the
+//! building on the junction, which is what makes it an address agents stop at
+//! rather than a shape drawn beside the road. The undo has to put the two
+//! halves back together.
 // ============================================================================
 class AddUnitCommand: public ICommand
 {
@@ -200,6 +202,12 @@ public:
 
 private:
 
+    //! \brief Put the two halves of the cut segment back into one, as long as
+    //! nothing was built on them in the meantime.
+    void mergeBack(Simulation& simulation);
+
+private:
+
     std::string m_city;
     std::string m_path;
     std::string m_unitType;
@@ -207,6 +215,13 @@ private:
     float m_offset = 0.5f;
     uint32_t m_nodeId = NO_ID;
     uint32_t m_unitId = NO_ID;
+
+    //! \brief What the cut created, so that the undo can sew the segment back.
+    //! The junction carries the building; the second half runs from it to the
+    //! far end the segment used to reach.
+    uint32_t m_junctionId = NO_ID;
+    uint32_t m_secondHalfId = NO_ID;
+    std::string m_wayType;
 };
 
 // ============================================================================
@@ -365,10 +380,6 @@ public:
         m_removed.clear();
         m_leftovers.clear();
     }
-
-    //! \brief Identifier of the Area this command added, so that the caller can
-    //! select it. Only meaningful once redo() has succeeded.
-    uint32_t createdAreaId() const { return m_areaId; }
 
 private:
 

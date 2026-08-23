@@ -74,6 +74,11 @@ struct SimulationConfig
     //! the default tick rate, so one second of game time is one game minute.
     uint32_t ticksPerMinute = 20u;
 
+    //! \brief Hour of the day a fresh simulation opens at. Starting at midnight
+    //! means waiting a third of a day before the rules that keep office hours
+    //! do anything at all.
+    uint32_t startHour = 8u;
+
     //! \brief How often an Agent recomputes its remaining itinerary, in ticks.
     //! Routing on a congested network is expensive, and doing it at every node
     //! makes the population swing from one road to the other.
@@ -82,6 +87,11 @@ struct SimulationConfig
     //! \brief Relative increase of the remaining itinerary cost that forces an
     //! Agent to recompute immediately, in [0..1]. Zero means always recompute.
     float pathCostDeviation = 0.25f;
+
+    //! \brief How long an Agent wanders without finding anything that accepts
+    //! its load before it gives up, in ticks. Two game hours by default. Zero
+    //! lets it roam for ever, which piles up Agents nothing will ever remove.
+    uint32_t agentGiveUpTicks = 2400u;
 
     //--------------------------------------------------------------------------
     //! \brief Duration of a single simulation tick, in seconds of game time.

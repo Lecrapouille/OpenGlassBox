@@ -47,6 +47,10 @@ public:
 // ****************************************************************************
 //! \brief Details whatever is selected: resources as progress bars, rules with
 //! their period and the number of ticks left before the next attempt.
+//!
+//! A second tab breaks the whole ruleset down, because what a rule does is a
+//! property of the script rather than of the building under the cursor, and
+//! reading it one building at a time says nothing about the city.
 // ****************************************************************************
 class InspectorPanel
 {
@@ -63,17 +67,60 @@ private:
     void drawWay(game::DebugState& state);
     void drawCell(Simulation& simulation, game::DebugState& state);
     void drawArea(Simulation& simulation, game::DebugState& state);
+    void drawRuleset(Simulation& simulation);
+
+private:
+
+    //! \brief Substring the rule name or one of its commands must contain.
+    char m_filter[64] = "";
 };
 
 // ****************************************************************************
 //! \brief Editable source of the open ruleset (.ogs). Apply reparses and
 //! keeps the city when every type still in use is still defined.
+//!
+//! It also reports the checksum a save has to match. A save records the
+//! fingerprint of the ruleset it was written against, which is what stops a
+//! city from being rebuilt with types that mean something else; while a
+//! ruleset is being written that same fingerprint is in the way, hence the
+//! button that reads it and the option that waives it.
 // ****************************************************************************
 class ScriptPanel
 {
 public:
 
-    void draw(std::string& text, bool& applyRequested, std::string const& status);
+    // ------------------------------------------------------------------------
+    //! \brief The fingerprints, computed by the host on demand rather than
+    //! every frame: hashing a file is not free.
+    // ------------------------------------------------------------------------
+    struct Checksum
+    {
+        //! \brief Whether the values below were ever computed.
+        bool known = false;
+        //! \brief SHA-256 of the ruleset as it sits on disk.
+        std::string onDisk;
+        //! \brief SHA-256 of the text in this editor, which drifts from the
+        //! one above as soon as a character is typed and until Apply.
+        std::string edited;
+        //! \brief What the open save recorded, empty when no save is open.
+        std::string save;
+    };
+
+    // ------------------------------------------------------------------------
+    //! \brief What the player asked for during this frame.
+    // ------------------------------------------------------------------------
+    struct Actions
+    {
+        bool apply = false;
+        bool computeChecksum = false;
+        //! \brief Rewrite the open save so that it records the checksum of the
+        //! ruleset as it is now.
+        bool restampSave = false;
+    };
+
+    void draw(std::string& text, std::string const& status,
+              Checksum const& checksum, bool& ignoreMismatch,
+              Actions& actions);
 };
 
 // ****************************************************************************
@@ -149,8 +196,15 @@ public:
 
 private:
 
+    void drawTimeOfDay(Simulation& simulation);
+
     uint32_t m_pending_steps = 0u;
     int m_step_size = 1;
+    //! \brief Time of day being typed in. Mirrors the clock until the player
+    //! touches it, so that the running clock does not fight the input.
+    int m_hour = 8;
+    int m_minute = 0;
+    bool m_editing_time = false;
 };
 
 // ****************************************************************************

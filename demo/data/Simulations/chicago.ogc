@@ -1,7 +1,7 @@
 save
-	ruleset chicago.ogs
-	hash d1836433104b43d7ef49c687e0990ba9e65cd5e3ba870a40d517e26b5f4f29ea
-	types [ Road Dirt ]
+	ruleset test_city.ogs
+	hash e5bba970acdfa150fa3646a8b6c873c92dee46e9bba1f286b416a42c2aaa995f
+	types [ Road Dirt Home Work Shop Residential ]
 end
 
 clock 0

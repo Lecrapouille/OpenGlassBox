@@ -318,7 +318,8 @@ void Editor::drawToolbar(Simulation& simulation, game::DebugState& state)
           "Click or drag to paint a zone. Its rules grow buildings inside it.\n"
           "Painting over another zone re-zones only the cells you paint." },
         { EditTool::Building, "Buildings",
-          "Click a road to place a building without splitting it." },
+          "Click a road to place a building. The segment is cut in two and\n"
+          "the building sits on the junction, where agents can stop." },
         { EditTool::Paint, "Maps",
           "Click or drag to write a resource on map cells, and pick which\n"
           "maps are drawn." },
@@ -632,28 +633,13 @@ void Editor::handleZone(Simulation& simulation, game::DebugState& state, bool ho
 
     auto command = std::make_unique<AddAreaCommand>(m_city, m_areaType,
                                                     u0, v0, u1, v1);
-    AddAreaCommand const* const applied = command.get();
     if (!m_stack.push(simulation, std::move(command)))
         return;
 
-    // The command stack owns the command now, so reading back the identifier
-    // of the Area it created is safe.
-    City* city = targetCity(simulation);
-    if (city == nullptr)
-        return;
-
-    for (auto& area: city->areas())
-    {
-        if (area->id() != applied->createdAreaId())
-            continue;
-
-        state.selection.clear();
-        state.selection.kind = game::Selection::Kind::Area;
-        state.selection.city = m_city;
-        state.selection.area = area.get();
-        state.showAreas = true;
-        break;
-    }
+    // A zone wears the colour of its type, so selecting the one just painted
+    // added nothing but a highlight the player had no way to dismiss: the last
+    // rectangle drawn stayed blue for the rest of the session.
+    state.showAreas = true;
 }
 
 // ----------------------------------------------------------------------------

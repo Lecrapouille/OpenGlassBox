@@ -76,31 +76,72 @@ std::string joinPath(std::string dir, std::string const& name)
     return dir + name;
 }
 
-std::string dataDirectory()
+//! \brief Every directory a data file may sit in.
+//!
+//! project::info::paths::data is a colon separated search path, not a single
+//! directory: reading it as one is why the demo could not find its own
+//! simulations when started from the repository. None of its entries names the
+//! sources either, where the data of the demo lives under demo/.
+std::vector<std::string> dataDirectories()
 {
-    std::string dir = project::info::paths::data;
-    if (!dir.empty() && (dir.back() != '/') && (dir.back() != '\\'))
-        dir += '/';
-    return dir;
+    std::vector<std::string> directories;
+
+    auto push = [&directories](std::string dir) {
+        if (dir.empty())
+            return;
+        if ((dir.back() != '/') && (dir.back() != '\\'))
+            dir += '/';
+        directories.push_back(std::move(dir));
+    };
+
+    std::string const search = project::info::paths::data;
+    size_t start = 0u;
+    while (start <= search.size())
+    {
+        size_t const end = search.find(':', start);
+        push(search.substr(start, (end == std::string::npos) ? end
+                                                             : end - start));
+        if (end == std::string::npos)
+            break;
+        start = end + 1u;
+    }
+
+    push("demo/data");
+    push("../demo/data");
+    return directories;
 }
 
-//! \brief As given if the path exists, otherwise Simulations/ under the
-//! build-time data path.
+//! \brief The data directory that actually holds the simulations, so that the
+//! file dialogs open where the files are.
+std::string dataDirectory()
+{
+    std::vector<std::string> const directories = dataDirectories();
+    for (std::string const& dir: directories)
+    {
+        if (fileExists(dir + "Simulations"))
+            return dir;
+    }
+    return directories.empty() ? std::string() : directories.front();
+}
+
+//! \brief As given if the path exists, otherwise looked up by name in the data
+//! directories and in their Simulations/ subdirectory.
 std::string resolveDataFile(std::string const& name)
 {
     if (fileExists(name))
         return name;
 
-    std::string const data = dataDirectory();
-    std::string const simulations = data + "Simulations/";
     std::string const base = fileBasename(name);
-
-    if (fileExists(simulations + base))
-        return simulations + base;
-    if (fileExists(data + name))
-        return data + name;
-    if (fileExists(simulations + name))
-        return simulations + name;
+    for (std::string const& data: dataDirectories())
+    {
+        std::string const simulations = data + "Simulations/";
+        if (fileExists(simulations + base))
+            return simulations + base;
+        if (fileExists(data + name))
+            return data + name;
+        if (fileExists(simulations + name))
+            return simulations + name;
+    }
     return {};
 }
 
@@ -333,7 +374,7 @@ bool GlassBoxApp::loadRuleset(std::string const& filename, bool loadSiblingSave)
         CitySaveHeader header;
         std::string error;
         if (!CitySave::peekHeader(sibling, header, error) ||
-            !CitySave::matchesRuleset(header, path, error) ||
+            !acceptRuleset(header, path, error) ||
             !CitySave::read(sibling, *m_simulation, error))
         {
             m_script_error = error;
@@ -353,6 +394,45 @@ bool GlassBoxApp::loadRuleset(std::string const& filename, bool loadSiblingSave)
     m_script_mtime = modificationTime(m_ruleset_path);
     setTitle("OpenGlassBox - " + fileBasename(m_ruleset_path));
     return m_script_error.empty();
+}
+
+// ----------------------------------------------------------------------------
+bool GlassBoxApp::acceptRuleset(CitySaveHeader const& header,
+                                std::string const& rulesetPath,
+                                std::string& error)
+{
+    if (CitySave::matchesRuleset(header, rulesetPath, error))
+        return true;
+
+    if (!m_ignore_hash)
+        return false;
+
+    // The geometry is still read against the types the header names, and a
+    // type the new script dropped is still refused by name. What is waived is
+    // only the promise that the rules did not move underneath the city.
+    m_reload_notice = "checksum ignored: " + error;
+    m_reload_notice_timer = NOTICE_DURATION;
+    error.clear();
+    return true;
+}
+
+// ----------------------------------------------------------------------------
+void GlassBoxApp::computeChecksum()
+{
+    m_checksum.known = true;
+    m_checksum.onDisk = m_ruleset_path.empty()
+                            ? std::string()
+                            : CitySave::hashFile(m_ruleset_path);
+    m_checksum.edited = CitySave::hashString(m_script_text);
+    m_checksum.save.clear();
+
+    if (!m_save_path.empty())
+    {
+        CitySaveHeader header;
+        std::string error;
+        if (CitySave::peekHeader(m_save_path, header, error))
+            m_checksum.save = header.hash;
+    }
 }
 
 // ----------------------------------------------------------------------------
@@ -383,7 +463,7 @@ bool GlassBoxApp::loadCity(std::string const& filename)
         return false;
     }
 
-    if (!CitySave::matchesRuleset(header, ruleset, error))
+    if (!acceptRuleset(header, ruleset, error))
     {
         m_script_error = error;
         return false;
@@ -538,6 +618,11 @@ void GlassBoxApp::watchScriptFile(float dt)
     if ((mtime == 0) || (mtime == m_script_mtime))
         return;
 
+    // Remember the file as seen even when what it holds is refused: otherwise
+    // the same broken save is reparsed twice a second and its error popup can
+    // never be dismissed.
+    m_script_mtime = mtime;
+
     loadScriptText();
     if (applyScript())
     {
@@ -641,6 +726,14 @@ void GlassBoxApp::onDrawMenuBar()
 
         ImGui::MenuItem("Reload ruleset when the file changes", nullptr,
                         &m_auto_reload);
+        ImGui::MenuItem("Open saves with a stale checksum", nullptr,
+                        &m_ignore_hash);
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("A save records the fingerprint of the ruleset\n"
+                              "it was written against. Waive it while you are\n"
+                              "writing one; the Script panel computes it.");
+        }
         ImGui::Separator();
         if (ImGui::MenuItem("Quit", "Alt+F4"))
             halt();
@@ -768,12 +861,7 @@ void GlassBoxApp::onDrawPanels()
         if (m_show_traffic)
             m_traffic.draw(*m_simulation, m_state);
         if (m_show_script)
-        {
-            bool apply = false;
-            m_script_panel.draw(m_script_text, apply, m_script_status);
-            if (apply)
-                applyScript();
-        }
+            drawScriptPanel();
     }
 
     drawScriptError();
@@ -781,29 +869,95 @@ void GlassBoxApp::onDrawPanels()
 }
 
 // ----------------------------------------------------------------------------
+void GlassBoxApp::drawScriptPanel()
+{
+    ui::ScriptPanel::Actions actions;
+    m_script_panel.draw(m_script_text, m_script_status, m_checksum,
+                        m_ignore_hash, actions);
+
+    if (actions.apply)
+    {
+        applyScript();
+        if (m_checksum.known)
+            computeChecksum();
+    }
+    if (actions.computeChecksum)
+    {
+        computeChecksum();
+    }
+    if (actions.restampSave && !m_save_path.empty())
+    {
+        // Writing the city back is what stamps it: the writer records the
+        // fingerprint of the ruleset it is given.
+        saveCity(m_save_path);
+        computeChecksum();
+    }
+}
+
+// ----------------------------------------------------------------------------
 void GlassBoxApp::drawScriptError()
 {
     if (m_script_error.empty())
+    {
+        m_script_error_shown = false;
         return;
+    }
 
-    ImGui::OpenPopup("Script error");
+    // Opened once, on the edge. Calling OpenPopup on every frame put the popup
+    // straight back up after the player closed it, and an error raised again
+    // by the file watcher on every attempt then pinned the whole application
+    // behind a modal that could not be dismissed.
+    if (!m_script_error_shown)
+    {
+        m_script_error_shown = true;
+        ImVec2 const centre = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos(centre, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+        ImGui::OpenPopup("Script error");
+    }
+
+    ImGui::SetNextWindowSize(ImVec2(600.0f, 0.0f), ImGuiCond_Appearing);
     if (ImGui::BeginPopupModal("Script error", nullptr,
                                ImGuiWindowFlags_AlwaysAutoResize))
     {
         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(theme::FAILURE),
                            "The operation was refused.");
         ImGui::Separator();
-        ImGui::PushTextWrapPos(520.0f);
-        ImGui::TextUnformatted(m_script_error.c_str());
-        ImGui::PopTextWrapPos();
+
+        // A parse reports every error it found, which is a page of text on a
+        // bad file. Left to grow, the popup ran past the bottom of the screen
+        // and took the Close button with it.
+        if (ImGui::BeginChild("message", ImVec2(580.0f, 240.0f),
+                              ImGuiChildFlags_Borders))
+        {
+            ImGui::PushTextWrapPos(560.0f);
+            ImGui::TextUnformatted(m_script_error.c_str());
+            ImGui::PopTextWrapPos();
+        }
+        ImGui::EndChild();
         ImGui::Separator();
 
-        if (ImGui::Button("Close", ImVec2(120.0f, 0.0f)))
+        bool close = ImGui::Button("Close", ImVec2(120.0f, 0.0f));
+        ImGui::SameLine();
+        if (ImGui::Button("Copy", ImVec2(120.0f, 0.0f)))
+            ImGui::SetClipboardText(m_script_error.c_str());
+        ImGui::SameLine();
+        ImGui::TextDisabled("Escape also closes this.");
+
+        close = close || ImGui::IsKeyPressed(ImGuiKey_Escape, false);
+        if (close)
         {
             m_script_error.clear();
+            m_script_error_shown = false;
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();
+    }
+    else if (!ImGui::IsPopupOpen("Script error"))
+    {
+        // Another popup took the level and closed this one. Let the message
+        // go rather than hold an error nothing will ever show again.
+        m_script_error.clear();
+        m_script_error_shown = false;
     }
 }
 

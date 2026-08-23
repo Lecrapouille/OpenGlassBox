@@ -133,6 +133,26 @@ uint32_t Map::getResource(int32_t const u, int32_t const v, uint32_t radius,
 }
 
 // -----------------------------------------------------------------------------
+uint32_t Map::cellsInRadius(int32_t const u, int32_t const v,
+                            uint32_t const radius, MapRegion const& region)
+{
+    if (radius == 0u)
+        return region.contains(u, v) ? 1u : 0u;
+
+    uint32_t count = 0u;
+    int32_t x = u;
+    int32_t y = v;
+
+    m_coordinates.init(radius, x, y, region.u0, region.u1(), region.v0,
+                       region.v1(), false);
+
+    while (m_coordinates.next(x, y))
+        ++count;
+
+    return count;
+}
+
+// -----------------------------------------------------------------------------
 void Map::addResource(int32_t const u, int32_t const v, uint32_t toAdd)
 {
     uint32_t amount = getResource(u, v);
@@ -244,9 +264,11 @@ void Map::executeRules(Cities const& cities)
 {
     ++m_ticks;
 
+    uint32_t const perMinute = m_world.clock().ticksPerMinute();
+
     for (auto& rule: m_type.rules)
     {
-        if (m_ticks % rule->rate() != 0u)
+        if (m_ticks % rule->periodTicks(perMinute) != 0u)
             continue;
 
         // The grid has no bounds of its own: what a rule walks is the region

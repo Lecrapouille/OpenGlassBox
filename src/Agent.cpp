@@ -17,6 +17,9 @@ namespace ogb {
 namespace
 {
     static const float MIN_WAY_MAGNITUDE = 1e-6f;
+    //! \brief How close to the offset of a Unit an Agent has to be to knock at
+    //! its door.
+    static const float ARRIVED_OFFSET = 0.05f;
 }
 
 //------------------------------------------------------------------------------
@@ -131,6 +134,26 @@ void Agent::forget(Node const& node)
 }
 
 //------------------------------------------------------------------------------
+void Agent::forget(Unit const& unit)
+{
+    if (m_owner == &unit)
+        m_owner = nullptr;
+
+    // The itinerary named that building as its destination. Anyone reading the
+    // route, the inspector for one, would be reading freed memory.
+    if (m_route.destination == &unit)
+        invalidateRoute();
+}
+
+//------------------------------------------------------------------------------
+bool Agent::giveUp()
+{
+    if (m_owner != nullptr)
+        m_resources.transferResourcesTo(m_owner->resources());
+    return true;
+}
+
+//------------------------------------------------------------------------------
 bool Agent::stranded() const
 {
     if (m_currentWay != nullptr)
@@ -167,6 +190,34 @@ bool Agent::uses(Node const& node) const
 Node* Agent::routingNode() const
 {
     return (m_nextNode != nullptr) ? m_nextNode : m_lastNode;
+}
+
+//------------------------------------------------------------------------------
+Node* Agent::wayExit() const
+{
+    if ((m_currentWay == nullptr) || (m_lastNode == nullptr))
+        return nullptr;
+
+    if ((m_lastNode != &m_currentWay->from()) &&
+        (m_lastNode != &m_currentWay->to()))
+    {
+        return nullptr;
+    }
+
+    return m_lastNode;
+}
+
+//------------------------------------------------------------------------------
+bool Agent::arrivedAtDestination() const
+{
+    if (!m_route.found || !m_route.nodes.empty())
+        return false;
+
+    if (m_route.approachWay == nullptr)
+        return true;
+
+    return (m_route.approachWay == m_currentWay) &&
+           (std::fabs(m_offset - m_route.approachOffset) <= ARRIVED_OFFSET);
 }
 
 //------------------------------------------------------------------------------
@@ -224,8 +275,59 @@ bool Agent::shouldRecomputeRoute(Dijkstra& dijkstra,
 }
 
 //------------------------------------------------------------------------------
+bool Agent::standingAlongWay() const
+{
+    return (m_currentWay != nullptr) && (m_nextNode == nullptr) &&
+           (m_offset > 0.0f) && (m_offset < 1.0f);
+}
+
+//------------------------------------------------------------------------------
+void Agent::computeRouteAlongWay(Dijkstra& dijkstra)
+{
+    Node& from = m_currentWay->from();
+    Node& to = m_currentWay->to();
+    float const travel = m_currentWay->travelTime();
+    float const infinity = std::numeric_limits<float>::infinity();
+
+    Route byFrom = dijkstra.findRoute(from, m_searchTarget, m_resources);
+    float const costFrom = byFrom.found ? (byFrom.cost + travel * m_offset)
+                                        : infinity;
+
+    Route byTo = dijkstra.findRoute(to, m_searchTarget, m_resources);
+    float const costTo = byTo.found ? (byTo.cost + travel * (1.0f - m_offset))
+                                    : infinity;
+
+    m_ticksOnRoute = 0u;
+
+    if ((costFrom == infinity) && (costTo == infinity))
+    {
+        m_route = Route();
+        return;
+    }
+
+    // m_lastNode is the end the Agent drives to before it may take another
+    // segment, and followRoute reads it back through wayExit().
+    if (costTo < costFrom)
+    {
+        m_lastNode = &to;
+        m_route = std::move(byTo);
+    }
+    else
+    {
+        m_lastNode = &from;
+        m_route = std::move(byFrom);
+    }
+}
+
+//------------------------------------------------------------------------------
 void Agent::computeRoute(Dijkstra& dijkstra)
 {
+    if (standingAlongWay())
+    {
+        computeRouteAlongWay(dijkstra);
+        return;
+    }
+
     Node* from = routingNode();
     if (from == nullptr)
     {
@@ -244,6 +346,32 @@ void Agent::followRoute(Dijkstra& dijkstra, SimulationConfig const& config)
 
     if (shouldRecomputeRoute(dijkstra, config))
         computeRoute(dijkstra);
+
+    // The Agent stands along a Way, at the door of the building that sent it
+    // out or of the one it has just been refused by. It has to drive to an
+    // intersection before it can take another Way: writing its offset the way
+    // the branches below do would teleport it to the end of the segment.
+    if ((m_currentWay != nullptr) && (m_offset > 0.0f) && (m_offset < 1.0f))
+    {
+        if (m_route.found && m_route.nodes.empty() &&
+            (m_route.approachWay == m_currentWay) &&
+            (std::fabs(m_offset - m_route.approachOffset) > ARRIVED_OFFSET))
+        {
+            // Destination on this very Way. Only the direction is needed: the
+            // approach branch of moveTowardsNextNode walks the offset there.
+            m_nextNode = (m_route.approachOffset >= m_offset)
+                         ? &m_currentWay->to()
+                         : &m_currentWay->from();
+            return;
+        }
+
+        Node* const exit = wayExit();
+        if (exit != nullptr)
+        {
+            m_nextNode = exit;
+            return;
+        }
+    }
 
     if (!m_route.found)
     {
@@ -320,11 +448,28 @@ bool Agent::update(Dijkstra& dijkstra, SimulationConfig const& config, float dt)
         if (m_lastNode == nullptr)
             return false;
 
+        // Standing at the door and refused: the building filled up while the
+        // Agent was driving to it. Throwing the itinerary away is what sends it
+        // somewhere else, since Dijkstra skips the Units that cannot accept
+        // what it carries. Keeping it made the Agent knock for ever.
+        if (arrivedAtDestination())
+            invalidateRoute();
+
         followRoute(dijkstra, config);
     }
     else
     {
         moveTowardsNextNode(dt);
+    }
+
+    if (m_route.found)
+    {
+        m_ticksLost = 0u;
+    }
+    else if ((config.agentGiveUpTicks != 0u) &&
+             (++m_ticksLost >= config.agentGiveUpTicks))
+    {
+        return giveUp();
     }
 
     return false;
@@ -347,6 +492,12 @@ Unit* Agent::searchUnit()
     }
 
     if (m_lastNode == nullptr)
+        return nullptr;
+
+    // Only knock at a door the Agent is standing at. Along a segment m_lastNode
+    // is the end it came from or drives to, which can be a whole street away,
+    // and a delivery made from there is a delivery made from nowhere.
+    if ((m_currentWay != nullptr) && (m_offset > 0.0f) && (m_offset < 1.0f))
         return nullptr;
 
     std::vector<Unit*>& units = m_lastNode->units();

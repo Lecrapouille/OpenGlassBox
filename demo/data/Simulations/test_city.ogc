@@ -1,6 +1,6 @@
 save
 	ruleset test_city.ogs
-	hash 3eb28ae9c79c6f86b58a6e54d1a41927f2c264dcddeadcef18131c86302ed70a
+	hash e5bba970acdfa150fa3646a8b6c873c92dee46e9bba1f286b416a42c2aaa995f
 	types [ Road Dirt Home Work Shop Residential ]
 end
 

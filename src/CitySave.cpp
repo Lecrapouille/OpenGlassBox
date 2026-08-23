@@ -691,7 +691,10 @@ bool CitySave::read(std::string const& filePath,
                     return false;
                 if (unit != nullptr)
                 {
-                    unit->resources() = loaded;
+                    // Only the amounts come from the save. The capacities come
+                    // from the ruleset, and overwriting them left every loaded
+                    // building unable to hold anything.
+                    unit->resources().setAmounts(loaded);
                 }
             }
         }

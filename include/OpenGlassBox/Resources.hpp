@@ -140,6 +140,16 @@ public:
     void setCapacities(Resources const& resourcesCapacities);
 
     // -------------------------------------------------------------------------
+    //! \brief Replace the amounts held, keeping the capacities.
+    //!
+    //! A save stores what a building holds, not how much it can hold: the
+    //! capacities belong to the ruleset. Assigning the whole collection instead
+    //! used to leave every loaded building with a capacity of zero, which made
+    //! it refuse every Agent and every rule that adds anything.
+    // -------------------------------------------------------------------------
+    void setAmounts(Resources const& amounts);
+
+    // -------------------------------------------------------------------------
     //! \brief Return the maximal amount of resource of the given type. If the
     //! resource does not exist return 0.
     // -------------------------------------------------------------------------

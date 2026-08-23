@@ -178,8 +178,10 @@ public:
     //--------------------------------------------------------------------------
     //! \brief
     //--------------------------------------------------------------------------
-    IRule(std::string const& name, uint32_t rate, std::vector<IRuleCommand*> const& commands)
-        : m_type(name), m_rate(rate), m_commands(commands)
+    IRule(std::string const& name, uint32_t rate, uint32_t rateMinutes,
+          std::vector<IRuleCommand*> const& commands)
+        : m_type(name), m_rate(rate), m_rateMinutes(rateMinutes),
+          m_commands(commands)
     {}
 
     //--------------------------------------------------------------------------
@@ -221,9 +223,11 @@ public:
     //! that a map may list a rule written further down the file. A rule is
     //! therefore born empty and filled in on the second pass.
     //--------------------------------------------------------------------------
-    void reset(uint32_t rate, std::vector<IRuleCommand*> commands)
+    void reset(uint32_t rate, uint32_t rateMinutes,
+               std::vector<IRuleCommand*> commands)
     {
         m_rate = rate;
+        m_rateMinutes = rateMinutes;
         m_commands = std::move(commands);
     }
 
@@ -233,9 +237,34 @@ public:
     std::string const& type() const { return m_type; }
 
     //--------------------------------------------------------------------------
-    //! \brief
+    //! \brief Period of the rule as the script wrote it, in ticks. Meaningless
+    //! when the script gave a duration: ask periodTicks() instead.
     //--------------------------------------------------------------------------
     uint32_t rate() const { return m_rate; }
+
+    //--------------------------------------------------------------------------
+    //! \brief Period of the rule as a duration of game time, in minutes. Zero
+    //! when the script counted ticks.
+    //--------------------------------------------------------------------------
+    uint32_t rateMinutes() const { return m_rateMinutes; }
+
+    //--------------------------------------------------------------------------
+    //! \brief How many ticks separate two runs of the rule.
+    //!
+    //! A script may write "rate 7", which counts ticks, or "rate 30 minutes",
+    //! which counts game time and is what a reader can reason about. The second
+    //! form is turned into ticks here rather than at parsing time, so that
+    //! changing SimulationConfig::ticksPerMinute rescales the whole ruleset
+    //! instead of leaving it behind.
+    //--------------------------------------------------------------------------
+    uint32_t periodTicks(uint32_t ticksPerMinute) const
+    {
+        if (m_rateMinutes == 0u)
+            return (m_rate == 0u) ? 1u : m_rate;
+
+        uint32_t const perMinute = (ticksPerMinute == 0u) ? 1u : ticksPerMinute;
+        return m_rateMinutes * perMinute;
+    }
 
     //--------------------------------------------------------------------------
     //! \brief
@@ -263,6 +292,7 @@ private:
 
     std::string                m_type;
     uint32_t                   m_rate = 1u;
+    uint32_t                   m_rateMinutes = 0u;
     std::vector<IRuleCommand*> m_commands;
 };
 
@@ -274,7 +304,7 @@ class RuleMap: public IRule
 public:
 
     RuleMap(RuleMapType const& type)
-        : IRule(type.name, type.rate, type.commands),
+        : IRule(type.name, type.rate, type.rateMinutes, type.commands),
           m_randomTiles(type.randomTiles),
           m_randomTilesPercent(std::min(100u, type.randomTilesPercent))
     {}
@@ -284,7 +314,7 @@ public:
     //--------------------------------------------------------------------------
     void reset(RuleMapType const& type)
     {
-        IRule::reset(type.rate, type.commands);
+        IRule::reset(type.rate, type.rateMinutes, type.commands);
         m_randomTiles = type.randomTiles;
         m_randomTilesPercent = std::min(100u, type.randomTilesPercent);
     }
@@ -320,7 +350,8 @@ class RuleUnit: public IRule
 public:
 
     RuleUnit(RuleUnitType const& type)
-        : IRule(type.name, type.rate, type.commands), m_onFail(type.onFail)
+        : IRule(type.name, type.rate, type.rateMinutes, type.commands),
+          m_onFail(type.onFail)
     {}
 
     //--------------------------------------------------------------------------
@@ -328,7 +359,7 @@ public:
     //--------------------------------------------------------------------------
     void reset(RuleUnitType const& type)
     {
-        IRule::reset(type.rate, type.commands);
+        IRule::reset(type.rate, type.rateMinutes, type.commands);
         m_onFail = type.onFail;
     }
 
@@ -366,12 +397,12 @@ class RuleArea: public IRule
 public:
 
     RuleArea(RuleAreaType const& type)
-        : IRule(type.name, type.rate, type.commands)
+        : IRule(type.name, type.rate, type.rateMinutes, type.commands)
     {}
 
     void reset(RuleAreaType const& type)
     {
-        IRule::reset(type.rate, type.commands);
+        IRule::reset(type.rate, type.rateMinutes, type.commands);
     }
 };
 

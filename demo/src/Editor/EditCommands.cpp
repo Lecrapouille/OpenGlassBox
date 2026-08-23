@@ -345,7 +345,28 @@ bool AddUnitCommand::redo(Simulation& simulation)
         Way* way = path->way(m_wayId);
         if (way == nullptr)
             return false;
-        unit = &city->addUnit(*type, *path, *way, m_offset);
+
+        // Cutting the segment turns the spot into a junction, which is what
+        // makes the building an address: agents stop at nodes.
+        m_wayType = way->type();
+        uint32_t const fromId = way->from().id();
+        uint32_t const toId = way->to().id();
+
+        Node& junction = city->splitWay(*path, *way, m_offset);
+
+        m_junctionId = NO_ID;
+        m_secondHalfId = NO_ID;
+        if ((junction.id() != fromId) && (junction.id() != toId))
+        {
+            m_junctionId = junction.id();
+            for (Way const* incident: junction.ways())
+            {
+                if (incident->id() != m_wayId)
+                    m_secondHalfId = incident->id();
+            }
+        }
+
+        unit = &city->addUnit(*type, junction);
     }
 
     m_unitId = unit->id();
@@ -364,9 +385,64 @@ void AddUnitCommand::undo(Simulation& simulation)
         if (it->id() == m_unitId)
         {
             city->removeUnit(*it);
-            return;
+            break;
         }
     }
+
+    mergeBack(simulation);
+}
+
+// ----------------------------------------------------------------------------
+void AddUnitCommand::mergeBack(Simulation& simulation)
+{
+    if (m_junctionId == NO_ID)
+        return;
+
+    City* city = findCity(simulation, m_city);
+    Path* path = findPath(simulation, m_city, m_path);
+    if ((city == nullptr) || (path == nullptr))
+        return;
+
+    Node* junction = path->node(m_junctionId);
+    Way* first = path->way(m_wayId);
+    Way* second = path->way(m_secondHalfId);
+    if ((junction == nullptr) || (first == nullptr) || (second == nullptr))
+        return;
+
+    // Sewing the halves back is only harmless while nothing else came to lean
+    // on them: another building, or a road drawn from the junction.
+    if (!junction->units().empty() || (junction->ways().size() != 2u))
+        return;
+    if (!first->units().empty() || !second->units().empty())
+        return;
+
+    WayType const* type = nullptr;
+    try
+    {
+        type = &simulation.script().getWayType(m_wayType);
+    }
+    catch (...)
+    {
+        return;
+    }
+
+    Node const& a = (&first->from() == junction) ? first->to() : first->from();
+    Node const& b = (&second->from() == junction) ? second->to() : second->from();
+    uint32_t const fromId = a.id();
+    uint32_t const toId = b.id();
+    Vector3f const fromPosition = a.position();
+    Vector3f const toPosition = b.position();
+
+    // The two halves go with the junction, and either end may be left an
+    // orphan and swept away, so both are named back into existence before the
+    // segment is laid again with the identifier it had.
+    city->removeNode(*path, *junction);
+    Node& from = path->addNode(fromId, fromPosition);
+    Node& to = path->addNode(toId, toPosition);
+    path->addWay(m_wayId, *type, from, to);
+
+    m_junctionId = NO_ID;
+    m_secondHalfId = NO_ID;
 }
 
 // ----------------------------------------------------------------------------
@@ -379,6 +455,8 @@ std::string AddUnitCommand::label() const
 void AddUnitCommand::onWorldRebuilt()
 {
     m_unitId = NO_ID;
+    m_junctionId = NO_ID;
+    m_secondHalfId = NO_ID;
 }
 
 // =============================================================================

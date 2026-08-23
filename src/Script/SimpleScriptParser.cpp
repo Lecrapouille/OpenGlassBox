@@ -373,6 +373,53 @@ bool SimpleScriptParser::nextBool(char const* what)
     return toBool(expectToken(what));
 }
 
+// -----------------------------------------------------------------------------
+void SimpleScriptParser::parseRate(uint32_t& rate, uint32_t& rateMinutes)
+{
+    Token const number = expectToken("a period, in ticks or in game time");
+    uint32_t const value = toUint(number);
+
+    rate = value;
+    rateMinutes = 0u;
+
+    // "rate 600" counts ticks, which is only readable to someone who knows how
+    // many of them make a minute. "rate 30 minutes" says the same thing out
+    // loud. The word is optional so that the older scripts keep working, and it
+    // has to sit on the same line as the number: "hour" is also the name of a
+    // command, and a rule that reads "rate 1" then "hour between 8 18" on the
+    // next line is not asking for a period of one hour.
+    Token const& unit = m_lexer.peek();
+    if (unit.valid() && (unit.line == number.line))
+    {
+        if ((unit.text == "tick") || (unit.text == "ticks"))
+        {
+            m_lexer.next();
+        }
+        else if ((unit.text == "minute") || (unit.text == "minutes"))
+        {
+            m_lexer.next();
+            rateMinutes = value;
+        }
+        else if ((unit.text == "hour") || (unit.text == "hours"))
+        {
+            m_lexer.next();
+            rateMinutes = value * 60u;
+        }
+        else if ((unit.text == "day") || (unit.text == "days"))
+        {
+            m_lexer.next();
+            rateMinutes = value * 60u * 24u;
+        }
+    }
+
+    if ((rateMinutes == 0u) && (rate == 0u))
+    {
+        error(number, "A period of zero would run the rule at every tick, "
+                      "write 1 tick instead");
+        rate = 1u;
+    }
+}
+
 // =============================================================================
 // RESOURCES
 // =============================================================================
@@ -941,7 +988,7 @@ void SimpleScriptParser::parseRuleMap()
 
         if (token.text == "rate")
         {
-            type.rate = nextUint("a rate, in ticks");
+            parseRate(type.rate, type.rateMinutes);
         }
         else if (token.text == "randomTiles")
         {
@@ -1002,7 +1049,7 @@ void SimpleScriptParser::parseRuleUnit()
 
         if (token.text == "rate")
         {
-            type.rate = nextUint("a rate, in ticks");
+            parseRate(type.rate, type.rateMinutes);
         }
         else if (token.text == "onFail")
         {
@@ -1075,7 +1122,7 @@ void SimpleScriptParser::parseRuleArea()
 
         if (token.text == "rate")
         {
-            type.rate = nextUint("a rate, in ticks");
+            parseRate(type.rate, type.rateMinutes);
         }
         else
         {

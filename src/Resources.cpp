@@ -100,6 +100,16 @@ void Resources::setCapacities(Resources const& resourcesCapacities)
 }
 
 // -----------------------------------------------------------------------------
+void Resources::setAmounts(Resources const& amounts)
+{
+    for (auto& it: m_bin)
+        it.remove(it.getAmount());
+
+    for (auto const& it: amounts.m_bin)
+        findOrAddResource(it.type()).add(it.getAmount());
+}
+
+// -----------------------------------------------------------------------------
 uint32_t Resources::getCapacity(ResourceType const& type) const
 {
     const Resource* b = findResource(type);

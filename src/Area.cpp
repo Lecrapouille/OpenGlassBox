@@ -32,10 +32,12 @@ void Area::executeRules()
     m_ticks += 1u;
     m_context.clock = &m_city.world().clock();
 
+    uint32_t const perMinute = m_city.world().clock().ticksPerMinute();
+
     size_t i = m_type.rules.size();
     while (i--)
     {
-        if (m_ticks % m_type.rules[i]->rate() == 0u)
+        if (m_ticks % m_type.rules[i]->periodTicks(perMinute) == 0u)
             m_type.rules[i]->execute(m_context);
     }
 }

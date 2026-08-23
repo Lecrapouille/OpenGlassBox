@@ -130,6 +130,19 @@ private:
     bool nextBool(char const* what);
 
     //--------------------------------------------------------------------------
+    //! \brief Read the period of a rule, either as a number of ticks or as a
+    //! duration of game time: "rate 7", "rate 30 minutes", "rate 2 hours",
+    //! "rate 1 day". The unit word is optional and ticks are assumed without
+    //! it, which is what every script written before this said. It must sit on
+    //! the same line as the number, because "hour" is also a command.
+    //! \param[out] rate: the number of ticks, meaningful only when rateMinutes
+    //! comes back as zero.
+    //! \param[out] rateMinutes: the duration in minutes of game time, zero when
+    //! the script counted ticks.
+    //--------------------------------------------------------------------------
+    void parseRate(uint32_t& rate, uint32_t& rateMinutes);
+
+    //--------------------------------------------------------------------------
     //! \brief Record an error at the position of a token.
     //--------------------------------------------------------------------------
     void error(Token const& token, std::string const& message);

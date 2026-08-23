@@ -402,18 +402,23 @@ game::Selection CityViewer::pickAt(Simulation& simulation,
                                    game::DebugState const& state,
                                    ImVec2 const& screen) const
 {
-    float bestDistance = PICK_RADIUS * PICK_RADIUS;
+    float const reach = PICK_RADIUS * PICK_RADIUS;
+    float bestDistance = std::numeric_limits<float>::infinity();
     game::Selection best;
 
+    // Candidates are offered building first, then agent, then node, and a tie
+    // goes to the first of them. A building dropped on a junction shares the
+    // position of its node to the pixel, and letting the node win is what made
+    // every house placed by the Buildings tool look like a bare node.
     auto const consider = [&](ImVec2 const& position, game::Selection candidate) {
         float const dx = position.x - screen.x;
         float const dy = position.y - screen.y;
         float const distance = dx * dx + dy * dy;
-        if (distance <= bestDistance)
-        {
-            bestDistance = distance;
-            best = std::move(candidate);
-        }
+        if ((distance > reach) || (distance >= bestDistance))
+            return;
+
+        bestDistance = distance;
+        best = std::move(candidate);
     };
 
     for (auto& it: simulation.cities())
@@ -1162,8 +1167,49 @@ void CityViewer::drawHoverTooltip(Simulation& simulation,
     case game::Selection::Kind::Unit:
         if (hover.unit != nullptr)
         {
-            ImGui::Text("Unit %s #%u", hover.unit->type().c_str(),
-                        hover.unit->id());
+            Unit const& unit = *hover.unit;
+            ImGui::TextColored(
+                ImGui::ColorConvertU32ToFloat4(theme::fromScript(unit.color())),
+                "%s #%u", unit.type().c_str(), unit.id());
+
+            // What a building holds and what it tries to do is the whole
+            // reason to point at it. Without them the tooltip only repeated
+            // the label already drawn on the map.
+            ImGui::Separator();
+            std::vector<Resource> const& bin = unit.resources().container();
+            if (bin.empty())
+            {
+                ImGui::TextDisabled("holds nothing");
+            }
+            else
+            {
+                for (Resource const& resource: bin)
+                {
+                    ImGui::Text("%s %u / %u", resource.type().c_str(),
+                                resource.getAmount(), resource.getCapacity());
+                }
+            }
+
+            ImGui::Separator();
+            if (unit.rules().empty())
+            {
+                ImGui::TextDisabled("no rule");
+            }
+            else
+            {
+                for (RuleUnit const* rule: unit.rules())
+                {
+                    if (rule != nullptr)
+                        ImGui::BulletText("%s", rule->type().c_str());
+                }
+            }
+
+            if (!unit.hasWays())
+            {
+                ImGui::TextColored(
+                    ImGui::ColorConvertU32ToFloat4(theme::FAILURE),
+                    "no road: unreachable");
+            }
         }
         break;
     case game::Selection::Kind::Agent:
@@ -1186,6 +1232,13 @@ void CityViewer::drawHoverTooltip(Simulation& simulation,
             {
                 ImGui::BulletText("%s, %.1f m", way->type().c_str(),
                                   way->magnitude());
+            }
+
+            for (Unit const* unit: hover.node->units())
+            {
+                ImGui::TextColored(
+                    ImGui::ColorConvertU32ToFloat4(theme::fromScript(unit->color())),
+                    "%s #%u stands here", unit->type().c_str(), unit->id());
             }
         }
         break;

@@ -14,7 +14,12 @@ namespace ogb {
 World::World(SimulationConfig const& config)
     : m_config(config),
       m_clock(config.ticksPerMinute)
-{}
+{
+    // A city that opens at midnight keeps the player waiting until the rules
+    // that hold office hours wake up. Loading a save overwrites this, since it
+    // restores the tick counter it was written with.
+    m_clock.setTimeOfDay(0u, config.startHour, 0u);
+}
 
 // -----------------------------------------------------------------------------
 Map& World::addMap(MapType const& type)
