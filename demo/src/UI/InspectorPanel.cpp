@@ -4,10 +4,10 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
-#include "UI/Panels.hpp"
-#include "UI/Theme.hpp"
 #include "Game/RuleTrace.hpp"
 #include "OpenGlassBox/Simulation.hpp"
+#include "UI/Panels.hpp"
+#include "UI/Theme.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -16,8 +16,10 @@
 #include <string>
 #include <vector>
 
-namespace ogb {
-namespace ui {
+namespace ogb
+{
+namespace ui
+{
 using namespace ogb::theme;
 
 //! \brief Width of the label column of the identity blocks and of the resource
@@ -35,8 +37,8 @@ static bool beginFields(char const* id)
     if (!ImGui::BeginTable(id, 2, ImGuiTableFlags_SizingFixedFit))
         return false;
 
-    ImGui::TableSetupColumn("label", ImGuiTableColumnFlags_WidthFixed,
-                            LABEL_WIDTH);
+    ImGui::TableSetupColumn(
+        "label", ImGuiTableColumnFlags_WidthFixed, LABEL_WIDTH);
     ImGui::TableSetupColumn("value", ImGuiTableColumnFlags_WidthStretch);
     return true;
 }
@@ -71,10 +73,14 @@ static void endFields()
 static void drawResource(Resource const& resource)
 {
     uint32_t const capacity = std::max(1u, resource.getCapacity());
-    float const ratio = std::min(1.0f, float(resource.getAmount()) / float(capacity));
+    float const ratio =
+        std::min(1.0f, float(resource.getAmount()) / float(capacity));
 
     char overlay[64];
-    std::snprintf(overlay, sizeof(overlay), "%u / %u", resource.getAmount(),
+    std::snprintf(overlay,
+                  sizeof(overlay),
+                  "%u / %u",
+                  resource.getAmount(),
                   resource.getCapacity());
 
     ImGui::TextUnformatted(resource.type().c_str());
@@ -93,7 +99,7 @@ static void drawResources(char const* label, std::vector<Resource> const& bin)
         return;
     }
 
-    for (Resource const& resource: bin)
+    for (Resource const& resource : bin)
     {
         drawResource(resource);
     }
@@ -117,7 +123,8 @@ static std::string gameTimeText(uint32_t ticks, uint32_t ticksPerMinute)
     uint32_t const rest = minutes % 60u;
 
     std::string out;
-    auto append = [&out](uint32_t value, char const* unit) {
+    auto append = [&out](uint32_t value, char const* unit)
+    {
         if (value == 0u)
             return;
         if (!out.empty())
@@ -141,7 +148,7 @@ static std::string gameTimeText(uint32_t ticks, uint32_t ticksPerMinute)
 static std::string commandsText(IRule& rule)
 {
     std::string out;
-    for (IRuleCommand* command: rule.commands())
+    for (IRuleCommand* command : rule.commands())
     {
         if (command == nullptr)
             continue;
@@ -164,6 +171,49 @@ static uint32_t ticksToGo(uint32_t period, uint32_t ticks)
 }
 
 // ----------------------------------------------------------------------------
+//! \brief The hours one rule keeps, so that a rule sleeping until eight in the
+//! morning is not read as a rule that does nothing.
+// ----------------------------------------------------------------------------
+static OpeningHours ruleHours(IRule const& rule)
+{
+    OpeningHours hours;
+    hours.add(rule);
+    return hours;
+}
+
+// ----------------------------------------------------------------------------
+OpeningStatus openingStatus(Unit const& unit, uint32_t hourOfDay)
+{
+    OpeningHours const hours = unit.openingHours();
+
+    OpeningStatus status;
+    status.known = hours.bounded();
+    if (!status.known)
+        return status;
+
+    status.open = hours.isOpen(hourOfDay);
+    if (status.open)
+    {
+        // closingAfter() gives the last hour still open, and a shop open at 17
+        // shuts at 18.
+        uint32_t const last = hours.closingAfter(hourOfDay);
+        status.text = (last == OpeningHours::NEVER)
+                          ? "open"
+                          : "open until " +
+                                std::to_string((last + 1u) %
+                                               OpeningHours::HOURS_PER_DAY) +
+                                "h";
+        return status;
+    }
+
+    uint32_t const next = hours.nextOpening(hourOfDay);
+    status.text = (next == OpeningHours::NEVER)
+                      ? "never opens"
+                      : "closed until " + std::to_string(next) + "h";
+    return status;
+}
+
+// ----------------------------------------------------------------------------
 //! \brief List the rules of the selected entity: how often each one is
 //! attempted and how long until the next attempt, both counted in ticks, which
 //! is the unit the engine actually runs on. Hovering a row spells the period
@@ -171,11 +221,14 @@ static uint32_t ticksToGo(uint32_t period, uint32_t ticks)
 //!
 //! A rule that never fires with many ticks to go is simply not due yet; one
 //! that is due every tick and still does nothing is blocked, and the Rule Log
-//! says by what.
+//! says by what. A rule outside the hours it keeps is asleep, and the countdown
+//! would claim it is about to fire.
 // ----------------------------------------------------------------------------
-template<typename RuleContainer>
-static void drawRules(RuleContainer const& rules, uint32_t ticks,
-                      uint32_t ticksPerMinute)
+template <typename RuleContainer>
+static void drawRules(RuleContainer const& rules,
+                      uint32_t ticks,
+                      uint32_t ticksPerMinute,
+                      uint32_t hourOfDay)
 {
     if (rules.empty())
     {
@@ -183,9 +236,10 @@ static void drawRules(RuleContainer const& rules, uint32_t ticks,
         return;
     }
 
-    if (!ImGui::BeginTable("rules", 3,
+    if (!ImGui::BeginTable("rules",
+                           3,
                            ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
-                           ImGuiTableFlags_SizingStretchProp))
+                               ImGuiTableFlags_SizingStretchProp))
         return;
 
     ImGui::TableSetupColumn("rule", ImGuiTableColumnFlags_WidthStretch, 2.0f);
@@ -193,30 +247,57 @@ static void drawRules(RuleContainer const& rules, uint32_t ticks,
     ImGui::TableSetupColumn("in", ImGuiTableColumnFlags_WidthStretch, 1.0f);
     ImGui::TableHeadersRow();
 
-    for (auto* rule: rules)
+    for (auto* rule : rules)
     {
         if (rule == nullptr)
             continue;
 
         uint32_t const period = std::max(1u, rule->periodTicks(ticksPerMinute));
         uint32_t const remaining = ticksToGo(period, ticks);
+        OpeningHours const hours = ruleHours(*rule);
+        bool const asleep = hours.bounded() && !hours.isOpen(hourOfDay);
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
 
         // The name spans the row so that hovering anywhere on it explains the
         // whole line rather than the cell under the cursor.
-        ImGui::Selectable(rule->type().c_str(), false,
-                          ImGuiSelectableFlags_SpanAllColumns);
+        ImGui::Selectable(
+            rule->type().c_str(), false, ImGuiSelectableFlags_SpanAllColumns);
         if (ImGui::BeginItemTooltip())
         {
             ImGui::TextUnformatted(rule->type().c_str());
             ImGui::Separator();
-            ImGui::Text("every %u tick%s (%s of game time)", period,
+            ImGui::Text("every %u tick%s (%s of game time)",
+                        period,
                         (period > 1u) ? "s" : "",
                         gameTimeText(period, ticksPerMinute).c_str());
-            ImGui::Text("next attempt in %u tick%s", remaining,
+            ImGui::Text("next attempt in %u tick%s",
+                        remaining,
                         (remaining > 1u) ? "s" : "");
+            if (hours.bounded())
+            {
+                uint32_t const next = hours.nextOpening(hourOfDay);
+                if (asleep && (next != OpeningHours::NEVER))
+                {
+                    ImGui::TextColored(
+                        ImGui::ColorConvertU32ToFloat4(theme::MUTED),
+                        "asleep until %uh: attempts are skipped",
+                        next);
+                }
+                else if (asleep)
+                {
+                    ImGui::TextColored(
+                        ImGui::ColorConvertU32ToFloat4(theme::FAILURE),
+                        "the hours it keeps are empty: it never fires");
+                }
+                else
+                {
+                    ImGui::TextColored(
+                        ImGui::ColorConvertU32ToFloat4(theme::SUCCESS),
+                        "within the hours it keeps");
+                }
+            }
             ImGui::Separator();
             std::string const commands = commandsText(*rule);
             if (commands.empty())
@@ -230,7 +311,14 @@ static void drawRules(RuleContainer const& rules, uint32_t ticks,
         ImGui::Text("%u", period);
 
         ImGui::TableNextColumn();
-        if (remaining == 0u)
+        if (asleep)
+        {
+            // The countdown is still running, but the calendar condition will
+            // refuse the attempt, so showing "now" would be a lie.
+            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(theme::MUTED),
+                               "asleep");
+        }
+        else if (remaining == 0u)
         {
             ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(theme::ACCENT),
                                "now");
@@ -242,8 +330,8 @@ static void drawRules(RuleContainer const& rules, uint32_t ticks,
     }
 
     ImGui::EndTable();
-    ImGui::TextDisabled("Periods are in ticks. Hover a row for the game time\n"
-                        "and for what the rule does.");
+    ImGui::TextDisabled("Periods are in ticks. Hover a row for the game time,\n"
+                        "the hours the rule keeps and what it does.");
 }
 
 // ----------------------------------------------------------------------------
@@ -253,7 +341,7 @@ static void drawRules(RuleContainer const& rules, uint32_t ticks,
 static void drawAgentLine(Agent const& agent)
 {
     std::string carried;
-    for (Resource const& resource: agent.resources())
+    for (Resource const& resource : agent.resources().container())
     {
         if (resource.getAmount() == 0u)
             continue;
@@ -268,7 +356,9 @@ static void drawAgentLine(Agent const& agent)
     ImGui::TableNextColumn();
     ImGui::TextColored(
         ImGui::ColorConvertU32ToFloat4(theme::fromScript(agent.color())),
-        "%s #%u", agent.type().c_str(), agent.id());
+        "%s #%u",
+        agent.type().c_str(),
+        agent.id());
     ImGui::TableNextColumn();
     ImGui::TextUnformatted(carried.c_str());
     ImGui::TableNextColumn();
@@ -292,7 +382,7 @@ static void drawUnitAgents(City& city, Unit const& unit)
     std::vector<Agent const*> outbound;
     std::vector<Agent const*> inbound;
 
-    for (auto const& agent: city.agents())
+    for (auto const& agent : city.agents())
     {
         if (agent->owner() == &unit)
         {
@@ -305,7 +395,8 @@ static void drawUnitAgents(City& city, Unit const& unit)
         }
     }
 
-    ImGui::Text("%zu agent(s) sent out, %zu on their way in", outbound.size(),
+    ImGui::Text("%zu agent(s) sent out, %zu on their way in",
+                outbound.size(),
                 inbound.size());
 
     if (outbound.empty() && inbound.empty())
@@ -319,8 +410,10 @@ static void drawUnitAgents(City& city, Unit const& unit)
                                   ImGuiTableFlags_RowBg |
                                   ImGuiTableFlags_SizingStretchProp;
 
-    auto const table = [&](char const* id, char const* first,
-                           std::vector<Agent const*> const& agents) {
+    auto const table = [&](char const* id,
+                           char const* first,
+                           std::vector<Agent const*> const& agents)
+    {
         if (agents.empty())
             return;
         if (!ImGui::BeginTable(id, 4, flags))
@@ -330,7 +423,7 @@ static void drawUnitAgents(City& city, Unit const& unit)
         ImGui::TableSetupColumn("looks for");
         ImGui::TableSetupColumn("left");
         ImGui::TableHeadersRow();
-        for (Agent const* agent: agents)
+        for (Agent const* agent : agents)
             drawAgentLine(*agent);
         ImGui::EndTable();
     };
@@ -340,7 +433,8 @@ static void drawUnitAgents(City& city, Unit const& unit)
 }
 
 // ----------------------------------------------------------------------------
-void InspectorPanel::draw(Simulation& simulation, game::DebugState& state,
+void InspectorPanel::draw(Simulation& simulation,
+                          game::DebugState& state,
                           game::RuleTrace const& trace)
 {
     if (!ImGui::Begin("Inspector"))
@@ -356,29 +450,29 @@ void InspectorPanel::draw(Simulation& simulation, game::DebugState& state,
             ImGui::Spacing();
             switch (state.selection.kind)
             {
-            case game::Selection::Kind::None:
-                ImGui::TextDisabled(
-                    "Click a building, an agent, a road, a node, a zone\n"
-                    "or a cell on the map to inspect it.");
-                break;
-            case game::Selection::Kind::Unit:
-                drawUnit(simulation, state, trace);
-                break;
-            case game::Selection::Kind::Agent:
-                drawAgent(simulation, state);
-                break;
-            case game::Selection::Kind::Node:
-                drawNode(state);
-                break;
-            case game::Selection::Kind::Way:
-                drawWay(state);
-                break;
-            case game::Selection::Kind::Area:
-                drawArea(simulation, state);
-                break;
-            case game::Selection::Kind::Cell:
-                drawCell(simulation, state);
-                break;
+                case game::Selection::Kind::None:
+                    ImGui::TextDisabled(
+                        "Click a building, an agent, a road, a node, a zone\n"
+                        "or a cell on the map to inspect it.");
+                    break;
+                case game::Selection::Kind::Unit:
+                    drawUnit(simulation, state, trace);
+                    break;
+                case game::Selection::Kind::Agent:
+                    drawAgent(simulation, state);
+                    break;
+                case game::Selection::Kind::Node:
+                    drawNode(state);
+                    break;
+                case game::Selection::Kind::Way:
+                    drawWay(state);
+                    break;
+                case game::Selection::Kind::Area:
+                    drawArea(simulation, state);
+                    break;
+                case game::Selection::Kind::Cell:
+                    drawCell(simulation, state);
+                    break;
             }
             ImGui::EndTabItem();
         }
@@ -407,8 +501,10 @@ void InspectorPanel::drawRuleset(Simulation& simulation)
     uint32_t const perMinute = simulation.clock().ticksPerMinute();
 
     ImGui::SetNextItemWidth(-1.0f);
-    ImGui::InputTextWithHint("##filter", "filter by rule name or by command",
-                             m_filter, IM_ARRAYSIZE(m_filter));
+    ImGui::InputTextWithHint("##filter",
+                             "filter by rule name or by command",
+                             m_filter,
+                             IM_ARRAYSIZE(m_filter));
     ImGui::Spacing();
 
     struct Row
@@ -419,11 +515,11 @@ void InspectorPanel::drawRuleset(Simulation& simulation)
 
     std::vector<Row> rows;
     ScriptDefinitions const& definitions = simulation.script().definitions();
-    for (auto const& it: definitions.ruleMaps())
+    for (auto const& it : definitions.ruleMaps())
         rows.push_back({ "map", it.second.get() });
-    for (auto const& it: definitions.ruleUnits())
+    for (auto const& it : definitions.ruleUnits())
         rows.push_back({ "building", it.second.get() });
-    for (auto const& it: definitions.ruleAreas())
+    for (auto const& it : definitions.ruleAreas())
         rows.push_back({ "zone", it.second.get() });
 
     if (rows.empty())
@@ -434,18 +530,22 @@ void InspectorPanel::drawRuleset(Simulation& simulation)
 
     // Case insensitive, because a filter that only matches the exact casing of
     // a rule name is a filter nobody uses twice.
-    auto contains = [](std::string haystack, std::string needle) {
-        std::transform(haystack.begin(), haystack.end(), haystack.begin(),
+    auto contains = [](std::string haystack, std::string needle)
+    {
+        std::transform(haystack.begin(),
+                       haystack.end(),
+                       haystack.begin(),
                        [](unsigned char c) { return char(std::tolower(c)); });
-        std::transform(needle.begin(), needle.end(), needle.begin(),
+        std::transform(needle.begin(),
+                       needle.end(),
+                       needle.begin(),
                        [](unsigned char c) { return char(std::tolower(c)); });
         return haystack.find(needle) != std::string::npos;
     };
 
-    ImGuiTableFlags const flags = ImGuiTableFlags_Borders |
-                                  ImGuiTableFlags_RowBg |
-                                  ImGuiTableFlags_ScrollY |
-                                  ImGuiTableFlags_SizingStretchProp;
+    ImGuiTableFlags const flags =
+        ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
+        ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp;
 
     if (!ImGui::BeginTable("ruleset", 4, flags))
         return;
@@ -458,7 +558,7 @@ void InspectorPanel::drawRuleset(Simulation& simulation)
     ImGui::TableHeadersRow();
 
     std::string const filter(m_filter);
-    for (Row const& row: rows)
+    for (Row const& row : rows)
     {
         if (row.rule == nullptr)
             continue;
@@ -477,7 +577,8 @@ void InspectorPanel::drawRuleset(Simulation& simulation)
         // Nothing forbids a map rule and a unit rule from sharing a name, and
         // two rows answering to the same identifier highlight together.
         ImGui::PushID(row.rule);
-        ImGui::Selectable(row.rule->type().c_str(), false,
+        ImGui::Selectable(row.rule->type().c_str(),
+                          false,
                           ImGuiSelectableFlags_SpanAllColumns);
         ImGui::PopID();
         if (ImGui::BeginItemTooltip())
@@ -485,7 +586,8 @@ void InspectorPanel::drawRuleset(Simulation& simulation)
             ImGui::TextUnformatted(row.rule->type().c_str());
             ImGui::Separator();
             ImGui::Text("run by every %s", row.runBy);
-            ImGui::Text("every %u tick%s (%s of game time)", period,
+            ImGui::Text("every %u tick%s (%s of game time)",
+                        period,
                         (period > 1u) ? "s" : "",
                         gameTimeText(period, perMinute).c_str());
             ImGui::Separator();
@@ -519,7 +621,8 @@ void InspectorPanel::drawRuleset(Simulation& simulation)
 }
 
 // ----------------------------------------------------------------------------
-void InspectorPanel::drawUnit(Simulation& simulation, game::DebugState& state,
+void InspectorPanel::drawUnit(Simulation& simulation,
+                              game::DebugState& state,
                               game::RuleTrace const& trace)
 {
     Unit* const unit = state.selection.unit;
@@ -529,8 +632,26 @@ void InspectorPanel::drawUnit(Simulation& simulation, game::DebugState& state,
         return;
     }
 
-    ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(theme::fromScript(unit->color())),
-                       "Building %s #%u", unit->type().c_str(), unit->id());
+    ImGui::TextColored(
+        ImGui::ColorConvertU32ToFloat4(theme::fromScript(unit->color())),
+        "Building %s #%u",
+        unit->type().c_str(),
+        unit->id());
+
+    uint32_t const hour = simulation.clock().hourOfDay();
+    OpeningStatus const opening = openingStatus(*unit, hour);
+    if (opening.known)
+    {
+        ImGui::SameLine();
+        ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(
+                               opening.open ? theme::SUCCESS : theme::MUTED),
+                           "- %s",
+                           opening.text.c_str());
+        ImGui::SetItemTooltip("The hours come from the 'hour between' "
+                              "conditions of its rules.\nIt is %02uh00 in the "
+                              "city.",
+                              hour);
+    }
     ImGui::Spacing();
 
     auto const cityIt = simulation.cities().find(state.selection.city);
@@ -542,7 +663,7 @@ void InspectorPanel::drawUnit(Simulation& simulation, game::DebugState& state,
     std::string zones;
     if (city != nullptr)
     {
-        for (auto const& area: city->areas())
+        for (auto const& area : city->areas())
         {
             if (!area->contains(unit->mapU(), unit->mapV()))
                 continue;
@@ -561,8 +682,11 @@ void InspectorPanel::drawUnit(Simulation& simulation, game::DebugState& state,
         if (unit->node() != nullptr)
             field("stands on", "node #%u", unit->node()->id());
         else if (unit->way() != nullptr)
-            field("stands on", "%s #%u at %.0f%%", unit->way()->type().c_str(),
-                  unit->way()->id(), 100.0f * unit->wayOffset());
+            field("stands on",
+                  "%s #%u at %.0f%%",
+                  unit->way()->type().c_str(),
+                  unit->way()->id(),
+                  100.0f * unit->wayOffset());
         else
             field("stands on", "nothing");
         endFields();
@@ -588,7 +712,7 @@ void InspectorPanel::drawUnit(Simulation& simulation, game::DebugState& state,
     else
     {
         std::string targets;
-        for (std::string const& target: unit->targets())
+        for (std::string const& target : unit->targets())
         {
             if (!targets.empty())
                 targets += ", ";
@@ -606,8 +730,10 @@ void InspectorPanel::drawUnit(Simulation& simulation, game::DebugState& state,
     ImGui::Spacing();
 
     ImGui::SeparatorText("Rules");
-    drawRules(unit->rules(), unit->ticks(),
-              simulation.clock().ticksPerMinute());
+    drawRules(unit->rules(),
+              unit->ticks(),
+              simulation.clock().ticksPerMinute(),
+              hour);
     ImGui::Spacing();
 
     // Outcome of the last attempts recorded for this very unit type.
@@ -632,18 +758,22 @@ void InspectorPanel::drawUnit(Simulation& simulation, game::DebugState& state,
 
         ++shown;
         ImU32 const color = event.success ? theme::SUCCESS : theme::FAILURE;
-        ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(color), "%s",
+        ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(color),
+                           "%s",
                            event.success ? "ok" : "blocked");
         ImGui::SameLine();
         if (event.success)
         {
-            ImGui::Text("%s (tick %llu)", event.rule.c_str(),
+            ImGui::Text("%s (tick %llu)",
+                        event.rule.c_str(),
                         (unsigned long long)event.tick);
         }
         else
         {
-            ImGui::Text("%s by %s (tick %llu)", event.rule.c_str(),
-                        event.blockedBy.c_str(), (unsigned long long)event.tick);
+            ImGui::Text("%s by %s (tick %llu)",
+                        event.rule.c_str(),
+                        event.blockedBy.c_str(),
+                        (unsigned long long)event.tick);
         }
     }
 
@@ -663,23 +793,31 @@ void InspectorPanel::drawAgent(Simulation& simulation, game::DebugState& state)
         return;
     }
 
-    ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(theme::fromScript(agent->color())),
-                       "Agent %s #%u", agent->type().c_str(), agent->id());
+    ImGui::TextColored(
+        ImGui::ColorConvertU32ToFloat4(theme::fromScript(agent->color())),
+        "Agent %s #%u",
+        agent->type().c_str(),
+        agent->id());
     ImGui::Spacing();
 
     Way const* const way = agent->currentWay();
     if (beginFields("agent"))
     {
         field("city", "%s", state.selection.city.c_str());
-        field("looking for", "a building accepting %s",
+        field("looking for",
+              "a building accepting %s",
               agent->searchTarget().c_str());
         field("speed", "%.2f world units per second", agent->speed());
-        field("position", "(%.1f, %.1f)", agent->position().x,
+        field("position",
+              "(%.1f, %.1f)",
+              agent->position().x,
               agent->position().y);
         if (way == nullptr)
             field("driving on", "nothing: waiting on a node for a route");
         else
-            field("driving on", "%s, %.0f%% travelled", way->type().c_str(),
+            field("driving on",
+                  "%s, %.0f%% travelled",
+                  way->type().c_str(),
                   100.0f * agent->offset());
         endFields();
     }
@@ -698,13 +836,15 @@ void InspectorPanel::drawAgent(Simulation& simulation, game::DebugState& state)
             field("nodes left", "%zu", route.nodes.size());
             if (route.destination != nullptr)
             {
-                field("destination", "%s #%u",
+                field("destination",
+                      "%s #%u",
                       route.destination->type().c_str(),
                       route.destination->id());
             }
             if (route.approachWay != nullptr)
             {
-                field("arrives on", "%s at %.0f%%",
+                field("arrives on",
+                      "%s at %.0f%%",
                       route.approachWay->type().c_str(),
                       100.0f * route.approachOffset);
             }
@@ -712,7 +852,7 @@ void InspectorPanel::drawAgent(Simulation& simulation, game::DebugState& state)
         endFields();
     }
 
-    drawResources("Carried", agent->resources());
+    drawResources("Carried", agent->resources().container());
 }
 
 // ----------------------------------------------------------------------------
@@ -731,8 +871,8 @@ void InspectorPanel::drawNode(game::DebugState& state)
     if (beginFields("node"))
     {
         field("city", "%s", state.selection.city.c_str());
-        field("position", "(%.1f, %.1f)", node->position().x,
-              node->position().y);
+        field(
+            "position", "(%.1f, %.1f)", node->position().x, node->position().y);
         endFields();
     }
 
@@ -742,11 +882,13 @@ void InspectorPanel::drawNode(game::DebugState& state)
         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(theme::FAILURE),
                            "orphan node: no agent can reach it");
     }
-    for (Way const* way: node->ways())
+    for (Way const* way : node->ways())
     {
         ImGui::BulletText("%s, %.1f long, %.2f s, %.0f%% full",
-                          way->type().c_str(), way->magnitude(),
-                          way->travelTime(), 100.0f * way->saturation());
+                          way->type().c_str(),
+                          way->magnitude(),
+                          way->travelTime(),
+                          100.0f * way->saturation());
     }
     ImGui::Spacing();
 
@@ -755,7 +897,7 @@ void InspectorPanel::drawNode(game::DebugState& state)
     {
         ImGui::TextDisabled("none");
     }
-    for (Unit const* unit: node->units())
+    for (Unit const* unit : node->units())
     {
         ImGui::BulletText("%s #%u", unit->type().c_str(), unit->id());
     }
@@ -787,14 +929,18 @@ void InspectorPanel::drawWay(game::DebugState& state)
 
     float const saturation = way->saturation();
     char overlay[64];
-    std::snprintf(overlay, sizeof(overlay), "%.0f / %.0f agents",
-                  way->flow(), way->capacity());
+    std::snprintf(overlay,
+                  sizeof(overlay),
+                  "%.0f / %.0f agents",
+                  way->flow(),
+                  way->capacity());
     ImGui::TextUnformatted("saturation");
     ImGui::SameLine(LABEL_WIDTH);
-    ImGui::PushStyleColor(ImGuiCol_PlotHistogram,
-                          ImGui::ColorConvertU32ToFloat4(
-                              theme::congestionColor(saturation)));
-    ImGui::ProgressBar(std::min(1.0f, saturation), ImVec2(-1.0f, 0.0f), overlay);
+    ImGui::PushStyleColor(
+        ImGuiCol_PlotHistogram,
+        ImGui::ColorConvertU32ToFloat4(theme::congestionColor(saturation)));
+    ImGui::ProgressBar(
+        std::min(1.0f, saturation), ImVec2(-1.0f, 0.0f), overlay);
     ImGui::PopStyleColor();
 }
 
@@ -810,8 +956,11 @@ void InspectorPanel::drawArea(Simulation& simulation, game::DebugState& state)
 
     MapRegion const& footprint = area->footprint();
 
-    ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(theme::fromScript(area->color())),
-                       "Zone %s #%u", area->type().c_str(), area->id());
+    ImGui::TextColored(
+        ImGui::ColorConvertU32ToFloat4(theme::fromScript(area->color())),
+        "Zone %s #%u",
+        area->type().c_str(),
+        area->id());
     ImGui::Spacing();
 
     if (beginFields("area"))
@@ -835,21 +984,24 @@ void InspectorPanel::drawArea(Simulation& simulation, game::DebugState& state)
         // Grouped by type: what matters about a zone is its mix, not the
         // identity of each building, which the Units themselves report.
         std::map<std::string, uint32_t> counts;
-        for (Unit const* unit: units)
+        for (Unit const* unit : units)
             ++counts[unit->type()];
 
-        for (auto const& it: counts)
+        for (auto const& it : counts)
         {
             ImGui::BulletText("%u x %s", it.second, it.first.c_str());
         }
-        ImGui::TextDisabled("%zu building(s) on %llu cell(s)", units.size(),
+        ImGui::TextDisabled("%zu building(s) on %llu cell(s)",
+                            units.size(),
                             (unsigned long long)footprint.area());
     }
     ImGui::Spacing();
 
     ImGui::SeparatorText("Rules");
-    drawRules(area->rules(), area->ticks(),
-              simulation.clock().ticksPerMinute());
+    drawRules(area->rules(),
+              area->ticks(),
+              simulation.clock().ticksPerMinute(),
+              simulation.clock().hourOfDay());
     ImGui::Spacing();
 
     auto const it = simulation.cities().find(state.selection.city);
@@ -858,15 +1010,19 @@ void InspectorPanel::drawArea(Simulation& simulation, game::DebugState& state)
 
     City& city = *it->second;
     char header[64];
-    std::snprintf(header, sizeof(header), "Cell (%d, %d) under the zone",
-                  state.selection.u, state.selection.v);
+    std::snprintf(header,
+                  sizeof(header),
+                  "Cell (%d, %d) under the zone",
+                  state.selection.u,
+                  state.selection.v);
     ImGui::SeparatorText(header);
-    for (auto& mapIt: city.maps())
+    for (auto& mapIt : city.maps())
     {
         Map& map = *mapIt.second;
         ImGui::TextColored(
             ImGui::ColorConvertU32ToFloat4(theme::fromScript(map.color())),
-            "%s", map.type().c_str());
+            "%s",
+            map.type().c_str());
         ImGui::SameLine(LABEL_WIDTH);
         ImGui::Text("%u / %u",
                     map.getResource(state.selection.u, state.selection.v),
@@ -885,26 +1041,31 @@ void InspectorPanel::drawCell(Simulation& simulation, game::DebugState& state)
     }
 
     City& city = *it->second;
-    ImGui::Text("Cell (%d, %d) of %s", state.selection.u, state.selection.v,
+    ImGui::Text("Cell (%d, %d) of %s",
+                state.selection.u,
+                state.selection.v,
                 city.name().c_str());
     ImGui::Spacing();
 
     ImGui::SeparatorText("Maps");
-    for (auto& mapIt: city.maps())
+    for (auto& mapIt : city.maps())
     {
         Map& map = *mapIt.second;
-        uint32_t const amount = map.getResource(state.selection.u, state.selection.v);
+        uint32_t const amount =
+            map.getResource(state.selection.u, state.selection.v);
         uint32_t const capacity = std::max(1u, map.getCapacity());
 
         char overlay[64];
-        std::snprintf(overlay, sizeof(overlay), "%u / %u", amount, map.getCapacity());
+        std::snprintf(
+            overlay, sizeof(overlay), "%u / %u", amount, map.getCapacity());
 
         ImGui::TextColored(
             ImGui::ColorConvertU32ToFloat4(theme::fromScript(map.color())),
-            "%s", map.type().c_str());
+            "%s",
+            map.type().c_str());
         ImGui::SameLine(LABEL_WIDTH);
-        ImGui::ProgressBar(float(amount) / float(capacity), ImVec2(-1.0f, 0.0f),
-                           overlay);
+        ImGui::ProgressBar(
+            float(amount) / float(capacity), ImVec2(-1.0f, 0.0f), overlay);
     }
     ImGui::Spacing();
 

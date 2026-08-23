@@ -7,15 +7,15 @@
 //! \file Lexer.hpp
 //! \brief Tokenizer that splits a simulation script into positioned tokens.
 
-
 #ifndef OPEN_GLASSBOX_SCRIPT_LEXER_HPP
-#  define OPEN_GLASSBOX_SCRIPT_LEXER_HPP
+#define OPEN_GLASSBOX_SCRIPT_LEXER_HPP
 
-#  include <cstdint>
-#  include <string>
-#  include <vector>
+#include <cstdint>
+#include <string>
+#include <vector>
 
-namespace ogb {
+namespace ogb
+{
 
 //==============================================================================
 //! \brief A word of a simulation script together with where it was written.
@@ -26,14 +26,23 @@ namespace ogb {
 //==============================================================================
 struct Token
 {
-    //! \brief The word itself. Empty at the end of the input.
+    //! \brief The word itself. Empty for the sentinel past the end of the
+    //! input.
     std::string text;
-    //! \brief One based, so that the numbers match what an editor shows.
+
+    //! \brief Which line it was written on, counted from one so that the
+    //! numbers match what an editor shows.
     uint32_t line = 0u;
+
+    //! \brief Which column it starts at, counted from one.
     uint32_t column = 0u;
 
-    //! \brief False for the sentinel returned past the end of the input.
-    bool valid() const { return !text.empty(); }
+    //! \brief \return false for the sentinel returned past the end of the
+    //! input, which is how a parser knows to stop.
+    bool valid() const
+    {
+        return !text.empty();
+    }
 };
 
 //==============================================================================
@@ -49,75 +58,105 @@ class Lexer
 public:
 
     //--------------------------------------------------------------------------
-    //! \brief Read and tokenize a file.
+    //! \brief Read a file and split it into words.
+    //! \param[in] filename the script to read. Its name is what the errors will
+    //! be reported against.
     //! \return false when the file cannot be opened.
     //--------------------------------------------------------------------------
     bool open(std::string const& filename);
 
     //--------------------------------------------------------------------------
-    //! \brief Tokenize a string. \c name is what the errors are reported
-    //! against. Used by the tests, which have no file to write.
+    //! \brief Split a script already in memory. What the tests use, having no
+    //! file to write.
+    //! \param[in] source the script itself.
+    //! \param[in] name what the errors should call it.
     //--------------------------------------------------------------------------
     void openString(std::string const& source, std::string const& name);
 
     //--------------------------------------------------------------------------
-    //! \brief Consume and return the next token. Returns the end sentinel, and
-    //! keeps returning it, once the input is exhausted.
+    //! \brief Take the next word.
+    //! \return that word, or the end sentinel once the input is exhausted,
+    //! which it then keeps returning: running off the end is not an error, it
+    //! is how a parser stops.
     //--------------------------------------------------------------------------
     Token const& next();
 
     //--------------------------------------------------------------------------
-    //! \brief The next token without consuming it.
+    //! \brief \return the word next() would return, without taking it. One word
+    //! of lookahead is all the language needs.
     //--------------------------------------------------------------------------
     Token const& peek() const;
 
     //--------------------------------------------------------------------------
-    //! \brief The token last returned by next().
+    //! \brief \return the word last taken by next(), or the end sentinel before
+    //! the first call.
     //--------------------------------------------------------------------------
     Token const& current() const;
 
     //--------------------------------------------------------------------------
-    //! \brief Whether the whole stream has been consumed.
+    //! \brief \return true once every word has been taken.
     //--------------------------------------------------------------------------
-    bool eof() const { return m_index >= m_tokens.size(); }
+    bool eof() const
+    {
+        return m_index >= m_tokens.size();
+    }
 
     //--------------------------------------------------------------------------
-    //! \brief Go back to the first token, to walk the stream a second time.
+    //! \brief Go back to the first word, which is how the parser walks the
+    //! whole script a second time to fill in the bodies it declared on the
+    //! first.
     //--------------------------------------------------------------------------
     void rewind();
 
     //--------------------------------------------------------------------------
-    //! \brief Name of what was tokenized, used in the error messages.
+    //! \brief \return the name of what was split, which the errors are reported
+    //! against.
     //--------------------------------------------------------------------------
-    std::string const& name() const { return m_name; }
+    std::string const& name() const
+    {
+        return m_name;
+    }
 
     //--------------------------------------------------------------------------
-    //! \brief The source of a given one based line, without its newline, or an
-    //! empty string when out of range. Used to render an error in context.
+    //! \brief One line of the script as it was written, so that an error can
+    //! quote it.
+    //! \param[in] line which line, counted from one.
+    //! \return the line without its newline, or an empty string when there is
+    //! no such line.
     //--------------------------------------------------------------------------
     std::string sourceLine(uint32_t line) const;
 
     //--------------------------------------------------------------------------
-    //! \brief Number of tokens read.
+    //! \brief \return how many words the script holds.
     //--------------------------------------------------------------------------
-    size_t size() const { return m_tokens.size(); }
+    size_t size() const
+    {
+        return m_tokens.size();
+    }
 
 private:
 
     //--------------------------------------------------------------------------
-    //! \brief Split the source into tokens, dropping the comments.
+    //! \brief Split a script into words, dropping the comments.
+    //! \param[in] source the script itself, kept line by line as well so that
+    //! an error can quote it.
     //--------------------------------------------------------------------------
     void tokenize(std::string const& source);
 
 private:
 
+    //! \brief Name of what was split, used in the error messages.
     std::string m_name;
+    //! \brief The script, line by line, so that an error can quote the line it
+    //! is complaining about.
     std::vector<std::string> m_lines;
+    //! \brief Every word of the script, in order, with its position.
     std::vector<Token> m_tokens;
+    //! \brief Which word comes next.
     size_t m_index = 0u;
     //! \brief Returned past the end of the input, and by current() before the
-    //! first next(). Holds the position of the end of the source so that a
-    //! truncated script still reports a sensible place.
+    //! first next(). Carries the position of the end of the script, so that a
+    //! script cut short still reports a sensible place.
     Token m_end;
 };
 

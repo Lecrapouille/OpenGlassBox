@@ -29,6 +29,36 @@ namespace ui {
 class CityViewer;
 
 // ****************************************************************************
+//! \brief Whether a building has something to do at a given hour of the day,
+//! in the words the inspector and the tooltips of the map both use.
+//!
+//! A shop that sells nothing at three in the morning is not a broken shop, and
+//! the only way to tell the two apart used to be to read the ruleset.
+// ****************************************************************************
+struct OpeningStatus
+{
+    //! \brief Whether the building keeps office hours at all. False for one
+    //! whose rules may run at any hour: there is nothing to display then, and
+    //! calling it open would suggest it could ever be shut.
+    bool known = false;
+
+    //! \brief Whether one of its rules may run at that hour.
+    bool open = false;
+
+    //! \brief "open until 18h" or "closed until 8h".
+    std::string text;
+};
+
+// ----------------------------------------------------------------------------
+//! \brief Read the timetable a building gets from the \c hour \c between
+//! conditions of its rules.
+//! \param[in] unit the building to read the rules of.
+//! \param[in] hourOfDay the hour to answer for, in [0..23].
+//! \return what to display, if anything. See OpeningStatus.
+// ----------------------------------------------------------------------------
+OpeningStatus openingStatus(Unit const& unit, uint32_t hourOfDay);
+
+// ****************************************************************************
 //! \brief One-click heatmap picker: click a map name to show it as the main
 //! layer. Lives next to the Maps tool of the toolbar, since choosing which map
 //! to look at and choosing which map to paint is the same decision.

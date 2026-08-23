@@ -489,7 +489,7 @@ bool CitySave::write(std::string const& path,
         if (agent->lastNode() != nullptr)
             out << " last " << agent->lastNode()->id();
         out << " resources ";
-        writeResources(out, agent->carried());
+        writeResources(out, agent->resources());
         out << "\n";
     }
 

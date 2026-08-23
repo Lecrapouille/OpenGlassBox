@@ -11,7 +11,8 @@
 #include <algorithm>
 
 // -----------------------------------------------------------------------------
-namespace ogb {
+namespace ogb
+{
 
 void Unit::bind(City& city)
 {
@@ -26,8 +27,7 @@ void Unit::bind(City& city)
 
 // -----------------------------------------------------------------------------
 Unit::Unit(UnitType const& type, Node& node, City& city)
-    : m_type(type),
-      m_position(node.position()),
+    : Entity(0u, type, node.position()),
       m_node(&node),
       m_resources(type.resources)
 {
@@ -37,7 +37,7 @@ Unit::Unit(UnitType const& type, Node& node, City& city)
 
 // -----------------------------------------------------------------------------
 Unit::Unit(UnitType const& type, Way& way, float offset, City& city)
-    : m_type(type),
+    : Entity(0u, type, Vector3f(0.0f, 0.0f, 0.0f)),
       m_way(&way),
       m_offset(offset),
       m_resources(type.resources)
@@ -54,9 +54,7 @@ Unit::Unit(UnitType const& type, Way& way, float offset, City& city)
 
 // -----------------------------------------------------------------------------
 Unit::Unit(UnitType const& type, Vector3f const& position, City& city)
-    : m_type(type),
-      m_position(position),
-      m_resources(type.resources)
+    : Entity(0u, type, position), m_resources(type.resources)
 {
     bind(city);
 }
@@ -67,9 +65,8 @@ void Unit::desynchronise()
     if (m_context.city == nullptr)
         return;
 
-    uint32_t const perMinute = (m_context.clock != nullptr)
-                               ? m_context.clock->ticksPerMinute()
-                               : 1u;
+    uint32_t const perMinute =
+        (m_context.clock != nullptr) ? m_context.clock->ticksPerMinute() : 1u;
     uint32_t const spread = std::max(1u, perMinute * 60u);
 
     // A cheap integer hash, so that consecutive identifiers do not come out as
@@ -187,9 +184,8 @@ void Unit::executeRules()
     if (m_context.city != nullptr)
         m_context.clock = &m_context.city->world().clock();
 
-    uint32_t const perMinute = (m_context.clock != nullptr)
-                               ? m_context.clock->ticksPerMinute()
-                               : 1u;
+    uint32_t const perMinute =
+        (m_context.clock != nullptr) ? m_context.clock->ticksPerMinute() : 1u;
 
     size_t i = m_type.rules.size();
     while (i--)
@@ -202,11 +198,24 @@ void Unit::executeRules()
 }
 
 // -----------------------------------------------------------------------------
-bool Unit::accepts(std::string const& searchTarget, Resources const& resourcesToTryToAdd)
+OpeningHours Unit::openingHours() const
+{
+    OpeningHours hours;
+    for (RuleUnit const* rule : m_type.rules)
+    {
+        if (rule != nullptr)
+            hours.add(*rule);
+    }
+    return hours;
+}
+
+// -----------------------------------------------------------------------------
+bool Unit::accepts(std::string const& searchTarget,
+                   Resources const& resourcesToTryToAdd)
 {
     return (m_resources.canAddSomeResources(resourcesToTryToAdd)) &&
-            ((find(m_type.targets.begin(), m_type.targets.end(), searchTarget)
-              != m_type.targets.end()));
+           ((find(m_type.targets.begin(), m_type.targets.end(), searchTarget) !=
+             m_type.targets.end()));
 }
 
 } // namespace ogb

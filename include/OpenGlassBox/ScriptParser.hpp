@@ -6,16 +6,16 @@
 //-----------------------------------------------------------------------------
 
 //! \file ScriptParser.hpp
-//! \brief Script holder that loads simulation definitions through pluggable parsers.
-
+//! \brief Script holder that loads simulation definitions through pluggable
+//! parsers.
 
 #ifndef OPEN_GLASSBOX_SCRIPT_HPP
-#  define OPEN_GLASSBOX_SCRIPT_HPP
+#define OPEN_GLASSBOX_SCRIPT_HPP
 
-#  include "OpenGlassBox/City.hpp"
-#  include "OpenGlassBox/Script/IScriptParser.hpp"
+#include "OpenGlassBox/Script/IScriptParser.hpp"
 
-namespace ogb {
+namespace ogb
+{
 
 //==============================================================================
 //! \brief Holds what a simulation script defined and knows how to load one.
@@ -52,7 +52,10 @@ public:
     //! \brief Everything found wrong by the last load, in the order it was
     //! found. Empty after a successful load.
     //--------------------------------------------------------------------------
-    std::vector<ParseError> const& errors() const { return m_errors; }
+    std::vector<ParseError> const& errors() const
+    {
+        return m_errors;
+    }
 
     //--------------------------------------------------------------------------
     //! \brief The errors of the last load, one per line, ready to be shown.
@@ -62,8 +65,14 @@ public:
     //--------------------------------------------------------------------------
     //! \brief What the script defined.
     //--------------------------------------------------------------------------
-    ScriptDefinitions const& definitions() const { return m_definitions; }
-    ScriptDefinitions& definitions() { return m_definitions; }
+    ScriptDefinitions const& definitions() const
+    {
+        return m_definitions;
+    }
+    ScriptDefinitions& definitions()
+    {
+        return m_definitions;
+    }
 
     //--------------------------------------------------------------------------
     //! \brief Search a type by its identifier.

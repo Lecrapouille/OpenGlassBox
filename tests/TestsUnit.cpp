@@ -2,9 +2,10 @@
 
 #define protected public
 #define private public
-#  include "TestWorld.hpp"
-#  include "OpenGlassBox/Unit.hpp"
-#  include "OpenGlassBox/City.hpp"
+#include "OpenGlassBox/City.hpp"
+#include "OpenGlassBox/RuleCommand.hpp"
+#include "OpenGlassBox/Unit.hpp"
+#include "TestWorld.hpp"
 #undef protected
 #undef private
 
@@ -35,7 +36,7 @@ TEST(TestsUnit, RulesOfTwoUnitsDoNotFallOnTheSameTick)
     std::vector<uint32_t> phases;
     for (uint32_t i = 0u; i < 6u; ++i)
     {
-        Unit& unit = city.addUnit(type, Vector3f(float(i), 0.0f, 0.0f));
+        Unit const& unit = city.addUnit(type, Vector3f(float(i), 0.0f, 0.0f));
         phases.push_back(unit.ticks());
         // One game hour at most, so that a rule counted in days cannot fire
         // the moment the building goes up.
@@ -45,7 +46,7 @@ TEST(TestsUnit, RulesOfTwoUnitsDoNotFallOnTheSameTick)
     // Not all the same. Two out of six may collide; six identical values would
     // mean no phase at all.
     uint32_t identical = 0u;
-    for (uint32_t const phase: phases)
+    for (uint32_t const phase : phases)
         identical += uint32_t(phase == phases[0]);
     ASSERT_LT(identical, phases.size());
 
@@ -53,7 +54,8 @@ TEST(TestsUnit, RulesOfTwoUnitsDoNotFallOnTheSameTick)
     TestWorld twin("Paris", 8u, 8u, Vector3f(0.0f, 0.0f, 0.0f), config);
     for (uint32_t i = 0u; i < phases.size(); ++i)
     {
-        Unit& unit = twin.city.addUnit(type, Vector3f(float(i), 0.0f, 0.0f));
+        Unit const& unit =
+            twin.city.addUnit(type, Vector3f(float(i), 0.0f, 0.0f));
         ASSERT_EQ(unit.ticks(), phases[i]);
     }
 
@@ -63,7 +65,8 @@ TEST(TestsUnit, RulesOfTwoUnitsDoNotFallOnTheSameTick)
     uint32_t same = 0u;
     for (uint32_t i = 0u; i < phases.size(); ++i)
     {
-        Unit& unit = other.city.addUnit(type, Vector3f(float(i), 0.0f, 0.0f));
+        Unit const& unit =
+            other.city.addUnit(type, Vector3f(float(i), 0.0f, 0.0f));
         same += uint32_t(unit.ticks() == phases[i]);
     }
     ASSERT_LT(same, phases.size());
@@ -71,15 +74,15 @@ TEST(TestsUnit, RulesOfTwoUnitsDoNotFallOnTheSameTick)
 
 TEST(TestsUnit, Constructor)
 {
-    TestWorld cityWorld("Paris", 4u, 4u,
-                       Vector3f(0.0f, 0.0f, 0.0f), smallCells());
+    TestWorld cityWorld(
+        "Paris", 4u, 4u, Vector3f(0.0f, 0.0f, 0.0f), smallCells());
     City& city = cityWorld.city;
     Node node(42u, Vector3f(3.0f, 4.0f, 5.0f));
     UnitType unit_type("unit");
     unit_type.color = 42u;
     unit_type.radius = 2u;
     unit_type.resources.addResource("car", 5u);
-    unit_type.targets.push_back("foo");
+    unit_type.targets.emplace_back("foo");
 
     // Constructor
     Unit u(unit_type, node, city);
@@ -122,19 +125,21 @@ TEST(TestsUnit, Constructor)
 // -----------------------------------------------------------------------------
 TEST(TestsUnit, Accept)
 {
-    TestWorld cityWorld("Paris", 4u, 4u,
-                       Vector3f(0.0f, 0.0f, 0.0f), smallCells());
+    TestWorld cityWorld(
+        "Paris", 4u, 4u, Vector3f(0.0f, 0.0f, 0.0f), smallCells());
     City& city = cityWorld.city;
     Node node(42u, Vector3f(3.0f, 4.0f, 5.0f));
     UnitType unit_type("unit");
     unit_type.resources.addResource("car", 5u);
-    unit_type.targets.push_back("foo");
+    unit_type.targets.emplace_back("foo");
     Unit u(unit_type, node, city);
 
     // Check accept
     Resources r0;
-    Resources r1; r1.addResource("car", 5u);
-    Resources r2; r2.addResource("oil", 5u);
+    Resources r1;
+    r1.addResource("car", 5u);
+    Resources r2;
+    r2.addResource("oil", 5u);
 
     ASSERT_EQ(u.accepts("foo", r0), false);
     ASSERT_EQ(u.accepts("foo", r1), true);
@@ -143,6 +148,144 @@ TEST(TestsUnit, Accept)
 
     r2.addResource("car", 5u);
     ASSERT_EQ(u.accepts("foo", r2), true);
+}
+
+// -----------------------------------------------------------------------------
+//! \brief A building is shut outside the hours its rules keep, and saying so is
+//! what keeps a sleeping shop from reading as a broken one.
+TEST(TestsUnit, OpeningHoursComeFromTheRulesOfTheBuilding)
+{
+    TestWorld cityWorld("Paris", 4u, 4u);
+    City& city = cityWorld.city;
+    Node node(1u, Vector3f(0.0f, 0.0f, 0.0f));
+
+    RuleCommandHour morning(8u, 10u);
+    RuleUnitType commuteType("SendPeopleToWork");
+    commuteType.commands.push_back(&morning);
+    RuleUnit commute(commuteType);
+
+    RuleCommandHour afternoon(14u, 18u);
+    RuleUnitType shoppingType("ShopForGoods");
+    shoppingType.commands.push_back(&afternoon);
+    RuleUnit shopping(shoppingType);
+
+    UnitType homeType("Home");
+    homeType.rules.push_back(&commute);
+    homeType.rules.push_back(&shopping);
+    Unit home(homeType, node, city);
+
+    OpeningHours const hours = home.openingHours();
+    ASSERT_TRUE(hours.bounded());
+
+    // The two windows add up, and what lies between them is closed: the house
+    // has nobody going anywhere at noon.
+    ASSERT_FALSE(hours.isOpen(7u));
+    ASSERT_TRUE(hours.isOpen(8u));
+    ASSERT_TRUE(hours.isOpen(9u));
+    ASSERT_FALSE(hours.isOpen(10u));
+    ASSERT_FALSE(hours.isOpen(12u));
+    ASSERT_TRUE(hours.isOpen(14u));
+    ASSERT_TRUE(hours.isOpen(17u));
+    ASSERT_FALSE(hours.isOpen(18u));
+    ASSERT_FALSE(hours.isOpen(0u));
+
+    ASSERT_EQ(hours.nextOpening(7u), 8u);
+    ASSERT_EQ(hours.nextOpening(9u), 9u);
+    ASSERT_EQ(hours.nextOpening(10u), 14u);
+    // Past the last window the answer is on the next day.
+    ASSERT_EQ(hours.nextOpening(20u), 8u);
+
+    ASSERT_EQ(hours.closingAfter(8u), 9u);
+    ASSERT_EQ(hours.closingAfter(14u), 17u);
+    ASSERT_EQ(hours.closingAfter(12u), OpeningHours::NEVER);
+}
+
+// -----------------------------------------------------------------------------
+//! \brief One rule with no timetable is enough to keep the doors open, and a
+//! building with no rule at all was never shut to begin with.
+TEST(TestsUnit, ABuildingWithoutATimetableNeverCloses)
+{
+    TestWorld cityWorld("Paris", 4u, 4u);
+    City& city = cityWorld.city;
+    Node node(1u, Vector3f(0.0f, 0.0f, 0.0f));
+
+    UnitType bareType("Road");
+    Unit bare(bareType, node, city);
+    ASSERT_FALSE(bare.openingHours().bounded());
+    ASSERT_TRUE(bare.openingHours().isOpen(3u));
+
+    // A shop that sells at any hour, and sends its customers home at any hour,
+    // keeps no office hours even though one of its rules does.
+    RuleCommandHour lunch(12u, 14u);
+    RuleUnitType servingType("ServeLunch");
+    servingType.commands.push_back(&lunch);
+    RuleUnit serving(servingType);
+
+    RuleUnitType sellingType("SellGoods");
+    RuleUnit selling(sellingType);
+
+    UnitType shopType("Shop");
+    shopType.rules.push_back(&serving);
+    shopType.rules.push_back(&selling);
+    Unit shop(shopType, node, city);
+
+    ASSERT_FALSE(shop.openingHours().bounded());
+    ASSERT_TRUE(shop.openingHours().isOpen(3u));
+}
+
+// -----------------------------------------------------------------------------
+//! \brief Two windows on the same rule narrow each other down: the rule only
+//! fires when both agree, so the shop opens on the overlap alone.
+TEST(TestsUnit, TwoWindowsOnOneRuleAreAnIntersection)
+{
+    TestWorld cityWorld("Paris", 4u, 4u);
+    City& city = cityWorld.city;
+    Node node(1u, Vector3f(0.0f, 0.0f, 0.0f));
+
+    RuleCommandHour wide(8u, 20u);
+    RuleCommandHour narrow(12u, 14u);
+    RuleUnitType ruleType("Lunch");
+    ruleType.commands.push_back(&wide);
+    ruleType.commands.push_back(&narrow);
+    RuleUnit rule(ruleType);
+
+    UnitType type("Restaurant");
+    type.rules.push_back(&rule);
+    Unit unit(type, node, city);
+
+    OpeningHours const hours = unit.openingHours();
+    ASSERT_TRUE(hours.bounded());
+    ASSERT_FALSE(hours.isOpen(9u));
+    ASSERT_TRUE(hours.isOpen(12u));
+    ASSERT_TRUE(hours.isOpen(13u));
+    ASSERT_FALSE(hours.isOpen(14u));
+}
+
+// -----------------------------------------------------------------------------
+//! \brief A window given the other way round runs through midnight, the way
+//! SimulationClock::hourBetween reads it.
+TEST(TestsUnit, ATimetableCanRunThroughMidnight)
+{
+    TestWorld cityWorld("Paris", 4u, 4u);
+    City& city = cityWorld.city;
+    Node node(1u, Vector3f(0.0f, 0.0f, 0.0f));
+
+    RuleCommandHour night(22u, 6u);
+    RuleUnitType ruleType("NightShift");
+    ruleType.commands.push_back(&night);
+    RuleUnit rule(ruleType);
+
+    UnitType type("Bakery");
+    type.rules.push_back(&rule);
+    Unit unit(type, node, city);
+
+    OpeningHours const hours = unit.openingHours();
+    ASSERT_TRUE(hours.isOpen(23u));
+    ASSERT_TRUE(hours.isOpen(0u));
+    ASSERT_TRUE(hours.isOpen(5u));
+    ASSERT_FALSE(hours.isOpen(6u));
+    ASSERT_FALSE(hours.isOpen(21u));
+    ASSERT_EQ(hours.nextOpening(21u), 22u);
 }
 
 // -----------------------------------------------------------------------------
@@ -161,9 +304,7 @@ class MockRuleUnit: public RuleUnit
 {
 public:
 
-    MockRuleUnit(RuleUnitType const& type)
-        : RuleUnit(type)
-    {}
+    explicit MockRuleUnit(RuleUnitType const& type) : RuleUnit(type) {}
     ~MockRuleUnit() = default;
 
     MOCK_METHOD(bool, execute, (RuleContext&), (override));
@@ -172,8 +313,8 @@ public:
 // -----------------------------------------------------------------------------
 TEST(TestsUnit, ExecuteRules)
 {
-    TestWorld cityWorld("Paris", 4u, 4u,
-                       Vector3f(0.0f, 0.0f, 0.0f), smallCells());
+    TestWorld cityWorld(
+        "Paris", 4u, 4u, Vector3f(0.0f, 0.0f, 0.0f), smallCells());
     City& city = cityWorld.city;
     Node node(42u, Vector3f(3.0f, 4.0f, 5.0f));
 

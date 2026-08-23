@@ -7,6 +7,8 @@
 #  include "TestWorld.hpp"
 #  include "OpenGlassBox/City.hpp"
 #  include "OpenGlassBox/Path.hpp"
+#  include "OpenGlassBox/RuleCommand.hpp"
+#  include "OpenGlassBox/RuleValue.hpp"
 #undef protected
 #undef private
 
@@ -107,7 +109,7 @@ TEST(TestsCity, BuildingCity)
     TestWorld cityWorld("Paris", GRILL, GRILL, Vector3f(1.0f, 2.0f, 3.0f));
     City& city = cityWorld.city;
     // Add Map1.
-    Map& m1 = city.addMap(MapType("map1"));
+    Map& m1 = city.addMap(keep<MapType>("map1"));
     Map& m2 = city.getMap("map1");
 
     // Check initial values of the newly created Map
@@ -120,7 +122,7 @@ TEST(TestsCity, BuildingCity)
     ASSERT_EQ(m1.color(), 0xFFFFFFu);
 
     // Add Map2.
-    Map& m3 = city.addMap(MapType("map2", 0x00, 10u));
+    Map& m3 = city.addMap(keep<MapType>("map2", 0x00, 10u));
     Map& m4 = city.getMap("map2");
 
     // Check initial values of the newly created Map
@@ -134,7 +136,7 @@ TEST(TestsCity, BuildingCity)
     ASSERT_EQ(m4.color(), 0x00u);
 
     // Add again Map2. Check previous map has been replaced
-    Map& m5 = city.addMap(MapType("map2"));
+    Map& m5 = city.addMap(keep<MapType>("map2"));
     Map& m6 = city.getMap("map2");
     ASSERT_EQ(&m1, &m2);
     ASSERT_EQ(&m5, &m6);
@@ -144,7 +146,7 @@ TEST(TestsCity, BuildingCity)
     ASSERT_EQ(m6.color(), 0xFFFFFFu);
 
     // Add a Path
-    Path& p1 = city.addPath(PathType("path1"));
+    Path& p1 = city.addPath(keep<PathType>("path1"));
     Path& p2 = city.getPath("path1");
     ASSERT_EQ(&p1, &p2);
 
@@ -157,7 +159,7 @@ TEST(TestsCity, BuildingCity)
     ASSERT_EQ(p2.m_nextWayId, 0u);
 
     // Replace the Path
-    Path& p3 = city.addPath(PathType("path1", 0xAA));
+    Path& p3 = city.addPath(keep<PathType>("path1", 0xAA));
     Path& p4 = city.getPath("path1");
 
     // Check previous map has been replaced
@@ -196,15 +198,15 @@ TEST(TestsCity, AddUnitOnWayDoesNotSplitRoad)
 {
     TestWorld cityWorld("Paris");
     City& city = cityWorld.city;
-    Path& p1 = city.addPath(PathType("Road"));
+    Path& p1 = city.addPath(keep<PathType>("Road"));
     Node& n1 = p1.addNode(Vector3f(0.0f, 0.0f, 3.0f));
     Node& n2 = p1.addNode(Vector3f(2.0f, 0.0f, 3.0f));
-    Way& w1 = p1.addWay(WayType("Dirt", 0xAAAAAA), n1, n2);
+    Way& w1 = p1.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
 
     ASSERT_EQ(p1.nodes().size(), 2u);
     ASSERT_EQ(p1.ways().size(), 1u);
 
-    Unit& u1 = city.addUnit(UnitType("unit"), p1, w1, 0.5f);
+    Unit& u1 = city.addUnit(keep<UnitType>("unit"), p1, w1, 0.5f);
     ASSERT_EQ(p1.nodes().size(), 2u);
     ASSERT_EQ(p1.ways().size(), 1u);
     ASSERT_EQ(u1.way(), &w1);
@@ -220,10 +222,10 @@ TEST(TestsCity, SplitWayCutsTheSegmentInTwo)
 {
     TestWorld cityWorld("Paris");
     City& city = cityWorld.city;
-    Path& path = city.addPath(PathType("Road"));
+    Path& path = city.addPath(keep<PathType>("Road"));
     Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& n2 = path.addNode(Vector3f(10.0f, 0.0f, 0.0f));
-    Way& way = path.addWay(WayType("Dirt", 0xAAAAAA), n1, n2);
+    Way& way = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
 
     Node& junction = city.splitWay(path, way, 0.5f);
 
@@ -244,13 +246,13 @@ TEST(TestsCity, SplitWayKeepsTheBuildingsWhereTheyStand)
 {
     TestWorld cityWorld("Paris");
     City& city = cityWorld.city;
-    Path& path = city.addPath(PathType("Road"));
+    Path& path = city.addPath(keep<PathType>("Road"));
     Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& n2 = path.addNode(Vector3f(10.0f, 0.0f, 0.0f));
-    Way& way = path.addWay(WayType("Dirt", 0xAAAAAA), n1, n2);
+    Way& way = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
 
-    Unit& near = city.addUnit(UnitType("Home"), path, way, 0.2f);
-    Unit& far = city.addUnit(UnitType("Home"), path, way, 0.8f);
+    Unit& near = city.addUnit(keep<UnitType>("Home"), path, way, 0.2f);
+    Unit& far = city.addUnit(keep<UnitType>("Home"), path, way, 0.8f);
 
     Node& junction = city.splitWay(path, way, 0.5f);
 
@@ -275,10 +277,10 @@ TEST(TestsCity, SplitWayOnAnExtremityCutsNothing)
 {
     TestWorld cityWorld("Paris");
     City& city = cityWorld.city;
-    Path& path = city.addPath(PathType("Road"));
+    Path& path = city.addPath(keep<PathType>("Road"));
     Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& n2 = path.addNode(Vector3f(10.0f, 0.0f, 0.0f));
-    Way& way = path.addWay(WayType("Dirt", 0xAAAAAA), n1, n2);
+    Way& way = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
 
     ASSERT_EQ(&city.splitWay(path, way, 0.0f), &n1);
     ASSERT_EQ(&city.splitWay(path, way, 1.0f), &n2);
@@ -291,14 +293,14 @@ TEST(TestsCity, translate)
 {
     TestWorld cityWorld("Paris");
     City& city = cityWorld.city;
-    Map& m1 = city.addMap(MapType("water"));
-    Path& p1 = city.addPath(PathType("Road"));
+    Map& m1 = city.addMap(keep<MapType>("water"));
+    Path& p1 = city.addPath(keep<PathType>("Road"));
     Node& n1 = p1.addNode(Vector3f(1.0f, 2.0f, 3.0f));
     Node& n2 = p1.addNode(Vector3f(3.0f, 3.0f, 3.0f));
-    Way& w1 = p1.addWay(WayType("Dirt", 0xAAAAAA), n1, n2);
+    Way& w1 = p1.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
     float const initialMagnitude = w1.magnitude();
-    Unit& u1 = city.addUnit(UnitType("unit1"), n1);
-    Agent& a1 = city.addAgent(AgentType("Worker", 1.0f, 2u,
+    Unit& u1 = city.addUnit(keep<UnitType>("unit1"), n1);
+    Agent& a1 = city.addAgent(keep<AgentType>("Worker", 1.0f, 2u,
          0xFFFFFF), u1, Resources(), "target");
 
     // Displace the City
@@ -339,100 +341,95 @@ TEST(TestsCity, translate)
 }
 
 // -----------------------------------------------------------------------------
-// For testing City::update()
-class MockUnit: public Unit
+//! \brief One tick of the City is one tick of every one of its buildings: the
+//! rules that fall due are attempted and their effect lands in the resources.
+//!
+//! This was written with a mock building overriding executeRules(), which is
+//! what the VIRTUAL macro used to be for. Reading the outcome instead of
+//! counting the calls also catches a rule that runs and does nothing.
+TEST(TestsCity, UpdateRunsTheRulesOfEveryBuilding)
 {
-public:
-
-    MockUnit(Node& n, City& city)
-        : Unit(UnitType("unit"), n, city)
-    {}
-    MOCK_METHOD(void, executeRules, (), (override));
-};
-
-class MockAgent: public Agent
-{
-public:
-
-    MockAgent(uint32_t id, AgentType const& type, Unit& owner, Resources const& resources,
-              std::string const& searchTarget)
-        : Agent(id, type, owner, resources, searchTarget)
-    {}
-    MOCK_METHOD(bool, update, (Dijkstra&, float), (override));
-};
-
-// -----------------------------------------------------------------------------
-TEST(TestsCity, update)
-{
-    TestWorld cityWorld("Paris");
+    TestWorld cityWorld("Paris", 8u, 8u);
     City& city = cityWorld.city;
-    Node n1(42u, Vector3f(1.0f, 2.0f, 3.0f));
 
-    // Add two Units
-    city.m_units.push_back(std::make_unique<MockUnit>(n1, city));
-    city.m_units.push_back(std::make_unique<MockUnit>(n1, city));
+    // A rule due on every tick, adding one to a resource of the building.
+    Resource people("People");
+    RuleValueLocal local(people);
+    RuleCommandAdd add(local, 1u);
+    RuleUnitType ruleType("Fill");
+    ruleType.rate = 1u;
+    ruleType.commands.push_back(&add);
+    RuleUnit rule(ruleType);
 
-    // Add two agents
-    city.m_agents.push_back(std::make_unique<MockAgent>(
-       0u, AgentType("Worker", 1.0f, 2u, 0xFFFFFF), *(city.m_units[0]), Resources(), "target")
-    );
-    city.m_agents.push_back(std::make_unique<MockAgent>(
-       1u, AgentType("Worker", 1.0f, 2u, 0xFFFFFF), *(city.m_units[0]), Resources(), "target")
-    );
+    UnitType type("Home");
+    type.rules.push_back(&rule);
+    type.resources.setCapacity("People", 10u);
 
-    // Each Unit will call executeRules() once
-    EXPECT_CALL(*(static_cast<MockUnit*>(city.m_units[0].get())),
-                executeRules()).Times(1);
-    EXPECT_CALL(*(static_cast<MockUnit*>(city.m_units[1].get())),
-                executeRules()).Times(1);
+    Unit& first = city.addUnit(type, Vector3f(1.0f, 1.0f, 0.0f));
+    Unit& second = city.addUnit(type, Vector3f(3.0f, 1.0f, 0.0f));
+    ASSERT_EQ(first.resources().getAmount("People"), 0u);
+    ASSERT_EQ(second.resources().getAmount("People"), 0u);
 
-    // Each Agent will call update() once
-    EXPECT_CALL(*(static_cast<MockAgent*>(city.m_agents[0].get())),
-                update(_, _)).Times(1).WillOnce(Return(false));
-    EXPECT_CALL(*(static_cast<MockAgent*>(city.m_agents[1].get())),
-                update(_, _)).Times(1).WillOnce(Return(false));
     city.update();
+
+    ASSERT_EQ(first.resources().getAmount("People"), 1u);
+    ASSERT_EQ(second.resources().getAmount("People"), 1u);
+
+    city.update();
+
+    ASSERT_EQ(first.resources().getAmount("People"), 2u);
+    ASSERT_EQ(second.resources().getAmount("People"), 2u);
 }
 
 // -----------------------------------------------------------------------------
-TEST(TestsCity, updateRemoveAgent)
+//! \brief An Agent that has handed its load over is taken away, and the others
+//! keep their identity and their order. An Agent with nothing to deliver is
+//! done on the very first tick.
+TEST(TestsCity, UpdateTakesAwayTheAgentsThatAreDone)
 {
-    TestWorld cityWorld("Paris");
+    TestWorld cityWorld("Paris", 8u, 8u);
     City& city = cityWorld.city;
-    Node n1(42u, Vector3f(1.0f, 2.0f, 3.0f));
-    Unit u1(UnitType("foo"), n1, city);
 
-    // Add two agents
-    city.m_agents.push_back(std::make_unique<MockAgent>(
-       0u, AgentType("Worker", 1.0f, 2u, 0xFFFFFF), u1, Resources(), "target")
-    );
-    city.m_agents.push_back(std::make_unique<MockAgent>(
-       1u, AgentType("Worker", 1.0f, 2u, 0xFFFFFF), u1, Resources(), "target")
-    );
-    city.m_agents.push_back(std::make_unique<MockAgent>(
-       2u, AgentType("Worker", 1.0f, 2u, 0xFFFFFF), u1, Resources(), "target")
-    );
+    Path& path = city.addPath(keep<PathType>("Road"));
+    Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
+    Node& n2 = path.addNode(Vector3f(10.0f, 0.0f, 0.0f));
+    path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
 
-    EXPECT_CALL(*(static_cast<MockAgent*>(city.m_agents[2].get())),
-                update(_, _)).Times(1).WillOnce(Return(true));
-    EXPECT_CALL(*(static_cast<MockAgent*>(city.m_agents[1].get())),
-                update(_, _)).Times(1).WillOnce(Return(false));
-    EXPECT_CALL(*(static_cast<MockAgent*>(city.m_agents[0].get())),
-                update(_, _)).Times(1).WillOnce(Return(false));
+    UnitType homeType("Home");
+    Unit& home = city.addUnit(homeType, n1);
+
+    AgentType worker("Worker", 1.0f, 2u, 0xFFFFFF);
+    Resources load;
+    load.addResource("People", 1u);
+
+    // Nothing in the city answers to "nowhere", so these two keep looking.
+    Agent& looking0 = city.addAgent(worker, home, load, "nowhere");
+    Agent& looking1 = city.addAgent(worker, home, load, "nowhere");
+    // Nothing to deliver: done as soon as it is asked to drive.
+    city.addAgent(worker, home, Resources(), "nowhere");
+
+    uint32_t const id0 = looking0.id();
+    uint32_t const id1 = looking1.id();
+    ASSERT_EQ(city.agents().size(), 3u);
+
     city.update();
 
-    ASSERT_EQ(city.m_agents.size(), 2u);
-    ASSERT_EQ(city.m_agents[0]->m_id, 0u);
-    ASSERT_EQ(city.m_agents[1]->m_id, 1u);
+    ASSERT_EQ(city.agents().size(), 2u);
+    ASSERT_EQ(city.agents()[0]->id(), id0);
+    ASSERT_EQ(city.agents()[1]->id(), id1);
 
-    EXPECT_CALL(*(static_cast<MockAgent*>(city.m_agents[1].get())),
-                update(_, _)).Times(1).WillOnce(Return(false));
-    EXPECT_CALL(*(static_cast<MockAgent*>(city.m_agents[0].get())),
-                update(_, _)).Times(1).WillOnce(Return(true));
-    city.update();
+    // Empty the load of the first one and it too is done, the second one taking
+    // its place without changing identity. Not on the very next tick: having
+    // found nothing, it drove off towards a random crossroads, and an Agent on
+    // its way somewhere does not stop to look around.
+    city.agents()[0]->resources().removeResource("People", 1u);
+    for (uint32_t tick = 0u; (tick < 600u) && (city.agents().size() > 1u); ++tick)
+    {
+        city.update();
+    }
 
-    ASSERT_EQ(city.m_agents.size(), 1u);
-    ASSERT_EQ(city.m_agents[0]->m_id, 1u);
+    ASSERT_EQ(city.agents().size(), 1u);
+    ASSERT_EQ(city.agents()[0]->id(), id1);
 }
 
 // -----------------------------------------------------------------------------
@@ -594,12 +591,12 @@ TEST(TestsCity, ClearKeepsTheGraphsAndEmptiesThem)
     City& city = cityWorld.city;
     WayType wayType("Dirt", 0xAAAAAA);
 
-    Path& path = city.addPath(PathType("Road"));
+    Path& path = city.addPath(keep<PathType>("Road"));
     Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& n2 = path.addNode(Vector3f(10.0f, 0.0f, 0.0f));
     path.addWay(wayType, n1, n2);
-    city.addUnit(UnitType("Home"), n1);
-    city.addArea(AreaType("Residential"), city.region());
+    city.addUnit(keep<UnitType>("Home"), n1);
+    city.addArea(keep<AreaType>("Residential"), city.region());
 
     city.clear();
 

@@ -6,60 +6,61 @@
 //-----------------------------------------------------------------------------
 
 #include "OpenGlassBox/Dijkstra.hpp"
-#include "OpenGlassBox/Vector.hpp"
 #include "OpenGlassBox/Unit.hpp"
-#include <queue>
+#include "OpenGlassBox/Vector.hpp"
 #include <limits>
+#include <queue>
 
-namespace ogb {
+namespace ogb
+{
 
 namespace
 {
-    struct QueueEntry
-    {
-        float f;
-        float g;
-        Node* node;
+struct QueueEntry
+{
+    float f;
+    float g;
+    Node* node;
 
-        bool operator>(QueueEntry const& other) const
-        {
-            if (f != other.f)
-                return f > other.f;
-            return g > other.g;
-        }
-    };
-
-    Unit* acceptingUnitOnNode(Node* current, std::string const& searchTarget,
-                              Resources const& resources)
+    bool operator>(QueueEntry const& other) const
     {
-        std::vector<Unit*>& units = current->units();
-        size_t i = units.size();
-        while (i--)
-        {
-            if (units[i]->accepts(searchTarget, resources))
-                return units[i];
-        }
-        return nullptr;
+        if (f != other.f)
+            return f > other.f;
+        return g > other.g;
     }
+};
 
-    Unit* acceptingUnitOnWay(Way* way, std::string const& searchTarget,
-                             Resources const& resources)
+Unit* acceptingUnitOnNode(Node* current,
+                          std::string const& searchTarget,
+                          Resources const& resources)
+{
+    std::vector<Unit*>& units = current->units();
+    size_t i = units.size();
+    while (i--)
     {
-        std::vector<Unit*>& units = way->units();
-        size_t i = units.size();
-        while (i--)
-        {
-            if (units[i]->accepts(searchTarget, resources))
-                return units[i];
-        }
-        return nullptr;
+        if (units[i]->accepts(searchTarget, resources))
+            return units[i];
     }
+    return nullptr;
 }
 
+Unit* acceptingUnitOnWay(Way* way,
+                         std::string const& searchTarget,
+                         Resources const& resources)
+{
+    std::vector<Unit*>& units = way->units();
+    size_t i = units.size();
+    while (i--)
+    {
+        if (units[i]->accepts(searchTarget, resources))
+            return units[i];
+    }
+    return nullptr;
+}
+} // namespace
+
 //------------------------------------------------------------------------------
-Dijkstra::Dijkstra()
-    : m_rng(std::random_device{}())
-{}
+Dijkstra::Dijkstra() : m_rng(std::random_device{}()) {}
 
 //------------------------------------------------------------------------------
 void Dijkstra::setRandomSeed(unsigned seed)
@@ -86,8 +87,11 @@ Node* Dijkstra::randomNeighbor(Node& fromNode)
 }
 
 //------------------------------------------------------------------------------
-Route Dijkstra::reconstruct(Node& fromNode, Node* goalNode, Unit* destination,
-                            Way* approachWay, float approachOffset,
+Route Dijkstra::reconstruct(Node const& fromNode,
+                            Node* goalNode,
+                            Unit* destination,
+                            Way* approachWay,
+                            float approachOffset,
                             float cost) const
 {
     Route route;
@@ -116,19 +120,24 @@ Route Dijkstra::reconstruct(Node& fromNode, Node* goalNode, Unit* destination,
 }
 
 //------------------------------------------------------------------------------
-Route Dijkstra::findRoute(Node& fromNode, std::string const& searchTarget,
+Route Dijkstra::findRoute(Node& fromNode,
+                          std::string const& searchTarget,
                           Resources const& resources)
 {
     m_closedSet.clear();
     m_cameFrom.clear();
     m_scoreFromStart.clear();
 
-    std::priority_queue<QueueEntry, std::vector<QueueEntry>, std::greater<QueueEntry>> open;
-    Path* const scope = fromNode.path();
-    float const maxSpeed = (scope != nullptr) ? scope->maxFreeFlowSpeed() : 1.0f;
+    std::priority_queue<QueueEntry,
+                        std::vector<QueueEntry>,
+                        std::greater<QueueEntry>>
+        open;
+    Path const* scope = fromNode.path();
+    float const maxSpeed =
+        (scope != nullptr) ? scope->maxFreeFlowSpeed() : 1.0f;
 
     m_scoreFromStart[&fromNode] = 0.0f;
-    open.push({0.0f, 0.0f, &fromNode});
+    open.push({ 0.0f, 0.0f, &fromNode });
 
     Route best;
     float bestCost = std::numeric_limits<float>::infinity();
@@ -148,7 +157,8 @@ Route Dijkstra::findRoute(Node& fromNode, std::string const& searchTarget,
         if (g >= bestCost)
             continue;
 
-        if (Unit* unit = acceptingUnitOnNode(currentNode, searchTarget, resources))
+        if (Unit* unit =
+                acceptingUnitOnNode(currentNode, searchTarget, resources))
         {
             return reconstruct(fromNode, currentNode, unit, nullptr, 0.0f, g);
         }
@@ -156,29 +166,31 @@ Route Dijkstra::findRoute(Node& fromNode, std::string const& searchTarget,
         // A Unit sitting on an incident Way is reached from this Node by
         // travelling a fraction of the segment. It is a candidate, not an
         // immediate winner: another Node a hop away may hold a cheaper Unit.
-        for (auto* way: currentNode->ways())
+        for (auto* way : currentNode->ways())
         {
             Unit* unit = acceptingUnitOnWay(way, searchTarget, resources);
             if (unit == nullptr)
                 continue;
 
-            float const extra = way->travelTime() * (
-                (&way->from() == currentNode) ? unit->wayOffset()
-                                              : (1.0f - unit->wayOffset()));
+            float const extra =
+                way->travelTime() * ((&way->from() == currentNode)
+                                         ? unit->wayOffset()
+                                         : (1.0f - unit->wayOffset()));
             float const cost = g + extra;
             if (cost < bestCost)
             {
-                best = reconstruct(fromNode, currentNode, unit, way,
-                                   unit->wayOffset(), cost);
+                best = reconstruct(
+                    fromNode, currentNode, unit, way, unit->wayOffset(), cost);
                 bestCost = cost;
             }
         }
 
         m_closedSet.insert(currentNode);
 
-        for (auto* way: currentNode->ways())
+        for (auto* way : currentNode->ways())
         {
-            Node* neighbor = (&way->from() == currentNode) ? &way->to() : &way->from();
+            Node* neighbor =
+                (&way->from() == currentNode) ? &way->to() : &way->from();
 
             if (scope != nullptr && neighbor->path() != scope)
                 continue;
@@ -194,8 +206,9 @@ Route Dijkstra::findRoute(Node& fromNode, std::string const& searchTarget,
 
             m_cameFrom[neighbor] = currentNode;
             m_scoreFromStart[neighbor] = tentativeG;
-            open.push({tentativeG + heuristic(*neighbor, fromNode, maxSpeed),
-                       tentativeG, neighbor});
+            open.push({ tentativeG + heuristic(*neighbor, fromNode, maxSpeed),
+                        tentativeG,
+                        neighbor });
         }
     }
 
@@ -203,7 +216,8 @@ Route Dijkstra::findRoute(Node& fromNode, std::string const& searchTarget,
 }
 
 //------------------------------------------------------------------------------
-Node* Dijkstra::findNextPoint(Node& fromNode, std::string& searchTarget,
+Node* Dijkstra::findNextPoint(Node& fromNode,
+                              std::string& searchTarget,
                               Resources& resources)
 {
     Route const route = findRoute(fromNode, searchTarget, resources);
@@ -215,7 +229,8 @@ Node* Dijkstra::findNextPoint(Node& fromNode, std::string& searchTarget,
 }
 
 //------------------------------------------------------------------------------
-float Dijkstra::shortestPathCost(Node& fromNode, std::string const& searchTarget,
+float Dijkstra::shortestPathCost(Node& fromNode,
+                                 std::string const& searchTarget,
                                  Resources const& resources)
 {
     Route const route = findRoute(fromNode, searchTarget, resources);
@@ -223,7 +238,9 @@ float Dijkstra::shortestPathCost(Node& fromNode, std::string const& searchTarget
 }
 
 //------------------------------------------------------------------------------
-float Dijkstra::heuristic(Node& p1, Node& p2, float maxFreeFlowSpeed) const
+float Dijkstra::heuristic(Node const& p1,
+                          Node const& p2,
+                          float maxFreeFlowSpeed) const
 {
     return magnitude(p2.position() - p1.position()) / maxFreeFlowSpeed;
 }

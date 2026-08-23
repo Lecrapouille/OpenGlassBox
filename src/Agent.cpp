@@ -12,25 +12,24 @@
 #include <iostream>
 #include <limits>
 
-namespace ogb {
-
-namespace
+namespace ogb
 {
-    static const float MIN_WAY_MAGNITUDE = 1e-6f;
-    //! \brief How close to the offset of a Unit an Agent has to be to knock at
-    //! its door.
-    static const float ARRIVED_OFFSET = 0.05f;
-}
+
+static const float MIN_WAY_MAGNITUDE = 1e-6f;
+//! \brief How close to the offset of a Unit an Agent has to be to knock at
+//! its door.
+static const float ARRIVED_OFFSET = 0.05f;
 
 //------------------------------------------------------------------------------
-Agent::Agent(uint32_t id, AgentType const& type, Unit& owner,
-             Resources const& resources, std::string const& searchTarget)
-    : m_id(id),
-      m_type(type),
+Agent::Agent(uint32_t id,
+             AgentType const& type,
+             Unit& owner,
+             Resources const& resources,
+             std::string const& searchTarget)
+    : Entity(id, type, owner.position()),
       m_owner(&owner),
       m_searchTarget(searchTarget),
-      m_resources(resources),
-      m_position(owner.position())
+      m_resources(resources)
 {
     if (owner.way() != nullptr && owner.node() == nullptr)
     {
@@ -75,7 +74,10 @@ void Agent::translate(Vector3f const direction)
 }
 
 //------------------------------------------------------------------------------
-void Agent::relocate(Vector3f const& position, Way* way, float offset, Node* last)
+void Agent::relocate(Vector3f const& position,
+                     Way* way,
+                     float offset,
+                     Node* last)
 {
     setCurrentWay(way);
     m_position = position;
@@ -83,15 +85,6 @@ void Agent::relocate(Vector3f const& position, Way* way, float offset, Node* las
     m_lastNode = last;
     m_nextNode = last;
     m_route = Route{};
-}
-
-//------------------------------------------------------------------------------
-void Agent::disruptRoute()
-{
-    setCurrentWay(nullptr);
-    m_route = Route{};
-    m_nextNode = nullptr;
-    m_ticksOnRoute = 0u;
 }
 
 //------------------------------------------------------------------------------
@@ -178,7 +171,7 @@ bool Agent::uses(Node const& node) const
 {
     if ((m_lastNode == &node) || (m_nextNode == &node))
         return true;
-    for (Node* n: m_route.nodes)
+    for (Node const* n : m_route.nodes)
     {
         if (n == &node)
             return true;
@@ -228,11 +221,11 @@ float Agent::remainingRouteCost() const
 
     float cost = 0.0f;
     Node* current = routingNode();
-    for (Node* next: m_route.nodes)
+    for (Node* next : m_route.nodes)
     {
         if (current == nullptr || next == nullptr)
             break;
-        Way* way = current->getWayToNode(*next);
+        Way const* way = current->getWayToNode(*next);
         if (way != nullptr)
             cost += way->travelTime();
         current = next;
@@ -240,8 +233,8 @@ float Agent::remainingRouteCost() const
     if ((m_route.approachWay != nullptr) && (current != nullptr))
     {
         float const fraction = (&m_route.approachWay->from() == current)
-                               ? m_route.approachOffset
-                               : (1.0f - m_route.approachOffset);
+                                   ? m_route.approachOffset
+                                   : (1.0f - m_route.approachOffset);
         cost += m_route.approachWay->travelTime() * fraction;
     }
     return cost;
@@ -266,8 +259,8 @@ bool Agent::shouldRecomputeRoute(Dijkstra& dijkstra,
     if (remaining <= 1e-4f)
         return false;
 
-    float const shortest = dijkstra.shortestPathCost(*from, m_searchTarget,
-                                                     m_resources);
+    float const shortest =
+        dijkstra.shortestPathCost(*from, m_searchTarget, m_resources);
     if (!std::isfinite(shortest))
         return false;
 
@@ -290,12 +283,12 @@ void Agent::computeRouteAlongWay(Dijkstra& dijkstra)
     float const infinity = std::numeric_limits<float>::infinity();
 
     Route byFrom = dijkstra.findRoute(from, m_searchTarget, m_resources);
-    float const costFrom = byFrom.found ? (byFrom.cost + travel * m_offset)
-                                        : infinity;
+    float const costFrom =
+        byFrom.found ? (byFrom.cost + travel * m_offset) : infinity;
 
     Route byTo = dijkstra.findRoute(to, m_searchTarget, m_resources);
-    float const costTo = byTo.found ? (byTo.cost + travel * (1.0f - m_offset))
-                                    : infinity;
+    float const costTo =
+        byTo.found ? (byTo.cost + travel * (1.0f - m_offset)) : infinity;
 
     m_ticksOnRoute = 0u;
 
@@ -360,8 +353,8 @@ void Agent::followRoute(Dijkstra& dijkstra, SimulationConfig const& config)
             // Destination on this very Way. Only the direction is needed: the
             // approach branch of moveTowardsNextNode walks the offset there.
             m_nextNode = (m_route.approachOffset >= m_offset)
-                         ? &m_currentWay->to()
-                         : &m_currentWay->from();
+                             ? &m_currentWay->to()
+                             : &m_currentWay->from();
             return;
         }
 
@@ -431,9 +424,8 @@ void Agent::followRoute(Dijkstra& dijkstra, SimulationConfig const& config)
 //------------------------------------------------------------------------------
 bool Agent::update(Dijkstra& dijkstra, float dt)
 {
-    SimulationConfig const& config = (m_simConfig != nullptr)
-                                     ? *m_simConfig
-                                     : SimulationConfig{};
+    SimulationConfig const& config =
+        (m_simConfig != nullptr) ? *m_simConfig : SimulationConfig{};
     return update(dijkstra, config, dt);
 }
 
@@ -483,7 +475,7 @@ Unit* Agent::searchUnit()
         float const arrived = std::fabs(m_offset - m_route.approachOffset);
         if (arrived <= 0.05f || m_nextNode == nullptr)
         {
-            for (Unit* unit: m_currentWay->units())
+            for (Unit* unit : m_currentWay->units())
             {
                 if (unit->accepts(m_searchTarget, m_resources))
                     return unit;
@@ -544,8 +536,8 @@ void Agent::moveTowardsNextNode(float dt)
         float const direction = (target >= m_offset) ? 1.0f : -1.0f;
         m_offset += direction * m_type.speed * dt / wayLength;
 
-        bool const arrived = (direction > 0.0f) ? (m_offset >= target)
-                                                : (m_offset <= target);
+        bool const arrived =
+            (direction > 0.0f) ? (m_offset >= target) : (m_offset <= target);
         if (arrived)
         {
             m_offset = target;

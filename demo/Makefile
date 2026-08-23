@@ -49,7 +49,6 @@ USER_CXXFLAGS += -Wno-unused-variable -Wno-old-style-cast -Wno-null-dereference 
 SRC_FILES += $(call rwildcard,src,*.cpp)
 INCLUDES += $(P)/include $(P)/demo/src
 VPATH += $(P)/demo
-DEFINES += -DVIRTUAL=
 INTERNAL_LIBS += $(call internal-lib,$(PROJECT_NAME))
 
 ###################################################

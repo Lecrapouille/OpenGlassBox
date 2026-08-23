@@ -24,7 +24,7 @@ TEST(TestsDijkstra, DirectPath)
 {
     TestWorld cityWorld("Paris", 32u, 32u);
     City& city = cityWorld.city;
-    Path& path = city.addPath(PathType("Road"));
+    Path& path = city.addPath(keep<PathType>("Road"));
     Node& home = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& mid = path.addNode(Vector3f(1.0f, 0.0f, 0.0f));
     Node& factory = path.addNode(Vector3f(2.0f, 0.0f, 0.0f));
@@ -49,7 +49,7 @@ TEST(TestsDijkstra, ShortestBranch)
 {
     TestWorld cityWorld("Paris", 32u, 32u);
     City& city = cityWorld.city;
-    Path& path = city.addPath(PathType("Road"));
+    Path& path = city.addPath(keep<PathType>("Road"));
     Node& start = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& longRoute = path.addNode(Vector3f(10.0f, 0.0f, 0.0f));
     Node& shortRoute = path.addNode(Vector3f(1.0f, 0.0f, 0.0f));
@@ -77,7 +77,7 @@ TEST(TestsDijkstra, AlreadyAtDestination)
 {
     TestWorld cityWorld("Paris", 32u, 32u);
     City& city = cityWorld.city;
-    Path& path = city.addPath(PathType("Road"));
+    Path& path = city.addPath(keep<PathType>("Road"));
     Node& factory = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     UnitType factoryType = makeFactoryType();
     city.addUnit(factoryType, factory);
@@ -96,10 +96,10 @@ TEST(TestsDijkstra, RandomFallbackWhenNoDestination)
 {
     TestWorld cityWorld("Paris", 32u, 32u);
     City& city = cityWorld.city;
-    Path& path = city.addPath(PathType("Road"));
+    Path& path = city.addPath(keep<PathType>("Road"));
     Node& start = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& other = path.addNode(Vector3f(1.0f, 0.0f, 0.0f));
-    path.addWay(WayType("Dirt", 0xAAAAAA), start, other);
+    path.addWay(keep<WayType>("Dirt", 0xAAAAAA), start, other);
 
     Resources carried;
     carried.addResource("People", 1u);
@@ -130,8 +130,8 @@ TEST(TestsDijkstra, PathScopedRouting)
 {
     TestWorld cityWorld("Paris", 32u, 32u);
     City& city = cityWorld.city;
-    Path& road = city.addPath(PathType("Road"));
-    Path& rail = city.addPath(PathType("Rail"));
+    Path& road = city.addPath(keep<PathType>("Road"));
+    Path& rail = city.addPath(keep<PathType>("Rail"));
 
     Node& start = road.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& roadMid = road.addNode(Vector3f(1.0f, 0.0f, 0.0f));

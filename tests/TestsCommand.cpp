@@ -222,7 +222,7 @@ TEST(TestsCommand, RuleCommandAgent)
     Resources locals, globals;
     TestWorld cityWorld("Paris", 2u, 2u);
     City& city = cityWorld.city;
-    Path& p1 = city.addPath(PathType("Road"));
+    Path& p1 = city.addPath(keep<PathType>("Road"));
     Node& n1 = p1.addNode(Vector3f(0.0f, 0.0f, 3.0f));
     Node& n2 = p1.addNode(Vector3f(2.0f, 0.0f, 3.0f));
     Unit unit(UnitType("unit"), n1, city);
@@ -246,7 +246,7 @@ TEST(TestsCommand, RuleCommandAgent)
     EXPECT_EQ(city.agents().size(), 0u);
 
     // Add ways => can execute command => agents created
-    p1.addWay(WayType("Dirt", 0xAAAAAA), n1, n2);
+    p1.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
     EXPECT_CALL(target, add(_,_)).Times(0);
     EXPECT_CALL(target, remove(_,_)).Times(0);
     EXPECT_CALL(target, get(_)).Times(0);

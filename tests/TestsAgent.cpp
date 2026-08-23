@@ -136,10 +136,10 @@ TEST(TestsAgent, LeavesAndReachesABuildingWithoutJumping)
 {
     TestWorld cityWorld("Paris", 32u, 32u);
     City& city = cityWorld.city;
-    Path& path = city.addPath(PathType("Road"));
+    Path& path = city.addPath(keep<PathType>("Road"));
     Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& n2 = path.addNode(Vector3f(60.0f, 0.0f, 0.0f));
-    Way& way = path.addWay(WayType("Dirt", 0xAAAAAA), n1, n2);
+    Way& way = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
 
     UnitType homeType("Home");
     homeType.targets.push_back("Home");
@@ -173,12 +173,12 @@ TEST(TestsAgent, DrivesToTheIntersectionBeforeTakingAnotherWay)
 {
     TestWorld cityWorld("Paris", 32u, 32u);
     City& city = cityWorld.city;
-    Path& path = city.addPath(PathType("Road"));
+    Path& path = city.addPath(keep<PathType>("Road"));
     Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& n2 = path.addNode(Vector3f(60.0f, 0.0f, 0.0f));
     Node& n3 = path.addNode(Vector3f(120.0f, 0.0f, 0.0f));
-    Way& way1 = path.addWay(WayType("Dirt", 0xAAAAAA), n1, n2);
-    Way& way2 = path.addWay(WayType("Dirt", 0xAAAAAA), n2, n3);
+    Way& way1 = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
+    Way& way2 = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n2, n3);
 
     UnitType homeType("Home");
     homeType.targets.push_back("Home");
@@ -210,12 +210,12 @@ TEST(TestsAgent, LeavesTheWayByTheEndTheDestinationIsBehind)
 {
     TestWorld cityWorld("Paris", 32u, 32u);
     City& city = cityWorld.city;
-    Path& path = city.addPath(PathType("Road"));
+    Path& path = city.addPath(keep<PathType>("Road"));
     Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& n2 = path.addNode(Vector3f(60.0f, 0.0f, 0.0f));
     Node& n3 = path.addNode(Vector3f(120.0f, 0.0f, 0.0f));
-    Way& way1 = path.addWay(WayType("Dirt", 0xAAAAAA), n1, n2);
-    path.addWay(WayType("Dirt", 0xAAAAAA), n2, n3);
+    Way& way1 = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
+    path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n2, n3);
 
     // The factory stands at a fifth of the first street, so n1 is its near end
     // and the shop is on the other side of n2.
@@ -262,10 +262,10 @@ TEST(TestsAgent, DoesNotDeliverFromTheMiddleOfTheStreet)
 {
     TestWorld cityWorld("Paris", 32u, 32u);
     City& city = cityWorld.city;
-    Path& path = city.addPath(PathType("Road"));
+    Path& path = city.addPath(keep<PathType>("Road"));
     Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& n2 = path.addNode(Vector3f(60.0f, 0.0f, 0.0f));
-    Way& way = path.addWay(WayType("Dirt", 0xAAAAAA), n1, n2);
+    Way& way = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
 
     UnitType workType("Work");
     workType.targets.push_back("Work");
@@ -298,12 +298,12 @@ TEST(TestsAgent, DeliversToTheBuildingThatStillHasRoom)
 {
     TestWorld cityWorld("Paris", 32u, 32u);
     City& city = cityWorld.city;
-    Path& path = city.addPath(PathType("Road"));
+    Path& path = city.addPath(keep<PathType>("Road"));
     Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& n2 = path.addNode(Vector3f(60.0f, 0.0f, 0.0f));
     Node& n3 = path.addNode(Vector3f(120.0f, 0.0f, 0.0f));
-    Way& way1 = path.addWay(WayType("Dirt", 0xAAAAAA), n1, n2);
-    Way& way2 = path.addWay(WayType("Dirt", 0xAAAAAA), n2, n3);
+    Way& way1 = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
+    Way& way2 = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n2, n3);
 
     UnitType workType("Work");
     workType.targets.push_back("Work");
@@ -344,10 +344,10 @@ TEST(TestsAgent, DoesNotLoopWhenTheDestinationFillsUpOnTheWay)
     config.agentGiveUpTicks = 200u;
     TestWorld cityWorld("Paris", 32u, 32u, Vector3f(0.0f, 0.0f, 0.0f), config);
     City& city = cityWorld.city;
-    Path& path = city.addPath(PathType("Road"));
+    Path& path = city.addPath(keep<PathType>("Road"));
     Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& n2 = path.addNode(Vector3f(60.0f, 0.0f, 0.0f));
-    Way& way = path.addWay(WayType("Dirt", 0xAAAAAA), n1, n2);
+    Way& way = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
 
     UnitType workType("Work");
     workType.targets.push_back("Work");
@@ -391,10 +391,10 @@ TEST(TestsAgent, ForgetsADestroyedDestination)
 {
     TestWorld cityWorld("Paris", 32u, 32u);
     City& city = cityWorld.city;
-    Path& path = city.addPath(PathType("Road"));
+    Path& path = city.addPath(keep<PathType>("Road"));
     Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& n2 = path.addNode(Vector3f(60.0f, 0.0f, 0.0f));
-    Way& way = path.addWay(WayType("Dirt", 0xAAAAAA), n1, n2);
+    Way& way = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
 
     UnitType workType("Work");
     workType.targets.push_back("Work");
@@ -425,10 +425,10 @@ TEST(TestsAgent, ZeroLengthWayDoesNotCrash)
 {
     TestWorld cityWorld("Paris", 32u, 32u);
     City& city = cityWorld.city;
-    Path& path = city.addPath(PathType("Road"));
+    Path& path = city.addPath(keep<PathType>("Road"));
     Node& n1 = path.addNode(Vector3f(1.0f, 2.0f, 3.0f));
     Node& n2 = path.addNode(Vector3f(1.0f, 2.0f, 3.0f));
-    path.addWay(WayType("Dirt", 0xAAAAAA), n1, n2);
+    path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
 
     UnitType homeType("Home");
     homeType.targets.push_back("Home");

@@ -18,7 +18,6 @@ include $(M)/project/Makefile
 LIB_FILES := $(call rwildcard,src,*.cpp)
 INCLUDES := $(P)/include
 VPATH := $(P)/src
-DEFINES := -DVIRTUAL=
 
 ###################################################
 # Generic Makefile rules

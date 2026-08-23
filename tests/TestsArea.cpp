@@ -13,10 +13,10 @@ TEST(TestsArea, SpawnOnNearestWay)
 {
     TestWorld world("Paris", 8u, 8u);
     City& city = world.city;
-    Path& path = city.addPath(PathType("Road"));
+    Path& path = city.addPath(keep<PathType>("Road"));
     Node& n1 = path.addNode(Vector3f(30.0f, 30.0f, 0.0f));
     Node& n2 = path.addNode(Vector3f(90.0f, 30.0f, 0.0f));
-    path.addWay(WayType("Dirt", 0xAAAAAA), n1, n2);
+    path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
 
     UnitType home("Home");
     RuleAreaType growType("Grow");
@@ -47,11 +47,11 @@ TEST(TestsArea, SpawnedUnitsStandAlongTheRoad)
     City& city = world.city;
     float const side = city.gridCellSize();
 
-    Path& path = city.addPath(PathType("Road"));
+    Path& path = city.addPath(keep<PathType>("Road"));
     // A road along the third row of cells, crossing the whole city.
     Node& n1 = path.addNode(Vector3f(0.5f * side, 2.5f * side, 0.0f));
     Node& n2 = path.addNode(Vector3f(7.5f * side, 2.5f * side, 0.0f));
-    path.addWay(WayType("Dirt", 0xAAAAAA), n1, n2);
+    path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
 
     UnitType home("Home");
     RuleAreaType growType("Grow");
@@ -91,7 +91,7 @@ TEST(TestsArea, NoRoadNoBuilding)
 {
     TestWorld world("Paris", 8u, 8u);
     City& city = world.city;
-    city.addPath(PathType("Road"));
+    city.addPath(keep<PathType>("Road"));
 
     UnitType home("Home");
     RuleAreaType growType("Grow");
@@ -112,9 +112,9 @@ TEST(TestsArea, CountAndDestroy)
 {
     TestWorld world("Paris", 8u, 8u);
     City& city = world.city;
-    Path& path = city.addPath(PathType("Road"));
+    Path& path = city.addPath(keep<PathType>("Road"));
     Node& n1 = path.addNode(Vector3f(30.0f, 30.0f, 0.0f));
-    city.addUnit(UnitType("Home"), n1);
+    city.addUnit(keep<UnitType>("Home"), n1);
 
     AreaType residential("Residential");
     Area& area = city.addArea(residential, city.region());
@@ -133,10 +133,10 @@ TEST(TestsArea, UpgradeKeepsAttachment)
 {
     TestWorld world("Paris", 8u, 8u);
     City& city = world.city;
-    Path& path = city.addPath(PathType("Road"));
+    Path& path = city.addPath(keep<PathType>("Road"));
     Node& n1 = path.addNode(Vector3f(30.0f, 30.0f, 0.0f));
     Node& n2 = path.addNode(Vector3f(90.0f, 30.0f, 0.0f));
-    Way& way = path.addWay(WayType("Dirt", 0xAAAAAA), n1, n2);
+    Way& way = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
 
     UnitType home("Home");
     UnitType shop("Shop");

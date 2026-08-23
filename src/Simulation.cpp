@@ -74,7 +74,7 @@ float Simulation::relativeGap() const
                 continue;
 
             float const shortest = router.shortestPathCost(
-                *from, agent->searchTarget(), agent->carried());
+                *from, agent->searchTarget(), agent->resources());
             if (std::isfinite(shortest))
                 sptt += shortest;
         }

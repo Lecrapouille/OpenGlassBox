@@ -5,40 +5,70 @@
 //-----------------------------------------------------------------------------
 
 //! \file MapRegion.hpp
-//! \brief Axis-aligned rectangle of grid cells belonging to a city.
-
+//! \brief Axis-aligned rectangle of grid cells.
 
 #ifndef OPEN_GLASSBOX_MAP_REGION_HPP
-#  define OPEN_GLASSBOX_MAP_REGION_HPP
+#define OPEN_GLASSBOX_MAP_REGION_HPP
 
-#  include <cstdint>
+#include <cstdint>
 
-namespace ogb {
+namespace ogb
+{
 
 //==============================================================================
-//! \brief A rectangle of cells on the world grid, in cell coordinates.
+//! \brief A rectangle of cells on the world grid, in grid coordinates.
 //!
-//! The world grid is unbounded, so anything that has to walk cells needs to be
-//! told which ones. A City hands out the region it administers, and that is
-//! what bounds the rules and the actions of its Units.
+//! The grid is unbounded in the four directions, so anything that has to walk
+//! cells has to be told which ones. A City hands out the region it administers,
+//! and that is what bounds its Maps, its rules and the reach of its buildings.
+//! An Area hands out the footprint the player painted, and that is what bounds
+//! the buildings a zone may grow.
+//!
+//! Coordinates are signed, and the rectangle is half open: \c u0 is inside,
+//! \c u1() is the first column past it, which is what makes a loop read like
+//! any other.
+//!
+//! Example:
+//! \code
+//! ogb::MapRegion const& region = city.region();
+//! for (int32_t v = region.v0; v < region.v1(); ++v)
+//!     for (int32_t u = region.u0; u < region.u1(); ++u)
+//!         total += map.getResource(u, v);
+//! \endcode
 //==============================================================================
 struct MapRegion
 {
-    //! \brief Coordinates of the first cell, included.
+    //! \brief Column of the first cell, included.
     int32_t u0 = 0;
+
+    //! \brief Row of the first cell, included.
     int32_t v0 = 0;
-    //! \brief Number of cells along each axis.
+
+    //! \brief Number of columns.
     uint32_t sizeU = 0u;
+
+    //! \brief Number of rows.
     uint32_t sizeV = 0u;
 
     //--------------------------------------------------------------------------
-    //! \brief Coordinate just past the last cell, excluded.
+    //! \brief \return the column just past the last one, excluded.
     //--------------------------------------------------------------------------
-    int32_t u1() const { return u0 + int32_t(sizeU); }
-    int32_t v1() const { return v0 + int32_t(sizeV); }
+    int32_t u1() const
+    {
+        return u0 + int32_t(sizeU);
+    }
 
     //--------------------------------------------------------------------------
-    //! \brief Whether the cell belongs to this region.
+    //! \brief \return the row just past the last one, excluded.
+    //--------------------------------------------------------------------------
+    int32_t v1() const
+    {
+        return v0 + int32_t(sizeV);
+    }
+
+    //--------------------------------------------------------------------------
+    //! \brief \param[in] u, v the cell to test.
+    //! \return true when that cell belongs to the rectangle.
     //--------------------------------------------------------------------------
     bool contains(int32_t u, int32_t v) const
     {
@@ -46,20 +76,51 @@ struct MapRegion
     }
 
     //--------------------------------------------------------------------------
-    //! \brief The cell of the region closest to the given one.
+    //! \brief Move a cell inside the rectangle, along each axis separately.
+    //!
+    //! What a rule reaching past the edge of the city reads: the cell of the
+    //! rectangle nearest to the one it asked for, rather than nothing at all.
+    //!
+    //! \param[in,out] u, v the cell to bring back in. Left as is when it is
+    //! already inside. Meaningless on an empty rectangle.
     //--------------------------------------------------------------------------
     void clamp(int32_t& u, int32_t& v) const
     {
-        if (u < u0) { u = u0; } else if (u >= u1()) { u = u1() - 1; }
-        if (v < v0) { v = v0; } else if (v >= v1()) { v = v1() - 1; }
+        if (u < u0)
+        {
+            u = u0;
+        }
+        else if (u >= u1())
+        {
+            u = u1() - 1;
+        }
+        if (v < v0)
+        {
+            v = v0;
+        }
+        else if (v >= v1())
+        {
+            v = v1() - 1;
+        }
     }
 
     //--------------------------------------------------------------------------
-    //! \brief Number of cells.
+    //! \brief \return the number of cells. Wide enough to hold the product of
+    //! two large sides without wrapping around.
     //--------------------------------------------------------------------------
-    uint64_t area() const { return uint64_t(sizeU) * uint64_t(sizeV); }
+    uint64_t area() const
+    {
+        return uint64_t(sizeU) * uint64_t(sizeV);
+    }
 
-    bool empty() const { return (sizeU == 0u) || (sizeV == 0u); }
+    //--------------------------------------------------------------------------
+    //! \brief \return true when the rectangle holds no cell at all, which is
+    //! what a zone painted outside the city amounts to.
+    //--------------------------------------------------------------------------
+    bool empty() const
+    {
+        return (sizeU == 0u) || (sizeV == 0u);
+    }
 };
 
 } // namespace ogb

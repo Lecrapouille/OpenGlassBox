@@ -8,32 +8,57 @@
 //! \file Resources.hpp
 //! \brief Container of several resource stocks carried by units or agents.
 
-
 #ifndef OPEN_GLASSBOX_RESOURCES_HPP
-#  define OPEN_GLASSBOX_RESOURCES_HPP
+#define OPEN_GLASSBOX_RESOURCES_HPP
 
-#  include "OpenGlassBox/Resource.hpp"
-#  include <vector>
+#include "OpenGlassBox/Resource.hpp"
+#include <vector>
 
-namespace ogb {
+namespace ogb
+{
 
 //==============================================================================
-//! \brief Resources come in a container. This class manages a collection of
-//! heterogeneous resources. A Resource are initialy empty but with inifinite
-//! capacity.
-//! Example: House = { Citizen 0/2, Money 1/10, Electricity 3/3, Trash 0/1 }.
+//! \brief Everything one thing holds: a set of stocks, one per kind, looked up
+//! by name.
+//!
+//! This is the state of a building, the load of an Agent, the treasury of a
+//! City and the recipe a UnitType hands to a new building. A stock appears the
+//! first time it is mentioned and starts empty with the largest capacity
+//! allowed, so a rule may add to a resource nobody declared.
+//!
+//! Example, a house: { People 3/8, Money 1/10, Trash 0/1 }.
+//!
+//! Lookups are linear over a small vector rather than hashed: a building holds
+//! a handful of resources, and walking a contiguous vector beats hashing a
+//! string for that size. Names are compared as strings, so they are what has to
+//! match, not the order the script declared them in.
+//!
+//! Example:
+//! \code
+//! ogb::Resources house;
+//! house.setCapacity("People", 8u);
+//! house.addResource("People", 8u);
+//!
+//! ogb::Resources load;
+//! load.addResource("People", 1u);
+//! house.removeResources(load);            // one leaves for work
+//!
+//! if (house.getAmount("People") == 0u)
+//!     std::cout << "empty house\n";
+//! \endcode
+//!
+//! The matching script, where \c caps sets the ceilings and \c resources the
+//! starting stock:
+//! \code
+//! unit Home color 0xFF00FF caps [ People 8 Trash 1 ] resources [ People 8 ]
+//! \endcode
 //==============================================================================
 class Resources
 {
 public:
 
     // -------------------------------------------------------------------------
-    //! \brief
-    // -------------------------------------------------------------------------
-    //Resources(Resources const&) = default;
-
-    // -------------------------------------------------------------------------
-    //! \brief
+    //! \brief An empty set: nothing held and nothing capped.
     // -------------------------------------------------------------------------
     Resources() = default;
 
@@ -50,7 +75,8 @@ public:
     //! \brief Search for a resource given its name. If the resource is not
     //! present create one and store it before returning its reference.
     //! \param[in] type: the type of resource (ie "Water").
-    //! \return the reference of the resource already stored or the newly created.
+    //! \return the reference of the resource already stored or the newly
+    //! created.
     // -------------------------------------------------------------------------
     Resource& findOrAddResource(ResourceType const& type);
 
@@ -170,17 +196,25 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief Return in read only access resources (for debug purpose).
+    //! \brief Every stock held, in the order they first appeared. What the
+    //! inspector of the demo walks to draw its bars, and what a save writes.
     // -------------------------------------------------------------------------
-    std::vector<Resource> const& container() const { return m_bin; }
+    std::vector<Resource> const& container() const
+    {
+        return m_bin;
+    }
 
     // -------------------------------------------------------------------------
-    //! \brief
+    //! \brief Write every stock as "type: amount/capacity", which is what a
+    //! failing unit test prints.
     // -------------------------------------------------------------------------
-    friend std::ostream& operator<<(std::ostream& os, Resources const& resources);
+    friend std::ostream& operator<<(std::ostream& os,
+                                    Resources const& resources);
 
 private:
 
+    //! \brief The stocks, one per kind. Small enough that a linear search over
+    //! a contiguous vector is the fastest lookup.
     std::vector<Resource> m_bin;
 };
 

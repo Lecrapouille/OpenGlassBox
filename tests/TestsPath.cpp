@@ -53,9 +53,8 @@ TEST(TestsNode, AddUnit)
     ASSERT_EQ(n1.units().size(), 1u);
     ASSERT_EQ(n1.m_units[0], &u1);
     ASSERT_EQ(n1.units()[0], &u1);
-    ASSERT_EQ(&(n1.unit(0)), &u1);
-    ASSERT_EQ(n1.unit(0).m_node, &n1);
-    ASSERT_STREQ(n1.unit(0).type().c_str(), "house");
+    ASSERT_EQ(n1.units()[0]->m_node, &n1);
+    ASSERT_STREQ(n1.units()[0]->type().c_str(), "house");
 
     // Add Unit1 to Node2. Check if the Unit has been attached.
     n2.addUnit(u1);

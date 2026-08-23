@@ -1168,9 +1168,22 @@ void CityViewer::drawHoverTooltip(Simulation& simulation,
         if (hover.unit != nullptr)
         {
             Unit const& unit = *hover.unit;
+            uint32_t const hour = simulation.clock().hourOfDay();
             ImGui::TextColored(
                 ImGui::ColorConvertU32ToFloat4(theme::fromScript(unit.color())),
                 "%s #%u", unit.type().c_str(), unit.id());
+
+            // A building doing nothing at three in the morning is shut, not
+            // broken, and the timetable of its rules is the only thing that
+            // says which.
+            OpeningStatus const opening = openingStatus(unit, hour);
+            if (opening.known)
+            {
+                ImGui::TextColored(
+                    ImGui::ColorConvertU32ToFloat4(
+                        opening.open ? theme::SUCCESS : theme::MUTED),
+                    "%s", opening.text.c_str());
+            }
 
             // What a building holds and what it tries to do is the whole
             // reason to point at it. Without them the tooltip only repeated
@@ -1199,8 +1212,29 @@ void CityViewer::drawHoverTooltip(Simulation& simulation,
             {
                 for (RuleUnit const* rule: unit.rules())
                 {
-                    if (rule != nullptr)
+                    if (rule == nullptr)
+                        continue;
+
+                    OpeningHours hours;
+                    hours.add(*rule);
+                    if (hours.bounded() && !hours.isOpen(hour))
+                    {
+                        uint32_t const next = hours.nextOpening(hour);
+                        if (next == OpeningHours::NEVER)
+                        {
+                            ImGui::BulletText("%s (never fires)",
+                                              rule->type().c_str());
+                        }
+                        else
+                        {
+                            ImGui::BulletText("%s (asleep until %uh)",
+                                              rule->type().c_str(), next);
+                        }
+                    }
+                    else
+                    {
                         ImGui::BulletText("%s", rule->type().c_str());
+                    }
                 }
             }
 

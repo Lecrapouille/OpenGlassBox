@@ -23,19 +23,29 @@ namespace ogb {
 //==============================================================================
 struct ParseError
 {
+    //! \brief Name the script was parsed under, which is its path when it came
+    //! from a file.
     std::string file;
-    //! \brief One based.
+
+    //! \brief Line of the offending word, counted from one so that the numbers
+    //! match what an editor shows.
     uint32_t line = 0u;
+
+    //! \brief Column of the offending word, counted from one.
     uint32_t column = 0u;
+
+    //! \brief What is wrong, in words meant for whoever wrote the script.
     std::string message;
-    //! \brief The offending source line, so that the error can be read without
-    //! opening the file.
+
+    //! \brief The offending line itself, copied, so the error can be read
+    //! without opening the file again. That matters for a script parsed from
+    //! memory, which has no file to open.
     std::string source;
 
     //--------------------------------------------------------------------------
-    //! \brief Render as "file:line:column: message", followed by the source
-    //! line and a caret under the column. The first line is the format every
-    //! editor knows how to jump from.
+    //! \brief \return the error as \c file:line:column:\ message, followed by the
+    //! offending line and a caret under the column. The first line is in the
+    //! format every editor knows how to jump from.
     //--------------------------------------------------------------------------
     std::string format() const;
 };
@@ -54,37 +64,48 @@ public:
     virtual ~IScriptParser() = default;
 
     //--------------------------------------------------------------------------
-    //! \brief Parse a file into \c definitions.
-    //! \return true when nothing was wrong. On failure \c definitions may hold
-    //! what could be understood, which is what lets an editor show a partially
-    //! broken script.
+    //! \brief Read a script file into a ruleset.
+    //! \param[in] filename the script to read.
+    //! \param[out] definitions where to put what was understood. Added to rather
+    //! than replaced.
+    //! \return true when nothing was wrong. On failure the ruleset holds
+    //! whatever could be understood, which is what lets an editor show a
+    //! half-broken script instead of nothing at all.
     //--------------------------------------------------------------------------
     virtual bool parse(std::string const& filename,
                        ScriptDefinitions& definitions) = 0;
 
     //--------------------------------------------------------------------------
-    //! \brief Parse a string, reported under the given name. Used by the tests.
+    //! \brief The same, from a script already in memory.
+    //! \param[in] source the script itself.
+    //! \param[in] name what the errors should call it, there being no path.
+    //! \param[out] definitions where to put what was understood.
+    //! \return true when nothing was wrong.
     //--------------------------------------------------------------------------
     virtual bool parseString(std::string const& source, std::string const& name,
                              ScriptDefinitions& definitions) = 0;
 
     //--------------------------------------------------------------------------
-    //! \brief Everything found wrong by the last parse, in the order it was
-    //! found. Empty on success.
+    //! \brief \return everything found wrong by the last parse, in the order it
+    //! was found. Empty after a parse that went well.
     //--------------------------------------------------------------------------
     virtual std::vector<ParseError> const& errors() const = 0;
 
     //--------------------------------------------------------------------------
-    //! \brief The errors of the last parse, one per line, ready to be shown.
+    //! \brief \return the errors of the last parse, one per line, ready to be
+    //! put in front of a user.
     //--------------------------------------------------------------------------
     std::string formatErrors() const;
 };
 
 //==============================================================================
-//! \brief Pick a parser for a file, from its extension.
+//! \brief Pick the parser for a script, from the extension of its name.
 //!
-//! Unknown extensions fall back on the historical language rather than
-//! refusing, since that is what every script in the wild is written in.
+//! An extension nobody claims falls back on the original language rather than
+//! being refused, that being what every script in the wild is written in.
+//!
+//! \param[in] filename the script whose language is to be guessed.
+//! \return a parser for it, never null.
 //==============================================================================
 std::unique_ptr<IScriptParser> makeScriptParser(std::string const& filename);
 
