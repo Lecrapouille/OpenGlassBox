@@ -8,6 +8,7 @@
 #include "OpenGlassBox/Agent.hpp"
 #include "OpenGlassBox/Config.hpp"
 #include "OpenGlassBox/Unit.hpp"
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <limits>
@@ -20,12 +21,155 @@ static const float MIN_WAY_MAGNITUDE = 1e-6f;
 //! its door.
 static const float ARRIVED_OFFSET = 0.05f;
 
+namespace
+{
+Unit* findAcceptingUnitOnWay(Way const& way,
+                             Name const& searchTarget,
+                             Resources const& resources)
+{
+    for (Unit* unit : way.units())
+    {
+        if (unit->accepts(searchTarget, resources))
+            return unit;
+    }
+    return nullptr;
+}
+} // namespace
+
+// =============================================================================
+// THE STEPS OF FOLLOWING AN ITINERARY
+//
+// One of these picks the next crossroads to drive to, and followRoute() below
+// tries them in order until one succeeds.
+// =============================================================================
+
+//------------------------------------------------------------------------------
+bool Agent::arrivedAtDestination() const
+{
+    Route const& route = m_route;
+    if (!route.found || route.waypointsLeft())
+        return false;
+
+    if (route.approachWay == nullptr)
+        return true;
+
+    Way const* const way = currentWay();
+    return (route.approachWay == way) &&
+           (std::fabs(offset() - route.approachOffset) <= ARRIVED_OFFSET);
+}
+
+//------------------------------------------------------------------------------
+bool Agent::giveUp()
+{
+    if (Unit* owner = m_owner)
+        m_resources.transferResourcesTo(owner->resources());
+    return true;
+}
+
+//------------------------------------------------------------------------------
+void Agent::setNextNodeFromRoute(Node* next)
+{
+    m_nextNode = next;
+    if (m_lastNode == nullptr)
+        return;
+
+    setCurrentWay(m_lastNode->getWayToNode(*next));
+    if (m_currentWay != nullptr)
+    {
+        m_offset =
+            (m_lastNode == &m_currentWay->from()) ? 0.0f : 1.0f;
+    }
+    else
+    {
+        m_nextNode = nullptr;
+    }
+}
+
+//------------------------------------------------------------------------------
+bool Agent::followRouteWhileAlongWay()
+{
+    Route const& route = m_route;
+    Way* const way = m_currentWay;
+    float const offset = m_offset;
+
+    // The destination is a door on this very segment: drive towards whichever
+    // end lies past it, and moveTowardsNextNode() stops at the door.
+    if (route.found && !route.waypointsLeft() && (route.approachWay == way) &&
+        (std::fabs(offset - route.approachOffset) > ARRIVED_OFFSET))
+    {
+        m_nextNode = (route.approachOffset >= offset) ? &way->to()
+                                                      : &way->from();
+        return true;
+    }
+
+    // Otherwise get off the segment first: routing only happens at crossroads.
+    if (Node* const exit = wayExit())
+    {
+        m_nextNode = exit;
+        return true;
+    }
+
+    return false;
+}
+
+//------------------------------------------------------------------------------
+void Agent::followRouteWhenLost(IRouter& router)
+{
+    if (m_lastNode == nullptr)
+        return;
+
+    Node* const next =
+        router.findNextPoint(*m_lastNode, m_searchTarget, m_resources);
+    if (next == nullptr)
+        return;
+
+    m_nextNode = next;
+    setCurrentWay(m_lastNode->getWayToNode(*next));
+    if (m_currentWay != nullptr)
+    {
+        m_offset =
+            (m_lastNode == &m_currentWay->from()) ? 0.0f : 1.0f;
+    }
+    else
+    {
+        m_nextNode = nullptr;
+    }
+}
+
+//------------------------------------------------------------------------------
+void Agent::followRouteAlongNodes()
+{
+    m_nextNode = m_route.nextWaypoint();
+    m_route.takeWaypoint();
+    setNextNodeFromRoute(m_nextNode);
+}
+
+//------------------------------------------------------------------------------
+void Agent::followRouteApproach()
+{
+    setCurrentWay(m_route.approachWay);
+    if (m_lastNode == &m_currentWay->from())
+    {
+        m_offset = 0.0f;
+        m_nextNode = &m_currentWay->to();
+    }
+    else
+    {
+        m_offset = 1.0f;
+        m_nextNode = &m_currentWay->from();
+    }
+}
+
+// =============================================================================
+// LIFETIME AND ATTACHMENT TO THE ROAD NETWORK
+// =============================================================================
+
 //------------------------------------------------------------------------------
 Agent::Agent(uint32_t id,
              AgentType const& type,
              Unit& owner,
              Resources const& resources,
-             std::string const& searchTarget)
+             Name const& searchTarget)
     : Entity(id, type, owner.position()),
       m_owner(&owner),
       m_searchTarget(searchTarget),
@@ -55,6 +199,9 @@ Agent::~Agent()
 //------------------------------------------------------------------------------
 void Agent::setCurrentWay(Way* way)
 {
+    // The segment counts the Agents on it, and that count is what the BPR
+    // function turns into congestion. Every move between segments has to go
+    // through here or a street stays busy for ever.
     if (m_currentWay == way)
         return;
 
@@ -66,6 +213,13 @@ void Agent::setCurrentWay(Way* way)
     if (m_currentWay != nullptr)
         m_currentWay->addAgent();
 }
+
+// =============================================================================
+// WHEN THE WORLD CHANGES UNDER IT
+//
+// The City calls these when something the Agent refers to is moved or pulled
+// down, so that it never reads freed memory nor drives on a road that is gone.
+// =============================================================================
 
 //------------------------------------------------------------------------------
 void Agent::translate(Vector3f const direction)
@@ -138,13 +292,9 @@ void Agent::forget(Unit const& unit)
         invalidateRoute();
 }
 
-//------------------------------------------------------------------------------
-bool Agent::giveUp()
-{
-    if (m_owner != nullptr)
-        m_resources.transferResourcesTo(m_owner->resources());
-    return true;
-}
+// =============================================================================
+// READING ITS OWN STATE
+// =============================================================================
 
 //------------------------------------------------------------------------------
 bool Agent::stranded() const
@@ -171,12 +321,10 @@ bool Agent::uses(Node const& node) const
 {
     if ((m_lastNode == &node) || (m_nextNode == &node))
         return true;
-    for (Node const* n : m_route.nodes)
-    {
-        if (n == &node)
-            return true;
-    }
-    return false;
+
+    return std::any_of(m_route.begin(),
+                       m_route.end(),
+                       [&](Node const* n) { return n == &node; });
 }
 
 //------------------------------------------------------------------------------
@@ -200,28 +348,21 @@ Node* Agent::wayExit() const
     return m_lastNode;
 }
 
-//------------------------------------------------------------------------------
-bool Agent::arrivedAtDestination() const
-{
-    if (!m_route.found || !m_route.nodes.empty())
-        return false;
-
-    if (m_route.approachWay == nullptr)
-        return true;
-
-    return (m_route.approachWay == m_currentWay) &&
-           (std::fabs(m_offset - m_route.approachOffset) <= ARRIVED_OFFSET);
-}
+// =============================================================================
+// CHOOSING AN ITINERARY
+// =============================================================================
 
 //------------------------------------------------------------------------------
-float Agent::remainingRouteCost() const
+float Agent::remainingCost() const
 {
     if (!m_route.found)
         return 0.0f;
 
+    // Sum the segments still to drive, then the fraction of the last one that
+    // leads to the door.
     float cost = 0.0f;
     Node* current = routingNode();
-    for (Node* next : m_route.nodes)
+    for (Node* next : m_route)
     {
         if (current == nullptr || next == nullptr)
             break;
@@ -241,30 +382,54 @@ float Agent::remainingRouteCost() const
 }
 
 //------------------------------------------------------------------------------
-bool Agent::shouldRecomputeRoute(Dijkstra& dijkstra,
-                                 SimulationConfig const& config) const
+void Agent::maybeRecomputeRoute(IRouter& router, SimulationConfig const& config)
 {
-    if (!m_route.found)
-        return true;
-    if (m_ticksOnRoute >= config.pathRecalcTicks)
-        return true;
-    if (config.pathCostDeviation <= 0.0f)
-        return true;
+    // The cheap answers first: no itinerary at all, one that has been held long
+    // enough, or a city that asked for a recomputation on every tick.
+    if (!m_route.found || (m_ticksOnRoute >= config.pathRecalcTicks) ||
+        (config.pathCostDeviation <= 0.0f))
+    {
+        computeRoute(router);
+        return;
+    }
+
+    // What follows costs a graph search, so it does not run on every tick.
+    uint32_t const period =
+        (config.pathCheckTicks == 0u) ? 1u : config.pathCheckTicks;
+    if ((m_ticksOnRoute % period) != 0u)
+        return;
 
     Node* from = routingNode();
     if (from == nullptr)
-        return true;
+    {
+        computeRoute(router);
+        return;
+    }
 
-    float const remaining = remainingRouteCost();
+    float const remaining = remainingCost();
     if (remaining <= 1e-4f)
-        return false;
+        return;
 
-    float const shortest =
-        dijkstra.shortestPathCost(*from, m_searchTarget, m_resources);
-    if (!std::isfinite(shortest))
-        return false;
+    // Ask for the itinerary rather than for its cost alone: if it turns out to
+    // be worth switching to, it is the one the Agent wants, and searching for
+    // it a second time would be the same work twice.
+    Route candidate = router.findRoute(*from, m_searchTarget, m_resources);
+    if (!candidate.found || !std::isfinite(candidate.cost))
+        return;
 
-    return shortest + remaining * config.pathCostDeviation < remaining;
+    if (candidate.cost + remaining * config.pathCostDeviation >= remaining)
+        return;
+
+    // Standing between two crossroads, the Agent may be better off leaving by
+    // the other end, and that is a decision the candidate cannot express.
+    if (standingAlongWay())
+    {
+        computeRouteAlongWay(router);
+        return;
+    }
+
+    m_route = std::move(candidate);
+    m_ticksOnRoute = 0u;
 }
 
 //------------------------------------------------------------------------------
@@ -275,24 +440,26 @@ bool Agent::standingAlongWay() const
 }
 
 //------------------------------------------------------------------------------
-void Agent::computeRouteAlongWay(Dijkstra& dijkstra)
+void Agent::computeRouteAlongWay(IRouter& router)
 {
+    // Standing between two crossroads, the Agent can leave by either end. Cost
+    // both, counting the stretch of the current segment it has to drive first.
     Node& from = m_currentWay->from();
     Node& to = m_currentWay->to();
     float const travel = m_currentWay->travelTime();
     float const infinity = std::numeric_limits<float>::infinity();
 
-    Route byFrom = dijkstra.findRoute(from, m_searchTarget, m_resources);
+    Route byFrom = router.findRoute(from, m_searchTarget, m_resources);
     float const costFrom =
         byFrom.found ? (byFrom.cost + travel * m_offset) : infinity;
 
-    Route byTo = dijkstra.findRoute(to, m_searchTarget, m_resources);
+    Route byTo = router.findRoute(to, m_searchTarget, m_resources);
     float const costTo =
         byTo.found ? (byTo.cost + travel * (1.0f - m_offset)) : infinity;
 
     m_ticksOnRoute = 0u;
 
-    if ((costFrom == infinity) && (costTo == infinity))
+    if (std::isinf(costFrom) && std::isinf(costTo))
     {
         m_route = Route();
         return;
@@ -313,11 +480,11 @@ void Agent::computeRouteAlongWay(Dijkstra& dijkstra)
 }
 
 //------------------------------------------------------------------------------
-void Agent::computeRoute(Dijkstra& dijkstra)
+void Agent::computeRoute(IRouter& router)
 {
     if (standingAlongWay())
     {
-        computeRouteAlongWay(dijkstra);
+        computeRouteAlongWay(router);
         return;
     }
 
@@ -328,115 +495,72 @@ void Agent::computeRoute(Dijkstra& dijkstra)
         return;
     }
 
-    m_route = dijkstra.findRoute(*from, m_searchTarget, m_resources);
+    m_route = router.findRoute(*from, m_searchTarget, m_resources);
     m_ticksOnRoute = 0u;
 }
 
 //------------------------------------------------------------------------------
-void Agent::followRoute(Dijkstra& dijkstra, SimulationConfig const& config)
+void Agent::followRoute(IRouter& router, SimulationConfig const& config)
 {
     ++m_ticksOnRoute;
 
-    if (shouldRecomputeRoute(dijkstra, config))
-        computeRoute(dijkstra);
+    maybeRecomputeRoute(router, config);
 
-    // The Agent stands along a Way, at the door of the building that sent it
-    // out or of the one it has just been refused by. It has to drive to an
-    // intersection before it can take another Way: writing its offset the way
-    // the branches below do would teleport it to the end of the segment.
-    if ((m_currentWay != nullptr) && (m_offset > 0.0f) && (m_offset < 1.0f))
-    {
-        if (m_route.found && m_route.nodes.empty() &&
-            (m_route.approachWay == m_currentWay) &&
-            (std::fabs(m_offset - m_route.approachOffset) > ARRIVED_OFFSET))
-        {
-            // Destination on this very Way. Only the direction is needed: the
-            // approach branch of moveTowardsNextNode walks the offset there.
-            m_nextNode = (m_route.approachOffset >= m_offset)
-                             ? &m_currentWay->to()
-                             : &m_currentWay->from();
-            return;
-        }
+    // Each case below picks the next crossroads, from the most constrained
+    // situation to the least. Standing between two crossroads comes first
+    // because the way out of a segment is not a routing decision.
+    if ((m_currentWay != nullptr) && (m_offset > 0.0f) && (m_offset < 1.0f) &&
+        followRouteWhileAlongWay())
+        return;
 
-        Node* const exit = wayExit();
-        if (exit != nullptr)
-        {
-            m_nextNode = exit;
-            return;
-        }
-    }
-
+    // Nothing accepts the load, or nothing is reachable: wander.
     if (!m_route.found)
     {
-        if (m_lastNode == nullptr)
-            return;
-
-        m_nextNode = dijkstra.randomNeighbor(*m_lastNode);
-        if (m_nextNode == nullptr)
-            return;
-
-        setCurrentWay(m_lastNode->getWayToNode(*m_nextNode));
-        if (m_currentWay != nullptr)
-            m_offset = (m_lastNode == &m_currentWay->from()) ? 0.0f : 1.0f;
-        else
-            m_nextNode = nullptr;
+        followRouteWhenLost(router);
         return;
     }
 
-    if (!m_route.nodes.empty())
+    // Crossroads still to go through.
+    if (m_route.waypointsLeft())
     {
-        m_nextNode = m_route.nodes.front();
-        m_route.nodes.erase(m_route.nodes.begin());
-        if (m_lastNode != nullptr)
-        {
-            setCurrentWay(m_lastNode->getWayToNode(*m_nextNode));
-            if (m_currentWay != nullptr)
-            {
-                m_offset = (m_lastNode == &m_currentWay->from()) ? 0.0f : 1.0f;
-            }
-            else
-            {
-                m_nextNode = nullptr;
-            }
-        }
+        followRouteAlongNodes();
         return;
     }
 
+    // Last leg: the door stands along a segment rather than at a crossroads.
     if (m_route.approachWay != nullptr)
     {
-        setCurrentWay(m_route.approachWay);
-        if (m_lastNode == &m_currentWay->from())
-        {
-            m_offset = 0.0f;
-            m_nextNode = &m_currentWay->to();
-        }
-        else
-        {
-            m_offset = 1.0f;
-            m_nextNode = &m_currentWay->from();
-        }
+        followRouteApproach();
         return;
     }
 
+    // Arrived, and the door is right here. Stand still and let update() knock.
     m_nextNode = nullptr;
 }
 
+// =============================================================================
+// ONE TICK
+// =============================================================================
+
 //------------------------------------------------------------------------------
-bool Agent::update(Dijkstra& dijkstra, float dt)
+bool Agent::update(IRouter& router, float dt)
 {
-    SimulationConfig const& config =
-        (m_simConfig != nullptr) ? *m_simConfig : SimulationConfig{};
-    return update(dijkstra, config, dt);
+    static SimulationConfig const defaults;
+    return update(router, defaults, dt);
 }
 
 //------------------------------------------------------------------------------
-bool Agent::update(Dijkstra& dijkstra, SimulationConfig const& config, float dt)
+bool Agent::update(IRouter& router, SimulationConfig const& config, float dt)
 {
+    // Standing still: try to deliver, then decide where to go next. Driving:
+    // just cover some ground. The two are exclusive, which is what keeps an
+    // Agent from knocking at a door it is only passing by.
     if (m_nextNode == nullptr)
     {
         if (unloadResources())
             return true;
 
+        // Stranded off the network, with no crossroads to route from.
         if (m_lastNode == nullptr)
             return false;
 
@@ -447,39 +571,44 @@ bool Agent::update(Dijkstra& dijkstra, SimulationConfig const& config, float dt)
         if (arrivedAtDestination())
             invalidateRoute();
 
-        followRoute(dijkstra, config);
+        followRoute(router, config);
     }
     else
     {
         moveTowardsNextNode(dt);
     }
 
+    // An Agent that never finds anything would drive for ever, so count the
+    // ticks spent without an itinerary and hand the load back after a while.
     if (m_route.found)
     {
         m_ticksLost = 0u;
     }
-    else if ((config.agentGiveUpTicks != 0u) &&
-             (++m_ticksLost >= config.agentGiveUpTicks))
+    else if (config.agentGiveUpTicks != 0u)
     {
-        return giveUp();
+        ++m_ticksLost;
+        if (m_ticksLost >= config.agentGiveUpTicks)
+            return giveUp();
     }
 
     return false;
 }
 
+// =============================================================================
+// DELIVERING THE LOAD
+// =============================================================================
+
 //------------------------------------------------------------------------------
 Unit* Agent::searchUnit()
 {
+    // A door along the current segment, and the Agent has reached its offset.
     if ((m_currentWay != nullptr) && (m_route.approachWay == m_currentWay))
     {
         float const arrived = std::fabs(m_offset - m_route.approachOffset);
-        if (arrived <= 0.05f || m_nextNode == nullptr)
+        if (arrived <= ARRIVED_OFFSET || m_nextNode == nullptr)
         {
-            for (Unit* unit : m_currentWay->units())
-            {
-                if (unit->accepts(m_searchTarget, m_resources))
-                    return unit;
-            }
+            return findAcceptingUnitOnWay(
+                *m_currentWay, m_searchTarget, m_resources);
         }
     }
 
@@ -492,6 +621,7 @@ Unit* Agent::searchUnit()
     if ((m_currentWay != nullptr) && (m_offset > 0.0f) && (m_offset < 1.0f))
         return nullptr;
 
+    // Otherwise the Agent stands at a crossroads: try the buildings on it.
     std::vector<Unit*>& units = m_lastNode->units();
     size_t i = units.size();
     while (i--)
@@ -512,6 +642,13 @@ bool Agent::unloadResources()
     return m_resources.isEmpty();
 }
 
+// =============================================================================
+// DRIVING
+//
+// Position is derived from m_offset, the fraction of the current segment the
+// Agent has covered, so a segment that is moved or resized carries it along.
+// =============================================================================
+
 //------------------------------------------------------------------------------
 void Agent::moveTowardsNextNode(float dt)
 {
@@ -519,10 +656,13 @@ void Agent::moveTowardsNextNode(float dt)
         return;
 
     // Destination is a point on the current Way rather than a Node.
-    if ((m_route.approachWay == m_currentWay) && m_route.nodes.empty())
+    if ((m_route.approachWay == m_currentWay) && !m_route.waypointsLeft())
     {
         float const target = m_route.approachOffset;
         float const wayLength = m_currentWay->magnitude();
+
+        // A segment of zero length has no direction to drive along, so land on
+        // the door at once rather than divide by it.
         if (wayLength <= MIN_WAY_MAGNITUDE)
         {
             m_offset = target;
@@ -533,6 +673,7 @@ void Agent::moveTowardsNextNode(float dt)
             return;
         }
 
+        // The door may lie behind the Agent, hence the signed direction.
         float const direction = (target >= m_offset) ? 1.0f : -1.0f;
         m_offset += direction * m_type.speed * dt / wayLength;
 
@@ -550,6 +691,9 @@ void Agent::moveTowardsNextNode(float dt)
         return;
     }
 
+    // Ordinary case: drive towards a crossroads, m_offset growing towards 1
+    // when it is the far end of the segment and towards 0 when it is the near
+    // one, since a Way is undirected.
     float direction = (m_nextNode == &(m_currentWay->to())) ? 1.0f : -1.0f;
 
     float const wayLength = m_currentWay->magnitude();
@@ -565,6 +709,8 @@ void Agent::moveTowardsNextNode(float dt)
 
     m_offset += direction * m_type.speed * dt / wayLength;
 
+    // Reaching either end ends the leg: clearing m_nextNode is what makes
+    // update() ask followRoute() for the next one on the tick after.
     if (m_offset < 0.0f)
     {
         m_offset = 0.0f;

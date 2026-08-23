@@ -12,6 +12,8 @@
 #ifndef OPEN_GLASSBOX_RESOURCE_HPP
 #define OPEN_GLASSBOX_RESOURCE_HPP
 
+#include "OpenGlassBox/Name.hpp"
+
 #include <cstdint>
 #include <ostream>
 #include <string>
@@ -28,6 +30,9 @@ namespace ogb
 //! is also how a rule refers to one and how an Agent finds a building that has
 //! room for what it carries.
 //!
+//! Interned, so that those matches cost an integer comparison: see Name. A
+//! literal still works wherever one is expected.
+//!
 //! Example:
 //! \code
 //! resources
@@ -36,7 +41,7 @@ namespace ogb
 //! end
 //! \endcode
 //==============================================================================
-using ResourceType = std::string;
+using ResourceType = Name;
 
 //==============================================================================
 //! \brief The currency of the simulation: an amount of one thing, and the
@@ -111,7 +116,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief \return the name of the thing held, such as "Water".
     // -------------------------------------------------------------------------
-    inline std::string const& type() const
+    inline ResourceType const& type() const
     {
         return m_type;
     }

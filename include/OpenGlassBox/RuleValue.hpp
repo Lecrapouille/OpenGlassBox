@@ -136,7 +136,7 @@ public:
     //! is looked up in the City the rule runs in, so a script may name a Map
     //! that a given City does not have.
     //--------------------------------------------------------------------------
-    explicit RuleValueMap(std::string const& mapId) : m_mapId(mapId) {}
+    explicit RuleValueMap(Name const& mapId) : m_mapId(mapId) {}
 
     //! \brief \return what the cells within reach hold, added up.
     uint32_t get(RuleContext& context) override;
@@ -169,7 +169,7 @@ private:
 private:
 
     //! \brief Name of the Map, as the script wrote it.
-    std::string m_mapId;
+    Name m_mapId;
     //! \brief Which World the cached lookup was made against. A rule outlives a
     //! City, being owned by the ruleset, so the cache has to be invalidated
     //! when another world is simulated.

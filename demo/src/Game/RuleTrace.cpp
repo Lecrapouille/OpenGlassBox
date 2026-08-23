@@ -66,7 +66,7 @@ void RuleTrace::onRuleExecuted(IRule::Trace const& trace)
 
     if (context.unit != nullptr)
     {
-        event.entity = "Unit " + context.unit->type();
+        event.entity = "Unit " + context.unit->type().str();
     }
     else if (context.map != nullptr)
     {

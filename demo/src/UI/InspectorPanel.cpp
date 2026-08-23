@@ -347,7 +347,8 @@ static void drawAgentLine(Agent const& agent)
             continue;
         if (!carried.empty())
             carried += ", ";
-        carried += std::to_string(resource.getAmount()) + " " + resource.type();
+        carried +=
+            std::to_string(resource.getAmount()) + " " + resource.type().str();
     }
     if (carried.empty())
         carried = "empty";
@@ -745,7 +746,7 @@ void InspectorPanel::drawUnit(Simulation& simulation,
         return;
     }
 
-    std::string const entity = "Unit " + unit->type();
+    std::string const entity = "Unit " + unit->type().str();
     int shown = 0;
     size_t index = trace.size();
     while ((index-- > 0u) && (shown < 6))
@@ -833,7 +834,7 @@ void InspectorPanel::drawAgent(Simulation& simulation, game::DebugState& state)
         }
         else
         {
-            field("nodes left", "%zu", route.nodes.size());
+            field("nodes left", "%zu", route.waypointCount());
             if (route.destination != nullptr)
             {
                 field("destination",

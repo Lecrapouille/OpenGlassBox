@@ -7,18 +7,17 @@
 
 #include "OpenGlassBox/Simulation.hpp"
 #include "OpenGlassBox/Agent.hpp"
-#include "OpenGlassBox/Dijkstra.hpp"
 
 #include <cmath>
 
 //------------------------------------------------------------------------------
-namespace ogb {
+namespace ogb
+{
 
-Simulation::Simulation(uint32_t gridSizeU, uint32_t gridSizeV,
+Simulation::Simulation(uint32_t gridSizeU,
+                       uint32_t gridSizeV,
                        SimulationConfig const& config)
-    : m_world(config),
-      m_gridSizeU(gridSizeU),
-      m_gridSizeV(gridSizeV)
+    : m_world(config), m_gridSizeU(gridSizeU), m_gridSizeV(gridSizeV)
 {
     static Simulation::Listener listener;
     setListener(listener);
@@ -60,11 +59,10 @@ float Simulation::relativeGap() const
     float tstt = 0.0f;
     float sptt = 0.0f;
 
-    for (auto const& cityIt: m_world.cities())
+    for (auto const& cityIt : m_world.cities())
     {
         City const& city = *cityIt.second;
-        Dijkstra router;
-        for (auto const& agent: city.agents())
+        for (auto const& agent : city.agents())
         {
             float const remaining = agent->remainingCost();
             tstt += remaining;
@@ -73,8 +71,9 @@ float Simulation::relativeGap() const
             if (from == nullptr)
                 continue;
 
-            float const shortest = router.shortestPathCost(
-                *from, agent->searchTarget(), agent->resources());
+            float const shortest =
+                const_cast<City&>(city).router().shortestPathCost(
+                    *from, agent->searchTarget(), agent->resources());
             if (std::isfinite(shortest))
                 sptt += shortest;
         }
@@ -93,8 +92,10 @@ City& Simulation::addCity(std::string const& name, Vector3f position)
 }
 
 //------------------------------------------------------------------------------
-City& Simulation::addCity(std::string const& name, Vector3f position,
-                          uint32_t sizeU, uint32_t sizeV)
+City& Simulation::addCity(std::string const& name,
+                          Vector3f position,
+                          uint32_t sizeU,
+                          uint32_t sizeV)
 {
     City& city = m_world.addCity(name, position, sizeU, sizeV);
     m_listener->onCityAdded(city);

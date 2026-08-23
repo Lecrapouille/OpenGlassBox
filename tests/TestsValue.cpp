@@ -14,7 +14,7 @@ TEST(TestsValue, TestsValue)
     TestWorld cityWorld("Paris", 8u, 8u);
     City& city = cityWorld.city;
     Node n(42u, Vector3f(1.0f, 2.0f, 3.0f));
-    Unit unit(UnitType("unit"), n, city);
+    Unit unit(keep<UnitType>("unit"), n, city);
     Resources locals, globals;
     RuleContext context;
 

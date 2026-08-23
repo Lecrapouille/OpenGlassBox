@@ -97,6 +97,11 @@ struct SimulationConfig
     //! \brief Relative increase of the remaining itinerary cost that forces an
     //! Agent to recompute immediately, in [0..1]. Zero means always recompute.
     float pathCostDeviation = 0.25f;
+    //! \brief How often an Agent compares its itinerary against the current
+    //! shortest one, in ticks. That comparison costs a whole graph search, so
+    //! doing it on every tick for every Agent dwarfs everything else the
+    //! simulation does. Zero and one both mean every tick.
+    uint32_t pathCheckTicks = 10u;
     //! \brief How long an Agent wanders without finding anything that accepts
     //! its load before it gives up, in ticks. Two game hours by default. Zero
     //! lets it roam for ever, which piles up Agents nothing will ever remove.

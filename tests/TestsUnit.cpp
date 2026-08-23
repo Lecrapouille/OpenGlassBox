@@ -353,7 +353,7 @@ TEST(TestsUnit, ExecuteRules)
     // OnFail() callback
     MockIRuleCommand cmd2;
     RuleUnitType ruleunit_type2("ru2");
-    MockRuleUnit onFail(RuleUnitType("ru3"));
+    MockRuleUnit onFail(keep<RuleUnitType>("ru3"));
     ruleunit_type2.rate = 4u;
     ruleunit_type2.onFail = &onFail;
     ruleunit_type2.commands.push_back(&cmd2);

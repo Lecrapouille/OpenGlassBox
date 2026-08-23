@@ -121,6 +121,22 @@ public:
     }
 
     // -------------------------------------------------------------------------
+    //! \brief \return where the crossroads sits in the list of its Path, in
+    //! [0..Path::nodeCount()[.
+    //!
+    //! Not the same thing as id(): identifiers are handed out once and survive
+    //! a demolition, whereas this is renumbered so that it stays dense. That is
+    //! what lets a router keep its bookkeeping in plain arrays indexed by node
+    //! rather than in a tree keyed by address.
+    //!
+    //! Meaningless on a Node built outside a Path, as the unit tests do.
+    // -------------------------------------------------------------------------
+    uint32_t index() const
+    {
+        return m_index;
+    }
+
+    // -------------------------------------------------------------------------
     //! \brief \return where it stands, in world coordinates.
     // -------------------------------------------------------------------------
     Vector3f const& position() const
@@ -177,6 +193,9 @@ private:
 
     //! \brief Identifier, unique inside the Path.
     uint32_t m_id;
+
+    //! \brief Rank in the list of the Path, kept dense by it. See index().
+    uint32_t m_index = 0u;
 
     //! \brief Where it stands, in world coordinates.
     Vector3f m_position;
@@ -389,9 +408,17 @@ public:
     //! The flow used is the smoothed one, not the instantaneous count. See
     //! smoothFlow().
     //!
+    //! Held rather than computed: the flow only moves once per tick, in
+    //! smoothFlow(), whereas the router reads this twice per segment for every
+    //! segment it considers. Evaluating the power here made it the single
+    //! hottest instruction of the whole simulation.
+    //!
     //! \return the travel time, always at least the free flow time.
     // -------------------------------------------------------------------------
-    float travelTime() const;
+    float travelTime() const
+    {
+        return m_travelTime;
+    }
 
     // -------------------------------------------------------------------------
     //! \brief \return the smoothed traffic over the capacity of the type. Above
@@ -423,6 +450,7 @@ public:
     void setFlow(float flow)
     {
         m_flow = (flow < 0.0f) ? 0.0f : flow;
+        updateTravelTime();
     }
 
     // -------------------------------------------------------------------------
@@ -480,33 +508,43 @@ private:
     // -------------------------------------------------------------------------
     void updateMagnitude();
 
+    // -------------------------------------------------------------------------
+    //! \brief Recompute the congested travel time from the free flow time and
+    //! the smoothed traffic. Called from the only two places either of them
+    //! changes: updateMagnitude() and smoothFlow(), plus setFlow() when a save
+    //! is loaded.
+    // -------------------------------------------------------------------------
+    void updateTravelTime();
+
 private:
+
+    //! \brief Smallest change in the smoothed traffic worth recomputing the
+    //! travel time for, in vehicles. The smoothing converges towards the
+    //! instantaneous count without ever reaching it, so a plain test for
+    //! equality would keep evaluating the BPR power of every quiet street for
+    //! ever, and would be an unsafe way to compare two floats besides.
+    static constexpr float FLOW_EPSILON = 1e-3f;
 
     //! \brief Identifier, unique inside the Path.
     uint32_t m_id;
-
     //! \brief Recipe of the segment, shared with every segment of that type.
     WayType const& m_type;
-
     //! \brief The end offsets are counted from. Not owned.
     Node* m_from = nullptr;
-
     //! \brief The other end. Not owned.
     Node* m_to = nullptr;
-
     //! \brief Cached length, in world units.
     float m_magnitude = 0.0f;
-
     //! \brief Cached travel time with nobody on it, in seconds of game time.
     float m_t0 = 0.0f;
-
     //! \brief Agents on the segment right now.
     uint32_t m_agentCount = 0u;
-
     //! \brief Moving average of m_agentCount, which is the flow the BPR
     //! function is fed.
     float m_flow = 0.0f;
-
+    //! \brief Cached result of the BPR function for the current m_flow. See
+    //! travelTime().
+    float m_travelTime = 0.0f;
     //! \brief The buildings standing along it. Not owned.
     std::vector<Unit*> m_units;
 };
@@ -705,6 +743,16 @@ public:
     }
 
     // -------------------------------------------------------------------------
+    //! \brief \return how many crossroads the network has, which is also the
+    //! bound on Node::index() and therefore the size a router has to give the
+    //! arrays it indexes by node.
+    // -------------------------------------------------------------------------
+    size_t nodeCount() const
+    {
+        return m_nodes.size();
+    }
+
+    // -------------------------------------------------------------------------
     //! \brief \return every segment of the network, in creation order.
     // -------------------------------------------------------------------------
     Ways const& ways() const
@@ -727,7 +775,7 @@ public:
     //! Called once per tick by the City. See Way::smoothFlow.
     //! \param[in] alpha the step, in ]0..1].
     // -------------------------------------------------------------------------
-    void smoothFlows(float alpha);
+    void smoothFlows(float alpha) const;
 
 private:
 
@@ -736,6 +784,12 @@ private:
     //! removal, which is the only thing that can lower it.
     // -------------------------------------------------------------------------
     void updateMaxFreeFlowSpeed();
+
+    // -------------------------------------------------------------------------
+    //! \brief Renumber Node::index() so that the indices stay dense after a
+    //! crossroads has been removed.
+    // -------------------------------------------------------------------------
+    void reindexNodes() const;
 
 private:
 

@@ -1,11 +1,11 @@
-#include "main.hpp"
 #include "OpenGlassBox/Config.hpp"
+#include "main.hpp"
 
 #define protected public
 #define private public
-#  include "TestWorld.hpp"
-#  include "OpenGlassBox/Agent.hpp"
-#  include "OpenGlassBox/City.hpp"
+#include "OpenGlassBox/Agent.hpp"
+#include "OpenGlassBox/City.hpp"
+#include "TestWorld.hpp"
 #undef protected
 #undef private
 
@@ -23,7 +23,8 @@ TEST(TestsAgent, Constructor)
 
     // Create a new Agent
     AgentType agent_type("Agent", 5.0f, 3u, 42u);
-    Resources r; r.addResource("oil", 5u);
+    Resources r;
+    r.addResource("oil", 5u);
     Agent a(43u, agent_type, u, r, "target");
 
     // Check initial values (member variables).
@@ -66,7 +67,7 @@ TEST(TestsAgent, Move)
     Unit u(homeType, n1, city);
 
     UnitType factoryType("Factory");
-    factoryType.targets.push_back("People");
+    factoryType.targets.emplace_back("People");
     factoryType.resources.setCapacity("People", 10u);
     city.addUnit(factoryType, n2);
 
@@ -85,12 +86,12 @@ TEST(TestsAgent, Move)
     ASSERT_EQ(a.m_lastNode, &n1);
     ASSERT_EQ(a.m_nextNode, nullptr);
 
-    ASSERT_EQ(a.update(city.m_dijkstra, dt), false);
+    ASSERT_EQ(a.update(city.router(), dt), false);
     ASSERT_EQ(a.m_currentWay, &s1);
     ASSERT_EQ(a.m_lastNode, &n1);
     ASSERT_EQ(a.m_nextNode, &n2);
 
-    ASSERT_EQ(a.update(city.m_dijkstra, dt), false);
+    ASSERT_EQ(a.update(city.router(), dt), false);
     ASSERT_GT(a.m_position.x, 1.0f);
     ASSERT_EQ(a.m_position.y, 2.0f);
     ASSERT_EQ(a.m_position.z, 3.0f);
@@ -111,14 +112,14 @@ static float maxStepPerTick(Agent const& agent, float dt)
 //------------------------------------------------------------------------------
 //! \brief Drive the Agent until it delivers, checking at every tick that it did
 //! not jump. Returns the number of ticks, or zero when it never delivered.
-static uint32_t driveUntilDelivered(Agent& agent, City& city, float dt,
-                                    uint32_t maxTicks)
+static uint32_t
+driveUntilDelivered(Agent& agent, City& city, float dt, uint32_t maxTicks)
 {
     float const step = maxStepPerTick(agent, dt);
     for (uint32_t tick = 1u; tick <= maxTicks; ++tick)
     {
         Vector3f const before = agent.position();
-        bool const delivered = agent.update(city.m_dijkstra, dt);
+        bool const delivered = agent.update(city.router(), dt);
         float const moved = magnitude(agent.position() - before);
         EXPECT_LE(moved, step) << "teleported at tick " << tick;
         if (delivered)
@@ -142,12 +143,12 @@ TEST(TestsAgent, LeavesAndReachesABuildingWithoutJumping)
     Way& way = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
 
     UnitType homeType("Home");
-    homeType.targets.push_back("Home");
+    homeType.targets.emplace_back("Home");
     Unit& home = city.addUnit(homeType, path, way, 0.8f);
     ASSERT_FLOAT_EQ(home.position().x, 48.0f);
 
     UnitType workType("Work");
-    workType.targets.push_back("Work");
+    workType.targets.emplace_back("Work");
     workType.resources.setCapacity("People", 4u);
     Unit& work = city.addUnit(workType, path, way, 0.2f);
     ASSERT_FLOAT_EQ(work.position().x, 12.0f);
@@ -181,11 +182,11 @@ TEST(TestsAgent, DrivesToTheIntersectionBeforeTakingAnotherWay)
     Way& way2 = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n2, n3);
 
     UnitType homeType("Home");
-    homeType.targets.push_back("Home");
+    homeType.targets.emplace_back("Home");
     Unit& home = city.addUnit(homeType, path, way1, 0.6f);
 
     UnitType workType("Work");
-    workType.targets.push_back("Work");
+    workType.targets.emplace_back("Work");
     workType.resources.setCapacity("People", 4u);
     Unit& work = city.addUnit(workType, path, way2, 0.4f);
     ASSERT_FLOAT_EQ(work.position().x, 84.0f);
@@ -220,12 +221,12 @@ TEST(TestsAgent, LeavesTheWayByTheEndTheDestinationIsBehind)
     // The factory stands at a fifth of the first street, so n1 is its near end
     // and the shop is on the other side of n2.
     UnitType workType("Work");
-    workType.targets.push_back("Work");
+    workType.targets.emplace_back("Work");
     Unit& work = city.addUnit(workType, path, way1, 0.2f);
     ASSERT_FLOAT_EQ(work.position().x, 12.0f);
 
     UnitType shopType("Shop");
-    shopType.targets.push_back("Shop");
+    shopType.targets.emplace_back("Shop");
     shopType.resources.setCapacity("Goods", 4u);
     Unit& shop = city.addUnit(shopType, n3);
 
@@ -237,7 +238,7 @@ TEST(TestsAgent, LeavesTheWayByTheEndTheDestinationIsBehind)
     float const dt = 1.0f / config::DEFAULT_TICKS_PER_SECOND;
     float const departure = agent.position().x;
 
-    ASSERT_FALSE(agent.update(city.m_dijkstra, dt));
+    ASSERT_FALSE(agent.update(city.router(), dt));
     ASSERT_EQ(agent.m_nextNode, &n2) << "drove away from the shop";
 
     float const step = maxStepPerTick(agent, dt);
@@ -245,7 +246,7 @@ TEST(TestsAgent, LeavesTheWayByTheEndTheDestinationIsBehind)
     for (uint32_t tick = 0u; (tick < 4000u) && !delivered; ++tick)
     {
         Vector3f const before = agent.position();
-        delivered = agent.update(city.m_dijkstra, dt);
+        delivered = agent.update(city.router(), dt);
         ASSERT_LE(magnitude(agent.position() - before), step);
         ASSERT_GE(agent.position().x, departure - 0.5f) << "turned back";
     }
@@ -268,11 +269,11 @@ TEST(TestsAgent, DoesNotDeliverFromTheMiddleOfTheStreet)
     Way& way = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
 
     UnitType workType("Work");
-    workType.targets.push_back("Work");
+    workType.targets.emplace_back("Work");
     Unit& work = city.addUnit(workType, path, way, 0.2f);
 
     UnitType homeType("Home");
-    homeType.targets.push_back("Home");
+    homeType.targets.emplace_back("Home");
     homeType.resources.setCapacity("People", 4u);
     Unit& home = city.addUnit(homeType, n1);
 
@@ -282,7 +283,7 @@ TEST(TestsAgent, DoesNotDeliverFromTheMiddleOfTheStreet)
     Agent agent(1u, people, work, carried, "Home");
 
     float const dt = 1.0f / config::DEFAULT_TICKS_PER_SECOND;
-    ASSERT_FALSE(agent.update(city.m_dijkstra, dt)) << "delivered from afar";
+    ASSERT_FALSE(agent.update(city.router(), dt)) << "delivered from afar";
     ASSERT_EQ(home.resources().getAmount("People"), 0u);
 
     ASSERT_GT(driveUntilDelivered(agent, city, dt, 4000u), 0u);
@@ -306,19 +307,19 @@ TEST(TestsAgent, DeliversToTheBuildingThatStillHasRoom)
     Way& way2 = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n2, n3);
 
     UnitType workType("Work");
-    workType.targets.push_back("Work");
+    workType.targets.emplace_back("Work");
     Unit& work = city.addUnit(workType, path, way2, 0.9f);
 
     // The nearest home is full, the far one is not.
     UnitType homeType("Home");
-    homeType.targets.push_back("Home");
+    homeType.targets.emplace_back("Home");
     homeType.resources.setCapacity("People", 1u);
     homeType.resources.addResource("People", 1u);
     Unit& full = city.addUnit(homeType, path, way2, 0.4f);
     ASSERT_EQ(full.resources().getAmount("People"), 1u);
 
     UnitType freeType("Home");
-    freeType.targets.push_back("Home");
+    freeType.targets.emplace_back("Home");
     freeType.resources.setCapacity("People", 4u);
     Unit& free = city.addUnit(freeType, path, way1, 0.2f);
 
@@ -350,12 +351,12 @@ TEST(TestsAgent, DoesNotLoopWhenTheDestinationFillsUpOnTheWay)
     Way& way = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
 
     UnitType workType("Work");
-    workType.targets.push_back("Work");
+    workType.targets.emplace_back("Work");
     workType.resources.setCapacity("People", 4u);
     Unit& work = city.addUnit(workType, path, way, 0.8f);
 
     UnitType homeType("Home");
-    homeType.targets.push_back("Home");
+    homeType.targets.emplace_back("Home");
     homeType.resources.setCapacity("People", 1u);
     Unit& home = city.addUnit(homeType, path, way, 0.2f);
 
@@ -363,8 +364,6 @@ TEST(TestsAgent, DoesNotLoopWhenTheDestinationFillsUpOnTheWay)
     Resources carried;
     carried.addResource("People", 1u);
     Agent agent(1u, people, work, carried, "Home");
-    agent.setConfig(city.config());
-
     // Somebody else moves in before the Agent arrives.
     home.resources().addResource("People", 1u);
 
@@ -374,7 +373,7 @@ TEST(TestsAgent, DoesNotLoopWhenTheDestinationFillsUpOnTheWay)
     for (uint32_t tick = 0u; (tick < 2000u) && !removed; ++tick)
     {
         Vector3f const before = agent.position();
-        removed = agent.update(city.m_dijkstra, dt);
+        removed = agent.update(city.router(), city.config(), dt);
         ASSERT_LE(magnitude(agent.position() - before), step);
     }
 
@@ -397,18 +396,18 @@ TEST(TestsAgent, ForgetsADestroyedDestination)
     Way& way = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
 
     UnitType workType("Work");
-    workType.targets.push_back("Work");
+    workType.targets.emplace_back("Work");
     Unit& work = city.addUnit(workType, path, way, 0.9f);
 
     UnitType homeType("Home");
-    homeType.targets.push_back("Home");
+    homeType.targets.emplace_back("Home");
     homeType.resources.setCapacity("People", 4u);
     Unit& home = city.addUnit(homeType, path, way, 0.1f);
 
     static AgentType const people("People", 10.0f, 3u, 42u);
     Resources carried;
     carried.addResource("People", 1u);
-    Agent& agent = city.addAgent(people, work, carried, "Home");
+    Agent const& agent = city.addAgent(people, work, carried, "Home");
 
     float const dt = 1.0f / config::DEFAULT_TICKS_PER_SECOND;
     for (uint32_t tick = 0u; tick < 20u; ++tick)
@@ -431,19 +430,19 @@ TEST(TestsAgent, ZeroLengthWayDoesNotCrash)
     path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
 
     UnitType homeType("Home");
-    homeType.targets.push_back("Home");
+    homeType.targets.emplace_back("Home");
     Unit u(homeType, n1, city);
 
     UnitType factoryType("Factory");
-    factoryType.targets.push_back("People");
+    factoryType.targets.emplace_back("People");
     factoryType.resources.setCapacity("People", 10u);
     city.addUnit(factoryType, n2);
 
     Resources carried;
     carried.addResource("People", 1u);
-    Agent a(1u, AgentType("Worker", 5.0f, 3u, 42u), u, carried, "People");
+    Agent a(1u, keep<AgentType>("Worker", 5.0f, 3u, 42u), u, carried, "People");
 
     float const dt = 1.0f / config::DEFAULT_TICKS_PER_SECOND;
-    ASSERT_NO_THROW(a.update(city.m_dijkstra, dt));
-    ASSERT_NO_THROW(a.update(city.m_dijkstra, dt));
+    ASSERT_NO_THROW(a.update(city.router(), dt));
+    ASSERT_NO_THROW(a.update(city.router(), dt));
 }

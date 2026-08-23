@@ -43,13 +43,13 @@ void Area::executeRules()
 }
 
 // -----------------------------------------------------------------------------
-uint32_t Area::countUnits(std::string const& unitType) const
+uint32_t Area::countUnits(Name const& unitType) const
 {
     return uint32_t(unitsInside(unitType).size());
 }
 
 // -----------------------------------------------------------------------------
-std::vector<Unit*> Area::unitsInside(std::string const& unitType) const
+std::vector<Unit*> Area::unitsInside(Name const& unitType) const
 {
     std::vector<Unit*> found;
     for (auto& it: m_city.units())
@@ -115,7 +115,7 @@ bool Area::findFreeCell(int32_t& u, int32_t& v) const
     if (m_footprint.empty())
         return false;
 
-    std::vector<Unit*> const occupied = unitsInside(std::string());
+    std::vector<Unit*> const occupied = unitsInside(Name());
 
     auto taken = [&](int32_t cu, int32_t cv) {
         for (Unit* unit: occupied)
@@ -171,7 +171,7 @@ bool Area::findBuildableCell(int32_t& u, int32_t& v) const
     if (m_city.paths().empty())
         return false;
 
-    std::vector<Unit*> const occupied = unitsInside(std::string());
+    std::vector<Unit*> const occupied = unitsInside(Name());
 
     auto taken = [&](int32_t cu, int32_t cv) {
         for (Unit* unit: occupied)

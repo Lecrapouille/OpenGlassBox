@@ -63,7 +63,7 @@ public:
     //! be reported against.
     //! \return false when the file cannot be opened.
     //--------------------------------------------------------------------------
-    bool open(std::string const& filename);
+    bool openFile(std::string const& filename);
 
     //--------------------------------------------------------------------------
     //! \brief Split a script already in memory. What the tests use, having no

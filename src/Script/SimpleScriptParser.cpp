@@ -11,64 +11,19 @@
 #include <cstring>
 #include <sstream>
 
-// =============================================================================
-// PARSE ERROR
-// =============================================================================
-
-// -----------------------------------------------------------------------------
 namespace ogb {
-
-std::string ParseError::format() const
-{
-    std::ostringstream stream;
-    stream << file << ':' << line << ':' << column << ": " << message;
-
-    if (!source.empty())
-    {
-        stream << '\n' << source << '\n';
-
-        // Tabs are common in these scripts, so echo them into the caret line:
-        // any other filler would put the caret in the wrong place.
-        for (uint32_t i = 1u; (i < column) && (i <= source.size()); ++i)
-        {
-            stream << ((source[i - 1u] == '\t') ? '\t' : ' ');
-        }
-        stream << '^';
-    }
-
-    return stream.str();
-}
-
-// -----------------------------------------------------------------------------
-std::string IScriptParser::formatErrors() const
-{
-    std::ostringstream stream;
-    bool first = true;
-
-    for (auto const& e: errors())
-    {
-        if (!first)
-        {
-            stream << '\n';
-        }
-        stream << e.format();
-        first = false;
-    }
-
-    return stream.str();
-}
 
 // =============================================================================
 // PARSER
 // =============================================================================
 
 // -----------------------------------------------------------------------------
-bool SimpleScriptParser::parse(std::string const& filename,
+bool SimpleScriptParser::parseFile(std::string const& filename,
                                ScriptDefinitions& definitions)
 {
     m_errors.clear();
 
-    if (!m_lexer.open(filename))
+    if (!m_lexer.openFile(filename))
     {
         m_errors.push_back(ParseError{ filename, 0u, 0u,
                                        std::string("Cannot open the file: ") +
@@ -886,7 +841,7 @@ void SimpleScriptParser::parseUnit()
             parseStringArray(targets);
             if (unit != nullptr)
             {
-                unit->targets = std::move(targets);
+                unit->targets.assign(targets.begin(), targets.end());
             }
         }
         else if (token.text == "caps")
@@ -981,7 +936,7 @@ void SimpleScriptParser::parseRuleMap()
             RuleMap* rule = m_definitions->findRuleMap(name.text);
             if (rule != nullptr)
             {
-                rule->reset(type);
+                rule->configureFrom(type);
             }
             return;
         }
@@ -1042,7 +997,7 @@ void SimpleScriptParser::parseRuleUnit()
             RuleUnit* rule = m_definitions->findRuleUnit(name.text);
             if (rule != nullptr)
             {
-                rule->reset(type);
+                rule->configureFrom(type);
             }
             return;
         }
@@ -1116,7 +1071,7 @@ void SimpleScriptParser::parseRuleArea()
         {
             RuleArea* rule = m_definitions->findRuleArea(name.text);
             if (rule != nullptr)
-                rule->reset(type);
+                rule->configureFrom(type);
             return;
         }
 

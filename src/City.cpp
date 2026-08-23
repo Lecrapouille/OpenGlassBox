@@ -8,31 +8,37 @@
 #include "OpenGlassBox/City.hpp"
 #include "OpenGlassBox/Agent.hpp"
 #include "OpenGlassBox/Config.hpp"
-#include "OpenGlassBox/World.hpp"
 #include "OpenGlassBox/Vector.hpp"
+#include "OpenGlassBox/World.hpp"
 #include <algorithm>
 #include <utility>
 #include <vector>
 
 // -----------------------------------------------------------------------------
-namespace ogb {
+namespace ogb
+{
 
-City::City(std::string const& name, Vector3f position, uint32_t sizeU,
-           uint32_t sizeV, World& world)
+City::City(std::string const& name,
+           Vector3f position,
+           uint32_t sizeU,
+           uint32_t sizeV,
+           World& world)
     : m_name(name),
       m_world(world),
       m_position(position),
       m_gridSizeU(sizeU),
       m_gridSizeV(sizeV)
 {
+    updateRegion();
+
     static City::Listener listener;
     setListener(listener);
+}
 
-    // Seed zero keeps the non-reproducible seeding done by Dijkstra itself.
-    if (config().randomSeed != 0u)
-    {
-        m_dijkstra.setRandomSeed(config().randomSeed);
-    }
+// -----------------------------------------------------------------------------
+void City::setRouter(std::unique_ptr<IRouter> router)
+{
+    m_router = std::move(router);
 }
 
 // -----------------------------------------------------------------------------
@@ -72,12 +78,13 @@ Maps const& City::maps() const
 }
 
 // -----------------------------------------------------------------------------
-MapRegion City::region() const
+void City::updateRegion()
 {
-    int32_t u0, v0;
+    int32_t u0;
+    int32_t v0;
     m_world.world2mapPosition(m_position, u0, v0);
 
-    return MapRegion{ u0, v0, m_gridSizeU, m_gridSizeV };
+    m_region = MapRegion{ u0, v0, m_gridSizeU, m_gridSizeV };
 }
 
 // -----------------------------------------------------------------------------
@@ -85,7 +92,7 @@ void City::update(float dt)
 {
     // Advance the time averaged traffic before the Agents move, so that they
     // all route on the same picture of the network during this tick.
-    for (auto& it: m_paths)
+    for (auto const& it : m_paths)
     {
         it.second->smoothFlows(config().trafficSmoothing);
     }
@@ -94,7 +101,7 @@ void City::update(float dt)
     size_t i = m_agents.size();
     while (i--)
     {
-        if (m_agents[i]->update(m_dijkstra, dt))
+        if (m_router && m_agents[i]->update(*m_router, config(), dt))
         {
             std::swap(m_agents[i], m_agents[m_agents.size() - 1u]);
             m_agents.pop_back();
@@ -102,12 +109,14 @@ void City::update(float dt)
     }
 
     i = m_areas.size();
-    while (i--) {
+    while (i--)
+    {
         m_areas[i]->executeRules();
     }
 
     i = m_units.size();
-    while (i--) {
+    while (i--)
+    {
         m_units[i]->executeRules();
     }
 }
@@ -118,18 +127,19 @@ void City::update(float dt)
 void City::translate(Vector3f const direction)
 {
     m_position += direction;
+    updateRegion();
 
-    for (auto& it: m_paths)
+    for (auto& it : m_paths)
     {
         it.second->translate(direction);
     }
 
-    for (auto& it: m_agents)
+    for (auto const& it : m_agents)
     {
         it->translate(direction);
     }
 
-    for (auto& it: m_units)
+    for (auto const& it : m_units)
     {
         it->translate(direction);
     }
@@ -186,7 +196,10 @@ Unit& City::addUnit(UnitType const& type, Node& node)
 }
 
 // -----------------------------------------------------------------------------
-Unit& City::addUnit(UnitType const& type, Path& /*path*/, Way& way, float offset)
+Unit& City::addUnit(UnitType const& type,
+                    Path& /*path*/,
+                    Way& way,
+                    float offset)
 {
     m_units.push_back(std::make_unique<Unit>(type, way, offset, *this));
     Unit& unit = *(m_units.back());
@@ -210,20 +223,22 @@ Unit& City::addUnit(UnitType const& type, Vector3f const& position)
 // -----------------------------------------------------------------------------
 Area& City::addArea(AreaType const& type, MapRegion const& footprint)
 {
-    m_areas.push_back(std::make_unique<Area>(m_nextAreaId++, type, footprint, *this));
+    m_areas.push_back(
+        std::make_unique<Area>(m_nextAreaId++, type, footprint, *this));
     Area& area = *(m_areas.back());
     m_listener->onAreaAdded(area);
     return area;
 }
 
 // -----------------------------------------------------------------------------
-Agent& City::addAgent(AgentType const& type, Unit& owner, Resources const& resources,
-                      std::string const& searchTarget)
+Agent& City::addAgent(AgentType const& type,
+                      Unit& owner,
+                      Resources const& resources,
+                      Name const& searchTarget)
 {
-    m_agents.push_back(std::make_unique<Agent>(m_nextAgentId++, type, owner, resources,
-                                               searchTarget));
+    m_agents.push_back(std::make_unique<Agent>(
+        m_nextAgentId++, type, owner, resources, searchTarget));
     Agent& agent = *(m_agents.back());
-    agent.setConfig(config());
     m_listener->onAgentAdded(agent);
     return agent;
 }
@@ -233,7 +248,7 @@ void City::removeUnit(Unit& unit)
 {
     // The Agents point at the building both as the one that sent them out and
     // as the destination of their itinerary. Both have to go before it does.
-    for (auto& agent: m_agents)
+    for (auto const& agent : m_agents)
     {
         agent->forget(unit);
     }
@@ -241,10 +256,10 @@ void City::removeUnit(Unit& unit)
     m_listener->onUnitRemoved(unit);
     unit.detach();
 
-    m_units.erase(std::remove_if(m_units.begin(), m_units.end(),
-                                 [&unit](std::unique_ptr<Unit> const& it) {
-                                     return it.get() == &unit;
-                                 }),
+    m_units.erase(std::remove_if(m_units.begin(),
+                                 m_units.end(),
+                                 [&unit](std::unique_ptr<Unit> const& it)
+                                 { return it.get() == &unit; }),
                   m_units.end());
 }
 
@@ -252,10 +267,10 @@ void City::removeUnit(Unit& unit)
 void City::removeArea(Area& area)
 {
     m_listener->onAreaRemoved(area);
-    m_areas.erase(std::remove_if(m_areas.begin(), m_areas.end(),
-                                 [&area](std::unique_ptr<Area> const& it) {
-                                     return it.get() == &area;
-                                 }),
+    m_areas.erase(std::remove_if(m_areas.begin(),
+                                 m_areas.end(),
+                                 [&area](std::unique_ptr<Area> const& it)
+                                 { return it.get() == &area; }),
                   m_areas.end());
 }
 
@@ -289,7 +304,7 @@ void City::removeWay(Path& path, Way& way)
     // The Agents hold raw pointers on the segment and on the Nodes, so they
     // have to let go before anything is freed. They keep their position: the
     // next tick routes them again over the graph that remains.
-    for (auto& agent: m_agents)
+    for (auto const& agent : m_agents)
     {
         agent->forget(way);
         agent->invalidateRoute();
@@ -319,13 +334,13 @@ Node& City::splitWay(Path& path, Way& way, float offset)
     // and reanchor() mutates the very list being walked.
     std::vector<std::pair<Unit*, float>> anchored;
     anchored.reserve(way.units().size());
-    for (Unit* unit: way.units())
+    for (Unit* unit : way.units())
         anchored.emplace_back(unit, unit->wayOffset());
 
     // The Agents hold the segment and an offset along it, both of which mean
     // something else once it is half as long. They keep their position and the
     // next tick routes them over the graph as it now is.
-    for (auto& agent: m_agents)
+    for (auto const& agent : m_agents)
     {
         agent->forget(way);
         agent->invalidateRoute();
@@ -335,13 +350,13 @@ Node& City::splitWay(Path& path, Way& way, float offset)
 
     // splitWay() keeps the first half in place and creates the second one.
     Way* second = nullptr;
-    for (Way* incident: junction.ways())
+    for (Way* incident : junction.ways())
     {
         if (incident != &way)
             second = incident;
     }
 
-    for (auto const& it: anchored)
+    for (auto const& it : anchored)
     {
         if (it.second <= offset)
             it.first->reanchor(way, it.second / offset);
@@ -353,7 +368,7 @@ Node& City::splitWay(Path& path, Way& way, float offset)
 }
 
 // -----------------------------------------------------------------------------
-void City::removeOrphanNodes(Path& path)
+void City::removeOrphanNodes(Path& path) const
 {
     size_t i = path.nodes().size();
     while (i--)
@@ -364,7 +379,7 @@ void City::removeOrphanNodes(Path& path)
         if (!node.units().empty())
             continue;
 
-        for (auto& agent: m_agents)
+        for (auto const& agent : m_agents)
             agent->forget(node);
 
         path.removeNode(node);
@@ -387,7 +402,7 @@ void City::clear()
     // The graphs are emptied but kept: which kinds of network exist comes from
     // the ruleset, not from what the player drew. Dropping them would leave the
     // City with no road type to lay a road with.
-    for (auto& it: m_paths)
+    for (auto& it : m_paths)
         it.second->clear();
 
     m_globals = Resources();
@@ -400,9 +415,9 @@ void City::removeNode(Path& path, Node& node)
 
     // Segments first, then the Node: an Agent parked on the Node is only
     // detached from the graph once nothing carries it any more.
-    for (auto& agent: m_agents)
+    for (auto const& agent : m_agents)
     {
-        for (Way* way: incident)
+        for (Way const* way : incident)
             agent->forget(*way);
         agent->forget(node);
         agent->invalidateRoute();
@@ -417,7 +432,7 @@ void City::removeNode(Path& path, Node& node)
             removeUnit(unit);
             continue;
         }
-        for (Way* way: incident)
+        for (Way const* way : incident)
         {
             if (unit.way() == way)
             {

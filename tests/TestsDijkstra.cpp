@@ -2,23 +2,23 @@
 
 #define protected public
 #define private public
-#  include "TestWorld.hpp"
-#  include "OpenGlassBox/City.hpp"
-#  include "OpenGlassBox/Dijkstra.hpp"
-#  include "OpenGlassBox/Unit.hpp"
+#include "OpenGlassBox/City.hpp"
+#include "OpenGlassBox/Unit.hpp"
+#include "Routing/DijkstraRouter.hpp"
+#include "TestWorld.hpp"
 #undef protected
 #undef private
 
 namespace
 {
-    UnitType makeFactoryType()
-    {
-        UnitType type("Factory");
-        type.targets.push_back("People");
-        type.resources.setCapacity("People", 10u);
-        return type;
-    }
+UnitType makeFactoryType()
+{
+    UnitType type("Factory");
+    type.targets.emplace_back("People");
+    type.resources.setCapacity("People", 10u);
+    return type;
 }
+} // namespace
 
 TEST(TestsDijkstra, DirectPath)
 {
@@ -39,7 +39,7 @@ TEST(TestsDijkstra, DirectPath)
     carried.addResource("People", 1u);
 
     Dijkstra router;
-    std::string target = "People";
+    Name target = "People";
     Node* next = router.findNextPoint(home, target, carried);
 
     ASSERT_EQ(next, &mid);
@@ -67,7 +67,7 @@ TEST(TestsDijkstra, ShortestBranch)
     carried.addResource("People", 1u);
 
     Dijkstra router;
-    std::string target = "People";
+    Name target = "People";
     Node* next = router.findNextPoint(start, target, carried);
 
     ASSERT_EQ(next, &shortRoute);
@@ -86,7 +86,7 @@ TEST(TestsDijkstra, AlreadyAtDestination)
     carried.addResource("People", 1u);
 
     Dijkstra router;
-    std::string target = "People";
+    Name target = "People";
     Node* next = router.findNextPoint(factory, target, carried);
 
     ASSERT_EQ(next, &factory);
@@ -106,7 +106,7 @@ TEST(TestsDijkstra, RandomFallbackWhenNoDestination)
 
     Dijkstra router;
     router.setRandomSeed(42u);
-    std::string target = "People";
+    Name target = "People";
     Node* next = router.findNextPoint(start, target, carried);
 
     ASSERT_EQ(next, &other);
@@ -120,7 +120,7 @@ TEST(TestsDijkstra, DisconnectedGraph)
     carried.addResource("People", 1u);
 
     Dijkstra router;
-    std::string target = "People";
+    Name target = "People";
     Node* next = router.findNextPoint(orphan, target, carried);
 
     ASSERT_EQ(next, nullptr);
@@ -150,7 +150,7 @@ TEST(TestsDijkstra, PathScopedRouting)
     carried.addResource("People", 1u);
 
     Dijkstra router;
-    std::string target = "People";
+    Name target = "People";
     Node* next = router.findNextPoint(start, target, carried);
 
     ASSERT_EQ(next, &roadMid);

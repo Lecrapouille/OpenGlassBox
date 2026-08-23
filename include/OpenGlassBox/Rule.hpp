@@ -500,10 +500,10 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief Fill in a rule that was declared empty. See IRule::reset().
+    //! \brief Fill in a rule that was declared empty on the second parser pass.
     //! \param[in] type the rule as the script declared it.
     //--------------------------------------------------------------------------
-    void reset(RuleMapType const& type)
+    void configureFrom(RuleMapType const& type)
     {
         IRule::reset(type.rate, type.rateMinutes, type.commands);
         m_randomTiles = type.randomTiles;
@@ -575,10 +575,10 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief Fill in a rule that was declared empty. See IRule::reset().
+    //! \brief Fill in a rule that was declared empty on the second parser pass.
     //! \param[in] type the rule as the script declared it.
     //--------------------------------------------------------------------------
-    void reset(RuleUnitType const& type)
+    void configureFrom(RuleUnitType const& type)
     {
         IRule::reset(type.rate, type.rateMinutes, type.commands);
         m_onFail = type.onFail;
@@ -656,10 +656,10 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief Fill in a rule that was declared empty. See IRule::reset().
+    //! \brief Fill in a rule that was declared empty on the second parser pass.
     //! \param[in] type the rule as the script declared it.
     //--------------------------------------------------------------------------
-    void reset(RuleAreaType const& type)
+    void configureFrom(RuleAreaType const& type)
     {
         IRule::reset(type.rate, type.rateMinutes, type.commands);
     }

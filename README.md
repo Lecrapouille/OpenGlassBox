@@ -126,24 +126,46 @@ make -j8
 
 On macOS, a bundle application is also created inside the build folder.
 
-## Notes on the port
+## How this differs from the original project
 
-What changed compared to the original source code:
+Three things are easily confused, so it is worth naming them apart. **GlassBox** is the engine Maxis described in a 2012 GDC talk; there is no source code for it. **MultiAgentSimulation** is Federico D'Angelo's C# implementation of that talk for Unity, and it is the code this project was ported from. **OpenGlassBox** is what you are reading about, and this section is what it does differently.
 
-- The original code was written in C# for the Unity engine. Since I do not develop in C#, I ported it to C++.
-- The original project reused the names of the GDC talk. I renamed the classes whose names I found confusing:
-  - `Box` is now `City`.
-  - `Point` and `Segment` are now `Node` and `Way` (better aligned with graph theory terminology).
-  - `ResourceBinCollection` is now `Resources`.
-  - `SimulationDefinitionLoader` is now `ScriptParser`.
-- The original project never implemented the `Area` class, also called `Zone`. OpenGlassBox has `Area` and `AreaRule`, with `spawn`, `upgrade`, `destroy` and `count` commands. Areas and Units are kept independent: a zone is a rectangle of cells, and a building is not a graph node.
-- A `Unit` used to be forced onto a `Node` of a `Path`, which made the graph explode. A Unit now has its own position, plus an optional anchor either at an offset along a `Way` or on a `Node`. That anchor is not decoration: `spawn ... at nearestWay` only grows a building on a cell a road runs through or fronts, and the demo draws the link. A building with no way to reach the network could neither send nor receive an `Agent`, so an `Area` refuses to grow one at all rather than scatter houses in a field. An `Agent` leaving a building anchored along a `Way` drives out by the end its destination lies behind, which is not always the near one, and it only knocks at a door it has actually driven to.
-- The original project implemented a dynamic A in `Path::FindNextPoint`. Routing now goes through `IRouter` (`Dijkstra` or `AStarRouter`) and minimises BPR travel times. The flow of each `Way` is an exponential moving average and **not** the MSA solver of CiudadSim; the traffic section below explains the difference.
-- There are only two file formats: `.ogs` for the ruleset and `.ogc` for a save, whose header holds a hash of the ruleset and the list of the types used. There is no third "world" file.
-- One application window shows one city. A `World` can still hold several of them: a road crossing a border is clipped against the region of each city and each piece belongs to the city it was clipped to, once `World::Listener` has allowed it. Routing stays inside one `Path`, so an agent never wanders into the neighbouring city on its own.
-- The script parser sits behind `IScriptParser`, so another front end, a Forth one for instance, can be plugged in without touching the engine.
-- The original project had neither unit tests nor comments. I added both.
-- Since I cared about the simulation rather than the rendering, the dependencies on the Unity engine and its decorator classes were not ported, the library was separated from the demo, and the demo uses GLFW, OpenGL 3.3 and Dear ImGui (docking branch) rather than a full game engine. There is no SDL.
+### The language and the shape of the project
+
+- The original is C# for Unity. This is C++14, with no game engine underneath.
+- The simulation is a library that knows nothing about drawing, and the demo is a separate program on top of it, so you can plug in your own renderer. The Unity decorator classes were not ported. The demo uses GLFW, OpenGL 3.3 and Dear ImGui rather than a full engine. There is no SDL.
+- The original reused the names of the GDC talk. The ones I found confusing were renamed: `Box` became `City`, `Point` and `Segment` became `Node` and `Way` (the vocabulary of graph theory), `ResourceBinCollection` became `Resources`, and `SimulationDefinitionLoader` became `ScriptParser`.
+- The original had neither unit tests nor comments. This has both: every header carries its documentation and a small example, and the test suite covers the engine down to individual rule commands.
+
+### What the simulation models
+
+- **Zones exist.** The original declared the `Area` class, also called `Zone`, and never implemented it. Here `Area` and `AreaRule` are real, with `spawn`, `upgrade`, `destroy` and `count` commands. A zone is a rectangle of cells, and a building is not a graph node, so the two stay independent.
+- **A building is no longer a crossroads.** A `Unit` used to be forced onto a `Node` of a `Path`, which made the graph explode. It now has its own position plus an optional anchor, either on a `Node` or at an offset along a `Way`. That anchor is not decoration: `spawn ... at nearestWay` only grows a building on a cell a road runs through or fronts, because a building nobody can drive to could neither send nor receive an `Agent`. An `Agent` leaving a building anchored along a way drives out by the end its destination lies behind, which is not always the near one, and it only knocks at a door it has actually driven to.
+- **Routing is pluggable and traffic-aware.** The original walked the graph with a dynamic A\* inside `Path::FindNextPoint`. Routing now goes through the `IRouter` interface, and the shipped implementation minimises BPR travel times rather than distances. The flow of each `Way` is an exponential moving average, **not** the MSA solver of CiudadSim; the traffic section below explains why that distinction matters.
+- **There is a clock.** Rules can be given a period in game minutes rather than in ticks, and can be restricted to a range of hours, which is what lets a shop keep opening hours and a factory work a shift. The inspector reads those hours back and tells you whether a building is open.
+- **The rules can be watched.** A rule reports every attempt, successful or not, along with the command that refused, which is what the Rule Log panel of the demo shows. Debugging a ruleset without that amounts to guessing.
+
+### Files and tooling
+
+- There are two file formats, not three: `.ogs` for a ruleset and `.ogc` for a save. There is no separate "world" file. A save carries a fingerprint of the ruleset it was written against and the list of the types it uses, so opening it against a ruleset that has drifted tells you so instead of failing obscurely later.
+- The script parser sits behind `IScriptParser`, so another front end can be plugged in without touching the engine.
+- One window shows one city, but a `World` can hold several. A road crossing a border is clipped against the region of each city, and each piece belongs to the city it was clipped to, once `World::Listener` has allowed it. Routing stays inside one `Path`, so an agent never wanders into the neighbouring city on its own.
+- The demo has undo and redo, a script editor that reparses in place, and an inspector that shows what a building holds and which rules act on it.
+
+### Speed
+
+The original was written to run a few hundred cells in Unity. This one is meant to stay smooth on a real street network — the Chicago sample is 546 crossroads, 2176 segments and a region of 487 by 641 cells, which is a third of a million cells swept by every rule of every layer. Getting there took the following, and they are worth knowing about if you intend to grow the simulation further:
+
+- **The grid is sparse and addressed by shifts.** Cells live in blocks of 16 by 16 allocated on first write, so an empty world costs nothing and a city can be founded anywhere. Finding the block a cell belongs to is a shift and a mask rather than a signed division, and the last block found is remembered, which answers fifteen lookups in sixteen without touching the hash table.
+- **A rule sweeps its cells row by row**, which is the order a block stores them in, so sixteen consecutive cells are one cache line instead of sixteen.
+- **The region a city administers is derived once**, when it is founded or moved. Deriving it per cell, which is what a rule reading a layer used to do three times over, meant two floating point floors on the hottest path in the library.
+- **A rule that visits only a share of its cells draws them by selection sampling**: the region is scanned once in order and each cell is taken with the probability that makes the sample come out right. Every subset of the size asked for is still equally likely, but nothing is shuffled and nothing is allocated. The previous approach held two vectors as large as the map, copied one into the other on every run, and jumped randomly through both.
+- **Names are interned.** Everything a script names — resources, types of building, what an agent is looking for — is a `Name`, which is an index into a table fixed when the ruleset is read. Asking a building whether it accepts what an agent carries compares integers rather than strings.
+- **Travel times are cached** on each segment and recomputed only when its smoothed traffic actually moves, which spares the BPR power on every quiet street of the network on every tick. Agents re-examine their route on a period rather than on every tick, and only switch when the cost has drifted enough to be worth it.
+- **The router works in flat arrays.** Dijkstra's scratch space is indexed by a dense node index kept by the `Path`, with a generation counter instead of clearing, rather than the `std::map` and `std::unordered_set` it started with.
+- **A layer is drawn at the granularity the zoom deserves.** Squares of cells are aggregated so that neither their size on screen nor their number gets out of hand, which is what keeps a half million cell city from asking Dear ImGui for a hundred and sixty thousand rectangles per layer per frame.
+
+Together these took the Chicago sample from 2.25 ms to 0.95 ms of simulation per tick, and cut the rectangles the renderer emits at the worst zoom by a factor of sixteen.
 
 
 
@@ -216,7 +238,7 @@ Both containers are `std::deque` rather than `std::vector`, and that is delibera
 
 A `Map` is one layer: coal, water, forest, but also pollution, land value or desirability. Every cell holds an amount of that one thing, capped by the recipe of the layer, so nothing piles up without bound in one place.
 
-A `Map` is what lets a rule ask a question about a *place* rather than about a building: "is there water within three cells of here?" A building reads and writes its neighbourhood through its **footprint**, a radius around the cell it stands on, and that radius is a taxicab distance — a diamond, not a circle. `MapCoordinatesInsideRadius` walks it and `MapRandomCoordinates` walks it in a random order, both reusing their buffers, because a layer runs this for every cell of every town on every tick.
+A `Map` is what lets a rule ask a question about a *place* rather than about a building: "is there water within three cells of here?" A building reads and writes its neighbourhood through its **footprint**, a radius around the cell it stands on, and that radius is a taxicab distance — a diamond, not a circle. `MapCoordinatesInsideRadius` walks that diamond, reusing its buffers because a layer runs this for every cell of every town on every tick. `MapRandomCoordinates` is the other walker: it hands out a share of the cells of a region, drawn so that every subset of that size is equally likely, but scanned in reading order so that the cells come out in the order the grid stores them.
 
 The grid is unbounded in the four directions, so cell coordinates are signed, and storage is sparse: blocks of 16×16 cells allocated the first time something is written into them. An empty layer costs nothing and a town can be founded anywhere without deciding on a size beforehand. `allocatedChunks()` makes the cost visible in the debug panel.
 
@@ -357,7 +379,9 @@ The second is stranger, and it is the reason `Dijkstra` is not an A. **There is 
 
 Having no goal also means there is nothing for an A estimate to aim at. What is added to the cost of a crossroads is the free flow travel time back to the one the search started from, which biases the order of exploration towards the neighbourhood of the departure, where the nearest destination usually is. It is a speed-up, not an admissible heuristic: the answer is the cheapest building the search met first, which in an unusual geometry may not be the cheapest one there is. The `AStarRouter` alias is a leftover of the days when the search did have a goal.
 
-Two consequences follow, and both are visible in the demo. Two agents leaving the same door a minute apart may be sent to different shops, because the traffic changed in between. And an agent whose itinerary was computed a while ago recomputes it when the road it is on has become worse than the alternative — `shortestPathCost()` is what tells it so, without building an itinerary it may not use.
+Two consequences follow, and both are visible in the demo. Two agents leaving the same door a minute apart may be sent to different shops, because the traffic changed in between. And an agent whose itinerary was computed a while ago replaces it when the road it is on has become worse than the alternative.
+
+Comparing the two costs a whole graph search, so it does not happen on every tick: `pathCheckTicks` in the Traffic panel is how often an agent bothers to look, and `cost deviation` is how much worse its road has to be before it switches. When the comparison does say the alternative is better, the itinerary that search produced is the one the agent takes — it is not searched for a second time. Lowering `pathCheckTicks` to one is the quickest way to bring a large city to its knees.
 
 ### Why the flow is smoothed
 

@@ -45,7 +45,7 @@ TEST(TestsCommand, Constructor)
 
     //
     Resources r; r.addResource("oil", 5u);
-    RuleCommandAgent ra(AgentType("Worker", 1.0f, 2u, 0xFFFFFF), "home", r);
+    RuleCommandAgent ra(keep<AgentType>("Worker", 1.0f, 2u, 0xFFFFFF), "home", r);
     ASSERT_STREQ(ra.name.c_str(), "Worker");
     ASSERT_EQ(ra.speed, 1.0f);
     ASSERT_EQ(ra.radius, 2u);
@@ -210,7 +210,7 @@ TEST(TestsCommand, RuleCommandAgent)
     RuleContext context;
     MockIRuleValue target;
     Resources r; r.addResource("oil", 5u);
-    RuleCommandAgent cmd(AgentType("Worker", 1.0f, 2u, 0xFFFFFF), "home", r);
+    RuleCommandAgent cmd(keep<AgentType>("Worker", 1.0f, 2u, 0xFFFFFF), "home", r);
 
     EXPECT_CALL(target, add(_,_)).Times(0);
     EXPECT_CALL(target, remove(_,_)).Times(0);
@@ -225,7 +225,7 @@ TEST(TestsCommand, RuleCommandAgent)
     Path& p1 = city.addPath(keep<PathType>("Road"));
     Node& n1 = p1.addNode(Vector3f(0.0f, 0.0f, 3.0f));
     Node& n2 = p1.addNode(Vector3f(2.0f, 0.0f, 3.0f));
-    Unit unit(UnitType("unit"), n1, city);
+    Unit unit(keep<UnitType>("unit"), n1, city);
     context.city = &city;
     context.unit = &unit;
     context.locals = &locals;

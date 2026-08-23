@@ -132,7 +132,7 @@ public:
     //! room for all of it.
     //! \return true when the name matches and the load fits.
     // -------------------------------------------------------------------------
-    bool accepts(std::string const& searchTarget,
+    bool accepts(Name const& searchTarget,
                  Resources const& resourcesToTryToAdd);
 
     // -------------------------------------------------------------------------
@@ -256,7 +256,7 @@ public:
     //! \brief The names an Agent may look for to end its trip here. Empty means
     //! nothing can ever be delivered to it.
     // -------------------------------------------------------------------------
-    inline std::vector<std::string> const& targets() const
+    inline std::vector<Name> const& targets() const
     {
         return m_type.targets;
     }

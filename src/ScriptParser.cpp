@@ -44,7 +44,7 @@ bool Script::parse(std::string const& filename)
     bool const success = loadInto(
         m_definitions, m_errors, parser,
         [&filename](IScriptParser& p, ScriptDefinitions& out) {
-            return p.parse(filename, out);
+            return p.parseFile(filename, out);
         });
 
     if (success)

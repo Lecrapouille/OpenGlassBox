@@ -5,8 +5,9 @@
 //-----------------------------------------------------------------------------
 
 #include "Game/GlassBoxApp.hpp"
+#include "Routing/installRouter.hpp"
+#include "Save/CitySave.hpp"
 #include "UI/Theme.hpp"
-#include "OpenGlassBox/CitySave.hpp"
 
 #include <implot.h>
 
@@ -21,12 +22,11 @@
 
 #include "project_info.hpp"
 
-namespace ogb {
-namespace game {
+namespace ogb
+{
+namespace game
+{
 using namespace ogb::theme;
-
-
-namespace {
 
 static constexpr char const* OPEN_RULESET_DIALOG = "OpenRulesetDialog";
 static constexpr char const* OPEN_CITY_DIALOG = "OpenCityDialog";
@@ -34,6 +34,9 @@ static constexpr char const* SAVE_CITY_DIALOG = "SaveCityDialog";
 static constexpr float WATCH_PERIOD = 0.5f;
 static constexpr float NOTICE_DURATION = 4.0f;
 static constexpr uint32_t DEFAULT_CITY_SIZE = 16u;
+
+namespace
+{
 
 bool fileExists(std::string const& path)
 {
@@ -50,7 +53,8 @@ std::string fileBasename(std::string const& path)
 std::string fileDirectory(std::string const& path)
 {
     size_t const slash = path.find_last_of("/\\");
-    return (slash == std::string::npos) ? std::string() : path.substr(0u, slash + 1u);
+    return (slash == std::string::npos) ? std::string()
+                                        : path.substr(0u, slash + 1u);
 }
 
 std::string fileExtension(std::string const& path)
@@ -86,7 +90,8 @@ std::vector<std::string> dataDirectories()
 {
     std::vector<std::string> directories;
 
-    auto push = [&directories](std::string dir) {
+    auto push = [&directories](std::string dir)
+    {
         if (dir.empty())
             return;
         if ((dir.back() != '/') && (dir.back() != '\\'))
@@ -99,8 +104,8 @@ std::vector<std::string> dataDirectories()
     while (start <= search.size())
     {
         size_t const end = search.find(':', start);
-        push(search.substr(start, (end == std::string::npos) ? end
-                                                             : end - start));
+        push(search.substr(start,
+                           (end == std::string::npos) ? end : end - start));
         if (end == std::string::npos)
             break;
         start = end + 1u;
@@ -116,7 +121,7 @@ std::vector<std::string> dataDirectories()
 std::string dataDirectory()
 {
     std::vector<std::string> const directories = dataDirectories();
-    for (std::string const& dir: directories)
+    for (std::string const& dir : directories)
     {
         if (fileExists(dir + "Simulations"))
             return dir;
@@ -132,7 +137,7 @@ std::string resolveDataFile(std::string const& name)
         return name;
 
     std::string const base = fileBasename(name);
-    for (std::string const& data: dataDirectories())
+    for (std::string const& data : dataDirectories())
     {
         std::string const simulations = data + "Simulations/";
         if (fileExists(simulations + base))
@@ -180,22 +185,65 @@ bool writeAll(std::string const& path, std::string const& text)
 
 bool typeExists(Script const& script, std::string const& name)
 {
-    try { script.getPathType(name); return true; } catch (...) {}
-    try { script.getWayType(name); return true; } catch (...) {}
-    try { script.getUnitType(name); return true; } catch (...) {}
-    try { script.getAreaType(name); return true; } catch (...) {}
-    try { script.getAgentType(name); return true; } catch (...) {}
-    try { script.getMapType(name); return true; } catch (...) {}
+    try
+    {
+        script.getPathType(name);
+        return true;
+    }
+    catch (...)
+    {
+    }
+    try
+    {
+        script.getWayType(name);
+        return true;
+    }
+    catch (...)
+    {
+    }
+    try
+    {
+        script.getUnitType(name);
+        return true;
+    }
+    catch (...)
+    {
+    }
+    try
+    {
+        script.getAreaType(name);
+        return true;
+    }
+    catch (...)
+    {
+    }
+    try
+    {
+        script.getAgentType(name);
+        return true;
+    }
+    catch (...)
+    {
+    }
+    try
+    {
+        script.getMapType(name);
+        return true;
+    }
+    catch (...)
+    {
+    }
     return false;
 }
 
 std::vector<std::string> placedTypes(Simulation const& simulation)
 {
     std::vector<std::string> names;
-    auto const add = [&](std::string const& name) {
+    auto const add = [&](std::string const& name)
+    {
         if (name.empty())
             return;
-        for (std::string const& existing: names)
+        for (std::string const& existing : names)
         {
             if (existing == name)
                 return;
@@ -203,20 +251,20 @@ std::vector<std::string> placedTypes(Simulation const& simulation)
         names.push_back(name);
     };
 
-    for (auto const& cityIt: simulation.cities())
+    for (auto const& cityIt : simulation.cities())
     {
         City const& city = *cityIt.second;
-        for (auto const& pathIt: city.paths())
+        for (auto const& pathIt : city.paths())
         {
             add(pathIt.second->type());
-            for (auto const& way: pathIt.second->ways())
+            for (auto const& way : pathIt.second->ways())
                 add(way->type());
         }
-        for (auto const& unit: city.units())
+        for (auto const& unit : city.units())
             add(unit->type());
-        for (auto const& area: city.areas())
+        for (auto const& area : city.areas())
             add(area->type());
-        for (auto const& agent: city.agents())
+        for (auto const& agent : city.agents())
             add(agent->type());
     }
     return names;
@@ -228,7 +276,8 @@ std::vector<std::string> placedTypes(Simulation const& simulation)
 GlassBoxApp::GlassBoxApp(Options options)
     : host::Application(options.width, options.height, "OpenGlassBox"),
       m_options(std::move(options))
-{}
+{
+}
 
 // ----------------------------------------------------------------------------
 GlassBoxApp::~GlassBoxApp()
@@ -242,8 +291,8 @@ bool GlassBoxApp::onSetup()
     theme::loadFonts();
     ImPlot::CreateContext();
     imgui().setClearColor(0.05f, 0.06f, 0.08f);
-    imgui().setDefaultLayoutCallback(
-        [this](ImGuiID dockspace) { this->buildDefaultLayout(dockspace); });
+    imgui().setDefaultLayoutCallback([this](ImGuiID dockspace)
+                                     { this->buildDefaultLayout(dockspace); });
 
     if (!loadPath(m_options.file))
     {
@@ -272,7 +321,8 @@ void GlassBoxApp::buildDefaultLayout(ImGuiID dockspace)
 
     ImGuiID rightTop = 0u;
     ImGuiID rightBottom = 0u;
-    ImGui::DockBuilderSplitNode(right, ImGuiDir_Down, 0.50f, &rightBottom, &rightTop);
+    ImGui::DockBuilderSplitNode(
+        right, ImGuiDir_Down, 0.50f, &rightBottom, &rightTop);
 
     ImGui::DockBuilderDockWindow("Map", center);
     ImGui::DockBuilderDockWindow("Simulation clock", left);
@@ -285,16 +335,29 @@ void GlassBoxApp::buildDefaultLayout(ImGuiID dockspace)
 }
 
 // ----------------------------------------------------------------------------
-void GlassBoxApp::createEmptyCity(Simulation& simulation, std::string const& name)
+void GlassBoxApp::RouterListener::onCityAdded(City& city)
 {
-    City& city = simulation.addCity(name, Vector3f(0.0f, 0.0f, 0.0f),
-                                    DEFAULT_CITY_SIZE, DEFAULT_CITY_SIZE);
-    for (auto const& it: simulation.script().mapTypes())
+    installDijkstraRouter(city, city.config());
+}
+
+// ----------------------------------------------------------------------------
+void GlassBoxApp::wireSimulation(Simulation& simulation)
+{
+    simulation.setListener(m_router_listener);
+}
+
+// ----------------------------------------------------------------------------
+void GlassBoxApp::createEmptyCity(Simulation& simulation,
+                                  std::string const& name) const
+{
+    City& city = simulation.addCity(
+        name, Vector3f(0.0f, 0.0f, 0.0f), DEFAULT_CITY_SIZE, DEFAULT_CITY_SIZE);
+    for (auto const& it : simulation.script().mapTypes())
         city.addMap(*it.second);
 
     // The city starts with no road, but it has to start with the graphs the
     // ruleset declares: an empty Path is what the road tool lays segments into.
-    for (auto const& it: simulation.script().pathTypes())
+    for (auto const& it : simulation.script().pathTypes())
         city.addPath(*it.second);
 }
 
@@ -316,7 +379,7 @@ void GlassBoxApp::resetView()
             m_state.primaryLayer = maps.begin()->second->type();
 
         m_state.soloLayer.clear();
-        for (auto const& it: maps)
+        for (auto const& it : maps)
         {
             m_state.layer(it.first).visible =
                 (it.first == m_state.primaryLayer);
@@ -344,8 +407,9 @@ bool GlassBoxApp::loadRuleset(std::string const& filename, bool loadSiblingSave)
         return false;
     }
 
-    auto simulation = std::make_unique<Simulation>(DEFAULT_CITY_SIZE,
-                                                   DEFAULT_CITY_SIZE);
+    auto simulation =
+        std::make_unique<Simulation>(DEFAULT_CITY_SIZE, DEFAULT_CITY_SIZE);
+    wireSimulation(*simulation);
     try
     {
         if (!simulation->script().parse(path))
@@ -469,8 +533,9 @@ bool GlassBoxApp::loadCity(std::string const& filename)
         return false;
     }
 
-    auto simulation = std::make_unique<Simulation>(DEFAULT_CITY_SIZE,
-                                                   DEFAULT_CITY_SIZE);
+    auto simulation =
+        std::make_unique<Simulation>(DEFAULT_CITY_SIZE, DEFAULT_CITY_SIZE);
+    wireSimulation(*simulation);
     try
     {
         if (!simulation->script().parse(ruleset))
@@ -541,7 +606,9 @@ bool GlassBoxApp::applyScript()
     if (!m_simulation || m_ruleset_path.empty())
         return false;
 
-    auto next = std::make_unique<Simulation>(DEFAULT_CITY_SIZE, DEFAULT_CITY_SIZE);
+    auto next =
+        std::make_unique<Simulation>(DEFAULT_CITY_SIZE, DEFAULT_CITY_SIZE);
+    wireSimulation(*next);
     if (!next->script().parseString(m_script_text, m_ruleset_path))
     {
         m_script_error = "Apply failed:\n" + next->script().formatErrors();
@@ -549,7 +616,7 @@ bool GlassBoxApp::applyScript()
     }
 
     std::vector<std::string> missing;
-    for (std::string const& type: placedTypes(*m_simulation))
+    for (std::string const& type : placedTypes(*m_simulation))
     {
         if (!typeExists(next->script(), type))
             missing.push_back(type);
@@ -558,7 +625,7 @@ bool GlassBoxApp::applyScript()
     {
         m_script_error = "Apply refused: the city still uses types the new "
                          "script dropped:";
-        for (std::string const& type: missing)
+        for (std::string const& type : missing)
             m_script_error += "\n  - " + type;
         return false;
     }
@@ -569,7 +636,8 @@ bool GlassBoxApp::applyScript()
         return false;
     }
 
-    std::string const tmp = siblingWithExtension(m_ruleset_path, ".ogc.apply.tmp");
+    std::string const tmp =
+        siblingWithExtension(m_ruleset_path, ".ogc.apply.tmp");
     std::string error;
     bool const hadCity = !m_simulation->cities().empty();
     if (hadCity && !CitySave::write(tmp, *m_simulation, m_ruleset_path, error))
@@ -639,9 +707,8 @@ void GlassBoxApp::openRulesetDialog()
     request.title = "Open a ruleset";
     request.filters = ".ogs,.txt,.*";
     request.startPath = dataDirectory() + "Simulations";
-    request.onAccepted = [this](std::string const& path) {
-        loadRuleset(path, false);
-    };
+    request.onAccepted = [this](std::string const& path)
+    { loadRuleset(path, false); };
     imgui().requestFileDialog(std::move(request));
 }
 
@@ -653,9 +720,7 @@ void GlassBoxApp::openCityDialog()
     request.title = "Open a city save";
     request.filters = ".ogc,.*";
     request.startPath = dataDirectory() + "Simulations";
-    request.onAccepted = [this](std::string const& path) {
-        loadCity(path);
-    };
+    request.onAccepted = [this](std::string const& path) { loadCity(path); };
     imgui().requestFileDialog(std::move(request));
 }
 
@@ -666,12 +731,9 @@ void GlassBoxApp::saveCityDialog()
     request.key = SAVE_CITY_DIALOG;
     request.title = "Save the city";
     request.filters = ".ogc,.*";
-    request.startPath = m_save_path.empty()
-                            ? dataDirectory() + "Simulations"
-                            : m_save_path;
-    request.onAccepted = [this](std::string const& path) {
-        saveCity(path);
-    };
+    request.startPath =
+        m_save_path.empty() ? dataDirectory() + "Simulations" : m_save_path;
+    request.onAccepted = [this](std::string const& path) { saveCity(path); };
     imgui().requestFileDialog(std::move(request));
 }
 
@@ -720,14 +782,14 @@ void GlassBoxApp::onDrawMenuBar()
             openRulesetDialog();
         if (ImGui::MenuItem("Open city...", "Ctrl+O"))
             openCityDialog();
-        if (ImGui::MenuItem("Save city...", "Ctrl+S", false,
-                            m_simulation != nullptr))
+        if (ImGui::MenuItem(
+                "Save city...", "Ctrl+S", false, m_simulation != nullptr))
             saveCityDialog();
 
-        ImGui::MenuItem("Reload ruleset when the file changes", nullptr,
-                        &m_auto_reload);
-        ImGui::MenuItem("Open saves with a stale checksum", nullptr,
-                        &m_ignore_hash);
+        ImGui::MenuItem(
+            "Reload ruleset when the file changes", nullptr, &m_auto_reload);
+        ImGui::MenuItem(
+            "Open saves with a stale checksum", nullptr, &m_ignore_hash);
         if (ImGui::IsItemHovered())
         {
             ImGui::SetTooltip("A save records the fingerprint of the ruleset\n"
@@ -747,7 +809,9 @@ void GlassBoxApp::onDrawMenuBar()
         if (ImGui::MenuItem(stack.canUndo()
                                 ? ("Undo " + stack.undoLabel()).c_str()
                                 : "Undo",
-                            "Ctrl+Z", false, stack.canUndo()) &&
+                            "Ctrl+Z",
+                            false,
+                            stack.canUndo()) &&
             m_simulation)
         {
             m_editor.undo(*m_simulation);
@@ -755,7 +819,9 @@ void GlassBoxApp::onDrawMenuBar()
         if (ImGui::MenuItem(stack.canRedo()
                                 ? ("Redo " + stack.redoLabel()).c_str()
                                 : "Redo",
-                            "Ctrl+Y", false, stack.canRedo()) &&
+                            "Ctrl+Y",
+                            false,
+                            stack.canRedo()) &&
             m_simulation)
         {
             m_editor.redo(*m_simulation);
@@ -763,7 +829,12 @@ void GlassBoxApp::onDrawMenuBar()
 
         ImGui::Separator();
 
-        struct Entry { editor::EditTool tool; char const* label; char const* shortcut; };
+        struct Entry
+        {
+            editor::EditTool tool;
+            char const* label;
+            char const* shortcut;
+        };
         static Entry const TOOLS[] = {
             { editor::EditTool::Select, "Inspect", "1" },
             { editor::EditTool::Road, "Roads", "2" },
@@ -772,10 +843,10 @@ void GlassBoxApp::onDrawMenuBar()
             { editor::EditTool::Paint, "Maps", "5" },
             { editor::EditTool::Bulldozer, "Demolish", "6" },
         };
-        for (auto const& entry: TOOLS)
+        for (auto const& entry : TOOLS)
         {
-            if (ImGui::MenuItem(entry.label, entry.shortcut,
-                                m_editor.tool() == entry.tool))
+            if (ImGui::MenuItem(
+                    entry.label, entry.shortcut, m_editor.tool() == entry.tool))
             {
                 m_editor.setTool(entry.tool);
             }
@@ -833,9 +904,9 @@ void GlassBoxApp::onDrawPanels()
     if (!io.WantTextInput && !io.KeyCtrl)
     {
         static editor::EditTool const SHORTCUTS[] = {
-            editor::EditTool::Select, editor::EditTool::Road, editor::EditTool::Zone,
-            editor::EditTool::Building, editor::EditTool::Paint,
-            editor::EditTool::Bulldozer,
+            editor::EditTool::Select, editor::EditTool::Road,
+            editor::EditTool::Zone,   editor::EditTool::Building,
+            editor::EditTool::Paint,  editor::EditTool::Bulldozer,
         };
         for (int i = 0; i < IM_ARRAYSIZE(SHORTCUTS); ++i)
         {
@@ -872,8 +943,8 @@ void GlassBoxApp::onDrawPanels()
 void GlassBoxApp::drawScriptPanel()
 {
     ui::ScriptPanel::Actions actions;
-    m_script_panel.draw(m_script_text, m_script_status, m_checksum,
-                        m_ignore_hash, actions);
+    m_script_panel.draw(
+        m_script_text, m_script_status, m_checksum, m_ignore_hash, actions);
 
     if (actions.apply)
     {
@@ -911,13 +982,14 @@ void GlassBoxApp::drawScriptError()
     {
         m_script_error_shown = true;
         ImVec2 const centre = ImGui::GetMainViewport()->GetCenter();
-        ImGui::SetNextWindowPos(centre, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+        ImGui::SetNextWindowPos(
+            centre, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
         ImGui::OpenPopup("Script error");
     }
 
     ImGui::SetNextWindowSize(ImVec2(600.0f, 0.0f), ImGuiCond_Appearing);
-    if (ImGui::BeginPopupModal("Script error", nullptr,
-                               ImGuiWindowFlags_AlwaysAutoResize))
+    if (ImGui::BeginPopupModal(
+            "Script error", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
     {
         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(theme::FAILURE),
                            "The operation was refused.");
@@ -926,8 +998,8 @@ void GlassBoxApp::drawScriptError()
         // A parse reports every error it found, which is a page of text on a
         // bad file. Left to grow, the popup ran past the bottom of the screen
         // and took the Close button with it.
-        if (ImGui::BeginChild("message", ImVec2(580.0f, 240.0f),
-                              ImGuiChildFlags_Borders))
+        if (ImGui::BeginChild(
+                "message", ImVec2(580.0f, 240.0f), ImGuiChildFlags_Borders))
         {
             ImGui::PushTextWrapPos(560.0f);
             ImGui::TextUnformatted(m_script_error.c_str());
@@ -968,21 +1040,23 @@ void GlassBoxApp::drawAboutPopup()
         return;
 
     ImGui::OpenPopup("About OpenGlassBox");
-    if (ImGui::BeginPopupModal("About OpenGlassBox", nullptr,
-                               ImGuiWindowFlags_AlwaysAutoResize))
+    if (ImGui::BeginPopupModal(
+            "About OpenGlassBox", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
     {
         ImGui::TextUnformatted("OpenGlassBox");
         ImGui::TextDisabled("An open implementation of the GlassBox engine\n"
                             "of SimCity 2013.");
         ImGui::Separator();
-        ImGui::TextUnformatted("One window is one city. The ruleset is a .ogs;\n"
-                               "the save is a .ogc (geometry and live state).");
+        ImGui::TextUnformatted(
+            "One window is one city. The ruleset is a .ogs;\n"
+            "the save is a .ogc (geometry and live state).");
         ImGui::Separator();
         ImGui::BulletText("left: inspect / use the armed tool");
         ImGui::BulletText("middle or right drag: pan");
         ImGui::BulletText("wheel: zoom");
         ImGui::BulletText("space: pause");
-        ImGui::BulletText("1-6: inspect, roads, zones, buildings, maps, demolish");
+        ImGui::BulletText(
+            "1-6: inspect, roads, zones, buildings, maps, demolish");
         ImGui::BulletText("Ctrl+Z / Ctrl+Y: undo / redo");
         ImGui::Separator();
 
@@ -1009,21 +1083,24 @@ void GlassBoxApp::onDrawStatusBar()
         return;
     }
 
-    ImGui::TextColored(
-        ImGui::ColorConvertU32ToFloat4(
-            m_simulation->paused() ? theme::FAILURE : theme::SUCCESS),
-        "%s", m_simulation->paused() ? "paused" : "running");
+    ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(m_simulation->paused()
+                                                          ? theme::FAILURE
+                                                          : theme::SUCCESS),
+                       "%s",
+                       m_simulation->paused() ? "paused" : "running");
 
     ImGui::SameLine(0.0f, 20.0f);
     SimulationClock const& clock = m_simulation->clock();
     ImGui::Text("Jour %u  %02u:%02u  tick %llu x%.2f",
-                clock.day(), clock.hourOfDay(), clock.minuteOfHour(),
+                clock.day(),
+                clock.hourOfDay(),
+                clock.minuteOfHour(),
                 (unsigned long long)m_simulation->totalTicks(),
                 m_simulation->timeScale());
 
     size_t units = 0u;
     size_t agents = 0u;
-    for (auto const& it: m_simulation->cities())
+    for (auto const& it : m_simulation->cities())
     {
         units += it.second->units().size();
         agents += it.second->agents().size();
@@ -1035,7 +1112,8 @@ void GlassBoxApp::onDrawStatusBar()
     if (m_reload_notice_timer > 0.0f)
     {
         ImGui::SameLine(0.0f, 20.0f);
-        ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(theme::SUCCESS), "%s",
+        ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(theme::SUCCESS),
+                           "%s",
                            m_reload_notice.c_str());
     }
 

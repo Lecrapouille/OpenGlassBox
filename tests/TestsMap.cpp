@@ -84,7 +84,7 @@ TEST(TestsMap, addResourceRadius)
 {
     TestWorld cityWorld("Paris", 8u, 8u);
     City& city = cityWorld.city;
-    Map map(MapType("map"), cityWorld.world);
+    Map map(keep<MapType>("map"), cityWorld.world);
     MapRegion const region = city.region();
 
     map.setResource(3, 4, 34u);
@@ -106,7 +106,7 @@ TEST(TestsMap, getWorldPosition)
 {
     TestWorld cityWorld("Paris", 4u, 5u);
     City& city = cityWorld.city;
-    Map map(MapType("map"), cityWorld.world);
+    Map map(keep<MapType>("map"), cityWorld.world);
 
     Vector3f v = map.getWorldPosition(0, 0);
     ASSERT_EQ(v.x, 0.0f);
@@ -121,7 +121,7 @@ TEST(TestsMap, getWorldPosition)
 TEST(TestsMap, SparseNegativeCells)
 {
     TestWorld cityWorld("Paris");
-    Map map(MapType("map"), cityWorld.world);
+    Map map(keep<MapType>("map"), cityWorld.world);
 
     map.setResource(-3, -2, 7u);
     ASSERT_EQ(map.getResource(-3, -2), 7u);
@@ -137,7 +137,7 @@ TEST(TestsMap, SparseNegativeCells)
 TEST(TestsMap, TotalAndRegionIterationFollowWrites)
 {
     TestWorld cityWorld("Paris", 4u, 4u);
-    Map map(MapType("map"), cityWorld.world);
+    Map map(keep<MapType>("map"), cityWorld.world);
 
     map.setResource(1, 1, 10u);
     map.setResource(2, 1, 5u);
@@ -156,16 +156,39 @@ TEST(TestsMap, TotalAndRegionIterationFollowWrites)
 
     uint64_t visited = 0u;
     uint64_t sum = 0u;
-    map.forEachCellInRegion(MapRegion{ 0, 0, 4u, 4u },
-                            [&](int32_t, int32_t, uint32_t amount) {
-                                ++visited;
-                                sum += amount;
-                            });
+    map.forEachBlockInRegion(MapRegion{ 0, 0, 4u, 4u },
+                             1,
+                             [&](int32_t, int32_t, int32_t, uint32_t amount) {
+                                 ++visited;
+                                 sum += amount;
+                             });
     ASSERT_EQ(visited, 1u);
     ASSERT_EQ(sum, 3u);
 
+    // Coarser squares of the same region hand out the average over the cells
+    // of the square that lie inside it, which is the one cell holding three.
+    visited = 0u;
+    sum = 0u;
+    map.forEachBlockInRegion(MapRegion{ 0, 0, 4u, 4u },
+                             4,
+                             [&](int32_t, int32_t, int32_t side,
+                                 uint32_t amount) {
+                                 ++visited;
+                                 sum += amount;
+                                 ASSERT_EQ(side, 4);
+                             });
+    ASSERT_EQ(visited, 1u);
+    // Three spread over the sixteen cells of the square rounds down to zero:
+    // a lone cell fades as the picture gets coarser, which is the point.
+    ASSERT_EQ(sum, 0u);
+
+    // A square as wide as a block visits each of the two blocks once, which is
+    // what the renderer draws a layer with when it is zoomed all the way out.
     uint64_t blocks = 0u;
-    map.forEachChunk([&](int32_t, int32_t, int32_t, uint32_t) { ++blocks; });
+    map.forEachBlockInRegion(MapRegion{ -1000, -1000, 4000u, 4000u },
+                             Map::CHUNK_SIZE,
+                             [&](int32_t, int32_t, int32_t, uint32_t)
+                             { ++blocks; });
     ASSERT_EQ(blocks, 2u);
 }
 

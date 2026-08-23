@@ -151,7 +151,7 @@ public:
     //! \return how many buildings of that kind stand on a cell of the
     //! footprint.
     // -------------------------------------------------------------------------
-    uint32_t countUnits(std::string const& unitType) const;
+    uint32_t countUnits(Name const& unitType) const;
 
     // -------------------------------------------------------------------------
     //! \brief The buildings the zone holds, which is what a rule demolishing or
@@ -162,7 +162,7 @@ public:
     //! Not owned: the City owns them, and the list goes stale as soon as one is
     //! built or demolished.
     // -------------------------------------------------------------------------
-    std::vector<Unit*> unitsInside(std::string const& unitType = {}) const;
+    std::vector<Unit*> unitsInside(Name const& unitType = {}) const;
 
     // -------------------------------------------------------------------------
     //! \brief \param[in] u, v coordinates of the cell, on the grid of the

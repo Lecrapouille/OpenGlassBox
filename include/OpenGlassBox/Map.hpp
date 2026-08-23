@@ -16,6 +16,7 @@
 #include "OpenGlassBox/MapRegion.hpp"
 #include "OpenGlassBox/Rule.hpp"
 #include "OpenGlassBox/Vector.hpp"
+#include <algorithm>
 #include <array>
 #include <map>
 #include <memory>
@@ -83,7 +84,8 @@ class Map
 {
 public:
 
-    //! \brief Side of an allocation unit, in cells.
+    //! \brief Side of an allocation unit, in cells. A power of two, so that
+    //! finding the block a cell belongs to is a shift rather than a division.
     static constexpr int32_t CHUNK_SIZE = 16;
 
     // -------------------------------------------------------------------------
@@ -106,7 +108,30 @@ public:
     //! \param[in] u, v coordinates of the cell, on the grid of the World.
     //! \param[in] amount what to store. Values above getCapacity() are clamped.
     // -------------------------------------------------------------------------
-    void setResource(int32_t const u, int32_t const v, uint32_t amount);
+    void setResource(int32_t const u, int32_t const v, uint32_t amount)
+    {
+        if (amount > m_type.capacity)
+            amount = m_type.capacity;
+
+        // Do not allocate a block of cells just to write the value they
+        // already read as.
+        if (amount == 0u)
+        {
+            Chunk* const chunk = findChunk(u, v);
+            if (chunk == nullptr)
+                return;
+
+            uint32_t& cell = chunk->cells[cellIndex(u, v)];
+            chunk->total -= cell;
+            cell = 0u;
+            return;
+        }
+
+        Chunk& chunk = chunkFor(u, v);
+        uint32_t& cell = chunk.cells[cellIndex(u, v)];
+        chunk.total = chunk.total - cell + amount;
+        cell = amount;
+    }
 
     // -------------------------------------------------------------------------
     //! \brief \param[in] u, v coordinates of the cell.
@@ -114,7 +139,11 @@ public:
     //! reads as zero, which is also the answer for a cell outside every
     //! allocated block.
     // -------------------------------------------------------------------------
-    uint32_t getResource(int32_t const u, int32_t const v) const;
+    uint32_t getResource(int32_t const u, int32_t const v) const
+    {
+        Chunk const* const chunk = findChunk(u, v);
+        return (chunk == nullptr) ? 0u : chunk->cells[cellIndex(u, v)];
+    }
 
     // -------------------------------------------------------------------------
     //! \brief What a building with a footprint would see: the sum over its
@@ -133,7 +162,16 @@ public:
     uint32_t getResource(int32_t const u,
                          int32_t const v,
                          uint32_t radius,
-                         MapRegion const& region);
+                         MapRegion const& region)
+    {
+        // A rule of a layer stands on the cell it reads, and does so on every
+        // cell of the region: worth not walking a one element diamond, and
+        // worth being inlined into the caller.
+        if (radius == 0u)
+            return region.contains(u, v) ? getResource(u, v) : 0u;
+
+        return getResourceInRadius(u, v, radius, region);
+    }
 
     // -------------------------------------------------------------------------
     //! \brief How many cells the footprint of (u,v) covers inside the region.
@@ -152,7 +190,13 @@ public:
     uint32_t cellsInRadius(int32_t const u,
                            int32_t const v,
                            uint32_t const radius,
-                           MapRegion const& region);
+                           MapRegion const& region)
+    {
+        if (radius == 0u)
+            return region.contains(u, v) ? 1u : 0u;
+
+        return countCellsInRadius(u, v, radius, region);
+    }
 
     // -------------------------------------------------------------------------
     //! \brief \return the largest amount a single cell may hold, from the type.
@@ -168,7 +212,18 @@ public:
     //! \param[in] u, v coordinates of the cell.
     //! \param[in] toAdd how much to add.
     // -------------------------------------------------------------------------
-    void addResource(int32_t const u, int32_t const v, uint32_t toAdd);
+    void addResource(int32_t const u, int32_t const v, uint32_t const toAdd)
+    {
+        uint32_t amount = getResource(u, v);
+
+        // Avoid integer overflow
+        if (amount >= Resource::MAX_CAPACITY - toAdd)
+            amount = Resource::MAX_CAPACITY;
+        else
+            amount += toAdd;
+
+        setResource(u, v, amount);
+    }
 
     // -------------------------------------------------------------------------
     //! \brief Add to the cells of a footprint.
@@ -191,7 +246,17 @@ public:
                      uint32_t const radius,
                      MapRegion const& region,
                      uint32_t const toAdd,
-                     bool distributed = true);
+                     bool distributed = true)
+    {
+        if (radius == 0u)
+        {
+            if (region.contains(u, v))
+                addResource(u, v, toAdd);
+            return;
+        }
+
+        addResourceInRadius(u, v, radius, region, toAdd, distributed);
+    }
 
     // -------------------------------------------------------------------------
     //! \brief Take from one cell, down to zero. What is missing is simply not
@@ -199,7 +264,14 @@ public:
     //! \param[in] u, v coordinates of the cell.
     //! \param[in] toRemove how much to take.
     // -------------------------------------------------------------------------
-    void removeResource(int32_t const u, int32_t const v, uint32_t toRemove);
+    void removeResource(int32_t const u,
+                        int32_t const v,
+                        uint32_t const toRemove)
+    {
+        uint32_t const amount = getResource(u, v);
+
+        setResource(u, v, (amount > toRemove) ? (amount - toRemove) : 0u);
+    }
 
     // -------------------------------------------------------------------------
     //! \brief Take from the cells of a footprint. The mirror of
@@ -215,10 +287,20 @@ public:
     // -------------------------------------------------------------------------
     void removeResource(int32_t const u,
                         int32_t const v,
-                        uint32_t radius,
+                        uint32_t const radius,
                         MapRegion const& region,
-                        uint32_t toRemove,
-                        bool distributed = true);
+                        uint32_t const toRemove,
+                        bool distributed = true)
+    {
+        if (radius == 0u)
+        {
+            if (region.contains(u, v))
+                removeResource(u, v, toRemove);
+            return;
+        }
+
+        removeResourceInRadius(u, v, radius, region, toRemove, distributed);
+    }
 
     // -------------------------------------------------------------------------
     //! \brief \param[in] u, v coordinates of the cell.
@@ -323,20 +405,38 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief Same as forEachCell(), restricted to the cells inside a region.
+    //! \brief Call \c function(u, v, side, mean) for every square of \c side
+    //! cells inside a region that holds something, where \c mean is the average
+    //! amount over the square.
     //!
-    //! Blocks falling entirely outside are skipped without being read, which is
-    //! what keeps the cost of drawing a layer proportional to what is on screen
-    //! rather than to the size of the world.
+    //! This is how a layer is drawn. A side of one is cell by cell; a larger
+    //! one is a coarser picture of the same layer for a fraction of the
+    //! rectangles, which is what keeps drawing a half million cell city
+    //! affordable. The caller picks the side from the zoom: whatever keeps a
+    //! square worth a pixel or two and keeps their number bounded.
+    //!
+    //! Blocks falling entirely outside the region are skipped without being
+    //! read, so the cost follows what is on screen rather than the size of the
+    //! world, and empty squares are skipped altogether.
     //!
     //! \param[in] region the cells to visit. An empty region visits nothing.
-    //! \param[in] function anything callable as f(int32_t, int32_t, uint32_t).
+    //! \param[in] side how many cells a square spans, clamped into
+    //! [1..CHUNK_SIZE] and rounded down to a divisor of CHUNK_SIZE so that a
+    //! square never straddles two blocks.
+    //! \param[in] function anything callable as
+    //! f(int32_t, int32_t, int32_t, uint32_t).
     // -------------------------------------------------------------------------
     template <class Function>
-    void forEachCellInRegion(MapRegion const& region, Function function) const
+    void forEachBlockInRegion(MapRegion const& region,
+                              int32_t side,
+                              Function function) const
     {
         if (region.empty())
             return;
+
+        side = std::min(std::max(side, 1), CHUNK_SIZE);
+        while ((CHUNK_SIZE % side) != 0)
+            --side;
 
         for (auto const& it : m_chunks)
         {
@@ -350,39 +450,7 @@ public:
                 continue;
             }
 
-            forEachCellOfChunk(
-                chunk,
-                [&region, &function](int32_t u, int32_t v, uint32_t amount)
-                {
-                    if (region.contains(u, v))
-                        function(u, v, amount);
-                });
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    //! \brief Call \c function(u0, v0, side, mean) for every allocated block
-    //! holding something, where \c mean is the average amount over the block.
-    //!
-    //! Zoomed out, a cell is a fraction of a pixel, and the renderer draws
-    //! blocks instead: CHUNK_SIZE squared fewer rectangles for the same
-    //! picture.
-    //!
-    //! \param[in] function anything callable as
-    //! f(int32_t, int32_t, int32_t, uint32_t).
-    // -------------------------------------------------------------------------
-    template <class Function>
-    void forEachChunk(Function function) const
-    {
-        for (auto const& it : m_chunks)
-        {
-            Chunk const& chunk = it.second;
-            if (chunk.total == 0u)
-                continue;
-            function(chunk.u0,
-                     chunk.v0,
-                     CHUNK_SIZE,
-                     uint32_t(chunk.total / uint64_t(CHUNK_SIZE * CHUNK_SIZE)));
+            forEachBlockOfChunk(chunk, region, side, function);
         }
     }
 
@@ -418,6 +486,71 @@ private:
     //! \param[in] chunk the block to walk.
     //! \param[in] function anything callable as f(int32_t, int32_t, uint32_t).
     //--------------------------------------------------------------------------
+    //--------------------------------------------------------------------------
+    //! \brief The part of forEachBlockInRegion() that walks one block, once it
+    //! is known to overlap the region.
+    //! \param[in] chunk the block to walk.
+    //! \param[in] region the cells to keep. Cells of the block outside it are
+    //! left out of the average rather than counted as empty.
+    //! \param[in] side how many cells a square spans, a divisor of CHUNK_SIZE.
+    //! \param[in] function anything callable as
+    //! f(int32_t, int32_t, int32_t, uint32_t).
+    //--------------------------------------------------------------------------
+    template <class Function>
+    static void forEachBlockOfChunk(Chunk const& chunk,
+                                    MapRegion const& region,
+                                    int32_t const side,
+                                    Function function)
+    {
+        for (int32_t dv = 0; dv < CHUNK_SIZE; dv += side)
+        {
+            for (int32_t du = 0; du < CHUNK_SIZE; du += side)
+            {
+                uint64_t sum = 0u;
+                uint32_t counted = 0u;
+                sumSquare(chunk, region, du, dv, side, sum, counted);
+
+                if ((sum != 0u) && (counted != 0u))
+                {
+                    function(chunk.u0 + du,
+                             chunk.v0 + dv,
+                             side,
+                             uint32_t(sum / counted));
+                }
+            }
+        }
+    }
+
+    //--------------------------------------------------------------------------
+    //! \brief Add up the cells of one square of a block that lie inside a
+    //! region.
+    //! \param[in] chunk the block the square belongs to.
+    //! \param[in] region the cells to keep.
+    //! \param[in] du, dv top-left corner of the square, inside the block.
+    //! \param[in] side how many cells the square spans.
+    //! \param[out] sum what those cells hold, added up.
+    //! \param[out] counted how many of them lay inside the region.
+    //--------------------------------------------------------------------------
+    static void sumSquare(Chunk const& chunk,
+                          MapRegion const& region,
+                          int32_t const du,
+                          int32_t const dv,
+                          int32_t const side,
+                          uint64_t& sum,
+                          uint32_t& counted)
+    {
+        for (int32_t v = dv; v < dv + side; ++v)
+        {
+            for (int32_t u = du; u < du + side; ++u)
+            {
+                if (!region.contains(chunk.u0 + u, chunk.v0 + v))
+                    continue;
+                sum += chunk.cells[size_t(v * CHUNK_SIZE + u)];
+                ++counted;
+            }
+        }
+    }
+
     template <class Function>
     static void forEachCellOfChunk(Chunk const& chunk, Function function)
     {
@@ -435,45 +568,172 @@ private:
         }
     }
 
-    //--------------------------------------------------------------------------
-    //! \brief Pack the origin of the block holding a cell into one key, which
-    //! is what the table of blocks is indexed by.
-    //! \param[in] u, v coordinates of the cell.
-    //! \return the key of its block.
-    //--------------------------------------------------------------------------
-    static int64_t chunkKey(int32_t const u, int32_t const v);
+    // The three functions below sit on the hottest path of the whole library:
+    // a rule of a layer addresses a cell several times over, on every cell of
+    // the town, on every tick. They are defined here rather than in the source
+    // file so that the caller can inline them, and they use masks rather than
+    // divisions, which a side that is a power of two makes exact.
+    static_assert((CHUNK_SIZE & (CHUNK_SIZE - 1)) == 0,
+                  "the side of a block has to be a power of two");
+
+    //! \brief Mask of the bits a coordinate uses inside its block.
+    static constexpr int32_t CHUNK_MASK = CHUNK_SIZE - 1;
+
+    //! \brief How far to shift a coordinate to get the number of its block.
+    //! The base two logarithm of CHUNK_SIZE.
+    static constexpr int32_t CHUNK_SHIFT = 4;
+    static_assert((1 << CHUNK_SHIFT) == CHUNK_SIZE,
+                  "CHUNK_SHIFT has to be the logarithm of CHUNK_SIZE");
 
     //--------------------------------------------------------------------------
     //! \brief Round a coordinate down to the origin of its block.
     //!
     //! Rounding is towards minus infinity rather than towards zero, so that the
     //! cells at minus one and at zero land in different blocks instead of
-    //! sharing the one at the origin.
+    //! sharing the one at the origin. Clearing the low bits of a two's
+    //! complement integer does exactly that, and does it without a branch.
     //!
     //! \param[in] coordinate a column or a row.
     //! \return the matching multiple of CHUNK_SIZE.
     //--------------------------------------------------------------------------
-    static int32_t chunkOrigin(int32_t const coordinate);
+    static int32_t chunkOrigin(int32_t const coordinate)
+    {
+        return coordinate & ~CHUNK_MASK;
+    }
+
+    //--------------------------------------------------------------------------
+    //! \brief Pack the origin of the block holding a cell into one key, which
+    //! is what the table of blocks is indexed by.
+    //! \param[in] u, v coordinates of the cell.
+    //! \return the key of its block.
+    //--------------------------------------------------------------------------
+    static int64_t chunkKey(int32_t const u, int32_t const v)
+    {
+        // Shifting a negative number right rounds towards minus infinity on
+        // every compiler this builds with, and C++20 requires it, which is the
+        // same rounding chunkOrigin() uses.
+        int64_t const cu = u >> CHUNK_SHIFT;
+        int64_t const cv = v >> CHUNK_SHIFT;
+
+        return (cu << 32) ^ (cv & 0xFFFFFFFF);
+    }
 
     //--------------------------------------------------------------------------
     //! \brief \param[in] u, v coordinates of the cell.
     //! \return where it sits inside Chunk::cells.
     //--------------------------------------------------------------------------
-    static size_t cellIndex(int32_t const u, int32_t const v);
+    static size_t cellIndex(int32_t const u, int32_t const v)
+    {
+        int32_t const du = u & CHUNK_MASK;
+        int32_t const dv = v & CHUNK_MASK;
+
+        return size_t(dv * CHUNK_SIZE + du);
+    }
 
     //--------------------------------------------------------------------------
     //! \brief \param[in] u, v coordinates of the cell.
     //! \return the block holding it, or nullptr when nothing was ever written
     //! anywhere near it. Reading is allowed not to allocate.
+    //!
+    //! One rule attempt addresses the same cell three or four times over, and
+    //! consecutive cells share a block sixteen times out of seventeen, so the
+    //! last block found is remembered and the table is left alone.
     //--------------------------------------------------------------------------
-    Chunk const* findChunk(int32_t const u, int32_t const v) const;
+    Chunk const* findChunk(int32_t const u, int32_t const v) const
+    {
+        int64_t const key = chunkKey(u, v);
+
+        if (m_cacheFilled && (m_cachedKey == key))
+            return m_cachedChunk;
+
+        return lookupChunk(key);
+    }
+
+    //--------------------------------------------------------------------------
+    //! \brief The writable counterpart of findChunk(), for the caller that
+    //! clears a cell of a block it is not allowed to create.
+    //! \param[in] u, v coordinates of the cell.
+    //! \return the block holding it, or nullptr.
+    //--------------------------------------------------------------------------
+    Chunk* findChunk(int32_t const u, int32_t const v)
+    {
+        // This Map is not const here, so neither are the blocks it owns: only
+        // the memoisation, which reading a cell has to fill too, made the
+        // other overload the const one.
+        return const_cast<Chunk*>(
+            static_cast<Map const*>(this)->findChunk(u, v));
+    }
 
     //--------------------------------------------------------------------------
     //! \brief \param[in] u, v coordinates of the cell.
     //! \return the block holding it, allocating and zero filling it when it did
     //! not exist yet.
     //--------------------------------------------------------------------------
-    Chunk& chunkFor(int32_t const u, int32_t const v);
+    Chunk& chunkFor(int32_t const u, int32_t const v)
+    {
+        int64_t const key = chunkKey(u, v);
+
+        if (m_cacheFilled && (m_cachedKey == key) && (m_cachedChunk != nullptr))
+            return *findChunk(u, v);
+
+        return createChunk(key, u, v);
+    }
+
+    //--------------------------------------------------------------------------
+    //! \brief The part of findChunk() that has to read the table: the miss.
+    //! \param[in] key key of the block, from chunkKey().
+    //! \return the block, or nullptr when there is none. Fills the memo.
+    //--------------------------------------------------------------------------
+    Chunk const* lookupChunk(int64_t const key) const;
+
+    //--------------------------------------------------------------------------
+    //! \brief The part of chunkFor() that has to read or grow the table.
+    //! \param[in] key key of the block, from chunkKey().
+    //! \param[in] u, v coordinates of a cell of the block, which give its
+    //! origin when it has to be created.
+    //! \return the block. Fills the memo.
+    //--------------------------------------------------------------------------
+    Chunk& createChunk(int64_t const key, int32_t const u, int32_t const v);
+
+    //--------------------------------------------------------------------------
+    //! \brief The part of getResource() that walks a footprint of more than one
+    //! cell. Same parameters and same result.
+    //--------------------------------------------------------------------------
+    uint32_t getResourceInRadius(int32_t const u,
+                                 int32_t const v,
+                                 uint32_t const radius,
+                                 MapRegion const& region);
+
+    //--------------------------------------------------------------------------
+    //! \brief The part of cellsInRadius() that walks a footprint of more than
+    //! one cell. Same parameters and same result.
+    //--------------------------------------------------------------------------
+    uint32_t countCellsInRadius(int32_t const u,
+                                int32_t const v,
+                                uint32_t const radius,
+                                MapRegion const& region);
+
+    //--------------------------------------------------------------------------
+    //! \brief The part of addResource() that walks a footprint of more than one
+    //! cell. Same parameters.
+    //--------------------------------------------------------------------------
+    void addResourceInRadius(int32_t const u,
+                             int32_t const v,
+                             uint32_t const radius,
+                             MapRegion const& region,
+                             uint32_t const toAdd,
+                             bool const distributed);
+
+    //--------------------------------------------------------------------------
+    //! \brief The part of removeResource() that walks a footprint of more than
+    //! one cell. Same parameters.
+    //--------------------------------------------------------------------------
+    void removeResourceInRadius(int32_t const u,
+                                int32_t const v,
+                                uint32_t const radius,
+                                MapRegion const& region,
+                                uint32_t const toRemove,
+                                bool const distributed);
 
     //--------------------------------------------------------------------------
     //! \brief Run one rule over the region of one city, cell by cell.
@@ -503,6 +763,20 @@ private:
 
     //! \brief The cells, by blocks allocated on demand and keyed by chunkKey().
     std::unordered_map<int64_t, Chunk> m_chunks;
+
+    //! \brief Key of the block the last lookup landed in. Meaningless until
+    //! m_cacheFilled.
+    mutable int64_t m_cachedKey = 0;
+
+    //! \brief The block that key names, or nullptr when there is none. Blocks
+    //! are never removed and \c std::unordered_map keeps its elements put
+    //! across a rehash, so a pointer stays good for the life of the Map.
+    mutable Chunk const* m_cachedChunk = nullptr;
+
+    //! \brief Whether the two above hold an answer. A rule sweeping the grid
+    //! walks a whole row of a block before leaving it, so remembering the last
+    //! one answers fifteen lookups out of sixteen without hashing.
+    mutable bool m_cacheFilled = false;
 
     //! \brief Reusable walk over the cells of a footprint. Held here so that
     //! reading a neighbourhood does not allocate.

@@ -40,7 +40,9 @@ class IRuleCommand;
 struct EntityType
 {
     //! \brief Name given by the script, unique among the types of its kind.
-    std::string name;
+    //! Interned, so that the engine tells two types apart by comparing four
+    //! bytes; it still reads and prints as a string. See Name.
+    Name name;
     //! \brief 0xRRGGBB, as written in the script.
     uint32_t color = 0xFFFFFF;
 };
@@ -55,8 +57,8 @@ struct EntityType
 struct RuleType
 {
     //! \brief Name given by the script, by which units, maps and areas list the
-    //! rules they run.
-    std::string name;
+    //! rules they run. Interned: see Name.
+    Name name;
     //! \brief Period in simulation ticks, as written by \c rate \c 7. One means
     //! every tick. Meaningless when \c rateMinutes is set.
     uint32_t rate = 1u;
@@ -226,7 +228,11 @@ public:
 
     //! \brief The names an Agent may look for to end its trip here. A building
     //! answering to no name at all can never be delivered to.
-    std::vector<std::string> targets;
+    //!
+    //! Interned, and that is where it pays: the router asks every building it
+    //! walks past whether one of these matches what an Agent is carrying, so
+    //! this list is read thousands of times per tick.
+    std::vector<Name> targets;
 };
 
 //==============================================================================

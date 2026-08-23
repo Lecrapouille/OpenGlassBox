@@ -123,27 +123,33 @@ public:
     //! \brief Enumerate the types the script defined. The editor needs them to
     //! offer a choice of road, building or resource to place.
     //--------------------------------------------------------------------------
-    std::map<std::string, std::unique_ptr<PathType>> const& pathTypes() const
+    std::map<std::string, std::unique_ptr<PathType>, std::less<>> const&
+    pathTypes() const
     {
         return m_definitions.pathTypes();
     }
-    std::map<std::string, std::unique_ptr<WayType>> const& wayTypes() const
+    std::map<std::string, std::unique_ptr<WayType>, std::less<>> const&
+    wayTypes() const
     {
         return m_definitions.wayTypes();
     }
-    std::map<std::string, std::unique_ptr<UnitType>> const& unitTypes() const
+    std::map<std::string, std::unique_ptr<UnitType>, std::less<>> const&
+    unitTypes() const
     {
         return m_definitions.unitTypes();
     }
-    std::map<std::string, std::unique_ptr<MapType>> const& mapTypes() const
+    std::map<std::string, std::unique_ptr<MapType>, std::less<>> const&
+    mapTypes() const
     {
         return m_definitions.mapTypes();
     }
-    std::map<std::string, std::unique_ptr<AgentType>> const& agentTypes() const
+    std::map<std::string, std::unique_ptr<AgentType>, std::less<>> const&
+    agentTypes() const
     {
         return m_definitions.agentTypes();
     }
-    std::map<std::string, std::unique_ptr<AreaType>> const& areaTypes() const
+    std::map<std::string, std::unique_ptr<AreaType>, std::less<>> const&
+    areaTypes() const
     {
         return m_definitions.areaTypes();
     }

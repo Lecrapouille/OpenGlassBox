@@ -10,24 +10,28 @@
 //! \brief Look up a name, throwing a message that says what was missing rather
 //! than the bare "map::at" the standard library would give.
 // -----------------------------------------------------------------------------
-namespace ogb {
+namespace ogb
+{
 
-template<class T>
-static T const& lookup(std::map<std::string, std::unique_ptr<T>> const& container,
-                       std::string const& id, char const* what)
+template <class T, class Compare = std::less<>>
+static T const&
+lookup(std::map<std::string, std::unique_ptr<T>, Compare> const& container,
+       std::string const& id,
+       char const* what)
 {
     auto const it = container.find(id);
     if (it == container.end())
     {
-        throw std::out_of_range(std::string("Unknown ") + what + " '" + id + "'");
+        throw std::out_of_range(std::string("Unknown ") + what + " '" + id +
+                                "'");
     }
 
     return *it->second;
 }
 
 // -----------------------------------------------------------------------------
-template<class T>
-static T* search(std::map<std::string, std::unique_ptr<T>>& container,
+template <class T, class Compare = std::less<>>
+static T* search(std::map<std::string, std::unique_ptr<T>, Compare>& container,
                  std::string const& id)
 {
     auto const it = container.find(id);
@@ -37,9 +41,10 @@ static T* search(std::map<std::string, std::unique_ptr<T>>& container,
 // -----------------------------------------------------------------------------
 //! \brief Create a named entry, or return nullptr when the name is taken.
 // -----------------------------------------------------------------------------
-template<class T, class... Args>
-static T* create(std::map<std::string, std::unique_ptr<T>>& container,
-                 std::string const& id, Args&&... args)
+template <class T, class Compare = std::less<>, class... Args>
+static T* create(std::map<std::string, std::unique_ptr<T>, Compare>& container,
+                 std::string const& id,
+                 Args&&... args)
 {
     if (container.find(id) != container.end())
         return nullptr;

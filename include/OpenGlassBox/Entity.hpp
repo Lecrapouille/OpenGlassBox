@@ -10,6 +10,7 @@
 #ifndef OPEN_GLASSBOX_ENTITY_HPP
 #define OPEN_GLASSBOX_ENTITY_HPP
 
+#include "OpenGlassBox/Name.hpp"
 #include "OpenGlassBox/Vector.hpp"
 
 #include <cstdint>
@@ -65,8 +66,12 @@ public:
     //--------------------------------------------------------------------------
     //! \brief Name of the recipe the script gave, such as "Home" or "Truck".
     //! Several entities share it: this is a kind, not an identity.
+    //!
+    //! Interned, so that asking whether a building is a Home costs an integer
+    //! comparison rather than a walk over the characters. It still reads and
+    //! prints as a string. See Name.
     //--------------------------------------------------------------------------
-    std::string const& type() const
+    Name const& type() const
     {
         return m_type.name;
     }

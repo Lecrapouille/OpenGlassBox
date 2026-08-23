@@ -7,26 +7,26 @@
 //! \file GlassBoxApp.hpp
 //! \brief Main demo application wiring the simulation engine to the UI panels.
 
-
 #ifndef OPEN_GLASSBOX_DEMO_GLASSBOX_APP_HPP
-#  define OPEN_GLASSBOX_DEMO_GLASSBOX_APP_HPP
+#define OPEN_GLASSBOX_DEMO_GLASSBOX_APP_HPP
 
-#  include "Host/Application.hpp"
-#  include "Game/DebugState.hpp"
-#  include "Editor/Editor.hpp"
-#  include "Game/RuleTrace.hpp"
-#  include "UI/CityViewer.hpp"
-#  include "UI/Panels.hpp"
+#include "Editor/Editor.hpp"
+#include "Game/DebugState.hpp"
+#include "Game/RuleTrace.hpp"
+#include "Host/Application.hpp"
+#include "UI/CityViewer.hpp"
+#include "UI/Panels.hpp"
 
-#  include "OpenGlassBox/CitySave.hpp"
-#  include "OpenGlassBox/Simulation.hpp"
+#include "OpenGlassBox/Simulation.hpp"
+#include "Save/CitySave.hpp"
 
-#  include <memory>
-#  include <string>
+#include <memory>
+#include <string>
 
-namespace ogb {
-namespace game {
-
+namespace ogb
+{
+namespace game
+{
 
 // ****************************************************************************
 //! \brief The demo: owns the simulation, the debug panels and the wiring
@@ -72,7 +72,7 @@ private:
     void drawAboutPopup();
     void drawScriptError();
     void resetView();
-    void createEmptyCity(Simulation& simulation, std::string const& name);
+    void createEmptyCity(Simulation& simulation, std::string const& name) const;
     void loadScriptText();
     void openRulesetDialog();
     void openCityDialog();
@@ -88,11 +88,21 @@ private:
     //! mismatch is normally a hard refusal; the player can waive it while
     //! writing a ruleset, and then it is only reported.
     bool acceptRuleset(CitySaveHeader const& header,
-                       std::string const& rulesetPath, std::string& error);
+                       std::string const& rulesetPath,
+                       std::string& error);
+
+    //! \brief Install the demo router listener before any town is founded.
+    void wireSimulation(Simulation& simulation);
 
 private:
 
+    struct RouterListener: Simulation::Listener
+    {
+        void onCityAdded(City& city) override;
+    };
+
     Options m_options;
+    RouterListener m_router_listener;
     std::unique_ptr<Simulation> m_simulation;
     DebugState m_state;
     RuleTrace m_trace;

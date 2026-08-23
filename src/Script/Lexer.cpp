@@ -11,7 +11,8 @@
 
 //! \brief Characters that are a token on their own even when written against a
 //! word. Writing "[People 1]" then reads the same as "[ People 1 ]".
-namespace ogb {
+namespace ogb
+{
 
 static bool isDelimiter(char c)
 {
@@ -19,7 +20,7 @@ static bool isDelimiter(char c)
 }
 
 // -----------------------------------------------------------------------------
-bool Lexer::open(std::string const& filename)
+bool Lexer::openFile(std::string const& filename)
 {
     std::ifstream file(filename);
     if (!file)
@@ -55,7 +56,8 @@ void Lexer::tokenize(std::string const& source)
     std::string currentLine;
     bool inComment = false;
 
-    auto flush = [&]() {
+    auto flush = [&]()
+    {
         if (word.empty())
             return;
 
@@ -63,7 +65,7 @@ void Lexer::tokenize(std::string const& source)
         word.clear();
     };
 
-    for (char const c: source)
+    for (char const c : source)
     {
         if (c == '\n')
         {

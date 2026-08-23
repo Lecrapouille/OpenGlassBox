@@ -5,33 +5,22 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
-#include "OpenGlassBox/Dijkstra.hpp"
+#include "Routing/DijkstraRouter.hpp"
+
 #include "OpenGlassBox/Unit.hpp"
 #include "OpenGlassBox/Vector.hpp"
+
+#include <algorithm>
 #include <limits>
-#include <queue>
 
 namespace ogb
 {
 
 namespace
 {
-struct QueueEntry
-{
-    float f;
-    float g;
-    Node* node;
-
-    bool operator>(QueueEntry const& other) const
-    {
-        if (f != other.f)
-            return f > other.f;
-        return g > other.g;
-    }
-};
-
+//! \brief First building on a crossroads that accepts the load, or nullptr.
 Unit* acceptingUnitOnNode(Node* current,
-                          std::string const& searchTarget,
+                          Name const& searchTarget,
                           Resources const& resources)
 {
     std::vector<Unit*>& units = current->units();
@@ -44,8 +33,9 @@ Unit* acceptingUnitOnNode(Node* current,
     return nullptr;
 }
 
+//! \brief First building along a segment that accepts the load, or nullptr.
 Unit* acceptingUnitOnWay(Way* way,
-                         std::string const& searchTarget,
+                         Name const& searchTarget,
                          Resources const& resources)
 {
     std::vector<Unit*>& units = way->units();
@@ -87,12 +77,38 @@ Node* Dijkstra::randomNeighbor(Node& fromNode)
 }
 
 //------------------------------------------------------------------------------
+void Dijkstra::beginSearch(size_t const nodeCount)
+{
+    if (m_stamp.size() < nodeCount)
+    {
+        // The zeros the new entries are filled with never match a generation,
+        // so growing costs nothing beyond the allocation itself.
+        m_stamp.resize(nodeCount, 0u);
+        m_scoreFromStart.resize(nodeCount, 0.0f);
+        m_cameFrom.resize(nodeCount, nullptr);
+        m_closed.resize(nodeCount, 0u);
+    }
+
+    ++m_generation;
+    if (m_generation == 0u)
+    {
+        // Wrapped around after four billion searches. Entries left over from
+        // the previous cycle would read as fresh, so retire them by hand. This
+        // is the only place any of these arrays is ever written wholesale.
+        std::fill(m_stamp.begin(), m_stamp.end(), 0u);
+        m_generation = 1u;
+    }
+
+    m_open.clear();
+}
+
+//------------------------------------------------------------------------------
 Route Dijkstra::reconstruct(Node const& fromNode,
                             Node* goalNode,
                             Unit* destination,
                             Way* approachWay,
                             float approachOffset,
-                            float cost) const
+                            float cost)
 {
     Route route;
     route.found = true;
@@ -104,68 +120,83 @@ Route Dijkstra::reconstruct(Node const& fromNode,
     if (goalNode == nullptr || goalNode == &fromNode)
         return route;
 
-    std::vector<Node*> reverse;
+    // Walk the predecessors back to the start, which gives the trip in reverse.
+    m_reverse.clear();
     Node* current = goalNode;
     while (current != &fromNode)
     {
-        auto const it = m_cameFrom.find(current);
-        if (it == m_cameFrom.end())
+        uint32_t const index = current->index();
+        if (!visited(index))
             break;
-        reverse.push_back(current);
-        current = it->second;
+
+        Node* const previous = m_cameFrom[index];
+        if (previous == nullptr)
+            break;
+
+        m_reverse.push_back(current);
+        current = previous;
     }
 
-    route.nodes.assign(reverse.rbegin(), reverse.rend());
+    route.nodes.assign(m_reverse.rbegin(), m_reverse.rend());
     return route;
 }
 
 //------------------------------------------------------------------------------
 Route Dijkstra::findRoute(Node& fromNode,
-                          std::string const& searchTarget,
+                          Name const& searchTarget,
                           Resources const& resources)
 {
-    m_closedSet.clear();
-    m_cameFrom.clear();
-    m_scoreFromStart.clear();
+    // Node::index() is what the arrays below are indexed by, and only a Path
+    // hands out those indices. A crossroads outside any network is therefore
+    // not somewhere a trip can start, and there is nowhere to go from it.
+    Path const* const scope = fromNode.path();
+    if (scope == nullptr)
+        return Route();
 
-    std::priority_queue<QueueEntry,
-                        std::vector<QueueEntry>,
-                        std::greater<QueueEntry>>
-        open;
-    Path const* scope = fromNode.path();
-    float const maxSpeed =
-        (scope != nullptr) ? scope->maxFreeFlowSpeed() : 1.0f;
+    beginSearch(scope->nodeCount());
 
-    m_scoreFromStart[&fromNode] = 0.0f;
-    open.push({ 0.0f, 0.0f, &fromNode });
+    float const maxSpeed = scope->maxFreeFlowSpeed();
 
+    setScore(fromNode.index(), 0.0f, nullptr);
+    m_open.push_back({ 0.0f, 0.0f, &fromNode });
+    std::push_heap(m_open.begin(), m_open.end(), std::greater<QueueEntry>());
+
+    // The cheapest building met so far, and what it costs to reach it. Not the
+    // answer yet: the search carries on until every crossroads it could still
+    // reach is already more expensive than this.
     Route best;
     float bestCost = std::numeric_limits<float>::infinity();
 
-    while (!open.empty())
+    while (!m_open.empty())
     {
-        QueueEntry const current = open.top();
-        open.pop();
+        std::pop_heap(m_open.begin(), m_open.end(), std::greater<QueueEntry>());
+        QueueEntry const current = m_open.back();
+        m_open.pop_back();
 
-        Node* currentNode = current.node;
+        Node* const currentNode = current.node;
+        uint32_t const currentIndex = currentNode->index();
         float const g = current.g;
 
-        if (g > m_scoreFromStart[currentNode])
+        // A cheaper way of reaching this crossroads was found after this entry
+        // was queued, it has been expanded already, or nothing beyond it can
+        // beat what is already in hand.
+        if (g > m_scoreFromStart[currentIndex])
             continue;
-        if (m_closedSet.find(currentNode) != m_closedSet.end())
+        if (m_closed[currentIndex] != 0u)
             continue;
         if (g >= bestCost)
             continue;
 
+        // A building on the crossroads itself ends the search: nothing further
+        // out can be cheaper, since every segment costs something.
         if (Unit* unit =
                 acceptingUnitOnNode(currentNode, searchTarget, resources))
         {
             return reconstruct(fromNode, currentNode, unit, nullptr, 0.0f, g);
         }
 
-        // A Unit sitting on an incident Way is reached from this Node by
-        // travelling a fraction of the segment. It is a candidate, not an
-        // immediate winner: another Node a hop away may hold a cheaper Unit.
+        // A building standing along one of the streets is only a candidate: a
+        // crossroads one hop further may hold a cheaper one.
         for (auto* way : currentNode->ways())
         {
             Unit* unit = acceptingUnitOnWay(way, searchTarget, resources);
@@ -185,30 +216,37 @@ Route Dijkstra::findRoute(Node& fromNode,
             }
         }
 
-        m_closedSet.insert(currentNode);
+        m_closed[currentIndex] = 1u;
 
+        // Relax the streets leaving the crossroads.
         for (auto* way : currentNode->ways())
         {
-            Node* neighbor =
+            Node* const neighbor =
                 (&way->from() == currentNode) ? &way->to() : &way->from();
 
-            if (scope != nullptr && neighbor->path() != scope)
+            // A road and a railway may share a crossroads without a trip being
+            // allowed to change from one to the other.
+            if (neighbor->path() != scope)
                 continue;
 
+            uint32_t const neighborIndex = neighbor->index();
             float const tentativeG = g + way->travelTime();
 
-            auto const it = m_scoreFromStart.find(neighbor);
-            if (it != m_scoreFromStart.end() && tentativeG >= it->second)
+            if (visited(neighborIndex) &&
+                (tentativeG >= m_scoreFromStart[neighborIndex]))
                 continue;
 
-            if (m_closedSet.find(neighbor) != m_closedSet.end())
-                m_closedSet.erase(neighbor);
+            // Reopens the neighbour, which is the point: the heuristic is not
+            // admissible, so a crossroads already expanded may still turn out
+            // to be reachable more cheaply.
+            setScore(neighborIndex, tentativeG, currentNode);
 
-            m_cameFrom[neighbor] = currentNode;
-            m_scoreFromStart[neighbor] = tentativeG;
-            open.push({ tentativeG + heuristic(*neighbor, fromNode, maxSpeed),
-                        tentativeG,
-                        neighbor });
+            m_open.push_back(
+                { tentativeG + heuristic(*neighbor, fromNode, maxSpeed),
+                  tentativeG,
+                  neighbor });
+            std::push_heap(
+                m_open.begin(), m_open.end(), std::greater<QueueEntry>());
         }
     }
 
@@ -217,20 +255,20 @@ Route Dijkstra::findRoute(Node& fromNode,
 
 //------------------------------------------------------------------------------
 Node* Dijkstra::findNextPoint(Node& fromNode,
-                              std::string& searchTarget,
+                              Name& searchTarget,
                               Resources& resources)
 {
     Route const route = findRoute(fromNode, searchTarget, resources);
     if (!route.found)
         return randomNeighbor(fromNode);
-    if (route.nodes.empty())
+    if (!route.waypointsLeft())
         return &fromNode;
-    return route.nodes.front();
+    return route.nextWaypoint();
 }
 
 //------------------------------------------------------------------------------
 float Dijkstra::shortestPathCost(Node& fromNode,
-                                 std::string const& searchTarget,
+                                 Name const& searchTarget,
                                  Resources const& resources)
 {
     Route const route = findRoute(fromNode, searchTarget, resources);

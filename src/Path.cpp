@@ -15,11 +15,13 @@
 // =============================================================================
 
 // -----------------------------------------------------------------------------
-namespace ogb {
+namespace ogb
+{
 
 Node::Node(uint32_t id, Vector3f const& position)
     : m_id(id), m_position(position)
-{}
+{
+}
 
 // -----------------------------------------------------------------------------
 void Node::addUnit(Unit& unit)
@@ -38,7 +40,7 @@ void Node::removeUnit(Unit& unit)
 void Node::translate(Vector3f const direction)
 {
     m_position += direction;
-    for (auto& it: m_ways)
+    for (auto& it : m_ways)
     {
         it->updateMagnitude();
     }
@@ -67,10 +69,7 @@ Way* Node::getWayToNode(Node const& node)
 
 // -----------------------------------------------------------------------------
 Way::Way(uint32_t id, WayType const& type, Node& node1, Node& node2)
-    : m_id(id),
-      m_type(type),
-      m_from(&node1),
-      m_to(&node2)
+    : m_id(id), m_type(type), m_from(&node1), m_to(&node2)
 {
     m_from->m_ways.push_back(this);
     m_to->m_ways.push_back(this);
@@ -85,6 +84,22 @@ void Way::updateMagnitude()
     // A type with a nonsensical speed would give an infinite or negative travel
     // time and poison the whole routing, so fall back on the length.
     m_t0 = (m_type.speed > 0.0f) ? (m_magnitude / m_type.speed) : m_magnitude;
+
+    updateTravelTime();
+}
+
+// -----------------------------------------------------------------------------
+void Way::updateTravelTime()
+{
+    if (m_type.capacity <= 0.0f)
+    {
+        m_travelTime = m_t0;
+        return;
+    }
+
+    float const x = m_flow / m_type.capacity;
+
+    m_travelTime = m_t0 * (1.0f + 0.15f * std::pow(x, m_type.beta));
 }
 
 // -----------------------------------------------------------------------------
@@ -107,17 +122,6 @@ void Way::removeUnit(Unit& unit)
 }
 
 // -----------------------------------------------------------------------------
-float Way::travelTime() const
-{
-    if (m_type.capacity <= 0.0f)
-        return m_t0;
-
-    float const x = m_flow / m_type.capacity;
-
-    return m_t0 * (1.0f + 0.15f * std::pow(x, m_type.beta));
-}
-
-// -----------------------------------------------------------------------------
 void Way::addAgent()
 {
     ++m_agentCount;
@@ -135,18 +139,28 @@ void Way::removeAgent()
 // -----------------------------------------------------------------------------
 void Way::smoothFlow(float alpha)
 {
-    if (alpha <= 0.0f)
-    {
-        m_flow = float(m_agentCount);
-        return;
-    }
-
     if (alpha > 1.0f)
     {
         alpha = 1.0f;
     }
 
-    m_flow = (1.0f - alpha) * m_flow + alpha * float(m_agentCount);
+    float const flow =
+        (alpha <= 0.0f)
+            ? float(m_agentCount)
+            : ((1.0f - alpha) * m_flow + alpha * float(m_agentCount));
+
+    // An empty street stays empty, and a city has far more of those than it
+    // has busy ones. Skipping those spares the power the BPR function would
+    // otherwise evaluate on every segment of the network on every tick.
+    //
+    // The threshold is on the change rather than on equality: the smoothing of
+    // a street settling towards its traffic converges without ever reaching
+    // it, and a hundredth of a vehicle moves no travel time worth recomputing.
+    if (std::fabs(flow - m_flow) < FLOW_EPSILON)
+        return;
+
+    m_flow = flow;
+    updateTravelTime();
 }
 
 // =============================================================================
@@ -154,9 +168,7 @@ void Way::smoothFlow(float alpha)
 // =============================================================================
 
 // -----------------------------------------------------------------------------
-Path::Path(PathType const& type)
-    : m_type(type)
-{}
+Path::Path(PathType const& type) : m_type(type) {}
 
 // -----------------------------------------------------------------------------
 Node& Path::addNode(Vector3f const& position)
@@ -173,6 +185,7 @@ Node& Path::addNode(uint32_t id, Vector3f const& position)
 
     m_nodes.push_back(std::make_unique<Node>(id, position));
     m_nodes.back()->m_path = this;
+    m_nodes.back()->m_index = uint32_t(m_nodes.size() - 1u);
 
     // Identifiers handed out from now on must not collide with the one just
     // reused, otherwise two nodes would answer to the same reference.
@@ -187,7 +200,7 @@ Node& Path::addNode(uint32_t id, Vector3f const& position)
 // -----------------------------------------------------------------------------
 Node* Path::node(uint32_t id)
 {
-    for (auto& it: m_nodes)
+    for (auto const& it : m_nodes)
     {
         if (it->id() == id)
             return it.get();
@@ -210,7 +223,7 @@ Way& Path::addWay(uint32_t id, WayType const& type, Node& p1, Node& p2)
     if (existing != nullptr)
         return *existing;
 
-    m_ways.push_back(std::make_unique<Way>(id, type, p1, p2/*, *this*/));
+    m_ways.push_back(std::make_unique<Way>(id, type, p1, p2 /*, *this*/));
     m_maxFreeFlowSpeed = std::max(m_maxFreeFlowSpeed, type.speed);
 
     if (id >= m_nextWayId)
@@ -224,7 +237,7 @@ Way& Path::addWay(uint32_t id, WayType const& type, Node& p1, Node& p2)
 // -----------------------------------------------------------------------------
 Way* Path::way(uint32_t id)
 {
-    for (auto& it: m_ways)
+    for (auto const& it : m_ways)
     {
         if (it->id() == id)
             return it.get();
@@ -236,16 +249,15 @@ Way* Path::way(uint32_t id)
 // -----------------------------------------------------------------------------
 void Path::removeWay(Way& way)
 {
-    auto detach = [&way](std::vector<Way*>& ways) {
-        ways.erase(std::remove(ways.begin(), ways.end(), &way), ways.end());
-    };
+    auto detach = [&way](std::vector<Way*>& ways)
+    { ways.erase(std::remove(ways.begin(), ways.end(), &way), ways.end()); };
     detach(way.m_from->m_ways);
     detach(way.m_to->m_ways);
 
-    m_ways.erase(std::remove_if(m_ways.begin(), m_ways.end(),
-                                [&way](WayPtr const& it) {
-                                    return it.get() == &way;
-                                }),
+    m_ways.erase(std::remove_if(m_ways.begin(),
+                                m_ways.end(),
+                                [&way](WayPtr const& it)
+                                { return it.get() == &way; }),
                  m_ways.end());
 
     updateMaxFreeFlowSpeed();
@@ -261,11 +273,25 @@ void Path::removeNode(Node& node)
         removeWay(*node.m_ways.front());
     }
 
-    m_nodes.erase(std::remove_if(m_nodes.begin(), m_nodes.end(),
-                                 [&node](NodePtr const& it) {
-                                     return it.get() == &node;
-                                 }),
+    m_nodes.erase(std::remove_if(m_nodes.begin(),
+                                 m_nodes.end(),
+                                 [&node](NodePtr const& it)
+                                 { return it.get() == &node; }),
                   m_nodes.end());
+
+    reindexNodes();
+}
+
+// -----------------------------------------------------------------------------
+void Path::reindexNodes() const
+{
+    // Linear, but demolishing a crossroads is something a player does, not
+    // something a tick does, and the routers rely on the indices staying dense.
+    uint32_t index = 0u;
+    for (auto const& it : m_nodes)
+    {
+        it->m_index = index++;
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -285,7 +311,7 @@ void Path::updateMaxFreeFlowSpeed()
     // One is the floor rather than zero: the router divides a distance by this
     // speed, and an empty graph would otherwise give an infinite lower bound.
     float speed = 1.0f;
-    for (auto& it: m_ways)
+    for (auto const& it : m_ways)
     {
         speed = std::max(speed, it->m_type.speed);
     }
@@ -294,9 +320,9 @@ void Path::updateMaxFreeFlowSpeed()
 }
 
 // -----------------------------------------------------------------------------
-void Path::smoothFlows(float alpha)
+void Path::smoothFlows(float alpha) const
 {
-    for (auto& way: m_ways)
+    for (auto const& way : m_ways)
     {
         way->smoothFlow(alpha);
     }
@@ -310,8 +336,9 @@ Node& Path::splitWay(Way& segment, float offset)
     else if (offset >= 1.0f)
         return segment.to();
 
-    Vector3f wordPosition = segment.position1()
-           + (segment.position2() - segment.position1()) * offset;
+    Vector3f wordPosition =
+        segment.position1() +
+        (segment.position2() - segment.position1()) * offset;
 
     Node& newNode = addNode(wordPosition);
     addWay(segment.m_type, newNode, segment.to());
@@ -328,12 +355,12 @@ Node& Path::splitWay(Way& segment, float offset)
 // -----------------------------------------------------------------------------
 void Path::translate(Vector3f const direction)
 {
-    for (auto& it: m_nodes)
+    for (auto const& it : m_nodes)
     {
         it->m_position += direction;
     }
 
-    for (auto& it: m_ways)
+    for (auto const& it : m_ways)
     {
         it->updateMagnitude();
     }

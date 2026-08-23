@@ -6,45 +6,46 @@
 //-----------------------------------------------------------------------------
 
 //! \file MapRandomCoordinates.hpp
-//! \brief Walk the cells of a Map once each, in no particular order.
+//! \brief Draw a share of the cells of a Map, spread over the whole of it.
 
 #ifndef OPEN_GLASSBOX_MAPRANDOMCOORDINATES_HPP
 #define OPEN_GLASSBOX_MAPRANDOMCOORDINATES_HPP
 
 #include <cstdint>
-#include <vector>
 
 namespace ogb
 {
 
 //==============================================================================
-//! \brief Hands out the cells of a rectangle one at a time, each exactly once,
-//! in a shuffled order.
+//! \brief Hands out a given number of cells of a rectangle, drawn at random,
+//! each at most once, in reading order.
 //!
 //! A map rule that only acts on part of its cells has to pick which ones, and
-//! picking them in reading order would draw a front sweeping the map from one
-//! corner. Grass would grow in stripes. What the rule wants is a sample spread
-//! over the whole map, which is what walking the cells shuffled gives, and the
-//! shuffle has to be a permutation: a rule that fires on nine cells out of ten
-//! must not visit the same cell twice and leave another one dry for ever.
+//! taking the first ones in reading order would draw a front sweeping the map
+//! from one corner: grass would grow in stripes. What the rule wants is a
+//! sample spread over the whole map, and every subset of the size asked for has
+//! to be equally likely.
 //!
-//! The permutation is drawn lazily, one cell per call, by swapping the picked
-//! cell with the last of the candidates. The cells handed out are kept aside
-//! and put back by init(), so the vectors are allocated once for the life of
-//! the Map: a large city runs this for every cell of every map at every tick.
+//! What this does not have to be is a sample handed out in a random *order*.
+//! The rule is applied to each drawn cell on its own, so only the set matters,
+//! and a set handed out in reading order is a set read along the rows of the
+//! blocks the Map stores its cells in. Handing them out shuffled instead costs
+//! a cache miss on every cell, on a grid that is megabytes wide.
 //!
-//! Coordinates are packed as two sixteen bit halves of one integer, which is
-//! what makes the candidate list a flat vector of integers rather than a vector
-//! of pairs. A Map is therefore limited to 65536 cells on a side.
+//! So the rectangle is scanned once, in order, and each cell is taken with the
+//! probability that makes the sample come out right: \c wanted out of the cells
+//! that are left. That is selection sampling, and it draws exactly the number
+//! asked for, uniformly, in one pass, holding nothing but a handful of
+//! integers. The previous implementation held two vectors as large as the map
+//! and copied one into the other on every run.
 //!
 //! Example:
 //! \code
 //! MapRandomCoordinates walk;
-//! walk.init(sizeU, sizeV);          // shuffle the whole map
+//! walk.init(sizeU, sizeV, rule.percent(uint64_t(sizeU) * sizeV));
 //!
 //! uint32_t u, v;
-//! uint32_t const wanted = rule.percent(sizeU * sizeV);
-//! for (uint32_t i = 0u; (i < wanted) && walk.next(u, v); ++i)
+//! while (walk.next(u, v))
 //! {
 //!     // apply the rule on the cell (u, v)
 //! }
@@ -59,43 +60,80 @@ namespace ogb
 //!     map Grass add 1
 //! end
 //! \endcode
+//!
+//! \note The draw is not reproducible from one run of the program to the next:
+//! the generator is seeded from the system.
 //==============================================================================
 class MapRandomCoordinates
 {
 public:
 
-    MapRandomCoordinates() = default;
+    MapRandomCoordinates();
 
     //--------------------------------------------------------------------------
-    //! \brief Start a fresh walk over a rectangle of that size.
+    //! \brief Start a fresh draw over a rectangle of that size.
     //!
-    //! Called at the start of every run of a map rule. The cells handed out by
-    //! the previous walk are taken back, and nothing is allocated as long as
-    //! the size has not changed. A walk left unfinished is finished here, so
-    //! that every cell is a candidate again.
+    //! Called at the start of every run of a map rule. Allocates nothing, so a
+    //! rule firing on every tick costs no memory traffic beyond the cells it
+    //! actually visits. Whatever was left of a previous draw is forgotten.
     //!
     //! \param[in] mapSizeU number of columns.
     //! \param[in] mapSizeV number of rows.
+    //! \param[in] wanted how many cells to hand out. Clamped to the number of
+    //! cells the rectangle holds.
+    //!
+    //! \note A rectangle of more than four billion cells is scanned in part
+    //! only. No grid that large fits in memory in the first place.
     //--------------------------------------------------------------------------
-    void init(uint32_t mapSizeU, uint32_t mapSizeV);
+    void init(uint32_t mapSizeU, uint32_t mapSizeV, uint64_t wanted);
 
     // -------------------------------------------------------------------------
-    //! \brief Hand out the next cell of the walk.
+    //! \brief Hand out the next drawn cell.
     //! \param[out] u column of the cell, in [0..mapSizeU[. Zero when there is
     //! nothing left.
     //! \param[out] v row of the cell, in [0..mapSizeV[. Zero when there is
     //! nothing left.
-    //! \return true when a cell was handed out, false once every cell of the
-    //! rectangle has been visited.
+    //! \return true when a cell was handed out, false once the whole sample has
+    //! been handed out.
     // -------------------------------------------------------------------------
     bool next(uint32_t& u, uint32_t& v);
 
 private:
 
-    //! \brief Cells not handed out yet, packed as (u << 16) | v.
-    std::vector<uint32_t> m_randomCoordinates;
-    //! \brief Cells handed out by the current walk, put back by init().
-    std::vector<uint32_t> m_returnedCoordinates;
+    //--------------------------------------------------------------------------
+    //! \brief \return the next number of the generator. A xorshift, which is a
+    //! few instructions rather than the hundreds a Mersenne twister spends
+    //! refilling its state, and far better than good enough to decide which
+    //! cells grass grows on.
+    //--------------------------------------------------------------------------
+    uint32_t random();
+
+    //--------------------------------------------------------------------------
+    //! \brief \param[in] bound one past the largest value wanted, never zero.
+    //! \return a number in [0..bound[, by the multiply and shift of Lemire:
+    //! no division, and a bias too small to be worth a rejection loop.
+    //--------------------------------------------------------------------------
+    uint32_t random(uint32_t bound)
+    {
+        return uint32_t((uint64_t(random()) * uint64_t(bound)) >> 32);
+    }
+
+private:
+
+    //! \brief State of the generator, never zero.
+    uint64_t m_state = 0u;
+    //! \brief Number of columns of the rectangle being scanned.
+    uint32_t m_sizeU = 0u;
+    //! \brief Column of the cell the scan has reached.
+    uint32_t m_u = 0u;
+    //! \brief Row of the cell the scan has reached.
+    uint32_t m_v = 0u;
+    //! \brief How many cells are still to be handed out.
+    uint32_t m_wanted = 0u;
+    //! \brief How many cells the scan has not reached yet, this one included.
+    //! The draw takes the current cell with probability m_wanted / m_left,
+    //! which is what makes every sample of the size asked for equally likely.
+    uint32_t m_left = 0u;
 };
 
 } // namespace ogb

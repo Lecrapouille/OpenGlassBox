@@ -1,17 +1,18 @@
 #include "main.hpp"
 
-#include "OpenGlassBox/CitySave.hpp"
 #include "OpenGlassBox/Simulation.hpp"
+#include "Routing/installRouter.hpp"
+#include "Save/CitySave.hpp"
 
 #include <fstream>
 
 static std::string testCityRuleset()
 {
-    char const* candidates[] = {
+    std::vector<std::string> candidates = {
         "../demo/data/Simulations/test_city.ogs",
         "demo/data/Simulations/test_city.ogs",
     };
-    for (char const* path: candidates)
+    for (std::string const& path : candidates)
     {
         std::ifstream file(path);
         if (file.good())
@@ -22,11 +23,11 @@ static std::string testCityRuleset()
 
 static std::string testCitySave()
 {
-    char const* candidates[] = {
+    std::vector<std::string> candidates = {
         "../demo/data/Simulations/test_city.ogc",
         "demo/data/Simulations/test_city.ogc",
     };
-    for (char const* path: candidates)
+    for (std::string const& path : candidates)
     {
         std::ifstream file(path);
         if (file.good())
@@ -37,14 +38,15 @@ static std::string testCitySave()
 
 TEST(TestsCitySave, LoadShippedParis)
 {
-    Simulation simulation;
+    Simulation simulation{ 32u, 32u };
     ASSERT_TRUE(simulation.script().parse(testCityRuleset()));
 
     CitySaveHeader header;
     std::string error;
     ASSERT_TRUE(CitySave::peekHeader(testCitySave(), header, error)) << error;
     ASSERT_EQ(header.ruleset, "test_city.ogs");
-    ASSERT_TRUE(CitySave::matchesRuleset(header, testCityRuleset(), error)) << error;
+    ASSERT_TRUE(CitySave::matchesRuleset(header, testCityRuleset(), error))
+        << error;
     ASSERT_TRUE(CitySave::read(testCitySave(), simulation, error)) << error;
 
     ASSERT_EQ(simulation.cities().size(), 1u);
@@ -57,7 +59,7 @@ TEST(TestsCitySave, LoadShippedParis)
 
 TEST(TestsCitySave, MissingTypeIsRefused)
 {
-    Simulation simulation;
+    Simulation simulation{ 32u, 32u };
     ASSERT_TRUE(simulation.script().parse(testCityRuleset()));
 
     std::string const path = "/tmp/openglassbox-missing-type.ogc";
@@ -83,23 +85,25 @@ TEST(TestsCitySave, MissingTypeIsRefused)
 //! pairs only made this test fail whenever one of them was re-saved.
 TEST(TestsCitySave, LoadShippedBraessAndGrids)
 {
-    char const* const saves[] = {
+    std::vector<std::string> saves = {
         "demo/data/Simulations/braess.ogc",
         "demo/data/Simulations/regular.ogc",
         "demo/data/Simulations/chicago.ogc",
     };
 
-    for (char const* save: saves)
+    for (std::string const& save : saves)
     {
         CitySaveHeader header;
         std::string error;
         ASSERT_TRUE(CitySave::peekHeader(save, header, error)) << error;
 
         std::string const ruleset = "demo/data/Simulations/" + header.ruleset;
-        Simulation simulation;
+        Simulation simulation{ 32u, 32u };
         ASSERT_TRUE(simulation.script().parse(ruleset)) << ruleset;
         ASSERT_TRUE(CitySave::matchesRuleset(header, ruleset, error)) << error;
-        ASSERT_TRUE(CitySave::read(save, simulation, error)) << save << ": " << error;
+        ASSERT_TRUE(CitySave::read(save, simulation, error))
+            << save << ": " << error;
+        installDijkstraRouters(simulation);
         ASSERT_FALSE(simulation.cities().empty()) << save;
     }
 }
@@ -111,7 +115,7 @@ TEST(TestsCitySave, LoadShippedBraessAndGrids)
 //! every rule that adds anything.
 TEST(TestsCitySave, LoadedUnitsKeepTheCapacitiesOfTheirType)
 {
-    Simulation simulation;
+    Simulation simulation{ 32u, 32u };
     ASSERT_TRUE(simulation.script().parse(testCityRuleset()));
 
     std::string error;
@@ -119,10 +123,10 @@ TEST(TestsCitySave, LoadedUnitsKeepTheCapacitiesOfTheirType)
 
     City& city = *simulation.cities().begin()->second;
     uint32_t checked = 0u;
-    for (auto& unit: city.units())
+    for (auto& unit : city.units())
     {
         UnitType const& type = simulation.script().getUnitType(unit->type());
-        for (Resource const& capped: type.resources.container())
+        for (Resource const& capped : type.resources.container())
         {
             ASSERT_EQ(unit->resources().getCapacity(capped.type()),
                       capped.getCapacity())

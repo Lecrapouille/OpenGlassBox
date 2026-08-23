@@ -4,7 +4,7 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
-#include "OpenGlassBox/CitySave.hpp"
+#include "Save/CitySave.hpp"
 
 #include <cstdint>
 #include <cstdio>
@@ -357,7 +357,7 @@ bool CitySave::peekHeader(std::string const& path,
                           std::string& error)
 {
     Lexer lexer;
-    if (!lexer.open(path))
+    if (!lexer.openFile(path))
     {
         error = "Cannot open '" + path + "'";
         return false;
@@ -502,7 +502,7 @@ bool CitySave::read(std::string const& filePath,
                     std::string& error)
 {
     Lexer lexer;
-    if (!lexer.open(filePath))
+    if (!lexer.openFile(filePath))
     {
         error = "Cannot open '" + filePath + "'";
         return false;

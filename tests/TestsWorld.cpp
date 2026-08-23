@@ -1,6 +1,7 @@
 #include "main.hpp"
 #include "OpenGlassBox/World.hpp"
 #include "OpenGlassBox/Types.hpp"
+#include "Routing/installRouter.hpp"
 
 using namespace ogb;
 
@@ -56,6 +57,7 @@ TEST(TestsWorld, IRouterIsOwnedByCity)
 {
     World world;
     City& city = world.addCity("Solo", 4u, 4u);
+    installDijkstraRouter(city, world.config());
     IRouter& router = city.router();
     (void)router;
 }

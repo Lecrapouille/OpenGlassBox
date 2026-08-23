@@ -210,12 +210,17 @@ OpeningHours Unit::openingHours() const
 }
 
 // -----------------------------------------------------------------------------
-bool Unit::accepts(std::string const& searchTarget,
+bool Unit::accepts(Name const& searchTarget,
                    Resources const& resourcesToTryToAdd)
 {
-    return (m_resources.canAddSomeResources(resourcesToTryToAdd)) &&
-           ((find(m_type.targets.begin(), m_type.targets.end(), searchTarget) !=
-             m_type.targets.end()));
+    // Asked of every building the router walks past, so the name test comes
+    // first: it is four bytes against four bytes, whereas the room test walks
+    // two lists of stocks.
+    if (find(m_type.targets.begin(), m_type.targets.end(), searchTarget) ==
+        m_type.targets.end())
+        return false;
+
+    return m_resources.canAddSomeResources(resourcesToTryToAdd);
 }
 
 } // namespace ogb

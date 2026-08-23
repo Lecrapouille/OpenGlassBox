@@ -15,8 +15,9 @@
 
 #include "main.hpp"
 
-#include "OpenGlassBox/CitySave.hpp"
 #include "OpenGlassBox/Simulation.hpp"
+#include "Routing/installRouter.hpp"
+#include "Save/CitySave.hpp"
 
 #include <fstream>
 #include <functional>
@@ -29,7 +30,7 @@ static std::string dataFile(std::string const& name)
         "../demo/data/Simulations/" + name,
         "demo/data/Simulations/" + name,
     };
-    for (std::string const& path: candidates)
+    for (std::string const& path : candidates)
     {
         std::ifstream file(path);
         if (file.good())
@@ -43,7 +44,7 @@ static std::string dataFile(std::string const& name)
 //! the saves used here hold one of each.
 static Unit* findUnit(City& city, std::string const& type)
 {
-    for (auto const& unit: city.units())
+    for (auto const& unit : city.units())
     {
         if (unit->type() == type)
             return unit.get();
@@ -55,7 +56,7 @@ static Unit* findUnit(City& city, std::string const& type)
 static uint32_t countUnits(City& city, std::string const& type)
 {
     uint32_t count = 0u;
-    for (auto const& unit: city.units())
+    for (auto const& unit : city.units())
     {
         if (unit->type() == type)
             ++count;
@@ -64,10 +65,10 @@ static uint32_t countUnits(City& city, std::string const& type)
 }
 
 //------------------------------------------------------------------------------
-static bool hasAgent(City& city, std::string const& type,
-                     std::string const& target)
+static bool
+hasAgent(City& city, std::string const& type, std::string const& target)
 {
-    for (auto const& agent: city.agents())
+    for (auto const& agent : city.agents())
     {
         if ((agent->type() == type) && (agent->searchTarget() == target))
             return true;
@@ -98,7 +99,9 @@ struct Sightings
 };
 
 //------------------------------------------------------------------------------
-static Sightings watch(Simulation& simulation, City& city, uint32_t ticks,
+static Sightings watch(Simulation& simulation,
+                       City& city,
+                       uint32_t ticks,
                        std::function<void()> const& onTick = nullptr)
 {
     Sightings seen;
@@ -119,13 +122,13 @@ static Sightings watch(Simulation& simulation, City& city, uint32_t ticks,
         {
             seen.peopleAtWork = seen.peopleAtWork ||
                                 (work->resources().getAmount("People") > 0u);
-            seen.goodsAtWork = seen.goodsAtWork ||
-                               (work->resources().getAmount("Goods") > 0u);
+            seen.goodsAtWork =
+                seen.goodsAtWork || (work->resources().getAmount("Goods") > 0u);
         }
         if (shop != nullptr)
         {
-            seen.goodsAtShop = seen.goodsAtShop ||
-                               (shop->resources().getAmount("Goods") > 0u);
+            seen.goodsAtShop =
+                seen.goodsAtShop || (shop->resources().getAmount("Goods") > 0u);
             seen.peopleAtShop = seen.peopleAtShop ||
                                 (shop->resources().getAmount("People") > 0u);
         }
@@ -138,7 +141,8 @@ static Sightings watch(Simulation& simulation, City& city, uint32_t ticks,
         }
         if (restaurant != nullptr)
         {
-            bool const busy = (restaurant->resources().getAmount("People") > 0u);
+            bool const busy =
+                (restaurant->resources().getAmount("People") > 0u);
             seen.peopleAtRestaurant = seen.peopleAtRestaurant || busy;
             seen.restaurantBeforeLunch =
                 seen.restaurantBeforeLunch || (busy && (hour < 12u));
@@ -171,6 +175,7 @@ static City& openAtEightInTheMorning(Simulation& simulation,
         CitySave::matchesRuleset(header, dataFile("test_city.ogs"), error))
         << error;
     EXPECT_TRUE(CitySave::read(dataFile(save), simulation, error)) << error;
+    installDijkstraRouters(simulation);
 
     simulation.clock().setTimeOfDay(0u, 8u, 0u);
     simulation.setTotalTicks(simulation.clock().ticks());
@@ -188,7 +193,7 @@ static City& openAtEightInTheMorning(Simulation& simulation,
 //! save: the whole chain from an empty plot to a shop with something to sell.
 TEST(TestsScenario, ADayInQqCity)
 {
-    Simulation simulation;
+    Simulation simulation{ 32u, 32u };
     City& city = openAtEightInTheMorning(simulation, "qq.ogc");
 
     ASSERT_EQ(countUnits(city, "Home"), 0u);
@@ -201,8 +206,8 @@ TEST(TestsScenario, ADayInQqCity)
     Path& road = *(city.paths().begin()->second);
     Way* const way = road.way(3u);
     ASSERT_NE(way, nullptr);
-    city.addUnit(simulation.script().getUnitType("Restaurant"), road, *way,
-                 0.6f);
+    city.addUnit(
+        simulation.script().getUnitType("Restaurant"), road, *way, 0.6f);
     ASSERT_NE(findUnit(city, "Restaurant"), nullptr);
 
     // Nine game hours: the zones take four to grow the first houses, and the
@@ -235,13 +240,13 @@ TEST(TestsScenario, ADayInQqCity)
 
     // Houses stand along a road, not in a field, and no two share a cell.
     std::vector<Vector3f> homes;
-    for (auto const& unit: city.units())
+    for (auto const& unit : city.units())
     {
         if (unit->type() != "Home")
             continue;
         ASSERT_TRUE((unit->way() != nullptr) || (unit->node() != nullptr))
             << "a house grew with no road to reach it";
-        for (Vector3f const& other: homes)
+        for (Vector3f const& other : homes)
         {
             ASSERT_GT(magnitude(unit->position() - other), 0.1f)
                 << "two houses on the same spot";
@@ -257,7 +262,7 @@ TEST(TestsScenario, ADayInQqCity)
 //! pinned desirability to zero for the rest of the run.
 TEST(TestsScenario, PollutionFadesAndDesirabilityMovesInDays)
 {
-    Simulation simulation;
+    Simulation simulation{ 32u, 32u };
     City& city = openAtEightInTheMorning(simulation, "qq.ogc");
 
     Map const& pollution = city.getMap("Pollution");
@@ -289,8 +294,8 @@ TEST(TestsScenario, PollutionFadesAndDesirabilityMovesInDays)
     // Two hourly rules at most, each moving it by two.
     uint32_t const afterAnHour = desirability.getResource(u, v);
     uint32_t const moved = (afterAnHour > desirabilityAtStart)
-                           ? (afterAnHour - desirabilityAtStart)
-                           : (desirabilityAtStart - afterAnHour);
+                               ? (afterAnHour - desirabilityAtStart)
+                               : (desirabilityAtStart - afterAnHour);
     ASSERT_LE(moved, 2u) << "desirability still swings within the hour";
 
     // Five more hours: what fouls a district is the factories, not the passing
@@ -312,7 +317,7 @@ TEST(TestsScenario, PollutionFadesAndDesirabilityMovesInDays)
 //! start, and nothing may crash for want of a second one.
 TEST(TestsScenario, ADayInQq2City)
 {
-    Simulation simulation;
+    Simulation simulation{ 32u, 32u };
     City& city = openAtEightInTheMorning(simulation, "qq2.ogc");
 
     // The factory of that save stands at a fifth of the first street, and the
@@ -329,24 +334,32 @@ TEST(TestsScenario, ADayInQq2City)
 
     float const door = work->wayOffset();
     std::string wrongWay;
-    Sightings const seen = watch(simulation, city, 6u * 60u * 20u, [&]() {
-        for (auto const& agent: city.agents())
+    Sightings const seen = watch(
+        simulation,
+        city,
+        6u * 60u * 20u,
+        [&]()
         {
-            if (!wrongWay.empty())
-                return;
-            if ((agent->currentWay() != street) ||
-                (agent->offset() >= door - 0.01f))
+            for (auto const& agent : city.agents())
             {
-                continue;
+                if (!wrongWay.empty())
+                    return;
+                if ((agent->currentWay() != street) ||
+                    (agent->offset() >= door - 0.01f))
+                {
+                    continue;
+                }
+                wrongWay = agent->type().str() + " looking for " +
+                           agent->searchTarget().str() +
+                           (agent->route().found ? " with a route"
+                                                 : " with none");
             }
-            wrongWay = agent->type() + " looking for " + agent->searchTarget() +
-                       (agent->route().found ? " with a route" : " with none");
-        }
-    });
+        });
 
     ASSERT_TRUE(wrongWay.empty())
-        << wrongWay << " drove to the dead end behind the factory instead of "
-                       "towards its destination";
+        << wrongWay
+        << " drove to the dead end behind the factory instead of "
+           "towards its destination";
 
     // The four buildings of that save are placed by hand, and the canteen sits
     // closer to the factory than the shop does. While a restaurant answered to
@@ -362,14 +375,62 @@ TEST(TestsScenario, ADayInQq2City)
         << "the zone grew nothing at all";
 
     // Whatever grew, it hangs off the network.
-    for (auto const& unit: city.units())
+    for (auto const& unit : city.units())
     {
         ASSERT_TRUE((unit->way() != nullptr) || (unit->node() != nullptr))
             << unit->type() << " grew with no road to reach it";
     }
 
     // No Agent is left floating with nothing under it.
-    for (auto const& agent: city.agents())
+    for (auto const& agent : city.agents())
+    {
+        ASSERT_TRUE((agent->currentWay() != nullptr) ||
+                    (agent->lastNode() != nullptr));
+    }
+}
+
+//------------------------------------------------------------------------------
+//! \brief An hour on the imported Chicago network, which is two orders of
+//! magnitude larger than the hand-drawn saves.
+//!
+//! The router keeps its bookkeeping in arrays indexed by Node::index(), sized
+//! to the network and stamped rather than cleared. A city of thousands of
+//! crossroads is what tells whether that indexing holds: a stale stamp or an
+//! index gone out of step would show up here as a crash or as agents that never
+//! arrive, and nowhere else.
+TEST(TestsScenario, AnHourOnTheChicagoNetwork)
+{
+    Simulation simulation{ 512u, 512u };
+    ASSERT_TRUE(simulation.script().parse(dataFile("chicago.ogs")))
+        << simulation.script().formatErrors();
+
+    std::string error;
+    ASSERT_TRUE(CitySave::read(dataFile("chicago.ogc"), simulation, error))
+        << error;
+    installDijkstraRouters(simulation);
+
+    ASSERT_FALSE(simulation.cities().empty());
+    City& city = *(simulation.cities().begin()->second);
+
+    Path const& road = *(city.paths().begin()->second);
+    ASSERT_GT(road.nodeCount(), 100u) << "not the large network this is about";
+
+    simulation.clock().setTimeOfDay(0u, 8u, 0u);
+    simulation.setTotalTicks(simulation.clock().ticks());
+    for (uint32_t tick = 0u; tick < 60u * 20u; ++tick)
+    {
+        simulation.update(simulation.config().tickDuration());
+    }
+
+    // The indices stay dense and in step with the list they number, which is
+    // the invariant the router indexes by.
+    uint32_t expected = 0u;
+    for (auto const& node : road.nodes())
+    {
+        ASSERT_EQ(node->index(), expected++);
+    }
+
+    for (auto const& agent : city.agents())
     {
         ASSERT_TRUE((agent->currentWay() != nullptr) ||
                     (agent->lastNode() != nullptr));

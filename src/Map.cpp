@@ -12,10 +12,10 @@
 #include <algorithm>
 
 // -----------------------------------------------------------------------------
-namespace ogb {
+namespace ogb
+{
 
-Map::Map(MapType const& type, World& world)
-    : m_type(type), m_world(world)
+Map::Map(MapType const& type, World& world) : m_type(type), m_world(world)
 {
     m_context.map = this;
 }
@@ -27,104 +27,51 @@ float Map::cellSize() const
 }
 
 // -----------------------------------------------------------------------------
-int32_t Map::chunkOrigin(int32_t const coordinate)
+Map::Chunk const* Map::lookupChunk(int64_t const key) const
 {
-    // Rounding towards zero would make the chunk straddling the origin twice as
-    // wide, so round down instead.
-    int32_t const origin = (coordinate / CHUNK_SIZE) * CHUNK_SIZE;
-    return (coordinate < 0) && (origin != coordinate) ? origin - CHUNK_SIZE
-                                                      : origin;
-}
-
-// -----------------------------------------------------------------------------
-int64_t Map::chunkKey(int32_t const u, int32_t const v)
-{
-    int64_t const cu = chunkOrigin(u) / CHUNK_SIZE;
-    int64_t const cv = chunkOrigin(v) / CHUNK_SIZE;
-
-    return (cu << 32) ^ (cv & 0xFFFFFFFF);
-}
-
-// -----------------------------------------------------------------------------
-size_t Map::cellIndex(int32_t const u, int32_t const v)
-{
-    int32_t const du = u - chunkOrigin(u);
-    int32_t const dv = v - chunkOrigin(v);
-
-    return size_t(dv * CHUNK_SIZE + du);
-}
-
-// -----------------------------------------------------------------------------
-Map::Chunk const* Map::findChunk(int32_t const u, int32_t const v) const
-{
-    auto const it = m_chunks.find(chunkKey(u, v));
-    return (it == m_chunks.end()) ? nullptr : &(it->second);
-}
-
-// -----------------------------------------------------------------------------
-Map::Chunk& Map::chunkFor(int32_t const u, int32_t const v)
-{
-    int64_t const key = chunkKey(u, v);
-
     auto const it = m_chunks.find(key);
-    if (it != m_chunks.end())
-        return it->second;
 
-    Chunk& chunk = m_chunks[key];
-    chunk.u0 = chunkOrigin(u);
-    chunk.v0 = chunkOrigin(v);
+    m_cachedKey = key;
+    m_cachedChunk = (it == m_chunks.end()) ? nullptr : &(it->second);
+    m_cacheFilled = true;
 
-    return chunk;
+    return m_cachedChunk;
 }
 
 // -----------------------------------------------------------------------------
-void Map::setResource(int32_t const u, int32_t const v, uint32_t amount)
+Map::Chunk& Map::createChunk(int64_t const key,
+                             int32_t const u,
+                             int32_t const v)
 {
-    if (amount > m_type.capacity)
-        amount = m_type.capacity;
-
-    // Do not allocate a block of cells just to write the value they already
-    // read as.
-    if (amount == 0u)
+    auto it = m_chunks.find(key);
+    if (it == m_chunks.end())
     {
-        auto const it = m_chunks.find(chunkKey(u, v));
-        if (it == m_chunks.end())
-            return;
-
-        uint32_t& cell = it->second.cells[cellIndex(u, v)];
-        it->second.total -= cell;
-        cell = 0u;
-        return;
+        it = m_chunks.emplace(key, Chunk{}).first;
+        it->second.u0 = chunkOrigin(u);
+        it->second.v0 = chunkOrigin(v);
     }
 
-    Chunk& chunk = chunkFor(u, v);
-    uint32_t& cell = chunk.cells[cellIndex(u, v)];
-    chunk.total = chunk.total - cell + amount;
-    cell = amount;
+    // The table may just have grown, so a cached miss for this key is now
+    // wrong.
+    m_cachedKey = key;
+    m_cachedChunk = &(it->second);
+    m_cacheFilled = true;
+
+    return it->second;
 }
 
 // -----------------------------------------------------------------------------
-uint32_t Map::getResource(int32_t const u, int32_t const v) const
+uint32_t Map::getResourceInRadius(int32_t const u,
+                                  int32_t const v,
+                                  uint32_t const radius,
+                                  MapRegion const& region)
 {
-    Chunk const* const chunk = findChunk(u, v);
-    return (chunk == nullptr) ? 0u : chunk->cells[cellIndex(u, v)];
-}
-
-// -----------------------------------------------------------------------------
-uint32_t Map::getResource(int32_t const u, int32_t const v, uint32_t radius,
-                          MapRegion const& region)
-{
-    // A map rule reads the cell it stands on, and it does so for every cell of
-    // the region: worth not walking a one element circle to get there.
-    if (radius == 0u)
-        return region.contains(u, v) ? getResource(u, v) : 0u;
-
     uint32_t totalInsideRadius = 0u;
     int32_t x = u;
     int32_t y = v;
 
-    m_coordinates.init(radius, x, y, region.u0, region.u1(), region.v0,
-                       region.v1(), false);
+    m_coordinates.init(
+        radius, x, y, region.u0, region.u1(), region.v0, region.v1(), false);
 
     while (m_coordinates.next(x, y))
         totalInsideRadius += getResource(x, y);
@@ -133,18 +80,17 @@ uint32_t Map::getResource(int32_t const u, int32_t const v, uint32_t radius,
 }
 
 // -----------------------------------------------------------------------------
-uint32_t Map::cellsInRadius(int32_t const u, int32_t const v,
-                            uint32_t const radius, MapRegion const& region)
+uint32_t Map::countCellsInRadius(int32_t const u,
+                                 int32_t const v,
+                                 uint32_t const radius,
+                                 MapRegion const& region)
 {
-    if (radius == 0u)
-        return region.contains(u, v) ? 1u : 0u;
-
     uint32_t count = 0u;
     int32_t x = u;
     int32_t y = v;
 
-    m_coordinates.init(radius, x, y, region.u0, region.u1(), region.v0,
-                       region.v1(), false);
+    m_coordinates.init(
+        radius, x, y, region.u0, region.u1(), region.v0, region.v1(), false);
 
     while (m_coordinates.next(x, y))
         ++count;
@@ -153,36 +99,26 @@ uint32_t Map::cellsInRadius(int32_t const u, int32_t const v,
 }
 
 // -----------------------------------------------------------------------------
-void Map::addResource(int32_t const u, int32_t const v, uint32_t toAdd)
+void Map::addResourceInRadius(int32_t const u,
+                              int32_t const v,
+                              uint32_t const radius,
+                              MapRegion const& region,
+                              uint32_t const wanted,
+                              bool const distributed)
 {
-    uint32_t amount = getResource(u, v);
-
-    // Avoid integer overflow
-    if (amount >= Resource::MAX_CAPACITY - toAdd)
-        amount = Resource::MAX_CAPACITY;
-    else
-        amount += toAdd;
-
-    setResource(u, v, amount);
-}
-
-// -----------------------------------------------------------------------------
-void Map::addResource(int32_t const u, int32_t const v, uint32_t const radius,
-                      MapRegion const& region, uint32_t toAdd, bool distributed)
-{
-    if (radius == 0u)
-    {
-        if (region.contains(u, v))
-            addResource(u, v, toAdd);
-        return;
-    }
-
-    uint32_t remainingToAdd = toAdd;
+    uint32_t toAdd = wanted;
+    uint32_t remainingToAdd = wanted;
     int32_t x = u;
     int32_t y = v;
 
-    m_coordinates.init(radius, x, y, region.u0, region.u1(), region.v0,
-                       region.v1(), distributed);
+    m_coordinates.init(radius,
+                       x,
+                       y,
+                       region.u0,
+                       region.u1(),
+                       region.v0,
+                       region.v1(),
+                       distributed);
     while ((remainingToAdd > 0u) && m_coordinates.next(x, y))
     {
         uint32_t amount = getResource(x, y);
@@ -190,43 +126,36 @@ void Map::addResource(int32_t const u, int32_t const v, uint32_t const radius,
         if (toAdd > 0u)
         {
             amount += toAdd;
-            if (distributed) { remainingToAdd -= toAdd; }
+            if (distributed)
+            {
+                remainingToAdd -= toAdd;
+            }
             setResource(x, y, amount);
         }
     }
 }
 
 // -----------------------------------------------------------------------------
-void Map::removeResource(int32_t const u, int32_t const v, uint32_t toRemove)
+void Map::removeResourceInRadius(int32_t const u,
+                                 int32_t const v,
+                                 uint32_t const radius,
+                                 MapRegion const& region,
+                                 uint32_t const wanted,
+                                 bool const distributed)
 {
-    uint32_t amount = getResource(u, v);
-
-    if (amount > toRemove)
-        amount -= toRemove;
-    else
-        amount = 0u;
-
-    setResource(u, v, amount);
-}
-
-// -----------------------------------------------------------------------------
-void Map::removeResource(int32_t const u, int32_t const v, uint32_t radius,
-                         MapRegion const& region, uint32_t toRemove,
-                         bool distributed)
-{
-    if (radius == 0u)
-    {
-        if (region.contains(u, v))
-            removeResource(u, v, toRemove);
-        return;
-    }
-
-    uint32_t remainingToRemove = toRemove;
+    uint32_t toRemove = wanted;
+    uint32_t remainingToRemove = wanted;
     int32_t x = u;
     int32_t y = v;
 
-    m_coordinates.init(radius, x, y, region.u0, region.u1(), region.v0,
-                       region.v1(), distributed);
+    m_coordinates.init(radius,
+                       x,
+                       y,
+                       region.u0,
+                       region.u1(),
+                       region.v0,
+                       region.v1(),
+                       distributed);
     while ((remainingToRemove > 0u) && m_coordinates.next(x, y))
     {
         uint32_t amount = getResource(x, y);
@@ -234,7 +163,10 @@ void Map::removeResource(int32_t const u, int32_t const v, uint32_t radius,
         if (toRemove > 0u)
         {
             amount -= toRemove;
-            if (distributed) { remainingToRemove -= toRemove; }
+            if (distributed)
+            {
+                remainingToRemove -= toRemove;
+            }
             setResource(x, y, amount);
         }
     }
@@ -251,7 +183,7 @@ uint64_t Map::totalResource() const
 {
     uint64_t total = 0u;
 
-    for (auto const& it: m_chunks)
+    for (auto const& it : m_chunks)
     {
         total += it.second.total;
     }
@@ -266,14 +198,14 @@ void Map::executeRules(Cities const& cities)
 
     uint32_t const perMinute = m_world.clock().ticksPerMinute();
 
-    for (auto& rule: m_type.rules)
+    for (auto& rule : m_type.rules)
     {
         if (m_ticks % rule->periodTicks(perMinute) != 0u)
             continue;
 
         // The grid has no bounds of its own: what a rule walks is the region
         // administered by each City.
-        for (auto const& it: cities)
+        for (auto const& it : cities)
         {
             executeRule(*rule, *(it.second));
         }
@@ -283,7 +215,7 @@ void Map::executeRules(Cities const& cities)
 // -----------------------------------------------------------------------------
 void Map::executeRule(RuleMap& rule, City& city)
 {
-    MapRegion const region = city.region();
+    MapRegion const& region = city.region();
     if (region.empty())
         return;
 
@@ -293,29 +225,37 @@ void Map::executeRule(RuleMap& rule, City& city)
 
     if (rule.isRandom())
     {
-        m_randomCoordinates.init(region.sizeU, region.sizeV);
-        uint32_t tilesAmount = rule.percent(uint32_t(region.area()));
-        while (tilesAmount--)
+        // A share of the cells, drawn over the whole region but handed out in
+        // reading order, for the same reason the full sweep below reads in
+        // that order.
+        m_randomCoordinates.init(
+            region.sizeU, region.sizeV, rule.percent(region.area()));
+
+        uint32_t du;
+        uint32_t dv;
+        while (m_randomCoordinates.next(du, dv))
         {
-            uint32_t du, dv;
-            if (m_randomCoordinates.next(du, dv))
-            {
-                m_context.u = region.u0 + int32_t(du);
-                m_context.v = region.v0 + int32_t(dv);
-                rule.execute(m_context);
-            }
+            m_context.u = region.u0 + int32_t(du);
+            m_context.v = region.v0 + int32_t(dv);
+            rule.execute(m_context);
         }
     }
     else
     {
-        uint32_t du = region.sizeU;
-        while (du--)
+        // Row by row, and each row from left to right: the cells of a block
+        // are stored in that order, so a run of sixteen columns is a run of
+        // sixteen adjacent words, which is one cache line rather than sixteen.
+        // A rule of a layer only ever touches the cell it stands on, so the
+        // order the cells are visited in does not change the outcome.
+        int32_t const u1 = region.u1();
+        int32_t const v1 = region.v1();
+
+        for (int32_t v = region.v0; v < v1; ++v)
         {
-            m_context.u = region.u0 + int32_t(du);
-            uint32_t dv = region.sizeV;
-            while (dv--)
+            m_context.v = v;
+            for (int32_t u = region.u0; u < u1; ++u)
             {
-                m_context.v = region.v0 + int32_t(dv);
+                m_context.u = u;
                 rule.execute(m_context);
             }
         }

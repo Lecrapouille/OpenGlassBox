@@ -15,10 +15,10 @@
 #include "OpenGlassBox/Agent.hpp"
 #include "OpenGlassBox/Area.hpp"
 #include "OpenGlassBox/Config.hpp"
-#include "OpenGlassBox/Dijkstra.hpp"
 #include "OpenGlassBox/Map.hpp"
 #include "OpenGlassBox/MapRegion.hpp"
 #include "OpenGlassBox/Path.hpp"
+#include "OpenGlassBox/Router.hpp"
 #include "OpenGlassBox/Unit.hpp"
 #include <memory>
 
@@ -265,7 +265,7 @@ public:
     Agent& addAgent(AgentType const& type,
                     Unit& owner,
                     Resources const& resources,
-                    std::string const& searchTarget);
+                    Name const& searchTarget);
 
     // -------------------------------------------------------------------------
     //! \brief Demolish a building and take it out of the crossroads or the
@@ -368,10 +368,18 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \return the cells of the grid the town administers, computed from
+    //! \brief \return the cells of the grid the town administers, derived from
     //! its position and its size. What bounds every rule run on its behalf.
+    //!
+    //! Every command of a rule reaching into a layer asks for the region, and a
+    //! rule of a layer runs on every cell of it, so this is read hundreds of
+    //! thousands of times per tick on a large town. It is therefore derived
+    //! once, when the town is founded or moved, and only read here.
     // -------------------------------------------------------------------------
-    MapRegion region() const;
+    MapRegion const& region() const
+    {
+        return m_region;
+    }
 
     // -------------------------------------------------------------------------
     //! \brief \return the world the town belongs to, owner of the layers and of
@@ -510,14 +518,24 @@ public:
     // -------------------------------------------------------------------------
     IRouter& router()
     {
-        return m_dijkstra;
+        return *m_router;
     }
 
     //! \copydoc router()
     IRouter const& router() const
     {
-        return m_dijkstra;
+        return *m_router;
     }
+
+    // -------------------------------------------------------------------------
+    //! \brief Install the router the agents will ask for an itinerary.
+    //!
+    //! The library ships only \c IRouter; the demo and the tests pass a
+    //! concrete implementation here. Has to be called before agents need to
+    //! move when no default router is built in.
+    //! \param[in,out] router ownership moves into the City.
+    // -------------------------------------------------------------------------
+    void setRouter(std::unique_ptr<IRouter> router);
 
     // -------------------------------------------------------------------------
     //! \brief Empty the town: agents, buildings, zones, networks and globals.
@@ -534,7 +552,7 @@ public:
     //! crossroads let go of it first.
     //! \param[in] path the network to sweep.
     // -------------------------------------------------------------------------
-    void removeOrphanNodes(Path& path);
+    void removeOrphanNodes(Path& path) const;
 
     // -------------------------------------------------------------------------
     //! \brief Take away the agents left with no road under them, which is what
@@ -542,6 +560,18 @@ public:
     //! demolished. Their load is handed back the same way as in removeWay().
     // -------------------------------------------------------------------------
     void dropStrandedAgents();
+
+private:
+
+    // -------------------------------------------------------------------------
+    //! \brief Derive m_region from the position of the town and the size of a
+    //! grid cell. Called when the town is founded and whenever it moves.
+    //!
+    //! \note The size of a cell is settled when the World is built and is not
+    //! meant to change afterwards. Changing it under a town that already exists
+    //! would leave the region behind.
+    // -------------------------------------------------------------------------
+    void updateRegion();
 
 private:
 
@@ -555,6 +585,9 @@ private:
     uint32_t m_gridSizeU;
     //! \brief How many administered cells along V.
     uint32_t m_gridSizeV;
+    //! \brief The administered cells, kept in step with the three fields above
+    //! by updateRegion().
+    MapRegion m_region;
     //! \brief Identifier the next agent will be given. Never reused, so that a
     //! stale identifier names nothing rather than something else.
     uint32_t m_nextAgentId = 0u;
@@ -575,7 +608,7 @@ private:
     Areas m_areas;
     //! \brief The router, one per town so that its scratch memory is allocated
     //! once rather than on every search.
-    Dijkstra m_dijkstra;
+    std::unique_ptr<IRouter> m_router;
     //! \brief Who to tell when something is added or removed, or nullptr when
     //! nobody is listening. Not owned.
     City::Listener* m_listener;

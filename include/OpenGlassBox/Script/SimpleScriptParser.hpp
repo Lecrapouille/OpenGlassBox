@@ -80,9 +80,9 @@ class SimpleScriptParser: public IScriptParser
 {
 public:
 
-    //! \copydoc IScriptParser::parse
-    bool parse(std::string const& filename,
-               ScriptDefinitions& definitions) override;
+    //! \copydoc IScriptParser::parseFile
+    bool parseFile(std::string const& filename,
+                   ScriptDefinitions& definitions) override;
 
     //! \copydoc IScriptParser::parseString
     bool parseString(std::string const& source,

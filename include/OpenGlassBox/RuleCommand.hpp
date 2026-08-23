@@ -162,7 +162,7 @@ class RuleCommandAgent: public IRuleCommand, public AgentType
 public:
 
     RuleCommandAgent(AgentType const& type,
-                     std::string const& target,
+                     Name const& target,
                      Resources const& resources)
         : AgentType(type), m_target(target), m_resources(resources)
     {
@@ -174,7 +174,7 @@ public:
 
 public:
 
-    std::string m_target;
+    Name m_target;
     Resources m_resources;
 };
 
@@ -256,12 +256,10 @@ class RuleCommandCount: public IRuleCommand
 {
 public:
 
-    RuleCommandCount(std::string unitType,
+    RuleCommandCount(Name const& unitType,
                      RuleCommandTest::Comparison comparison,
                      uint32_t amount)
-        : m_unitType(std::move(unitType)),
-          m_comparison(comparison),
-          m_amount(amount)
+        : m_unitType(unitType), m_comparison(comparison), m_amount(amount)
     {
     }
 
@@ -271,7 +269,7 @@ public:
 
 private:
 
-    std::string m_unitType;
+    Name m_unitType;
     RuleCommandTest::Comparison m_comparison;
     uint32_t m_amount;
 };
@@ -350,10 +348,7 @@ class RuleCommandDestroy: public IRuleCommand
 {
 public:
 
-    explicit RuleCommandDestroy(std::string unitType)
-        : m_unitType(std::move(unitType))
-    {
-    }
+    explicit RuleCommandDestroy(Name const& unitType) : m_unitType(unitType) {}
 
     bool validate(RuleContext& context) override;
     void execute(RuleContext& context) override;
@@ -361,7 +356,7 @@ public:
 
 private:
 
-    std::string m_unitType;
+    Name m_unitType;
 };
 
 } // namespace ogb

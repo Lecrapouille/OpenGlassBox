@@ -283,7 +283,7 @@ void RuleCommandSpawn::execute(RuleContext& context)
 //------------------------------------------------------------------------------
 std::string RuleCommandSpawn::type()
 {
-    return "Spawn " + m_unitType.name;
+    return "Spawn " + m_unitType.name.str();
 }
 
 //------------------------------------------------------------------------------
@@ -320,7 +320,7 @@ void RuleCommandUpgrade::execute(RuleContext& context)
 //------------------------------------------------------------------------------
 std::string RuleCommandUpgrade::type()
 {
-    return "Upgrade " + m_fromType.name + " to " + m_toType.name;
+    return "Upgrade " + m_fromType.name.str() + " to " + m_toType.name.str();
 }
 
 //------------------------------------------------------------------------------
@@ -341,7 +341,7 @@ void RuleCommandDestroy::execute(RuleContext& context)
 //------------------------------------------------------------------------------
 std::string RuleCommandDestroy::type()
 {
-    return "Destroy " + m_unitType;
+    return "Destroy " + m_unitType.str();
 }
 
 } // namespace ogb

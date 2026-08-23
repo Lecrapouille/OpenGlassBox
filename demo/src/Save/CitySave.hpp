@@ -7,8 +7,8 @@
 //! \file CitySave.hpp
 //! \brief Load and write a city save (.ogc): header, geometry and live state.
 
-#ifndef OPEN_GLASSBOX_CITY_SAVE_HPP
-#define OPEN_GLASSBOX_CITY_SAVE_HPP
+#ifndef OPENGLASSBOX_DEMO_CITY_SAVE_HPP
+#define OPENGLASSBOX_DEMO_CITY_SAVE_HPP
 
 #include <string>
 #include <vector>

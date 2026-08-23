@@ -72,8 +72,8 @@ public:
     //! whatever could be understood, which is what lets an editor show a
     //! half-broken script instead of nothing at all.
     //--------------------------------------------------------------------------
-    virtual bool parse(std::string const& filename,
-                       ScriptDefinitions& definitions) = 0;
+    virtual bool parseFile(std::string const& filename,
+                           ScriptDefinitions& definitions) = 0;
 
     //--------------------------------------------------------------------------
     //! \brief The same, from a script already in memory.

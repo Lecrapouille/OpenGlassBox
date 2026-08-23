@@ -13,9 +13,9 @@
 #define OPEN_GLASSBOX_AGENT_HPP
 
 #include "OpenGlassBox/Config.hpp"
-#include "OpenGlassBox/Dijkstra.hpp"
 #include "OpenGlassBox/Entity.hpp"
 #include "OpenGlassBox/Path.hpp"
+#include "OpenGlassBox/Router.hpp"
 
 namespace ogb
 {
@@ -32,7 +32,7 @@ class Unit;
 //! ruleset would cost more than the rest of the simulation put together.
 //!
 //! What an Agent knows is what it carries, the name it is looking for, and an
-//! itinerary. It does not know which building it will end at: Dijkstra returns
+//! itinerary. It does not know which building it will end at: the router returns
 //! the cheapest one answering to that name and having room, and the answer may
 //! change while the Agent drives, which is why the itinerary is recomputed from
 //! time to time. Finding nothing at all is not an error, and an Agent that has
@@ -92,7 +92,7 @@ public:
           AgentType const& type,
           Unit& owner,
           Resources const& resources,
-          std::string const& searchTarget);
+          Name const& searchTarget);
 
     // -------------------------------------------------------------------------
     //! \brief Take itself out of the traffic count of the Way it was driving
@@ -103,24 +103,24 @@ public:
     // -------------------------------------------------------------------------
     //! \brief Drive for one tick: follow the itinerary, recompute it when it
     //! has gone stale, and knock at the door when standing in front of one.
-    //! \param[in] dijkstra the router of the City. Reused rather than built
+    //! \param[in] router the router of the City. Reused rather than built
     //! here: it keeps its scratch buffers between calls.
+    //! \param[in] config settings read for the giving up delay and the routing
+    //! intervals. The City passes its own; it is not held.
     //! \param[in] dt seconds of game time in one tick.
     //! \return true when the Agent is done, either because it has unloaded or
     //! because it has given up, in which case the City takes it away.
     // -------------------------------------------------------------------------
-    bool update(Dijkstra& dijkstra, float dt);
+    bool update(IRouter& router, SimulationConfig const& config, float dt);
 
     // -------------------------------------------------------------------------
-    //! \brief Point at the configuration of the Simulation, read for the giving
-    //! up delay and the routing intervals. Called by City::addAgent right after
-    //! construction.
-    //! \param[in] config has to outlive the Agent.
+    //! \brief The same, with the built-in defaults. For a caller with no
+    //! Simulation at hand, which in practice means a unit test.
+    //! \param[in] router the router of the City.
+    //! \param[in] dt seconds of game time in one tick.
+    //! \return true when the Agent is done.
     // -------------------------------------------------------------------------
-    void setConfig(SimulationConfig const& config)
-    {
-        m_simConfig = &config;
-    }
+    bool update(IRouter& router, float dt);
 
     // -------------------------------------------------------------------------
     //! \brief What it carries, and what room is left. Writable: unloading moves
@@ -141,7 +141,7 @@ public:
     //! \brief The name it is looking for, such as "Work" or "Shop". Matched
     //! against the \c targets of the buildings, not against their type.
     // -------------------------------------------------------------------------
-    std::string const& searchTarget() const
+    Name const& searchTarget() const
     {
         return m_searchTarget;
     }
@@ -187,10 +187,7 @@ public:
     //! \brief How long the rest of the trip takes, in seconds of game time,
     //! traffic included. Zero when it has no itinerary.
     // -------------------------------------------------------------------------
-    float remainingCost() const
-    {
-        return remainingRouteCost();
-    }
+    float remainingCost() const;
 
     // -------------------------------------------------------------------------
     //! \brief The crossroads it last stood at, which is where it is routed
@@ -275,12 +272,14 @@ private:
     // -------------------------------------------------------------------------
     //! \brief Whether the Agent is on that Way, or means to approach a building
     //! along it.
+    //! \param[in] way the segment to test.
     // -------------------------------------------------------------------------
     bool uses(Way const& way) const;
 
     // -------------------------------------------------------------------------
     //! \brief Whether that Node is on the itinerary, or is one of the two the
     //! Agent is driving between.
+    //! \param[in] node the crossroads to test.
     // -------------------------------------------------------------------------
     bool uses(Node const& node) const;
 
@@ -299,21 +298,31 @@ private:
     // -------------------------------------------------------------------------
     //! \brief Take the next segment of the itinerary, recomputing it when there
     //! is none or when it has gone stale.
+    //! \param[in] router the router of the City.
+    //! \param[in] config settings read for the routing intervals.
     // -------------------------------------------------------------------------
-    void followRoute(Dijkstra& dijkstra, SimulationConfig const& config);
+    void followRoute(IRouter& router, SimulationConfig const& config);
 
     // -------------------------------------------------------------------------
-    //! \brief Whether the itinerary is worth computing again: enough ticks have
-    //! passed, or the traffic has made it much worse than it was.
+    //! \brief Replace the itinerary if it is worth it: when there is none, when
+    //! it has been held long enough, or when the traffic has made it much worse
+    //! than the current shortest one.
+    //!
+    //! Comparing against the shortest one costs a whole graph search, so it
+    //! only happens every SimulationConfig::pathCheckTicks ticks, and the
+    //! itinerary that search produced is kept rather than searched for twice.
+    //!
+    //! \param[in] router the router of the City.
+    //! \param[in] config settings read for the routing intervals.
     // -------------------------------------------------------------------------
-    bool shouldRecomputeRoute(Dijkstra& dijkstra,
-                              SimulationConfig const& config) const;
+    void maybeRecomputeRoute(IRouter& router, SimulationConfig const& config);
 
     // -------------------------------------------------------------------------
     //! \brief Ask the router for the cheapest building answering to
     //! m_searchTarget, and keep the way there.
+    //! \param[in] router the router of the City.
     // -------------------------------------------------------------------------
-    void computeRoute(Dijkstra& dijkstra);
+    void computeRoute(IRouter& router);
 
     // -------------------------------------------------------------------------
     //! \brief The building the Agent is standing in front of and that accepts
@@ -324,6 +333,7 @@ private:
     // -------------------------------------------------------------------------
     //! \brief Move onto another Way, keeping the traffic count of both of them
     //! straight. Pass nullptr to leave the network.
+    //! \param[in] way the segment to drive on, or nullptr to leave the network.
     // -------------------------------------------------------------------------
     void setCurrentWay(Way* way);
 
@@ -346,8 +356,9 @@ private:
     //! near end is not always the good one: everyone leaving a factory placed
     //! at a fifth of the street drove to the nearest corner first, so an Agent
     //! bound for a shop to the east was first seen heading west.
+    //! \param[in] router the router of the City.
     // -------------------------------------------------------------------------
-    void computeRouteAlongWay(Dijkstra& dijkstra);
+    void computeRouteAlongWay(IRouter& router);
 
     // -------------------------------------------------------------------------
     //! \brief The end of the Way the Agent has to reach before it can take
@@ -357,74 +368,44 @@ private:
     // -------------------------------------------------------------------------
     Node* wayExit() const;
 
-    // -------------------------------------------------------------------------
-    //! \brief Whether the Agent stands at the end of its itinerary: on the Node
-    //! that holds the destination, or at the offset of the Way it sits on.
-    // -------------------------------------------------------------------------
+    bool followRouteWhileAlongWay();
+    void setNextNodeFromRoute(Node* next);
+    void followRouteWhenLost(IRouter& router);
+    void followRouteAlongNodes();
+    void followRouteApproach();
     bool arrivedAtDestination() const;
-
-    // -------------------------------------------------------------------------
-    //! \brief Stop looking: hand the load back to the building that sent the
-    //! Agent out, when it still has room, and let the City take the Agent away.
-    //! \return always true.
-    // -------------------------------------------------------------------------
     bool giveUp();
-
-    // -------------------------------------------------------------------------
-    //! \brief Travel time of the rest of the itinerary, in seconds of game
-    //! time, traffic included.
-    // -------------------------------------------------------------------------
-    float remainingRouteCost() const;
-
-    // -------------------------------------------------------------------------
-    //! \brief One tick of driving, with the configuration resolved. update()
-    //! forwards to it once it has one, defaulting to the built-in settings.
-    // -------------------------------------------------------------------------
-    bool update(Dijkstra& dijkstra, SimulationConfig const& config, float dt);
 
 private:
 
     //! \brief The building it left, and where the load goes back if nothing
     //! accepts it. Null once that building has been demolished. Not owned.
     Unit* m_owner = nullptr;
-
     //! \brief The name it is looking for, from the \c to of the script.
-    std::string m_searchTarget;
-
+    Name m_searchTarget;
     //! \brief What it carries.
     Resources m_resources;
-
     //! \brief Where along m_currentWay it stands, in [0..1] from
     //! m_currentWay->from().
     float m_offset = 0.0f;
-
     //! \brief The segment under it, which counts it as traffic. Not owned.
     Way* m_currentWay = nullptr;
-
     //! \brief The crossroads it came from, and what it is routed from. Not
     //! owned.
     Node* m_lastNode = nullptr;
-
     //! \brief The crossroads it is driving to, or null when it stands still.
     //! Not owned.
     Node* m_nextNode = nullptr;
-
     //! \brief Cached itinerary. Recomputed periodically, and as soon as the
     //! remaining cost drifts too far from the current shortest path.
     Route m_route;
-
     //! \brief Ticks spent on the current itinerary, against
     //! SimulationConfig::pathRecalcTicks.
     uint32_t m_ticksOnRoute = 0u;
-
     //! \brief Ticks spent without an itinerary, wandering from one crossroads
     //! to the next because nothing accepts what the Agent carries. Against
     //! SimulationConfig::agentGiveUpTicks.
     uint32_t m_ticksLost = 0u;
-
-    //! \brief Settings of the Simulation, or null until setConfig() is called,
-    //! in which case the built-in defaults are used. Not owned.
-    SimulationConfig const* m_simConfig = nullptr;
 };
 
 //! \brief The Agents of a City, which owns them.
