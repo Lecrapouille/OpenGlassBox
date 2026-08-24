@@ -38,7 +38,7 @@ A `Path` is a graph, and the only thing an `Agent` may travel on. `Node` is a ve
 
 A city may hold several `Path` objects and they never meet: a road network and a rail network are two of them, and the router never leaves the one it started on. That is the whole of the separation, and it is enforced in one place rather than checked everywhere.
 
-A `Way` knows its length, how many agents are on it, and from those two how long it takes to drive. That travel time, not the length, is what the router minimises: see [How traffic is modelled](#how-traffic-is-modelled) below.
+A `Way` knows its length, how many agents are on it, and from those two how long it takes to drive. That travel time, not the length, is what the router minimises: see [how traffic is modelled](traffic.md).
 
 Both containers are `std::deque` rather than `std::vector`, and that is deliberate: everything refers to a crossroads or a street **by address**, so adding one must not move the others.
 
@@ -79,11 +79,13 @@ A tick means nothing on its own. `SimulationClock` turns a tick count into an ho
 
 ## Routing: IRouter and Dijkstra
 
-`IRouter` is the interface the agents ask for an itinerary; `Dijkstra` is the implementation, and a `City` owns one so that its scratch buffers are allocated once instead of on every search. Two things make it more than a textbook shortest path, both covered in the traffic section: the cost of a street is its travel time under the current traffic, and there is no goal to aim at.
+`IRouter` is the interface the agents ask for an itinerary (`findRoute`, `shortestPathCost`); `Dijkstra` is the implementation, and a `City` owns one so that its scratch buffers are allocated once instead of on every search. Another pathfinder can be dropped in without touching `Agent`. Two things make it more than a textbook shortest path, both covered in the [traffic documentation](traffic.md#finding-a-destination-a-search-with-no-goal): the cost of a street is its travel time under the current traffic, and there is no goal to aim at.
 
 ## Resources
 
 `Resource` is a named stock with an amount and a capacity; `Resources` is a bag of them. Two resources are the same resource when their names match, which is what lets a script declare a new one without touching the engine. Lookup is a linear scan over a small vector, which beats a hash map at the handful of resources a building actually holds.
+
+Nothing here knows that `Money` is money: it is a name like `Water` or `People`, and what makes it behave like currency is the ruleset. See the [economy documentation](economy.md).
 
 ## Files and tooling
 
@@ -98,57 +100,10 @@ The `.ogc` format holds the state of a game: roads, buildings and what they hold
 
 That split is why every entry point in `CitySave` deals with the ruleset too. A save stores a **fingerprint** of the ruleset it was written against and the names of every type it uses. Loading it into a different ruleset would rebuild the same geometry out of different recipes, giving a town that looks right and behaves like something else, so the loader refuses rather than warns. `peekHeader()` reads the header alone, which is how the demo loads the right ruleset without asking.
 
-## How traffic is modelled
+## Traffic and economy
 
-### Travel time on a road: the BPR function
+Two subjects large enough to have documents of their own.
 
-Agents do not all take the shortest road: they take the *fastest* one, and a road gets slower as it fills up. The standard way to express that is the **BPR function**, named after the US **B**ureau of **P**ublic **R**oads that published it in 1964. It is the textbook formula of traffic assignment: the travel time of a road grows with the ratio of the traffic it carries to the traffic it was built for.
+The [traffic model](traffic.md) covers what a street costs to drive and who decides to drive on it: the BPR travel time of `Way`, the exponential moving average that keeps it stable, the destination search of `Dijkstra` and its lack of a goal, and the relative gap the demo reports. It also states the classical theory those depart from, and why the departures are deliberate.
 
-`Way::travelTime` implements it:
-
-$$\displaystyle t(f) = t_0 \left(1 + 0.15 \left(\frac{f}{c}\right)^{\beta}\right)$$
-
-- $t_0$ is the free flow travel time, the length of the road divided by its speed limit;
-- $f$ is the flow, that is how many agents are on the road;
-- $c$ is the capacity, the flow above which the road starts to jam;
-- $\beta$ says how brutally it degrades past that point: with $\beta = 4$, twice the capacity costs about three and a half times the free flow time.
-
-An empty road costs $t_0$. A road loaded exactly to its capacity costs 15 % more. `speed`, `capacity` and `beta` are properties of a `WayType`, so they are set in the `.ogs` ruleset.
-
-A word on the units, because they are not the ones a traffic engineer would expect. Here $f$ is a **number of agents currently on the road**, not a number of vehicles per hour, and $c$ is the number of agents a street carries before it starts to feel it. Nothing forbids $f$ from exceeding $c$: a saturated street stays passable, it just becomes expensive, and that is precisely what makes the router send the next agent somewhere else instead of queueing everybody through the same place. Times are in seconds of game time, which the clock converts from ticks, so lengthening a tick does not make the city drive faster.
-
-### Finding a destination: a search with no goal
-
-The router is where those travel times are actually used, and it does two things a textbook shortest path does not.
-
-The first is the cost: an edge costs its travel time under the current traffic, not its length. A short road carrying two hundred agents costs more than a long empty one.
-
-The second is stranger, and it is the reason `Dijkstra` is not an A. **There is no goal.** An agent does not know which building it is going to; it knows the *name* of what it is looking for. The search walks the network outwards from the crossroads the agent stands at and stops at the first building that answers to that name **and has room for the load**. A building standing along a street is kept as a candidate rather than accepted at once, because a crossroads one hop away may hold a cheaper one.
-
-Having no goal also means there is nothing for an A estimate to aim at. What is added to the cost of a crossroads is the free flow travel time back to the one the search started from, which biases the order of exploration towards the neighbourhood of the departure, where the nearest destination usually is. It is a speed-up, not an admissible heuristic: the answer is the cheapest building the search met first, which in an unusual geometry may not be the cheapest one there is. The `AStarRouter` alias is a leftover of the days when the search did have a goal.
-
-Two consequences follow, and both are visible in the demo. Two agents leaving the same door a minute apart may be sent to different shops, because the traffic changed in between. And an agent whose itinerary was computed a while ago replaces it when the road it is on has become worse than the alternative.
-
-Comparing the two costs a whole graph search, so it does not happen on every tick: `pathCheckTicks` in the Traffic panel is how often an agent bothers to look, and `cost deviation` is how much worse its road has to be before it switches. When the comparison does say the alternative is better, the itinerary that search produced is the one the agent takes: it is not searched for a second time. Lowering `pathCheckTicks` to one is the quickest way to bring a large city to its knees.
-
-### Why the flow is smoothed
-
-If routing used the instantaneous number of agents on each road, the whole population would swap between two parallel roads every tick: everyone sees road A empty, everyone moves to A, A is now jammed, everyone moves back to B. OpenGlassBox avoids that by feeding the BPR function an exponential moving average of the count $n$ of agents on the road, with a fixed weight $\alpha$ (0.05 by default, adjustable in the Traffic panel):
-
-$$\displaystyle f \leftarrow (1-\alpha) f + \alpha n$$
-
-This damps the oscillation, and that is all it does. It is deliberately **not** the solver used by traffic engineering tools such as CiudadSim, whose **MSA** (Method of Successive Averages) computes an all-or-nothing assignment $y^k$ onto the shortest paths at iteration $k$ and averages it in with a decreasing weight:
-
-$$\displaystyle f^{k+1} = (1-\lambda_k) f^k + \lambda_k y^k,\qquad \lambda_k = \frac{1}{k}$$
-
-Because $\lambda_k$ shrinks, MSA converges to a Wardrop equilibrium, where no agent can find a cheaper route. A fixed $\alpha$ does not converge to anything: it just keeps the picture of the network stable enough for the agents to make sensible decisions. This is a game, not an assignment solver.
-
-### Reading the Traffic panel
-
-The **relative gap** compares what the agents actually pay to what they would pay on the cheapest routes available at the current travel times:
-
-$$\displaystyle \mathrm{Relgap} = \frac{\mathrm{TSTT} - \mathrm{SPTT}}{\mathrm{TSTT}}$$
-
-TSTT is the total system travel time and SPTT the shortest path travel time. Near zero, the agents are already on their cheapest itineraries and the network has settled. Here it is a diagnostic you watch, not a stopping criterion of a solver.
-
-Routing itself sits behind `IRouter` (`findRoute`, `shortestPathCost`), which a `City` owns, so another pathfinder can be dropped in without touching `Agent`.
+The [economy](economy.md) is the other half, and it is mostly a list of what is missing: production is a constant rate in a script, `Money` is a resource like any other, and nothing arbitrates between two buildings that both want the same delivery.

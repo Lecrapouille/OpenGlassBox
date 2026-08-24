@@ -126,7 +126,7 @@ installDijkstraRouter(city, simulation.config());
 installDijkstraRouters(simulation);
 ```
 
-You can provide your own `IRouter` and call `city.setRouter(std::move(router))` instead. See [engine documentation](engine.md#routing-irouter-and-dijkstra) for how travel times and destination search work.
+You can provide your own `IRouter` and call `city.setRouter(std::move(router))` instead. See the [traffic documentation](traffic.md) for how travel times and destination search work.
 
 ## Loading and saving cities (optional)
 
@@ -147,5 +147,6 @@ See the [script language reference](script.md#ogc-save-structure) for the file l
 ## Where to read next
 
 - [Script language reference](script.md): write the gameplay in `.ogs`.
-- [Engine documentation](engine.md): classes, tick order, traffic model.
+- [Engine documentation](engine.md): classes and tick order.
+- [Traffic documentation](traffic.md): travel times, congestion, and destination search.
 - [Demo documentation](demo.md): interactive editor and panels.

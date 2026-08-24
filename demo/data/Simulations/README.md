@@ -1,6 +1,6 @@
 # Bundled simulations
 
-This folder holds the rulesets and city saves shipped with the demo. For the `.ogs` language itself, see the [script language reference](../../doc/script.md).
+This folder holds the rulesets and city saves shipped with the demo. For the `.ogs` language itself, see the [script language reference](../../../doc/script.md).
 
 ## File formats
 

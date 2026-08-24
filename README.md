@@ -17,7 +17,9 @@ The engine does not depend on the demo renderer, so it can be embedded in anothe
 | -------- | -------- |
 | [Integration guide](doc/integration.md) | Link the library and drive a simulation from your own code. |
 | [Demo application](doc/demo.md) | Tools, panels, and keyboard shortcuts. |
-| [Engine](doc/engine.md) | Classes, tick order, traffic model. |
+| [Engine](doc/engine.md) | Classes and tick order. |
+| [Traffic](doc/traffic.md) | Travel times, congestion, and destination search. |
+| [Economy](doc/economy.md) | What the ruleset does, and what a real economic model would add. |
 | [Scripts](doc/script.md) | The `.ogs` language: the core of the project. |
 | [Improvements](doc/improvements.md) | Changes over MultiAgentSimulation. |
 | [Bundled simulations](demo/data/Simulations/README.md) | Sample rulesets and the `test_city` walkthrough. |
@@ -143,7 +145,7 @@ The GlassBox approach describes a city simulation as data rather than as a tree 
 - **Resources** are money, goods, happiness ...
 - **Paths** are networks on which agents travel.
 
-See [engine documentation](doc/engine.md) for the class-by-class reference and the traffic model.
+See [engine documentation](doc/engine.md) for the class-by-class reference, [traffic](doc/traffic.md) for how congestion and routing work, and [economy](doc/economy.md) for how resources turn into a city.
 
 ## Scripts and rulesets
 

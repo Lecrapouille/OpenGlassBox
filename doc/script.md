@@ -50,7 +50,7 @@ segments
 end
 ```
 
-A `path` defines a network family, such as roads or rails. A `segment` (`WayType`) defines one kind of connection: its free-flow `speed`, `capacity` at which congestion becomes significant, and BPR exponent `beta` (4 by default).
+A `path` defines a network family, such as roads or rails. A `segment` (`WayType`) defines one kind of connection: its free-flow `speed`, `capacity` at which congestion becomes significant, and BPR exponent `beta` (4 by default). These three are the parameters of the travel time the router minimises; see the [traffic documentation](traffic.md#travel-time-on-a-road-the-bpr-function) for what they do and how to tune them.
 
 ### `agents`
 
