@@ -248,7 +248,7 @@ void CityViewer::handleInputs(Simulation& simulation,
                                ImGuiButtonFlags_MouseButtonMiddle);
 
     bool const hovered = ImGui::IsItemHovered();
-    ImGuiIO& io = ImGui::GetIO();
+    ImGuiIO const& io = ImGui::GetIO();
 
     // Pan with the middle button, or with the right one which is easier to
     // reach on a laptop.
@@ -331,7 +331,7 @@ Way* CityViewer::pickWay(City& city,
     float best = tolerance * tolerance;
     Way* found = nullptr;
 
-    for (auto& it : city.paths())
+    for (auto const& it : city.paths())
     {
         for (auto& way : it.second->ways())
         {
@@ -357,7 +357,7 @@ Node* CityViewer::pickNode(City& city, ImVec2 const& world, float pixels) const
     float best = tolerance * tolerance;
     Node* found = nullptr;
 
-    for (auto& it : city.paths())
+    for (auto const& it : city.paths())
     {
         for (auto& node : it.second->nodes())
         {
@@ -382,7 +382,7 @@ Unit* CityViewer::pickUnit(City& city, ImVec2 const& world, float pixels) const
     float best = tolerance * tolerance;
     Unit* found = nullptr;
 
-    for (auto& unit : city.units())
+    for (auto const& unit : city.units())
     {
         float const dx = unit->position().x - world.x;
         float const dy = unit->position().y - world.y;
@@ -405,7 +405,7 @@ CityViewer::pickAgent(City& city, ImVec2 const& world, float pixels) const
     float best = tolerance * tolerance;
     Agent* found = nullptr;
 
-    for (auto& agent : city.agents())
+    for (auto const& agent : city.agents())
     {
         float const dx = agent->position().x - world.x;
         float const dy = agent->position().y - world.y;
@@ -451,7 +451,7 @@ game::Selection CityViewer::pickAt(Simulation& simulation,
 
         if (state.showUnits)
         {
-            for (auto& unit : city.units())
+            for (auto const& unit : city.units())
             {
                 game::Selection candidate;
                 candidate.kind = game::Selection::Kind::Unit;
@@ -463,7 +463,7 @@ game::Selection CityViewer::pickAt(Simulation& simulation,
 
         if (state.showAgents)
         {
-            for (auto& agent : city.agents())
+            for (auto const& agent : city.agents())
             {
                 game::Selection candidate;
                 candidate.kind = game::Selection::Kind::Agent;
@@ -475,9 +475,9 @@ game::Selection CityViewer::pickAt(Simulation& simulation,
 
         if (state.showNodes && state.showPaths)
         {
-            for (auto& path : city.paths())
+            for (auto const& path : city.paths())
             {
-                for (auto& node : path.second->nodes())
+                for (auto const& node : path.second->nodes())
                 {
                     game::Selection candidate;
                     candidate.kind = game::Selection::Kind::Node;
@@ -564,13 +564,14 @@ void CityViewer::updateHover(Simulation& simulation,
 
     ImVec2 const world = screenToWorld(ImGui::GetIO().MousePos);
 
-    int32_t u, v;
+    int32_t u;
+    int32_t v;
     simulation.world().world2mapPosition(
         Vector3f(world.x, world.y, 0.0f), u, v);
 
-    for (auto& it : simulation.cities())
+    for (auto const& it : simulation.cities())
     {
-        City& city = *it.second;
+        City const& city = *it.second;
         if (!city.region().contains(u, v))
             continue;
 
@@ -583,8 +584,7 @@ void CityViewer::updateHover(Simulation& simulation,
 }
 
 // ----------------------------------------------------------------------------
-int32_t CityViewer::cellsPerSquare(float const pixels,
-                                   MapRegion const& visible)
+int32_t CityViewer::cellsPerSquare(float const pixels, MapRegion const& visible)
 {
     // Two reasons to draw a square of several cells rather than one rectangle
     // per cell, and the coarser of the two wins.
@@ -638,9 +638,9 @@ void CityViewer::drawMaps(World& world, game::DebugState const& state)
 
     int32_t const square = cellsPerSquare(pixels, visible);
 
-    for (auto& it : world.maps())
+    for (auto const& it : world.maps())
     {
-        Map& map = *it.second;
+        Map const& map = *it.second;
         if (!state.isLayerVisible(map.type()))
             continue;
 
@@ -706,12 +706,12 @@ void CityViewer::drawMaps(World& world, game::DebugState const& state)
                             break;
                         if (size < 22.0f)
                             break;
-                        char label[16];
+                        std::string label = std::to_string(amount);
                         std::snprintf(label, sizeof(label), "%u", amount);
-                        ImVec2 const size = ImGui::CalcTextSize(label);
+                        ImVec2 const textSize = ImGui::CalcTextSize(label);
                         m_draw_list->AddText(
-                            ImVec2(0.5f * (p0.x + p1.x) - 0.5f * size.x,
-                                   0.5f * (p0.y + p1.y) - 0.5f * size.y),
+                            ImVec2(0.5f * (p0.x + p1.x) - 0.5f * textSize.x,
+                                   0.5f * (p0.y + p1.y) - 0.5f * textSize.y),
                             theme::fromScript(map.color(), options.opacity),
                             label);
                         break;
@@ -722,7 +722,7 @@ void CityViewer::drawMaps(World& world, game::DebugState const& state)
 }
 
 // ----------------------------------------------------------------------------
-void CityViewer::drawCityFrame(City& city, game::DebugState const& state)
+void CityViewer::drawCityFrame(City const& city, game::DebugState const& state)
 {
     m_splitter.SetCurrentChannel(m_draw_list, CHANNEL_GRID);
 
@@ -776,7 +776,7 @@ void CityViewer::drawAreas(City& city)
     m_splitter.SetCurrentChannel(m_draw_list, CHANNEL_GRID);
 
     float const side = city.gridCellSize();
-    for (auto& area : city.areas())
+    for (auto const& area : city.areas())
     {
         MapRegion const& region = area->footprint();
         Vector3f const topLeftWorld =
@@ -805,9 +805,9 @@ void CityViewer::drawPaths(City& city, game::DebugState const& state)
 
     bool const details = m_zoom > DETAIL_ZOOM_THRESHOLD;
 
-    for (auto& it : city.paths())
+    for (auto const& it : city.paths())
     {
-        Path& path = *it.second;
+        Path const& path = *it.second;
 
         m_splitter.SetCurrentChannel(m_draw_list, CHANNEL_WAYS);
         for (auto& way : path.ways())
@@ -860,7 +860,7 @@ void CityViewer::drawUnits(City& city, game::DebugState const& state)
 
     bool const labels = state.showLabels && (m_zoom > LABEL_ZOOM_THRESHOLD);
 
-    for (auto& unit : city.units())
+    for (auto const& unit : city.units())
     {
         ImVec2 const position = worldToScreen(unit->position());
         ImU32 const color = theme::fromScript(unit->color());
@@ -916,7 +916,7 @@ void CityViewer::drawAgents(City& city, game::DebugState const& state)
 
     m_splitter.SetCurrentChannel(m_draw_list, CHANNEL_AGENTS);
 
-    for (auto& agent : city.agents())
+    for (auto const& agent : city.agents())
     {
         ImVec2 const position = worldToScreen(agent->position());
         m_draw_list->AddCircleFilled(
@@ -927,7 +927,7 @@ void CityViewer::drawAgents(City& city, game::DebugState const& state)
 // ----------------------------------------------------------------------------
 void CityViewer::drawInspectHover(Simulation& simulation,
                                   game::DebugState const& state,
-                                  editor::Editor const& editor)
+                                  editor::Editor const& /*editor*/)
 {
     if (!ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows))
         return;
@@ -1202,7 +1202,7 @@ void CityViewer::drawDisplayToggles(game::DebugState& state) const
         bool* value;
     };
 
-    Toggle const toggles[] = {
+    std::array<Toggle, 8> const toggles = {
         { "Grid", &state.showGrid },     { "Paths", &state.showPaths },
         { "Units", &state.showUnits },   { "Areas", &state.showAreas },
         { "Agents", &state.showAgents }, { "Traffic", &state.showTraffic },
@@ -1211,7 +1211,7 @@ void CityViewer::drawDisplayToggles(game::DebugState& state) const
 
     float const right =
         ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
-    for (size_t i = 0u; i < IM_ARRAYSIZE(toggles); ++i)
+    for (size_t i = 0u; i < toggles.size(); ++i)
     {
         float const width = ImGui::CalcTextSize(toggles[i].label).x +
                             ImGui::GetFrameHeight() +
@@ -1259,14 +1259,11 @@ void CityViewer::drawHoverTooltip(Simulation& simulation,
                 // broken, and the timetable of its rules is the only thing that
                 // says which.
                 OpeningStatus const opening = openingStatus(unit, hour);
-                if (opening.known)
-                {
-                    ImGui::TextColored(
-                        ImGui::ColorConvertU32ToFloat4(
-                            opening.open ? theme::SUCCESS : theme::MUTED),
-                        "%s",
-                        opening.text.c_str());
-                }
+                ImGui::TextColored(
+                    ImGui::ColorConvertU32ToFloat4(
+                        opening.open ? theme::SUCCESS : theme::FAILURE),
+                    "%s",
+                    opening.text.c_str());
 
                 // What a building holds and what it tries to do is the whole
                 // reason to point at it. Without them the tooltip only repeated
@@ -1307,19 +1304,20 @@ void CityViewer::drawHoverTooltip(Simulation& simulation,
                             uint32_t const next = hours.nextOpening(hour);
                             if (next == OpeningHours::NEVER)
                             {
-                                ImGui::BulletText("%s (never fires)",
+                                ImGui::BulletText("%s (inactive)",
                                                   rule->type().c_str());
                             }
                             else
                             {
-                                ImGui::BulletText("%s (asleep until %uh)",
+                                ImGui::BulletText("%s (inactive until %uh)",
                                                   rule->type().c_str(),
                                                   next);
                             }
                         }
                         else
                         {
-                            ImGui::BulletText("%s", rule->type().c_str());
+                            ImGui::BulletText("%s (active)",
+                                              rule->type().c_str());
                         }
                     }
                 }
@@ -1334,7 +1332,7 @@ void CityViewer::drawHoverTooltip(Simulation& simulation,
             break;
         case game::Selection::Kind::Agent:
         {
-            Agent* const agent = hover.resolveAgent(simulation);
+            Agent const* agent = hover.resolveAgent(simulation);
             if (agent != nullptr)
             {
                 ImGui::Text("Agent %s #%u", agent->type().c_str(), agent->id());

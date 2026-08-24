@@ -184,22 +184,34 @@ static OpeningHours ruleHours(IRule const& rule)
 // ----------------------------------------------------------------------------
 OpeningStatus openingStatus(Unit const& unit, uint32_t hourOfDay)
 {
+    OpeningStatus status;
+
+    if (unit.rules().empty())
+    {
+        status.known = true;
+        status.open = false;
+        status.text = "inactive (no rules)";
+        return status;
+    }
+
     OpeningHours const hours = unit.openingHours();
 
-    OpeningStatus status;
-    status.known = hours.bounded();
-    if (!status.known)
+    if (!hours.bounded())
+    {
+        status.known = true;
+        status.open = true;
+        status.text = "active (always)";
         return status;
+    }
 
+    status.known = true;
     status.open = hours.isOpen(hourOfDay);
     if (status.open)
     {
-        // closingAfter() gives the last hour still open, and a shop open at 17
-        // shuts at 18.
         uint32_t const last = hours.closingAfter(hourOfDay);
         status.text = (last == OpeningHours::NEVER)
-                          ? "open"
-                          : "open until " +
+                          ? "active"
+                          : "active until " +
                                 std::to_string((last + 1u) %
                                                OpeningHours::HOURS_PER_DAY) +
                                 "h";
@@ -208,8 +220,8 @@ OpeningStatus openingStatus(Unit const& unit, uint32_t hourOfDay)
 
     uint32_t const next = hours.nextOpening(hourOfDay);
     status.text = (next == OpeningHours::NEVER)
-                      ? "never opens"
-                      : "closed until " + std::to_string(next) + "h";
+                      ? "inactive (never opens)"
+                      : "inactive until " + std::to_string(next) + "h";
     return status;
 }
 
@@ -281,8 +293,8 @@ static void drawRules(RuleContainer const& rules,
                 if (asleep && (next != OpeningHours::NEVER))
                 {
                     ImGui::TextColored(
-                        ImGui::ColorConvertU32ToFloat4(theme::MUTED),
-                        "asleep until %uh: attempts are skipped",
+                        ImGui::ColorConvertU32ToFloat4(theme::FAILURE),
+                        "inactive until %uh: attempts are skipped",
                         next);
                 }
                 else if (asleep)
@@ -295,7 +307,7 @@ static void drawRules(RuleContainer const& rules,
                 {
                     ImGui::TextColored(
                         ImGui::ColorConvertU32ToFloat4(theme::SUCCESS),
-                        "within the hours it keeps");
+                        "active within its hours");
                 }
             }
             ImGui::Separator();
@@ -641,18 +653,12 @@ void InspectorPanel::drawUnit(Simulation& simulation,
 
     uint32_t const hour = simulation.clock().hourOfDay();
     OpeningStatus const opening = openingStatus(*unit, hour);
-    if (opening.known)
-    {
-        ImGui::SameLine();
-        ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(
-                               opening.open ? theme::SUCCESS : theme::MUTED),
-                           "- %s",
-                           opening.text.c_str());
-        ImGui::SetItemTooltip("The hours come from the 'hour between' "
-                              "conditions of its rules.\nIt is %02uh00 in the "
-                              "city.",
-                              hour);
-    }
+
+    ImGui::TextColored(
+        ImGui::ColorConvertU32ToFloat4(theme::fromScript(unit->color())),
+        "Building %s #%u",
+        unit->type().c_str(),
+        unit->id());
     ImGui::Spacing();
 
     auto const cityIt = simulation.cities().find(state.selection.city);
@@ -678,6 +684,24 @@ void InspectorPanel::drawUnit(Simulation& simulation,
     {
         field("city", "%s", state.selection.city.c_str());
         field("cell", "(%d, %d)", unit->mapU(), unit->mapV());
+
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::TextUnformatted("status");
+        ImGui::TableNextColumn();
+        ImGui::TextColored(
+            ImGui::ColorConvertU32ToFloat4(opening.open ? theme::SUCCESS
+                                                         : theme::FAILURE),
+            "%s",
+            opening.text.c_str());
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip(
+                "Derived from the 'hour between' conditions of its rules.\n"
+                "It is %02uh00 in the city.",
+                hour);
+        }
+
         field("map radius", "%u", unit->mapRadius());
         field("zone", "%s", zones.empty() ? "outside any zone" : zones.c_str());
         if (unit->node() != nullptr)

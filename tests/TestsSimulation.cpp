@@ -26,8 +26,10 @@ TEST(TestsSimulation, TimeControl)
     Simulation sim(4u, 4u, config);
 
     ASSERT_EQ(sim.totalTicks(), 0u);
-    ASSERT_EQ(sim.paused(), false);
+    ASSERT_EQ(sim.paused(), true);
     ASSERT_EQ(sim.timeScale(), 1.0f);
+
+    sim.setPaused(false);
 
     // One tick lasts 100 ms: 250 ms is worth two ticks and leaves 50 ms.
     sim.update(0.25f);

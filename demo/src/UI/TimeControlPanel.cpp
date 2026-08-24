@@ -4,21 +4,22 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+#include "OpenGlassBox/Simulation.hpp"
 #include "UI/Panels.hpp"
 #include "UI/Theme.hpp"
-#include "OpenGlassBox/Simulation.hpp"
 #include <algorithm>
 
-namespace ogb {
-namespace ui {
+namespace ogb
+{
+namespace ui
+{
 using namespace ogb::theme;
 
-
 //! \brief Speeds offered as one-click buttons.
-static float const SPEEDS[] = { 0.25f, 0.5f, 1.0f, 2.0f, 4.0f, 8.0f, 16.0f,
-                                32.0f };
-static char const* const SPEED_LABELS[] = { "x0.25", "x0.5", "x1", "x2",
-                                            "x4", "x8", "x16", "x32" };
+static float const SPEEDS[] = { 0.25f, 0.5f, 1.0f,  2.0f,
+                                4.0f,  8.0f, 16.0f, 32.0f };
+static char const* const SPEED_LABELS[] = { "x0.25", "x0.5", "x1",  "x2",
+                                            "x4",    "x8",   "x16", "x32" };
 
 // ----------------------------------------------------------------------------
 uint32_t TimeControlPanel::takePendingSteps()
@@ -48,8 +49,8 @@ void TimeControlPanel::drawTimeOfDay(Simulation& simulation)
     bool edited = ImGui::DragInt("##hour", &m_hour, 0.1f, 0, 23, "%02dh");
     ImGui::SameLine();
     ImGui::SetNextItemWidth(60.0f);
-    edited = ImGui::DragInt("##minute", &m_minute, 0.5f, 0, 59, "%02dm") ||
-             edited;
+    edited =
+        ImGui::DragInt("##minute", &m_minute, 0.5f, 0, 59, "%02dm") || edited;
     m_editing_time = edited || ImGui::IsItemActive();
 
     ImGui::SameLine();
@@ -86,7 +87,8 @@ void TimeControlPanel::draw(Simulation& simulation)
     drawTimeOfDay(simulation);
 
     bool const paused = simulation.paused();
-    ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+    ImGui::PushStyleColor(ImGuiCol_Text,
+                          ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
     ImGui::TextWrapped("%s. Play and Pause sit at the top of the map toolbar.",
                        paused ? "Paused" : "Running");
     ImGui::PopStyleColor();
@@ -126,7 +128,8 @@ void TimeControlPanel::draw(Simulation& simulation)
     ImGui::SeparatorText("Speed");
 
     float const scale = simulation.timeScale();
-    float const right = ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
+    float const right =
+        ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
     for (size_t i = 0u; i < IM_ARRAYSIZE(SPEEDS); ++i)
     {
         if (i != 0u)
@@ -144,8 +147,8 @@ void TimeControlPanel::draw(Simulation& simulation)
         bool const active = (scale == SPEEDS[i]);
         if (active)
         {
-            ImGui::PushStyleColor(ImGuiCol_Button,
-                                  ImGui::ColorConvertU32ToFloat4(theme::ACCENT));
+            ImGui::PushStyleColor(
+                ImGuiCol_Button, ImGui::ColorConvertU32ToFloat4(theme::ACCENT));
         }
         if (ImGui::Button(SPEED_LABELS[i]))
         {
@@ -157,12 +160,31 @@ void TimeControlPanel::draw(Simulation& simulation)
         }
     }
 
+    ImGui::SameLine();
+    if (!paused)
+    {
+        ImGui::PushStyleColor(ImGuiCol_Button,
+                              ImGui::ColorConvertU32ToFloat4(theme::SUCCESS));
+    }
+    if (ImGui::Button(paused ? "Play" : "Pause"))
+    {
+        simulation.setPaused(!paused);
+    }
+    if (!paused)
+    {
+        ImGui::PopStyleColor();
+    }
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("Pause or resume the simulation. Shortcut: space.");
+    }
+
     ImGui::SeparatorText("Tick rate");
 
     float ticksPerSecond = simulation.config().ticksPerSecond;
     ImGui::SetNextItemWidth(-140.0f);
-    if (ImGui::SliderFloat("ticks per second", &ticksPerSecond, 1.0f, 120.0f,
-                           "%.0f"))
+    if (ImGui::SliderFloat(
+            "ticks per second", &ticksPerSecond, 1.0f, 120.0f, "%.0f"))
     {
         simulation.config().ticksPerSecond = ticksPerSecond;
     }

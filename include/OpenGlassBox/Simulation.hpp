@@ -311,7 +311,7 @@ private:
     //! \brief How much game time passes per second of wall time.
     float m_timeScale = 1.0f;
     //! \brief While true, update() does nothing at all.
-    bool m_paused = false;
+    bool m_paused = true;
     //! \brief How many ticks have been run since the beginning.
     uint64_t m_totalTicks = 0u;
     //! \brief Who to tell when a town is founded or dropped, or nullptr when

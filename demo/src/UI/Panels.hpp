@@ -7,25 +7,32 @@
 //! \file Panels.hpp
 //! \brief Dockable debug panels: layers, inspector, charts, traffic and time.
 
-
 #ifndef OPEN_GLASSBOX_DEMO_PANELS_HPP
-#  define OPEN_GLASSBOX_DEMO_PANELS_HPP
+#define OPEN_GLASSBOX_DEMO_PANELS_HPP
 
-#  include "Host/OpenGL.hpp"
-#  include "Game/DebugState.hpp"
-#  include "Game/TimeSeries.hpp"
-#  include "OpenGlassBox/Simulation.hpp"
+#include "Game/DebugState.hpp"
+#include "Game/TimeSeries.hpp"
+#include "Host/OpenGL.hpp"
+#include "OpenGlassBox/Simulation.hpp"
 
-#  include <map>
-#  include <memory>
-#  include <string>
-#  include <vector>
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
-namespace ogb {
-namespace game { class RuleTrace; }
-namespace editor { class Editor; }
+namespace ogb
+{
+namespace game
+{
+class RuleTrace;
+}
+namespace editor
+{
+class Editor;
+}
 
-namespace ui {
+namespace ui
+{
 class CityViewer;
 
 // ****************************************************************************
@@ -71,7 +78,8 @@ public:
     //! \brief One map per row, the controls of every row aligned in columns.
     //! \param[in] width: width in pixels of the column of rows.
     // ------------------------------------------------------------------------
-    void drawColumn(Simulation& simulation, game::DebugState& state, float width);
+    void
+    drawColumn(Simulation& simulation, game::DebugState& state, float width);
 };
 
 // ****************************************************************************
@@ -86,11 +94,14 @@ class InspectorPanel
 {
 public:
 
-    void draw(Simulation& simulation, game::DebugState& state, game::RuleTrace const& trace);
+    void draw(Simulation& simulation,
+              game::DebugState& state,
+              game::RuleTrace const& trace);
 
 private:
 
-    void drawUnit(Simulation& simulation, game::DebugState& state,
+    void drawUnit(Simulation& simulation,
+                  game::DebugState& state,
                   game::RuleTrace const& trace);
     void drawAgent(Simulation& simulation, game::DebugState& state);
     void drawNode(game::DebugState& state);
@@ -148,8 +159,10 @@ public:
         bool restampSave = false;
     };
 
-    void draw(std::string& text, std::string const& status,
-              Checksum const& checksum, bool& ignoreMismatch,
+    void draw(std::string& text,
+              std::string const& status,
+              Checksum const& checksum,
+              bool& ignoreMismatch,
               Actions& actions);
 };
 
@@ -164,7 +177,9 @@ class RuleLogPanel
 {
 public:
 
-    void draw(Simulation& simulation, game::DebugState& state, game::RuleTrace& trace);
+    void draw(Simulation& simulation,
+              game::DebugState& state,
+              game::RuleTrace& trace);
 
 private:
 
