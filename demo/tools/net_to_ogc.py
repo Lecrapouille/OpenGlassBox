@@ -102,7 +102,7 @@ def write_ogc(
 
     out_path.write_text("\n".join(lines), encoding="utf-8")
     print(
-        f"Wrote {out_path} — {len(xs)} nodes, {len(tails)} ways, "
+        f"Wrote {out_path} : {len(xs)} nodes, {len(tails)} ways, "
         f"grid {size_u}x{size_v}"
     )
 

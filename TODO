@@ -1,7 +1,12 @@
 Mettre dans inspecteur en rouge vert si c'est ouvert + rendom horaire ouverture
 area: il semble que ca depasse une case.
 
+Mettre la simulation en pause. Ajouter le bouton play a cote des vitesses.
+
+gerer plusieurs villes
+
 Nettoyage code:
+
 - reprendre les commentaires des classes et donner un exemple de comment les dfinir dans un script.
 - mettre commentaire Doxygen des methodes
 - Virer Unit(UnitType const& type, Vector3f const& position, City& city);
@@ -9,8 +14,8 @@ Nettoyage code:
 - classe Agent: trop grosse: la decouper en plusieurs classes (private ?)
 - /home/qq/MyGithub/OpenGlassBox/include/OpenGlassBox/RuleCommand.hpp supprimer virtual
 
-
 A FAIRE:
+
 - Afficher les ressources: Richesse ?
 - Zoom des plots
 - On ne peut pas relier les villes entre elles ?
@@ -27,8 +32,6 @@ manquer bulldoze pour creer des zones vides
 Quand on croise deux routes ca ne cree pas de carrefour
 Zone Commercial ne cree pas de shop ni de work ==> test_city.ogs
 
-
-
 Ok regarde il y a plusieurs bugs. qq2.ogc et qq.ogc sont des fichiers enregistrés l'un avec 1 zone Residential et l'autres avec 2 zones Residential.
 Quen je les charge, les agents ne sortent jamais de chez eux. Quand j'avais construit qq.ogc, les gens vont vers Work mais j'ai eu 5 types de souci ensuite:
 
@@ -44,9 +47,6 @@ Mon impothese est qu'il y a un souci avec les index des noeuds. Que peut etre qu
 Concernant les regles de Desirability: ameliore car c'est beaucoup trop rapide, en quelques heures ca se construit et se detruit, regle pour que ca se compte en jours. Il manque le reglage de l'heure de depart de la simulation, ca nous fait attendre longtemps avant que les agents sortent. Ajoute un bouton "x32" apres "x16".
 
 Regle ces soucis par ordre croissant de difficultés et allant du plus deterministe au plus aleatoire à tester.
-
-
-
 
 Ok ameliore un peu les regles de Desirability car c'est beaucoup trop rapide, en quelques heures ca se construit et se detruit, regle pour que ca se compte en jours.
 Il y a toujours le bug ou deux groupe d'agents vont vers la meme maison. le premier groupe entre puis quand le deuxieme arrive les agents se teleportent vers le noeud avant la maison.
