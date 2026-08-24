@@ -1,4 +1,29 @@
-# `.ogs` language reference
+# Scripts and the `.ogs` language
+
+**Scripts are the heart of OpenGlassBox.** The C++ engine is a host: it advances time, routes agents, and executes rules. The **gameplay lives in `.ogs` files**. Change a script and you change the game—new building types, resources, traffic behaviour, zone growth—without recompiling the engine.
+
+That is the idea behind GlassBox (Willmott, GDC 2012): a city simulation can be **data** rather than a tree of objects with an `Update()` method. OpenGlassBox adds **Areas** (RCI zones) on top of the original MultiAgentSimulation model. For most users and contributors, the scripts are the most important part of the project; the demo is only one way to edit and watch them run.
+
+A ruleset combines five concepts, connected by **rules**:
+
+| Concept | Role |
+| ------- | ---- |
+| **Maps** | 2D fields (water, pollution, desirability, …). |
+| **Units** | Buildings with bounded resource stocks. |
+| **Agents** | Travellers that carry resources between units. |
+| **Paths** | Road (or rail) networks made of nodes and segments. |
+| **Areas** | Zones whose rules spawn, upgrade, and remove buildings. |
+
+Rules are atomic: every command in a rule must validate before any command runs. Buildings use `unitRule`, map layers use `mapRule`, and zones use `areaRule`.
+
+Two file formats exist:
+
+- **`.ogs`**: the ruleset: resources, types, and rules.
+- **`.ogc`**: a city save: geometry and live state, tied to the ruleset it was created with.
+
+The [bundled simulations](../demo/data/Simulations/README.md) include ready-made examples; start with `test_city.ogs`.
+
+## `.ogs` language reference
 
 An `.ogs` file consists of named blocks closed by `end`. A `#` starts a comment, identifiers are bare words, and block order does not matter.
 
@@ -60,7 +85,7 @@ units
 end
 ```
 
-Units are buildings. `caps` sets local resource capacities, `resources` sets initial amounts, and `targets` lists the names agents can use to find the building. A unit is **not** a graph node: it may be anchored to a segment or node, or stand freely in the world.
+Units are buildings. `caps` sets local resource capacities, `resources` sets initial amounts, and `targets` lists the names agents use to find the building. A unit is **not** a graph node: it may be anchored to a segment or node, or stand freely in the world.
 
 ### `areas`
 
@@ -97,7 +122,7 @@ rules
 end
 ```
 
-Every command in a rule must validate before any command is executed. If one refuses, the whole rule is skipped for that tick, so rules are atomic.
+Every command in a rule must validate before any command is executed. If one refuses, the whole rule is skipped for that tick.
 
 - `mapRule` uses map commands and can select cells with `randomTilesPercent`.
 - `unitRule` uses `local`, `global`, `map`, `agent Type to Target add [ Res N ]`, and `hour between A B`.
@@ -136,3 +161,7 @@ end
 ```
 
 The header is followed by the clock, `city Name size U V`, globals, paths, nodes, segments, units, areas, map cells, and agents. Traffic flow is also saved so a loaded city does not treat every road as empty.
+
+A save identifies the ruleset it was created with. Loading fails if a required type is missing or the ruleset hash differs. During ruleset development, the demo can open saves with a stale checksum; required types must still exist.
+
+See [engine documentation](engine.md#saving-citysave) for how the loader uses the fingerprint.

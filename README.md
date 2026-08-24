@@ -4,28 +4,33 @@
 
 OpenGlassBox is an independent project: neither OpenGlassBox nor MultiAgentSimulation contains Maxis source code or is affiliated with Maxis.
 
-The OpenGlassBox project provides:
+The project provides:
 
 - static and shared libraries containing the simulation engine;
-- a standalone "SimCity-like" 2D demo built using the simulation engine.
+- a standalone SimCity-like 2D demo built on top of that engine.
 
 The engine does not depend on the demo renderer, so it can be embedded in another application or connected to a different rendering engine. **Note: I am also looking for a game developer or an artist able to turn this library into a real game.**
 
-Differences with MultiAgentSimulation:
+## Documentation
+
+| Document | Contents |
+| -------- | -------- |
+| [Integration guide](doc/integration.md) | Link the library and drive a simulation from your own code. |
+| [Demo application](doc/demo.md) | Tools, panels, and keyboard shortcuts. |
+| [Engine](doc/engine.md) | Classes, tick order, traffic model. |
+| [Scripts](doc/script.md) | The `.ogs` language: the core of the project. |
+| [Improvements](doc/improvements.md) | Changes over MultiAgentSimulation. |
+| [Bundled simulations](demo/data/Simulations/README.md) | Sample rulesets and the `test_city` walkthrough. |
+
+## Differences from MultiAgentSimulation
 
 - The original project uses C# for Unity. This is C++14, with no game engine underneath.
-- The simulation is a library that knows nothing about drawing, and the demo is a separate program on top of it, so you can plug in your own renderer.
-- The original reused the names of the GDC talk. The ones I found confusing were renamed:
-  - `Box` became `City`,
-  - `Point` and `Segment` became `Node` and `Way` (the vocabulary of graph theory),
-  - `ResourceBinCollection` became `Resources`,
-  - `SimulationDefinitionLoader` became `ScriptParser`.
-  - I kept the term `Unit`, which means `Building` (but more generic).
-  - Some classes have been added: `Area` (a.k.a. `Zone`).
-- The original project had neither unit tests nor comments. This project has both: every header carries its documentation and a small example, and the test suite covers the engine down to individual rule commands.
-- Some parts of the code have been optimized from the original project.
+- The simulation is a library that knows nothing about drawing; the demo is a separate program on top of it.
+- Confusing names from the GDC talk were renamed: `Box` → `City`, `Point`/`Segment` → `Node`/`Way`, `ResourceBinCollection` → `Resources`, `SimulationDefinitionLoader` → `ScriptParser`. The term `Unit` was kept (it means building). New classes include `Area` (zone).
+- The original project had neither unit tests nor comments. This one has both.
+- Several parts of the code were optimized for larger cities.
 
-See [this document](doc/improvements.md) for more information.
+See [improvements](doc/improvements.md) for details.
 
 ## Installing system packages
 
@@ -33,14 +38,14 @@ See [this document](doc/improvements.md) for more information.
 
 - **Operating systems**: Linux, macOS. Should compile on Windows as well.
 - **Build tools**: C++14 compiler (`g++` or `clang++`), GNU Make, Git. C++14 is required for `std::make_unique`; otherwise, the code is largely C++11-compatible.
-- **Debug library** (debug builds only): [backward-cpp](https://github.com/bombela/backward-cpp) : automatically downloaded and built by the Makefile (not installed system-wide).
-- **Unit tests** (optional, for developers): [Google Test](https://github.com/google/googletest) (must be downloaded, built, and installed manually), plus coverage tools (see below).
+- **Debug library** (debug builds only): [backward-cpp](https://github.com/bombela/backward-cpp): automatically downloaded and built by the Makefile (not installed system-wide).
+- **Unit tests** (optional): [Google Test](https://github.com/google/googletest) (must be downloaded, built, and installed manually), plus coverage tools (see below).
 - **Makefile helper** [MyMakefile](https://github.com/Lecrapouille/MyMakefile): automatically fetched when cloning with `--recursive`.
 
-GLFW and Dear ImGui were chosen for the demo simply because they were the quickest way to see the simulation run, so feel free to plug in your own rendering engine instead.
+GLFW and Dear ImGui were chosen for the demo because they were the quickest way to see the simulation run; feel free to plug in your own renderer.
 
-- **Renderer libraries**: GLFW 3, GLEW and OpenGL 3.3 (must be installed on your system; only needed for the demo; see below).
-- **GUI libraries**: [Dear ImGui](https://github.com/ocornut/imgui) (docking), [ImPlot](https://github.com/epezent/implot) and [ImGuiFileDialog](https://github.com/aiekick/ImGuiFileDialog) : automatically downloaded and built by the Makefile (not installed system-wide; only needed for the demo).
+- **Renderer libraries**: GLFW 3, GLEW, and OpenGL 3.3 (system packages; demo only).
+- **GUI libraries**: [Dear ImGui](https://github.com/ocornut/imgui) (docking), [ImPlot](https://github.com/epezent/implot), and [ImGuiFileDialog](https://github.com/aiekick/ImGuiFileDialog): downloaded and built by the Makefile (demo only).
 
 ### Debian / Ubuntu
 
@@ -62,9 +67,9 @@ sudo dnf install gcc-c++ make git pkgconf-pkg-config glfw-devel glew-devel
 sudo dnf install elfutils-devel lcov cmake
 ```
 
-Note: `cmake` is only needed if you build and install Google Test from source (see the CI workflow for an example).
+`cmake` is only needed if you build and install Google Test from source (see the CI workflow for an example).
 
-## Download and compile OpenGlassBox
+## Download and compile
 
 Clone the repository recursively:
 
@@ -80,9 +85,9 @@ make download-external-libs
 make -j8
 ```
 
-A `build` folder shall have been created with executables and libraries. On macOS, a bundle application is also created inside the build folder.
+This creates a `build` folder with executables and libraries. On macOS, a bundle application is also created inside the build folder.
 
-Adjust `-j8` to the number of cores of your machine, and pick a compiler with `make CXX=clang++ -j8` if you prefer. Builds are optimized with debug symbols by default (`COMPILATION_MODE := normal` in `Makefile.common`). Use `make COMPILATION_MODE=debug -j8` to step through the code, and `make COMPILATION_MODE=release -j8` to ship. The mode matters: a map rule runs over every cell of a city, so the Chicago save with its three hundred thousand cells is an order of magnitude slower to simulate when compiled without optimisations.
+Adjust `-j8` to the number of cores on your machine, or pick a compiler with `make CXX=clang++ -j8`. Builds are optimized with debug symbols by default (`COMPILATION_MODE := normal` in `Makefile.common`). Use `make COMPILATION_MODE=debug -j8` to step through the code, and `make COMPILATION_MODE=release -j8` to ship. The mode matters: a map rule runs over every cell of a city, so the Chicago save with its three hundred thousand cells is an order of magnitude slower to simulate when compiled without optimizations.
 
 (Optional) Install OpenGlassBox on your system:
 
@@ -97,21 +102,20 @@ cd OpenGlassBox/tests
 make coverage -j8
 ```
 
-## How to integrate OpenGlassBox in your project?
+## Integrating OpenGlassBox into your project
 
-Here is a basic example on how to link your project against OpenGlassBox:
+The engine is meant to be linked from another application. A minimal workflow: parse a `.ogs` ruleset, create a city, attach a router, and call `simulation.update()` from your game loop.
+
+See the [integration guide](doc/integration.md) for pkg-config flags, a code example, and extension points. A working sample also lives in [LinkAgainstMyLibs](https://github.com/Lecrapouille/LinkAgainstMyLibs):
 
 ```sh
 git clone https://github.com/Lecrapouille/LinkAgainstMyLibs.git --recursive
-
 cd LinkAgainstMyLibs/OpenGlassBox
 make -j8
 ./build/OpenGlassBox
 ```
 
-TODO
-
-## OpenGlassBox demo application
+## Demo application
 
 Run the demo:
 
@@ -120,19 +124,17 @@ Run the demo:
 ./build/OpenGlassBox-demo demo/data/Simulations/chicago.ogc
 ```
 
-This screenshot may not match the current state of the code, and what you see also depends on the loaded ruleset.
+This screenshot may not match the current state of the code; what you see also depends on the loaded ruleset.
 
 ![OpenGlassBox](doc/OpenGlassBox.png)
 
-One window shows Chicago city. The simulation starts paused: press `Play` on the map toolbar or the space bar to start it. The `Simulation clock` panel steps it tick by tick while paused and changes the speed from `x0.25` to `x16`. Opening a ruleset (`.ogs`) starts from an empty city, while a city save (`.ogc`) holds the geometry, the live state and a hash of the ruleset it was made with. The `inspector` panel allow you to show information on any element of the game. The left panel allows you to edit your city.
+One window shows one city. The simulation starts paused: press **Play** on the map toolbar or the space bar to start it. The **Simulation clock** panel steps the simulation tick by tick while paused and changes the speed from x0.25 to x16. Opening a ruleset (`.ogs`) starts from an empty city; a city save (`.ogc`) holds geometry, live state, and a hash of the ruleset it was built with. The **Inspector** panel shows details about any selected element; the left toolbar lets you edit the city.
 
-(Work in progress) The demo includes several simulations. Their purpose, files, and `.ogs` language are documented in the [simulation file reference](demo/data/Simulations/README.md).
+The demo includes several bundled simulations, from the introductory `test_city` sandbox to traffic-focused road networks. See [bundled simulations](demo/data/Simulations/README.md) and [demo documentation](doc/demo.md).
 
-See [this document](doc/demo.md) for more information.
+## Simulation engine
 
-## The simulation engine, class by class
-
-The GlassBox approach describes a city simulation as data rather than as a tree of objects with an `Update()` method. OpenGlassBox models five kinds of data:
+The GlassBox approach describes a city simulation as data rather than as a tree of objects with an `Update()` method. OpenGlassBox models maps, units, agents, paths, areas, and the rules that connect them.
 
 - **Areas** are zones whose rules spawn, upgrade, and demolish buildings.
 - **Maps** are 2D fields over the grid, such as water, pollution, and desirability.
@@ -141,11 +143,14 @@ The GlassBox approach describes a city simulation as data rather than as a tree 
 - **Resources** are money, goods, happiness ...
 - **Paths** are networks on which agents travel.
 
-See [this document](doc/engine.md) for more information.
+See [engine documentation](doc/engine.md) for the class-by-class reference and the traffic model.
 
-## The script language reference
+## Scripts and rulesets
 
-The file format for storing a ruleset: is `.ogs`. The rule language, documented in the [simulation file reference](demo/data/Simulations/README.md);
+**Scripts are the most important part of the project.** Gameplay is defined in `.ogs` rulesets: resources, building types, agents, maps, zones, and the rules that move resources and grow cities. The C++ engine executes those rules; the demo is one host for editing and watching them.
+
+- [Script language reference](doc/script.md): syntax, commands, and save format.
+- [Bundled simulations](demo/data/Simulations/README.md): sample files and a worked `test_city` example.
 
 ## Future ideas
 
