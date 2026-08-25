@@ -27,7 +27,7 @@ include $(M)/rules/Makefile
 ###################################################
 # Extra rules
 #
-all:: build-demo
+post-build:: build-demo
 
 .PHONY: build-demo
 build-demo: $(TARGET_STATIC_LIB_NAME)
