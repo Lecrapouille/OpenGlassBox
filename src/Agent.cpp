@@ -194,6 +194,38 @@ Agent::Agent(uint32_t id,
 Agent::~Agent()
 {
     setCurrentWay(nullptr);
+    // Covers the deliveries, the give-ups and the Agents the City takes away
+    // when they end up stranded. A City destroys its Agents before its Units,
+    // so the building is still there to be told.
+    releaseDestination();
+}
+
+//------------------------------------------------------------------------------
+void Agent::claimDestination()
+{
+    if ((m_reservation != nullptr) || (m_route.destination == nullptr))
+        return;
+
+    m_reservation = m_route.destination;
+    m_reservation->reserve();
+}
+
+//------------------------------------------------------------------------------
+void Agent::releaseDestination()
+{
+    if (m_reservation == nullptr)
+        return;
+
+    m_reservation->release();
+    m_reservation = nullptr;
+}
+
+//------------------------------------------------------------------------------
+void Agent::setRoute(Route&& route)
+{
+    releaseDestination();
+    m_route = std::move(route);
+    claimDestination();
 }
 
 //------------------------------------------------------------------------------
@@ -238,13 +270,13 @@ void Agent::relocate(Vector3f const& position,
     m_offset = offset;
     m_lastNode = last;
     m_nextNode = last;
-    m_route = Route{};
+    setRoute(Route{});
 }
 
 //------------------------------------------------------------------------------
 void Agent::invalidateRoute()
 {
-    m_route = Route{};
+    setRoute(Route{});
     m_nextNode = nullptr;
     m_ticksOnRoute = 0u;
 }
@@ -285,6 +317,11 @@ void Agent::forget(Unit const& unit)
 {
     if (m_owner == &unit)
         m_owner = nullptr;
+
+    // City::removeUnit calls this while the building is still standing, which
+    // is the last moment a place held there can be given back.
+    if (m_reservation == &unit)
+        releaseDestination();
 
     // The itinerary named that building as its destination. Anyone reading the
     // route, the inspector for one, would be reading freed memory.
@@ -428,7 +465,7 @@ void Agent::maybeRecomputeRoute(IRouter& router, SimulationConfig const& config)
         return;
     }
 
-    m_route = std::move(candidate);
+    setRoute(std::move(candidate));
     m_ticksOnRoute = 0u;
 }
 
@@ -461,7 +498,7 @@ void Agent::computeRouteAlongWay(IRouter& router)
 
     if (std::isinf(costFrom) && std::isinf(costTo))
     {
-        m_route = Route();
+        setRoute(Route());
         return;
     }
 
@@ -470,12 +507,12 @@ void Agent::computeRouteAlongWay(IRouter& router)
     if (costTo < costFrom)
     {
         m_lastNode = &to;
-        m_route = std::move(byTo);
+        setRoute(std::move(byTo));
     }
     else
     {
         m_lastNode = &from;
-        m_route = std::move(byFrom);
+        setRoute(std::move(byFrom));
     }
 }
 
@@ -491,11 +528,11 @@ void Agent::computeRoute(IRouter& router)
     Node* from = routingNode();
     if (from == nullptr)
     {
-        m_route = Route();
+        setRoute(Route());
         return;
     }
 
-    m_route = router.findRoute(*from, m_searchTarget, m_resources);
+    setRoute(router.findRoute(*from, m_searchTarget, m_resources));
     m_ticksOnRoute = 0u;
 }
 
@@ -551,6 +588,26 @@ bool Agent::update(IRouter& router, float dt)
 
 //------------------------------------------------------------------------------
 bool Agent::update(IRouter& router, SimulationConfig const& config, float dt)
+{
+    // The claim is against the other Agents, not against oneself. Unit::accepts
+    // counts it in, so an Agent holding it through its own tick would find its
+    // own destination full: it would be refused at the door it was sent to, and
+    // every recomputation would send it somewhere else and back again.
+    releaseDestination();
+    bool const done = tick(router, config, dt);
+
+    // An Agent that has unloaded or given up is about to be taken away by the
+    // City, and has nowhere left to go. Taking the place back only to hand it
+    // over in the destructor would hide the building from everyone else for the
+    // rest of the tick.
+    if (!done)
+        claimDestination();
+
+    return done;
+}
+
+//------------------------------------------------------------------------------
+bool Agent::tick(IRouter& router, SimulationConfig const& config, float dt)
 {
     // Standing still: try to deliver, then decide where to go next. Driving:
     // just cover some ground. The two are exclusive, which is what keeps an

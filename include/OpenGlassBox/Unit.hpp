@@ -126,6 +126,11 @@ public:
 
     // -------------------------------------------------------------------------
     //! \brief Whether an Agent may end its trip here.
+    //!
+    //! The room counted is the stock plus the Agents already heading here, see
+    //! reserve(). Without that, twenty Agents routed on the same tick would all
+    //! see the same single free slot and all be sent to claim it.
+    //!
     //! \param[in] searchTarget what the Agent is looking for, matched against
     //! the \c targets of the script.
     //! \param[in] resourcesToTryToAdd what it carries. The building has to have
@@ -134,6 +139,40 @@ public:
     // -------------------------------------------------------------------------
     bool accepts(Name const& searchTarget,
                  Resources const& resourcesToTryToAdd);
+
+    // -------------------------------------------------------------------------
+    //! \brief Claim a place for an Agent that has just been routed here.
+    //!
+    //! Every reserve() has to be matched by exactly one release(), whether the
+    //! Agent delivers, gives up, changes its mind or is destroyed. A count that
+    //! never comes back down makes the building invisible to every Agent for
+    //! the rest of the game, which is worse than the crowding it prevents.
+    //! Agent::setRoute is the single place both are called from.
+    // -------------------------------------------------------------------------
+    inline void reserve()
+    {
+        ++m_inbound;
+    }
+
+    // -------------------------------------------------------------------------
+    //! \brief Give back a place claimed by reserve().
+    // -------------------------------------------------------------------------
+    inline void release()
+    {
+        if (m_inbound != 0u)
+            --m_inbound;
+    }
+
+    // -------------------------------------------------------------------------
+    //! \brief How many Agents are currently on their way here.
+    //!
+    //! Not saved: itineraries are recomputed on loading, so the counts rebuild
+    //! themselves. Exposed for the leak invariant the tests check.
+    // -------------------------------------------------------------------------
+    inline uint32_t inbound() const
+    {
+        return m_inbound;
+    }
 
     // -------------------------------------------------------------------------
     //! \brief What the building currently holds, and how much of each resource
@@ -369,6 +408,9 @@ private:
     RuleContext m_context;
     //! \brief Ticks counted, which is what makes the rules fall due.
     uint32_t m_ticks = 0u;
+    //! \brief How many Agents have been routed here and have not arrived yet.
+    //! See reserve().
+    uint32_t m_inbound = 0u;
 };
 
 //! \brief The buildings of a City, which owns them.

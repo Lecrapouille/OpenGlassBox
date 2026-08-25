@@ -220,7 +220,7 @@ bool Unit::accepts(Name const& searchTarget,
         m_type.targets.end())
         return false;
 
-    return m_resources.canAddSomeResources(resourcesToTryToAdd);
+    return m_resources.canAddSomeResources(resourcesToTryToAdd, m_inbound);
 }
 
 } // namespace ogb

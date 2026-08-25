@@ -220,6 +220,9 @@ private:
     int m_sample_period = 5;
     uint64_t m_last_sample_tick = 0u;
     bool m_first_sample = true;
+    //! \brief Whether the smoothed curve is drawn next to the raw one. On by
+    //! default: the raw curves are steps, and a trend is what the panel is for.
+    bool m_show_smoothed = true;
 };
 
 // ****************************************************************************

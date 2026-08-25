@@ -109,6 +109,13 @@ void ChartsPanel::draw(Simulation& simulation, game::DebugState& state)
     ImGui::SetNextItemWidth(160.0f);
     ImGui::SliderInt("sample every", &m_sample_period, 1, 60, "%d ticks");
     ImGui::SameLine();
+    ImGui::Checkbox("Trend", &m_show_smoothed);
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("Draw a moving average next to each raw curve.\n"
+                          "Reading aid only: the simulation never sees it.");
+    }
+    ImGui::SameLine();
     if (ImGui::Button("Clear history"))
     {
         clear();
@@ -141,6 +148,19 @@ void ChartsPanel::draw(Simulation& simulation, game::DebugState& state)
 
                 ImPlot::PlotLine(serie.name().c_str(), serie.hours(),
                                  serie.values(), int(serie.size()));
+
+                if (!m_show_smoothed)
+                    continue;
+
+                // Same colour as the curve it follows, so that the two read as
+                // one quantity rather than as two.
+                ImPlotSpec spec;
+                spec.LineColor = ImPlot::GetLastItemColor();
+                spec.LineWeight = 2.0f;
+
+                std::string const trend = serie.name() + " (trend)";
+                ImPlot::PlotLine(trend.c_str(), serie.hours(),
+                                 serie.smoothed(), int(serie.size()), spec);
             }
 
             ImPlot::EndPlot();

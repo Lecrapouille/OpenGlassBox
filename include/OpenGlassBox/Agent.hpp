@@ -376,6 +376,42 @@ private:
     bool arrivedAtDestination() const;
     bool giveUp();
 
+    // -------------------------------------------------------------------------
+    //! \brief The only way m_route is ever written.
+    //!
+    //! Going through one place is what keeps the claim on the destination
+    //! honest: it gives back the place held at the old building and takes one
+    //! at the new. An assignment that escaped it would leave a building
+    //! reserved for an Agent that is no longer coming, and a building whose
+    //! count never comes back down is invisible to every Agent for the rest of
+    //! the game.
+    //!
+    //! \param[in] route the new itinerary, or a default-built one to have none.
+    // -------------------------------------------------------------------------
+    void setRoute(Route&& route);
+
+    // -------------------------------------------------------------------------
+    //! \brief Take a place at the destination of the current itinerary, unless
+    //! one is held already or there is no destination.
+    // -------------------------------------------------------------------------
+    void claimDestination();
+
+    // -------------------------------------------------------------------------
+    //! \brief Give back the place held, if any. Safe to call twice.
+    // -------------------------------------------------------------------------
+    void releaseDestination();
+
+    // -------------------------------------------------------------------------
+    //! \brief The body of update(), which brackets it with the release and the
+    //! retaking of the claim.
+    //! \param[in] router the router of the City.
+    //! \param[in] config settings read for the giving up delay and the routing
+    //! intervals.
+    //! \param[in] dt seconds of game time in one tick.
+    //! \return true when the Agent is done.
+    // -------------------------------------------------------------------------
+    bool tick(IRouter& router, SimulationConfig const& config, float dt);
+
 private:
 
     //! \brief The building it left, and where the load goes back if nothing
@@ -397,8 +433,14 @@ private:
     //! Not owned.
     Node* m_nextNode = nullptr;
     //! \brief Cached itinerary. Recomputed periodically, and as soon as the
-    //! remaining cost drifts too far from the current shortest path.
+    //! remaining cost drifts too far from the current shortest path. Written
+    //! through setRoute() and nowhere else.
     Route m_route;
+    //! \brief The building a place is currently held at, or nullptr. The one
+    //! authority on whether a claim is outstanding: m_route.destination says
+    //! where the Agent is going, this says what has to be given back. Not
+    //! owned, and always cleared before the building is destroyed.
+    Unit* m_reservation = nullptr;
     //! \brief Ticks spent on the current itinerary, against
     //! SimulationConfig::pathRecalcTicks.
     uint32_t m_ticksOnRoute = 0u;

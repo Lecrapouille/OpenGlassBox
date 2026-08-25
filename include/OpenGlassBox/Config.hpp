@@ -106,6 +106,12 @@ struct SimulationConfig
     //! its load before it gives up, in ticks. Two game hours by default. Zero
     //! lets it roam for ever, which piles up Agents nothing will ever remove.
     uint32_t agentGiveUpTicks = 2400u;
+    //! \brief How many Agents Simulation::relativeGap() examines at most. That
+    //! diagnostic costs a whole graph search per Agent, so a large city would
+    //! spend more time measuring how settled it is than settling. The Agents
+    //! are picked at a regular stride over the population, which samples the
+    //! whole of it rather than the beginning. Zero means every Agent.
+    uint32_t relativeGapSamples = 256u;
 
     //--------------------------------------------------------------------------
     //! \brief Duration of a single simulation tick, in seconds of game time.

@@ -19,6 +19,8 @@ Files are handled through File → New city, Open ruleset (`.ogs`), Open city, a
 
 Simulation clock, Inspector, Rule Log, Charts, Traffic, History, and Script are dockable panels. The canvas shows `Jour N  HH:MM` in its top-left corner and tints the background through night, dawn, day, and dusk; the charts use game hours on the X axis.
 
-The **Traffic** panel is the one whose numbers need context. The smoothing weight, the route check period, and the cost deviation decide how quickly the network reacts and how often an agent reconsiders its itinerary, and the relative gap reports how far the city is from a state where nobody could find a cheaper route. All four are explained in the [traffic documentation](traffic.md).
+The **Traffic** panel is the one whose numbers need context. The smoothing weight, the route check period, and the cost deviation decide how quickly the network reacts and how often an agent reconsiders its itinerary, and the relative gap reports how far the city is from a state where nobody could find a cheaper route. All four are explained in the [traffic documentation](traffic.md). The gap is measured on a sample of the agents and refreshed once per tick rather than once per frame, since each agent examined costs a whole graph search; `SimulationConfig::relativeGapSamples` sets the size of that sample.
+
+The **Charts** panel draws every series twice: the raw samples, and a moving average of them under the **Trend** toggle. Population and money move in steps as a rule fires, and the average is there to make the direction readable. It is drawn and nothing more, the simulation never reads it.
 
 For the ruleset language itself, see the [script language reference](script.md).

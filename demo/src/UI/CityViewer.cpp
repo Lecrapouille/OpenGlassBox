@@ -706,14 +706,14 @@ void CityViewer::drawMaps(World& world, game::DebugState const& state)
                             break;
                         if (size < 22.0f)
                             break;
-                        std::string label = std::to_string(amount);
-                        std::snprintf(label, sizeof(label), "%u", amount);
-                        ImVec2 const textSize = ImGui::CalcTextSize(label);
+                        std::string const label = std::to_string(amount);
+                        ImVec2 const textSize =
+                            ImGui::CalcTextSize(label.c_str());
                         m_draw_list->AddText(
                             ImVec2(0.5f * (p0.x + p1.x) - 0.5f * textSize.x,
                                    0.5f * (p0.y + p1.y) - 0.5f * textSize.y),
                             theme::fromScript(map.color(), options.opacity),
-                            label);
+                            label.c_str());
                         break;
                     }
                 }
@@ -1202,12 +1202,15 @@ void CityViewer::drawDisplayToggles(game::DebugState& state) const
         bool* value;
     };
 
-    std::array<Toggle, 8> const toggles = {
-        { "Grid", &state.showGrid },     { "Paths", &state.showPaths },
-        { "Units", &state.showUnits },   { "Areas", &state.showAreas },
-        { "Agents", &state.showAgents }, { "Traffic", &state.showTraffic },
+    std::array<Toggle, 7> const toggles = { {
+        { "Grid", &state.showGrid },
+        { "Paths", &state.showPaths },
+        { "Units", &state.showUnits },
+        { "Areas", &state.showAreas },
+        { "Agents", &state.showAgents },
+        { "Traffic", &state.showTraffic },
         { "Labels", &state.showLabels },
-    };
+    } };
 
     float const right =
         ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;

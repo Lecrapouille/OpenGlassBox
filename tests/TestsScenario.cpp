@@ -256,6 +256,42 @@ TEST(TestsScenario, ADayInQqCity)
 }
 
 //------------------------------------------------------------------------------
+//! \brief The claims Agents hold on their destinations balance out.
+//!
+//! A building whose count never comes back down is invisible to every Agent for
+//! the rest of the game, which would be worse than the crowding the claims
+//! prevent. The invariant is exact: over a whole city, the claims outstanding
+//! are the Agents that have somewhere to go. A drift means an itinerary was
+//! written somewhere other than Agent::setRoute.
+TEST(TestsScenario, ClaimsOnDestinationsNeverLeak)
+{
+    Simulation simulation{ 32u, 32u };
+    City& city = openAtEightInTheMorning(simulation, "qq.ogc");
+
+    // Long enough for houses to grow, commutes to run, buildings to be
+    // demolished and Agents to give up: every way a trip can end.
+    for (uint32_t tick = 0u; tick < 4u * 60u * 20u; ++tick)
+    {
+        simulation.stepOneTick();
+
+        uint32_t claimed = 0u;
+        for (auto const& unit : city.units())
+            claimed += unit->inbound();
+
+        uint32_t bound = 0u;
+        for (auto const& agent : city.agents())
+        {
+            if (agent->route().destination != nullptr)
+                ++bound;
+        }
+
+        ASSERT_EQ(claimed, bound)
+            << "at tick " << tick << ": " << claimed << " places held for "
+            << bound << " Agents with somewhere to go";
+    }
+}
+
+//------------------------------------------------------------------------------
 //! \brief The slow variables have to be slow. Desirability used to move every
 //! ten ticks, half a game minute, so a district was built and abandoned within
 //! the hour; and pollution grew faster than it faded, saturated its cap and

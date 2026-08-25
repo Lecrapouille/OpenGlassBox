@@ -56,16 +56,36 @@ void Simulation::update(float const deltaTime)
 //------------------------------------------------------------------------------
 float Simulation::relativeGap() const
 {
+    // A panel reads this on every frame while the simulation advances twenty
+    // times a second, and the answer cannot change between two ticks. Nothing
+    // below runs again until the world has actually moved.
+    if (m_relativeGapTick == m_totalTicks)
+        return m_relativeGap;
+
     float tstt = 0.0f;
     float sptt = 0.0f;
+
+    uint32_t const budget = config().relativeGapSamples;
 
     for (auto const& cityIt : m_world.cities())
     {
         City const& city = *cityIt.second;
-        for (auto const& agent : city.agents())
+        auto const& agents = city.agents();
+
+        // Walking one Agent in every stride samples the whole population
+        // instead of whichever end of the vector the loop starts at. Both
+        // sums are scaled the same way, and the gap being their ratio, the
+        // estimate needs no correction factor.
+        size_t stride = 1u;
+        if ((budget != 0u) && (agents.size() > size_t(budget)))
         {
-            float const remaining = agent->remainingCost();
-            tstt += remaining;
+            stride = agents.size() / size_t(budget);
+        }
+
+        for (size_t i = 0u; i < agents.size(); i += stride)
+        {
+            auto const& agent = agents[i];
+            tstt += agent->remainingCost();
 
             Node* from = agent->lastNode();
             if (from == nullptr)
@@ -79,10 +99,17 @@ float Simulation::relativeGap() const
         }
     }
 
-    if (tstt <= 1e-6f)
-        return 0.0f;
-    float const gap = (tstt - sptt) / tstt;
-    return (gap < 0.0f) ? 0.0f : gap;
+    float gap = 0.0f;
+    if (tstt > 1e-6f)
+    {
+        gap = (tstt - sptt) / tstt;
+        if (gap < 0.0f)
+            gap = 0.0f;
+    }
+
+    m_relativeGap = gap;
+    m_relativeGapTick = m_totalTicks;
+    return gap;
 }
 
 //------------------------------------------------------------------------------

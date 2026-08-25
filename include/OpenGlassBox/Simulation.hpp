@@ -14,6 +14,8 @@
 #include "OpenGlassBox/ScriptParser.hpp"
 #include "OpenGlassBox/World.hpp"
 
+#include <limits>
+
 namespace ogb
 {
 
@@ -243,6 +245,12 @@ public:
     //! equilibrium; a large value means the traffic is still settling. Borrowed
     //! from the Relgap of the method of successive averages of CiudadSim.
     //!
+    //! Costs a whole graph search per Agent examined, so it is a diagnostic
+    //! rather than something to call from the simulation itself. Two things
+    //! keep it affordable when a panel reads it on every frame: the result is
+    //! memoized until the next tick, and at most
+    //! SimulationConfig::relativeGapSamples Agents are examined.
+    //!
     //! \return the gap, or zero when nobody is on the road.
     // -------------------------------------------------------------------------
     float relativeGap() const;
@@ -314,6 +322,12 @@ private:
     bool m_paused = true;
     //! \brief How many ticks have been run since the beginning.
     uint64_t m_totalTicks = 0u;
+    //! \brief Last value returned by relativeGap(), and the tick it was
+    //! computed at. Mutable because the memoization has to happen inside a
+    //! const method. The sentinel tick is one no run ever reaches, so the
+    //! first call always computes.
+    mutable float m_relativeGap = 0.0f;
+    mutable uint64_t m_relativeGapTick = std::numeric_limits<uint64_t>::max();
     //! \brief Who to tell when a town is founded or dropped, or nullptr when
     //! nobody is listening. Not owned.
     Simulation::Listener* m_listener;

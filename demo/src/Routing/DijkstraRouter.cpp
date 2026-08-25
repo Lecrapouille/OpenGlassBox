@@ -155,8 +155,6 @@ Route Dijkstra::findRoute(Node& fromNode,
 
     beginSearch(scope->nodeCount());
 
-    float const maxSpeed = scope->maxFreeFlowSpeed();
-
     setScore(fromNode.index(), 0.0f, nullptr);
     m_open.push_back({ 0.0f, 0.0f, &fromNode });
     std::push_heap(m_open.begin(), m_open.end(), std::greater<QueueEntry>());
@@ -236,15 +234,9 @@ Route Dijkstra::findRoute(Node& fromNode,
                 (tentativeG >= m_scoreFromStart[neighborIndex]))
                 continue;
 
-            // Reopens the neighbour, which is the point: the heuristic is not
-            // admissible, so a crossroads already expanded may still turn out
-            // to be reachable more cheaply.
             setScore(neighborIndex, tentativeG, currentNode);
 
-            m_open.push_back(
-                { tentativeG + heuristic(*neighbor, fromNode, maxSpeed),
-                  tentativeG,
-                  neighbor });
+            m_open.push_back({ tentativeG, tentativeG, neighbor });
             std::push_heap(
                 m_open.begin(), m_open.end(), std::greater<QueueEntry>());
         }
@@ -273,14 +265,6 @@ float Dijkstra::shortestPathCost(Node& fromNode,
 {
     Route const route = findRoute(fromNode, searchTarget, resources);
     return route.found ? route.cost : std::numeric_limits<float>::infinity();
-}
-
-//------------------------------------------------------------------------------
-float Dijkstra::heuristic(Node const& p1,
-                          Node const& p2,
-                          float maxFreeFlowSpeed) const
-{
-    return magnitude(p2.position() - p1.position()) / maxFreeFlowSpeed;
 }
 
 } // namespace ogb

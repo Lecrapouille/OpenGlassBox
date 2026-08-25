@@ -37,13 +37,11 @@ namespace ogb
 //!   winner: the search keeps it and carries on, because a crossroads one hop
 //!   away may hold a cheaper one.
 //!
-//! Having no goal also means there is nothing for an A* estimate to aim at.
-//! What is added to the cost of a node is the free flow travel time back to the
-//! Node the search started from, which biases the order of exploration towards
-//! the neighbourhood of the departure, where the nearest destination usually
-//! is. It is a speed-up, not an admissible heuristic: the answer is the
-//! cheapest building the search met first, which in an unusual geometry may not
-//! be the cheapest one there is.
+//! Having no goal is also why this is a Dijkstra and not an A*: an estimate
+//! needs a target to estimate the distance to. Stopping as soon as every
+//! crossroads still reachable is dearer than the best building already in hand
+//! is the best that can be done without one, and it is optimal: the search
+//! expands exactly the ball of radius the cost of its own answer.
 //!
 //! The search never leaves the Path it started on, so a road network and a rail
 //! network cannot be mixed in one trip. A crossroads belonging to no Path at
@@ -99,7 +97,9 @@ private:
     //==========================================================================
     struct QueueEntry
     {
-        //! \brief Total score the queue is ordered by: \c g plus the heuristic.
+        //! \brief Score the heap is ordered by. Equal to \c g in a plain
+        //! Dijkstra; the two are kept apart as the seam where a router with a
+        //! goal to aim at would add its estimate.
         float f;
         //! \brief Travel time from the start to \c node.
         float g;
@@ -121,20 +121,6 @@ private:
             return g > other.g;
         }
     };
-
-    // -------------------------------------------------------------------------
-    //! \brief Tie-breaking estimate added to the cost from the start.
-    //!
-    //! Not admissible: it biases exploration towards the neighbourhood of the
-    //! departure rather than guaranteeing the globally cheapest destination.
-    //! \param[in] p1 the node being scored.
-    //! \param[in] p2 the crossroads the search started from.
-    //! \param[in] maxFreeFlowSpeed free-flow speed of the Path being searched.
-    //! \return the estimated extra cost in seconds of game time.
-    // -------------------------------------------------------------------------
-    float heuristic(Node const& p1,
-                    Node const& p2,
-                    float maxFreeFlowSpeed) const;
 
     // -------------------------------------------------------------------------
     //! \brief Turn the predecessor map built by findRoute() into a Route.
@@ -173,8 +159,11 @@ private:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief Record a cheaper way of reaching a crossroads, which also reopens
-    //! it: a shorter road to it may open a shorter road to its neighbours.
+    //! \brief Record a cheaper way of reaching a crossroads.
+    //!
+    //! Also clears its closed flag. That never fires in practice, an expanded
+    //! crossroads being unimprovable once the queue is ordered by cost alone,
+    //! but it keeps the two arrays consistent for anyone reading them.
     //! \param[in] index rank of the crossroads.
     //! \param[in] score travel time from the start of the search.
     //! \param[in] from the crossroads it is reached from, or nullptr for the
@@ -218,9 +207,6 @@ private:
     //! used for security; reproducibility goes through setRandomSeed().
     std::mt19937 m_rng; // NOSONAR cpp:S2245
 };
-
-//! \brief Kept for the callers written when the search had a goal to aim at.
-using AStarRouter = Dijkstra;
 
 } // namespace ogb
 

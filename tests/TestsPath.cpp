@@ -506,9 +506,9 @@ TEST(TestsPath, RemoveWayLowersTheMaxFreeFlowSpeed)
     Way& highway = p.addWay(fast, n2, n3);
     ASSERT_EQ(p.maxFreeFlowSpeed(), 100.0f);
 
-    // The router turns a distance into a lower bound of a travel time by
-    // dividing by this speed, so a stale value would break the admissibility of
-    // the heuristic.
+    // Demolishing the fastest segment has to bring the cache back down: a
+    // router turning a distance into a lower bound of a travel time divides by
+    // this speed, and a stale value would make that bound unsound.
     p.removeWay(highway);
     ASSERT_EQ(p.maxFreeFlowSpeed(), 10.0f);
 }

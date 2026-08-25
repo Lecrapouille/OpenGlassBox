@@ -129,9 +129,13 @@ public:
     //! and recipient shall not be full.
     //!
     //! \param[in] resourcesToTryAdd: what resources and what amount to add.
+    //! \param[in] reserved: how many units of every resource are already
+    //! spoken for by something on its way here, and must therefore be counted
+    //! as if they had arrived. Zero asks the plain question.
     //! \return true if it possible to add at least one resource, else false.
     // -------------------------------------------------------------------------
-    bool canAddSomeResources(Resources const& resourcesToTryAdd);
+    bool canAddSomeResources(Resources const& resourcesToTryAdd,
+                             uint32_t reserved = 0u);
 
     // -------------------------------------------------------------------------
     //! \brief Transfer all resources to the recipient. For each resource the

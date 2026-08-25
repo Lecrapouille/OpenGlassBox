@@ -420,6 +420,225 @@ TEST(TestsAgent, ForgetsADestroyedDestination)
     ASSERT_NO_THROW(city.update(dt));
 }
 
+//------------------------------------------------------------------------------
+//! \brief An Agent that has been routed somewhere holds a place there, and that
+//! place comes back whichever way the trip ends. A count that never comes back
+//! down would make the building invisible to everyone for the rest of the game.
+TEST(TestsAgent, ClaimsAndGivesBackAPlaceAtItsDestination)
+{
+    TestWorld cityWorld("Paris", 32u, 32u);
+    City& city = cityWorld.city;
+    Path& path = city.addPath(keep<PathType>("Road"));
+    Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
+    Node& n2 = path.addNode(Vector3f(60.0f, 0.0f, 0.0f));
+    Way& way = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
+
+    UnitType workType("Work");
+    workType.targets.emplace_back("Work");
+    Unit& work = city.addUnit(workType, path, way, 0.9f);
+
+    UnitType homeType("Home");
+    homeType.targets.emplace_back("Home");
+    homeType.resources.setCapacity("People", 4u);
+    Unit& home = city.addUnit(homeType, path, way, 0.1f);
+
+    AgentType people("People", 10.0f, 3u, 42u);
+    Resources carried;
+    carried.addResource("People", 1u);
+    float const dt = 1.0f / config::DEFAULT_TICKS_PER_SECOND;
+
+    {
+        Agent agent(1u, people, work, carried, "Home");
+        ASSERT_EQ(home.inbound(), 0u) << "claimed before being routed";
+
+        ASSERT_FALSE(agent.update(city.router(), dt));
+        ASSERT_EQ(agent.route().destination, &home);
+        ASSERT_EQ(home.inbound(), 1u) << "routed without claiming";
+        ASSERT_EQ(agent.m_reservation, &home);
+
+        // Losing the itinerary hands the place straight back, rather than
+        // holding it for the two game hours it takes to give up.
+        agent.invalidateRoute();
+        ASSERT_EQ(home.inbound(), 0u) << "kept the place while wandering";
+
+        // Routed again, and this time driven to the door.
+        ASSERT_GT(driveUntilDelivered(agent, city, dt, 4000u), 0u);
+        ASSERT_EQ(home.resources().getAmount("People"), 1u);
+        ASSERT_EQ(home.inbound(), 0u) << "kept the place after delivering";
+    }
+
+    // And once more, destroyed halfway through: the destructor is the last
+    // line of defence, and the one that covers an Agent the City takes away.
+    {
+        Agent agent(2u, people, work, carried, "Home");
+        ASSERT_FALSE(agent.update(city.router(), dt));
+        ASSERT_EQ(home.inbound(), 1u);
+    }
+    ASSERT_EQ(home.inbound(), 0u) << "the place died with the Agent";
+}
+
+//------------------------------------------------------------------------------
+//! \brief An Agent that gives up because nothing will have it must not leave a
+//! claim behind either.
+TEST(TestsAgent, GivingUpGivesThePlaceBack)
+{
+    SimulationConfig config;
+    config.agentGiveUpTicks = 100u;
+    TestWorld cityWorld("Paris", 32u, 32u, Vector3f(0.0f, 0.0f, 0.0f), config);
+    City& city = cityWorld.city;
+    Path& path = city.addPath(keep<PathType>("Road"));
+    Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
+    Node& n2 = path.addNode(Vector3f(60.0f, 0.0f, 0.0f));
+    Way& way = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
+
+    UnitType workType("Work");
+    workType.targets.emplace_back("Work");
+    workType.resources.setCapacity("People", 4u);
+    Unit& work = city.addUnit(workType, path, way, 0.8f);
+
+    UnitType homeType("Home");
+    homeType.targets.emplace_back("Home");
+    homeType.resources.setCapacity("People", 1u);
+    Unit& home = city.addUnit(homeType, path, way, 0.2f);
+
+    AgentType people("People", 10.0f, 3u, 42u);
+    Resources carried;
+    carried.addResource("People", 1u);
+    Agent agent(1u, people, work, carried, "Home");
+
+    // Somebody moves in while the Agent is driving, so it arrives to a full
+    // house and eventually hands its load back.
+    float const dt = 1.0f / city.config().ticksPerSecond;
+    ASSERT_FALSE(agent.update(city.router(), city.config(), dt));
+    ASSERT_EQ(home.inbound(), 1u);
+    home.resources().addResource("People", 1u);
+
+    bool removed = false;
+    for (uint32_t tick = 0u; (tick < 2000u) && !removed; ++tick)
+        removed = agent.update(city.router(), city.config(), dt);
+
+    ASSERT_TRUE(removed);
+    ASSERT_EQ(home.inbound(), 0u) << "gave up but kept the place";
+}
+
+//------------------------------------------------------------------------------
+//! \brief Two Agents, one free place. The second must be sent to the other
+//! house rather than follow the first one to a door that is already spoken for.
+TEST(TestsAgent, TwoAgentsForOnePlaceGoToDifferentBuildings)
+{
+    TestWorld cityWorld("Paris", 32u, 32u);
+    City& city = cityWorld.city;
+    Path& path = city.addPath(keep<PathType>("Road"));
+    Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
+    Node& n2 = path.addNode(Vector3f(60.0f, 0.0f, 0.0f));
+    Node& n3 = path.addNode(Vector3f(120.0f, 0.0f, 0.0f));
+    Way& way1 = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
+    Way& way2 = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n2, n3);
+
+    UnitType workType("Work");
+    workType.targets.emplace_back("Work");
+    Unit& work = city.addUnit(workType, path, way1, 0.1f);
+
+    // The near house has room for one, the far one for plenty.
+    UnitType nearType("Home");
+    nearType.targets.emplace_back("Home");
+    nearType.resources.setCapacity("People", 1u);
+    Unit& nearHome = city.addUnit(nearType, path, way1, 0.9f);
+
+    UnitType farType("Home");
+    farType.targets.emplace_back("Home");
+    farType.resources.setCapacity("People", 4u);
+    Unit& farHome = city.addUnit(farType, path, way2, 0.9f);
+
+    AgentType people("People", 10.0f, 3u, 42u);
+    Resources carried;
+    carried.addResource("People", 1u);
+    Agent first(1u, people, work, carried, "Home");
+    Agent second(2u, people, work, carried, "Home");
+
+    float const dt = 1.0f / config::DEFAULT_TICKS_PER_SECOND;
+    ASSERT_FALSE(first.update(city.router(), dt));
+    ASSERT_FALSE(second.update(city.router(), dt));
+
+    ASSERT_EQ(first.route().destination, &nearHome)
+        << "the first one had the nearest house to itself";
+    ASSERT_EQ(second.route().destination, &farHome)
+        << "both were sent to the same single place";
+    ASSERT_EQ(nearHome.inbound(), 1u);
+    ASSERT_EQ(farHome.inbound(), 1u);
+}
+
+//------------------------------------------------------------------------------
+//! \brief The claim is against the other Agents, not against oneself: an Agent
+//! holding one through its own tick would find its destination full and never
+//! be let in.
+TEST(TestsAgent, ItsOwnClaimDoesNotShutTheDoorOnIt)
+{
+    TestWorld cityWorld("Paris", 32u, 32u);
+    City& city = cityWorld.city;
+    Path& path = city.addPath(keep<PathType>("Road"));
+    Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
+    Node& n2 = path.addNode(Vector3f(60.0f, 0.0f, 0.0f));
+    Way& way = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
+
+    UnitType workType("Work");
+    workType.targets.emplace_back("Work");
+    Unit& work = city.addUnit(workType, path, way, 0.9f);
+
+    // Room for exactly one, which is the Agent's own claim.
+    UnitType homeType("Home");
+    homeType.targets.emplace_back("Home");
+    homeType.resources.setCapacity("People", 1u);
+    Unit& home = city.addUnit(homeType, path, way, 0.1f);
+
+    AgentType people("People", 10.0f, 3u, 42u);
+    Resources carried;
+    carried.addResource("People", 1u);
+    Agent agent(1u, people, work, carried, "Home");
+
+    float const dt = 1.0f / config::DEFAULT_TICKS_PER_SECOND;
+    ASSERT_GT(driveUntilDelivered(agent, city, dt, 4000u), 0u);
+    ASSERT_EQ(home.resources().getAmount("People"), 1u);
+    ASSERT_EQ(home.inbound(), 0u);
+}
+
+//------------------------------------------------------------------------------
+//! \brief A building demolished under an Agent that had claimed a place there.
+//! The claim has to be given back while it is still standing.
+TEST(TestsAgent, GivesThePlaceBackBeforeTheBuildingGoes)
+{
+    TestWorld cityWorld("Paris", 32u, 32u);
+    City& city = cityWorld.city;
+    Path& path = city.addPath(keep<PathType>("Road"));
+    Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
+    Node& n2 = path.addNode(Vector3f(60.0f, 0.0f, 0.0f));
+    Way& way = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
+
+    UnitType workType("Work");
+    workType.targets.emplace_back("Work");
+    Unit& work = city.addUnit(workType, path, way, 0.9f);
+
+    UnitType homeType("Home");
+    homeType.targets.emplace_back("Home");
+    homeType.resources.setCapacity("People", 4u);
+    Unit& home = city.addUnit(homeType, path, way, 0.1f);
+
+    static AgentType const people("People", 10.0f, 3u, 42u);
+    Resources carried;
+    carried.addResource("People", 1u);
+    Agent const& agent = city.addAgent(people, work, carried, "Home");
+
+    float const dt = 1.0f / config::DEFAULT_TICKS_PER_SECOND;
+    for (uint32_t tick = 0u; tick < 20u; ++tick)
+        city.update(dt);
+    ASSERT_EQ(agent.route().destination, &home);
+    ASSERT_EQ(home.inbound(), 1u);
+
+    city.removeUnit(home);
+    ASSERT_EQ(agent.m_reservation, nullptr);
+    ASSERT_NO_THROW(city.update(dt));
+}
+
 TEST(TestsAgent, ZeroLengthWayDoesNotCrash)
 {
     TestWorld cityWorld("Paris", 32u, 32u);

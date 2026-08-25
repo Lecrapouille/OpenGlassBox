@@ -29,7 +29,8 @@ void Resources::addResources(Resources const& resourcesToAdd)
 }
 
 // -----------------------------------------------------------------------------
-bool Resources::canAddSomeResources(Resources const& resourcesToTryAdd)
+bool Resources::canAddSomeResources(Resources const& resourcesToTryAdd,
+                                    uint32_t const reserved)
 {
     if (this == &resourcesToTryAdd)
         return false;
@@ -38,8 +39,17 @@ bool Resources::canAddSomeResources(Resources const& resourcesToTryAdd)
     {
         if (it.hasAmount())
         {
-            Resource* res = findResource(it.type());
-            if ((res != nullptr) && (res->getAmount() < res->getCapacity()))
+            Resource const* res = findResource(it.type());
+            if (res == nullptr)
+                continue;
+
+            // What is reserved is counted in as if it had arrived, since it is
+            // on its way. The sum is widened: a large reserved count added to
+            // an amount close to the capacity would otherwise wrap round and
+            // report room where there is none.
+            uint64_t const taken =
+                uint64_t(res->getAmount()) + uint64_t(reserved);
+            if (taken < uint64_t(res->getCapacity()))
                 return true;
         }
     }

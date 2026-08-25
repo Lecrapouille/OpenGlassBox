@@ -10,9 +10,19 @@ The road network is a directed graph $G = (N, A)$, where $N$ is the set of nodes
 
 Travel demand is an **origin-destination matrix**: $d_{ij}$ is the number of trips wanting to go from node $i$ to node $j$ during the period considered.
 
-For a pair $(i,j)$ there is a set of possible routes $K_{ij}$. Writing $f_k$ for the flow assigned to route $k$, the flow on a link is the sum of the flows of every route using it:
+Everything below is written with one piece of shorthand, the **indicator**, which turns a yes-or-no question into a number that can be summed:
 
-$$\displaystyle x_a = \sum_{(i,j)} \sum_{k \in K_{ij}} f_k \, \delta_{a,k}, \qquad \delta_{a,k} = \begin{cases} 1 & \text{if route } k \text{ uses link } a \\ 0 & \text{otherwise} \end{cases}$$
+$$\displaystyle \mathbb{1}[P] = \begin{cases} 1 & \text{if the proposition } P \text{ holds} \\ 0 & \text{otherwise} \end{cases}$$
+
+It is worth naming because it is the only thing separating the formulas of the next three sections from one another. They all sum a demand multiplied by an indicator; what differs is the proposition inside the brackets.
+
+For a pair $(i,j)$ there is a set of possible routes $K_{ij}$. Writing $f_k$ for the flow assigned to route $k$, and
+
+$$\displaystyle \delta_{a,k} = \mathbb{1}\!\left[a \in k\right]$$
+
+for the indicator that route $k$ uses link $a$, the flow on a link is the sum of the flows of every route using it:
+
+$$\displaystyle x_a = \sum_{(i,j)} \sum_{k \in K_{ij}} f_k \, \delta_{a,k}$$
 
 Every algorithm below answers the same question: how to spread $d_{ij}$ over the routes of $K_{ij}$, knowing that the cost of a route depends on the flow it carries. That circularity is the whole difficulty. The flow determines the cost, the cost determines the flow, and what is wanted is a fixed point of the two.
 
@@ -60,9 +70,11 @@ An empty road costs $t_a^0$. A road loaded exactly to its capacity costs 15 % mo
 
 ## AON: All-or-nothing
 
-The simplest assignment, and the one a textbook Dijkstra or A\* performs without knowing it. For each pair $(i,j)$, compute the shortest route under the **current** costs $t_a$, and put **all** of the demand on it:
+The simplest assignment, and the one a textbook Dijkstra or A\* performs without knowing it. For each pair $(i,j)$, compute the shortest route $k^{*}_{ij}$ under the **current** costs $t_a$, and put **all** of the demand on it:
 
-$$\displaystyle x_a = \sum_{(i,j)} d_{ij} \cdot \mathbb{1}\!\left[a \in \text{shortest route}(i,j)\right]$$
+$$\displaystyle x_a = \sum_{(i,j)} d_{ij} \, \mathbb{1}\!\left[a \in k^{*}_{ij}\right]$$
+
+Compared with the general formula of the notation section, the inner sum over $K_{ij}$ has collapsed: one route out of the set carries $d_{ij}$ and every other carries nothing. That collapse is the whole of the algorithm, and the whole of its problem.
 
 The structural flaw is that the cost used to find the route ignores the flow that is about to use it. Everybody runs the same computation against the same costs, so everybody converges on the same road, which saturates, while a slightly longer and completely empty alternative sits next to it.
 
@@ -102,21 +114,57 @@ $$\displaystyle x^{n} = \frac{1}{n}\sum_{k=1}^{n} y^k$$
 
 Hence the name. As $n$ grows, an individual all-or-nothing carries less weight and the solution settles. MSA reaches the same Wardrop equilibrium as Frank-Wolfe, generally more slowly since $1/n$ is not the optimal step, but it is far simpler and, more importantly, it never assumes the demand is frozen.
 
+## Stochastic variants: logit, probit, Dial, Bell
+
+Everything above, all-or-nothing included, rests on one assumption: every user of a pair $(i,j)$ knows the network perfectly and picks the minimum-cost route. Real drivers do not. Their perception of a cost is imperfect and heterogeneous, made of habit, ignorance and personal preference, and two drivers offered the same two routes will not always choose the same one.
+
+The **logit** model replaces the indicator of the all-or-nothing formula with a probability that decreases with cost, so that the demand spreads over the whole of $K_{ij}$ instead of collapsing onto one route:
+
+$$\displaystyle P_k = \frac{e^{-\theta t_k}}{\displaystyle\sum_{k' \in K_{ij}} e^{-\theta t_{k'}}}$$
+
+where $t_k$ is the cost of route $k$ and $\theta > 0$ a sensitivity parameter. The two limits are worth keeping in mind, because they bracket everything in this document: as $\theta \to \infty$ the logit degenerates into all-or-nothing, and as $\theta \to 0$ the split becomes uniform and cost stops mattering at all.
+
+The **probit** model starts from the perception rather than the outcome. Each user sees a cost $\tilde{t}_k = t_k + \varepsilon_k$ with $\varepsilon_k \sim \mathcal{N}(0, \sigma^2)$, and picks the route that looks cheapest to them:
+
+$$\displaystyle P_k = \Pr\!\left(\tilde{t}_k \leq \tilde{t}_{k'}, \; \forall k' \neq k\right)$$
+
+That is more faithful than the logit, and it has no closed form: it needs numerical integration or a Monte-Carlo simulation.
+
+**Dial** (1971) and **Bell** (1995) are what make a logit assignment tractable at all. The obstacle is $K_{ij}$ itself, which can hold exponentially many routes, so neither algorithm enumerates it. Dial restricts the computation to *efficient* routes, those that never move away from the destination, and propagates the probabilities in one forward and one backward pass over the graph, in the spirit of dynamic programming. Bell reformulates the whole logit assignment as a flow problem solved by linear equations on the graph.
+
 ## What OpenGlassBox does instead
 
 The key simplification is that OpenGlassBox does not have to simulate a flow, because the flow is already there. In CiudadSim, $x_a$ is an aggregate quantity the solver computes. Here it is the `Agent` objects physically crossing the `Way` objects one by one; `Way::addAgent` and `Way::removeAgent` merely count them.
 
-So there is no assignment loop. Each agent, when it routes, runs its own all-or-nothing against the travel times of the moment, and the flow that results is observed rather than solved for.
+So there is no assignment loop, and no iteration index. What is left of the MSA structure runs once per tick, in four steps.
 
-### Smoothing, and why it is not MSA
+### Step 1: counting, which plays the part of the all-or-nothing
 
-Routing on the instantaneous count would make the whole population swap between two parallel roads every tick: everyone sees road A empty, everyone moves to A, A is now jammed, everyone moves back to B. The BPR function is therefore fed an **exponential moving average** of the count $n$ of agents on the road, with a fixed weight $\alpha$:
+Every `Way` holds `m_agentCount`, the number of agents currently on it, maintained by `Way::addAgent` and `Way::removeAgent` as agents enter and leave. At the end of a tick that count $n$ is the observation.
+
+This is where the saving is. In CiudadSim, obtaining $y^k$ means running a full all-or-nothing over the whole network at every iteration. Here the agents have already performed that computation, individually, by walking: each of them routed on the shortest path under the weights of the moment, and the count of who ended up where *is* the result. Nothing has to be recomputed, only read.
+
+### Step 2: updating the average flow
+
+The observation is blended into the running flow with a fixed weight $\alpha$:
 
 $$\displaystyle f \leftarrow (1-\alpha) f + \alpha \, n$$
 
-That is `Way::smoothFlow`, called once per tick for every segment from `City::update` through `Path::smoothFlows`, before any agent moves, so that all of them route on the same picture of the network during the tick. The weight is `SimulationConfig::trafficSmoothing`, 0.05 by default and adjustable in the Traffic panel of the demo. Segments whose flow barely moved are skipped, which spares the BPR power on every quiet street of the city on every tick.
+That is `Way::smoothFlow`, called for every segment from `City::update` through `Path::smoothFlows`, **before any agent moves**, so that all of them route on the same picture of the network during the tick. The weight is `SimulationConfig::trafficSmoothing`, 0.05 by default and adjustable in the Traffic panel of the demo.
 
-The resemblance to MSA is real but superficial, and worth being precise about, because the two differ in exactly one term. MSA averages with a **decreasing** weight $\lambda_k = 1/k$:
+Without this step the whole population would swap between two parallel roads every tick: everyone sees road A empty, everyone moves to A, A is now jammed, everyone moves back to B.
+
+### Step 3: updating the cost
+
+`Way::updateTravelTime` re-evaluates the BPR function on the new flow, giving the segment its new travel time. Segments whose flow barely moved are skipped, which spares the power on every quiet street of the city on every tick, and a city has far more quiet streets than busy ones.
+
+### Step 4: republishing the weights
+
+There is nothing to publish, and that is the point. `Way::travelTime` is the single accessor every router reads, so the next search sees the new costs without anything being notified, invalidated or rebuilt. Agents do not re-plan on the spot either: they reconsider on their own period, which step 3 of the following ticks keeps feeding.
+
+### Why this is not MSA
+
+The resemblance is real but superficial, and worth being precise about, because the two differ in exactly one term. MSA averages with a **decreasing** weight $\lambda_k = 1/k$:
 
 $$\displaystyle f^{k+1} = (1-\lambda_k) f^k + \lambda_k y^k, \qquad \lambda_k = \frac{1}{k}$$
 
@@ -128,19 +176,21 @@ The same exponential moving average is the mechanism proposed for smoothing macr
 
 ### Finding a destination: a search with no goal
 
-The router is where those travel times are used, and it does two things a textbook shortest path does not.
+"The router" here means one concrete class: `Dijkstra`, declared in `demo/src/Routing/DijkstraRouter.hpp`. It implements the engine-side interface `IRouter` of `include/OpenGlassBox/Router.hpp`, and a `City` owns one instance so that its scratch buffers are allocated once instead of on every search. It lives in the demo rather than in the engine on purpose: pathfinding is the piece a host is most likely to want to replace, and `City::setRouter` is how it does so.
+
+It does two things a textbook shortest path does not.
 
 The first is the cost: an edge costs its travel time under the current traffic, not its length. A short road carrying two hundred agents costs more than a long empty one.
 
-The second is stranger, and it is the reason `Dijkstra` is not an A\*. **There is no goal.** An agent does not know which building it is going to; it knows the *name* of what it is looking for. `Dijkstra::findRoute` walks the network outwards from the crossroads the agent stands at and stops at the first building that answers to that name **and has room for the load**, which `Unit::accepts` decides. A building standing along a street is kept as a candidate rather than accepted at once, because a crossroads one hop away may hold a cheaper one.
+The second is stranger. **There is no goal.** An agent does not know which building it is going to; it knows the *name* of what it is looking for. `Dijkstra::findRoute` walks the network outwards from the crossroads the agent stands at and stops at the first building that answers to that name **and has room for the load**, which `Unit::accepts` decides. A building standing along a street is kept as a candidate rather than accepted at once, because a crossroads one hop away may hold a cheaper one.
 
-Having no goal also means there is nothing for an A\* estimate to aim at. What is added to the cost of a crossroads is the free flow travel time back to the one the search started from, which biases the order of exploration towards the neighbourhood of the departure, where the nearest destination usually is. It is a speed-up, not an admissible heuristic: the answer is the cheapest building the search met first, which in an unusual geometry may not be the cheapest one there is. The `AStarRouter` alias is a leftover of the days when the search did have a goal.
+Having no goal is also why there is no A\* here: an A\* estimate needs something to aim at. Searching outwards until the predicate is satisfied is already the best that can be done without a target, since the search stops as soon as it has expanded everything cheaper than its answer, and nothing cheaper can be hiding further out.
 
 Two consequences follow, and both are visible in the demo. Two agents leaving the same door a minute apart may be sent to different shops, because the traffic changed in between. And an agent whose itinerary was computed a while ago replaces it when the road it is on has become worse than the alternative.
 
 Comparing the two costs a whole graph search, so it does not happen on every tick: `pathCheckTicks` is how often an agent bothers to look, and `pathCostDeviation` is how much worse its road has to be before it switches. When the comparison does say the alternative is better, the itinerary that search produced is the one the agent takes: it is not searched for a second time. Lowering `pathCheckTicks` to one is the quickest way to bring a large city to its knees.
 
-Note that this "first acceptable building" criterion is the destination-choice counterpart of all-or-nothing, and it has the same weakness. It is discussed, with a proposed fix, in the [economy documentation](economy.md#choosing-a-destination-assignmentpolicy).
+That "first acceptable building" criterion is the destination-choice counterpart of all-or-nothing, and it had the same weakness until the room a building has left started accounting for the agents already heading towards it. See [reserving the destination](#reserving-the-destination) below.
 
 ### Reading the relative gap
 
@@ -148,39 +198,57 @@ Since the engine never solves for an equilibrium, it measures how far it is from
 
 $$\displaystyle \mathrm{Relgap} = \frac{\mathrm{TSTT} - \mathrm{SPTT}}{\mathrm{TSTT}}$$
 
-TSTT is the total system travel time and SPTT the shortest path travel time. `Simulation::relativeGap` sums the remaining cost of every agent of every city for the first, and asks the router for `shortestPathCost` from where each agent stands for the second. Near zero, the agents are already on their cheapest itineraries and the network has settled. It is a diagnostic to watch in the Traffic panel, not the stopping criterion of a solver.
+TSTT is the total system travel time and SPTT the shortest path travel time. `Simulation::relativeGap` sums the remaining cost of the agents for the first, and asks the router for `shortestPathCost` from where each of them stands for the second. Near zero, the agents are already on their cheapest itineraries and the network has settled. It is a diagnostic to watch in the Traffic panel, not the stopping criterion of a solver.
+
+Being a diagnostic is what its cost has to be measured against, and the cost is a whole graph search per agent examined. Two things keep it affordable while a panel reads it on every frame. The result is memoized until the next tick, since nothing it depends on can move within one. And the agents are sampled rather than all walked, at most `SimulationConfig::relativeGapSamples` of them, taken at a regular stride so that the sample covers the whole population instead of whichever end of the list the loop starts at. The gap being a ratio of two sums scaled the same way, a regular sample estimates it without any correction.
 
 ## What we deliberately do not do
 
-All of the above, all-or-nothing included, assumes that every user of a pair $(i,j)$ knows the network perfectly and picks the minimum-cost route. Real drivers have an imperfect and heterogeneous perception of costs: habit, ignorance, personal preference.
+None of the four stochastic algorithms above is implemented, and the reason is that the property they exist to provide is already there by other means.
 
-The **logit** model spreads the demand over the routes of $K_{ij}$ with a probability decreasing in their cost, rather than putting all of it on the cheapest:
+What a logit or a probit buys is **dispersion**: two agents with the same origin and the same errand should not invariably make the same choice. A static assignment has to manufacture it, because it computes one answer for an entire origin-destination pair at once. Here it falls out of the simulation being a simulation. Agents route at different moments rather than in one batch; the travel times have moved in between, because others drove meanwhile; and the destination is whichever building has room when the search runs, not a fixed node. Two residents leaving the same door a minute apart already end up in different shops.
 
-$$\displaystyle P_k = \frac{e^{-\theta t_k}}{\displaystyle\sum_{k' \in K_{ij}} e^{-\theta t_{k'}}}$$
+The choice is therefore between dispersion that emerges from the mechanics and dispersion computed by a model layered on top of them. The second costs a route enumeration, or Dial's two passes to avoid one, on every search, and adds a $\theta$ to calibrate, for a difference no player could point at.
 
-where $\theta > 0$ is a sensitivity parameter. As $\theta \to \infty$ the logit degenerates into all-or-nothing; as $\theta \to 0$ the split becomes uniform.
+One cheap approximation is worth recording, being the only one that would fit the engine. Perturbing each edge cost by a factor $1 + \sigma\varepsilon$, with $\varepsilon$ drawn from a hash of the agent identifier and the way identifier, is a probit for the price of a hash: deterministic, so saves and tests stay reproducible, needing no storage, and giving each agent a stable driving personality rather than fresh noise at every search. It is not implemented because it would mean passing the agent identity into `IRouter::findRoute`, which is changing an interface for a refinement. Note also that it would raise the relative gap by construction, that gap being the measure of how far agents are from their shortest routes.
 
-The **probit** model instead assumes each user perceives a cost $\tilde{t}_k = t_k + \varepsilon_k$ with $\varepsilon_k \sim \mathcal{N}(0, \sigma^2)$, so that $P_k = \Pr(\tilde{t}_k \leq \tilde{t}_{k'}, \forall k' \neq k)$. It has no closed form and needs numerical integration or a Monte-Carlo simulation.
+## Why there is no assignment solver
 
-**Dial** (1971) and **Bell** (1995) are what make a logit assignment tractable on a graph without enumerating the routes, which can be exponentially many: Dial restricts the computation to "efficient" routes, those never moving away from the destination, and propagates probabilities in a forward and a backward pass; Bell reformulates the logit assignment as a flow problem solved by linear equations on the graph.
+The obvious next step, from the shape of the four steps above, is to promote them into a proper solver. That step was considered and rejected, and this section records why, so that the question does not have to be reopened from scratch.
 
-These capture the real dispersion of route choices, and they cost considerably more in computation and in code. OpenGlassBox gets a comparable dispersion for free by other means: agents route at different moments, against travel times that have moved in between, and towards destinations chosen by availability. Adding a stochastic model on top of that would buy realism no player would see.
+### What the class would have been
 
-## If we wanted a real solver: `TrafficAssignmentSolver`
+`TrafficAssignmentSolver` would have owned the three things the current design has nowhere to put:
 
-Should the fixed-step filter ever prove insufficient, the natural shape of the change is a class rather than a scattering of methods. `TrafficAssignmentSolver` would own the three things the current design does not have anywhere to put:
+- the **flow buffer**. Today there is one `m_flow` per `Way`, updated in place. A real MSA has to keep it separate from the observed count $y^k$ of the current window, since it needs both at once to form the average.
+- the **iteration counter** $k$. It does not exist, because there is no iteration: smoothing happens once per tick, unconditionally.
+- the **step policy**, that is the choice between $\lambda_k = 1/k$ and a fixed $\eta$. Today this is not a choice but a hard-coded formula.
 
-- the **flow buffer**, currently one `m_flow` per `Way` updated in place, which a real MSA needs to keep separate from the observed count $y^k$ of the current window;
-- the **iteration counter** $k$, which does not exist because there is no iteration: smoothing happens once per tick, unconditionally;
-- the **step policy**, the choice between $\lambda_k = 1/k$ and a fixed $\eta$, which is currently not a choice but a hard-coded formula.
+It would have run over a window of $N$ ticks, taken the observed counts as its $y^k$, updated the average with a vanishing step, recomputed the travel times and let the router read them. The hook was available: `City::update`, in the place `Path::smoothFlows` occupies, or `World::update` for an average spanning several cities. Nothing else would have had to change, `Way::travelTime` being already the single point every router reads.
 
-The observed count of a window of $N$ ticks would play the part of the all-or-nothing $y^k$: the agents, all following the shortest route under the current weights, already perform that computation by walking. The solver would then update the average, recompute the travel times, and republish the weights the router reads.
+### Why we do not want it
 
-The hook would be `City::update`, in the place `Path::smoothFlows` occupies today, or `World::update` if the averaging is ever to span several cities. Nothing else would need to change: `Way::travelTime` is already the single point every router reads.
+**There is no origin-destination matrix to solve for.** Everything in the theory above is defined over $d_{ij}$, trips from node $i$ to node $j$. OpenGlassBox has no such object and could not easily have one: demand is emergent, an agent being born from a rule carrying a *name* to look for, not a destination node. Its destination is decided during the search, by whichever building has room. Feeding a solver would mean first inventing an OD matrix by aggregating observed trips, solving it for aggregate link flows, and then reconciling the result with the per-agent counts already in hand. That is a round trip whose output is an approximation of its own input.
 
-A cheaper calibration reference, if the continuous BPR curve turns out to be hard to tune, is the official SimCity (2013) patch. Maxis weighted roads by **capacity tiers at 25 %, 50 % and 75 %**: as a road crosses each threshold it becomes less attractive to the following agents. That is the BPR curve of the first section discretised into three steps, and it is easier to reason about than $\alpha$ and $\beta$.
+**It would create a second source of truth.** The solver's $x_a$ and the actual number of agents on the street would drift apart, since only the latter is constrained by agents physically being somewhere. The player sees the agents. A cost derived from a flow that disagrees with them is a cost that is wrong in exactly the situations anyone would notice.
 
-This is not implemented, and the current behaviour is not a placeholder waiting for it. Read the section above on why a fixed step is the right default for a living city.
+**It would fix the wrong problem.** An equilibrium solver spreads flow across *routes*. The defect actually visible in the simulation is the choice of *destination*: agents converging on the same building because it had room when each of them looked. That is addressed by reserving the room, described below, and no amount of link-flow equilibrium would have touched it.
+
+To this add the reason given above for the fixed step: a vanishing $\lambda_k$ is right for a static demand and wrong for a city where a district appears, a road is demolished, a rush hour starts.
+
+### A cheaper calibration reference
+
+If the continuous BPR curve proves hard to tune, the official SimCity (2013) patch is worth knowing about. Maxis weighted roads by **capacity tiers at 25 %, 50 % and 75 %**: crossing each threshold makes a road less attractive to the following agents. That is the BPR curve discretised into three steps, and it is easier to reason about than $\alpha$ and $\beta$.
+
+## Reserving the destination
+
+The counterpart of all-or-nothing on the destination side, and the one place it did have to be fixed.
+
+`Unit::accepts` used to ask a boolean question: is there any room left. A shop missing one crate and a shop missing twenty both answered yes, so the nearer one won every time. Worse, twenty agents dispatched on the same tick all saw the same single free slot and were all sent to claim it; nineteen arrived to find it taken.
+
+A `Unit` therefore counts the agents currently travelling towards it, and `accepts` tests the room against the stock **plus** those already on their way. The count is maintained through a single point in `Agent`, so that an agent releases its claim whether it delivers, gives up, is destroyed, or merely recomputes its itinerary and picks somewhere else. An agent that loses its route and starts wandering releases immediately rather than holding a slot it may never use.
+
+The cost is one integer per building and one comparison per acceptance test. What it buys is that the twentieth agent sees a shop that is already spoken for and looks elsewhere, which is the behaviour the score of the [economy documentation](economy.md#choosing-a-destination) was meant to produce, obtained without widening the search.
 
 ## Where the coefficients live
 
@@ -190,5 +258,6 @@ This is not implemented, and the current behaviour is not a placeholder waiting 
 | $\beta$, capacity $c_a$, speed limit | `WayType` in `include/OpenGlassBox/Types.hpp`, set per segment type in the `.ogs` ruleset |
 | Smoothing weight $\alpha$ of the moving average | `SimulationConfig::trafficSmoothing`, `include/OpenGlassBox/Config.hpp` |
 | Route re-examination period and threshold | `SimulationConfig::pathCheckTicks`, `pathRecalcTicks`, `pathCostDeviation` |
+| Sample size of the relative gap | `SimulationConfig::relativeGapSamples`, zero meaning every agent |
 
 Nothing here is a script keyword beyond what `segment` already accepts. See the [script language reference](script.md) and the [engine documentation](engine.md).
