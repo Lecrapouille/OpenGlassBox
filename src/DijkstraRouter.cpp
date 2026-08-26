@@ -5,6 +5,7 @@
 // for users who cannot use the GPL, under a commercial license.
 // See LICENSING.md for details.
 
+#include "OpenGlassBox/Config.hpp"
 #include "OpenGlassBox/DijkstraRouter.hpp"
 
 #include "OpenGlassBox/Unit.hpp"
@@ -157,7 +158,7 @@ Route Dijkstra::findRoute(Node& fromNode,
     // answer yet: the search carries on until every crossroads it could still
     // reach is already more expensive than this.
     Route best;
-    float bestCost = std::numeric_limits<float>::infinity();
+    float bestCost = config::ROUTING_INFINITY;
 
     while (!m_open.empty())
     {
@@ -256,7 +257,7 @@ float Dijkstra::shortestPathCost(Node& fromNode,
                                  Resources const& resources)
 {
     Route const route = findRoute(fromNode, searchTarget, resources);
-    return route.found ? route.cost : std::numeric_limits<float>::infinity();
+    return route.found ? route.cost : config::ROUTING_INFINITY;
 }
 
 } // namespace ogb

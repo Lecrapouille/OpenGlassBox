@@ -1,3 +1,7 @@
+CI:
+- corriger les bugs
+- creer les archives pour les releases
+
 RENOMMAGE
 - Maps -> Layers
 

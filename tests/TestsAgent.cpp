@@ -38,7 +38,7 @@ TEST(TestsAgent, Constructor)
     ASSERT_EQ(a.m_id, 43u);
     ASSERT_STREQ(a.m_type.name.c_str(), "Agent");
     ASSERT_EQ(a.m_type.speed, 5.0f);
-    ASSERT_EQ(a.m_type.radius, 3.0f);
+    ASSERT_EQ(a.m_type.radius, 3u);
     ASSERT_EQ(a.m_type.color, 42u);
     ASSERT_STREQ(a.m_searchTarget.c_str(), "target");
     ASSERT_EQ(a.m_resources.m_bin.size(), 1u);
@@ -167,7 +167,7 @@ TEST(TestsAgent, LeavesAndReachesABuildingWithoutJumping)
     ASSERT_GT(driveUntilDelivered(agent, city, dt, 4000u), 0u);
 
     // It walked to the door rather than to the intersection.
-    ASSERT_NEAR(agent.position().x, 12.0f, 1.0f);
+    ASSERT_NEAR(static_cast<double>(agent.position().x), 12.0, 1.0);
     ASSERT_EQ(work.resources().getAmount("People"), 1u);
 }
 
@@ -201,7 +201,7 @@ TEST(TestsAgent, DrivesToTheIntersectionBeforeTakingAnotherWay)
 
     float const dt = 1.0f / config::DEFAULT_TICKS_PER_SECOND;
     ASSERT_GT(driveUntilDelivered(agent, city, dt, 4000u), 0u);
-    ASSERT_NEAR(agent.position().x, 84.0f, 1.0f);
+    ASSERT_NEAR(static_cast<double>(agent.position().x), 84.0, 1.0);
     ASSERT_EQ(work.resources().getAmount("People"), 1u);
 }
 
@@ -288,7 +288,7 @@ TEST(TestsAgent, DoesNotDeliverFromTheMiddleOfTheStreet)
     ASSERT_EQ(home.resources().getAmount("People"), 0u);
 
     ASSERT_GT(driveUntilDelivered(agent, city, dt, 4000u), 0u);
-    ASSERT_NEAR(agent.position().x, 0.0f, 1.0f);
+    ASSERT_NEAR(static_cast<double>(agent.position().x), 0.0, 1.0);
     ASSERT_EQ(home.resources().getAmount("People"), 1u);
 }
 

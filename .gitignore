@@ -1,6 +1,8 @@
 # Project specific
 build/
 .cache/
+ci-artifacts/
+release/
 doc/code-coverage/*
 doc/doxygen/*
 external/*/

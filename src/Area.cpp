@@ -6,6 +6,7 @@
 // See LICENSING.md for details.
 
 #include "OpenGlassBox/Area.hpp"
+#include "OpenGlassBox/Config.hpp"
 #include "OpenGlassBox/City.hpp"
 #include "OpenGlassBox/World.hpp"
 
@@ -77,7 +78,7 @@ Way* Area::nearestWay(Vector3f const& world, float& offset,
 {
     Way* best = nullptr;
     float bestDist = (maxDistance < 0.0f)
-                     ? std::numeric_limits<float>::infinity()
+                     ? config::ROUTING_INFINITY
                      : (maxDistance * maxDistance);
     offset = 0.5f;
 

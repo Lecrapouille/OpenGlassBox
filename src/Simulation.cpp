@@ -95,7 +95,7 @@ void Simulation::updateAssignmentMetrics() const
                 continue;
 
             float const alternative = agent.rerouteCost(router);
-            if (!std::isfinite(alternative))
+            if (routingCostUnreachable(alternative))
                 continue;
 
             tstt += agent.remainingCost();
