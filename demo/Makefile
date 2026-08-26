@@ -51,7 +51,7 @@ else ifeq ($(OS),Windows)
     USER_CXXFLAGS += -DGLEW_STATIC
     # LDFLAGS precedes pkg-config libraries on the final link command.
     LDFLAGS += -static
-    LINKER_FLAGS += $(shell pkg-config --static --libs $(STATIC_PKG_LIBS))
+    LINKER_FLAGS += $(shell pkg-config --static --libs $(STATIC_PKG_LIBS)) -lopengl32
 endif
 
 USER_CXXFLAGS += -Wno-format-nonliteral -Wno-conversion -Wno-sign-conversion -Wno-float-equal
