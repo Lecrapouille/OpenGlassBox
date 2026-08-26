@@ -104,6 +104,21 @@ jobs:
           V=1 mingw32-make compile-external-libs
           V=1 mingw32-make -j8
 
+      - name: Verify Windows runtime dependencies
+        shell: msys2 {0}
+        run: |
+          failed=0
+          while read -r dll; do
+            echo "DLL dependency: $dll"
+            case "$dll" in
+              glew32.dll|glfw3.dll|libwinpthread-1.dll|libstdc++-6.dll|libgcc_s_*.dll)
+                echo "::error::Unexpected dynamic dependency: $dll"
+                failed=1
+                ;;
+            esac
+          done < <(objdump -p build/OpenGlassBox-demo.exe | awk '/DLL Name:/ { print $3 }')
+          exit "$failed"
+
       - name: Run non regression tests
         shell: msys2 {0}
         run: |

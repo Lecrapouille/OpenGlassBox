@@ -43,7 +43,15 @@ PKG_LIBS := glfw3 glew
 ifeq ($(OS),Linux)
     PKG_LIBS += gl
 else ifeq ($(OS),Windows)
-    LINKER_FLAGS += -lopengl32
+    # Static glfw3/glew and MinGW runtimes: no MSYS2 DLLs beside the .exe.
+    # Requires mingw-w64-x86_64-glfw and mingw-w64-x86_64-glew (.a archives).
+    STATIC_PKG_LIBS := glfw3 glew
+    PKG_LIBS :=
+    USER_CXXFLAGS += $(shell pkg-config --static --cflags $(STATIC_PKG_LIBS))
+    USER_CXXFLAGS += -DGLEW_STATIC
+    # LDFLAGS precedes pkg-config libraries on the final link command.
+    LDFLAGS += -static
+    LINKER_FLAGS += $(shell pkg-config --static --libs $(STATIC_PKG_LIBS))
 endif
 
 USER_CXXFLAGS += -Wno-format-nonliteral -Wno-conversion -Wno-sign-conversion -Wno-float-equal
