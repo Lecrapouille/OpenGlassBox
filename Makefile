@@ -24,7 +24,6 @@ include $(M)/project/Makefile
 LIB_FILES := $(call rwildcard,src,*.cpp)
 INCLUDES := $(P)/include
 VPATH := $(P)/src
-DEFINES := -DVIRTUAL= -DDESIRED_GRID_SIZE=30u
 
 ###################################################
 # Generic Makefile rules
@@ -34,7 +33,7 @@ include $(M)/rules/Makefile
 ###################################################
 # Extra rules
 #
-all:: build-demo
+post-build:: build-demo
 
 .PHONY: build-demo
 build-demo: $(TARGET_STATIC_LIB_NAME)

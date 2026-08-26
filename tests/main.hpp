@@ -6,7 +6,7 @@
 // See LICENSING.md for details.
 
 // SimForth: A Forth for SimTaDyn.
-// Copyright 2018-2020 Quentin Quadrat <lecrapouille@gmail.com>
+// Copyright 2018-2026 Quentin Quadrat <lecrapouille@gmail.com>
 //
 // This file is part of SimForth.
 //
@@ -22,13 +22,19 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with SimForth.  If not, see <http://www.gnu.org/licenses/>.
+//! \file main.hpp
+//! \brief Google Test/Mock harness shared by the OpenGlassBox unit tests.
+
 #ifndef MAIN_HPP
 #  define MAIN_HPP
 
 #  include <gmock/gmock.h>
 #  include <gtest/gtest.h>
 
+#  include "OpenGlassBox/Config.hpp"
+
 using namespace ::testing;
+using namespace ogb;
 
 // Set interpreter quiet
 #  define QUIET(interpreter) \

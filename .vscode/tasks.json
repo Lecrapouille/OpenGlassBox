@@ -1,0 +1,14 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "build with bear",
+			"type": "shell",
+			"command": "bear -- make -j8",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		}
+	]
+}

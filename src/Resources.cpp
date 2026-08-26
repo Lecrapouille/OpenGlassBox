@@ -8,6 +8,8 @@
 #include "OpenGlassBox/Resources.hpp"
 
 // -----------------------------------------------------------------------------
+namespace ogb {
+
 Resource& Resources::addResource(ResourceType const& type, uint32_t const amount)
 {
     Resource& res = findOrAddResource(type);
@@ -27,7 +29,8 @@ void Resources::addResources(Resources const& resourcesToAdd)
 }
 
 // -----------------------------------------------------------------------------
-bool Resources::canAddSomeResources(Resources const& resourcesToTryAdd)
+bool Resources::canAddSomeResources(Resources const& resourcesToTryAdd,
+                                    uint32_t const reserved)
 {
     if (this == &resourcesToTryAdd)
         return false;
@@ -36,8 +39,17 @@ bool Resources::canAddSomeResources(Resources const& resourcesToTryAdd)
     {
         if (it.hasAmount())
         {
-            Resource* res = findResource(it.type());
-            if ((res != nullptr) && (res->getAmount() < res->getCapacity()))
+            Resource const* res = findResource(it.type());
+            if (res == nullptr)
+                continue;
+
+            // What is reserved is counted in as if it had arrived, since it is
+            // on its way. The sum is widened: a large reserved count added to
+            // an amount close to the capacity would otherwise wrap round and
+            // report room where there is none.
+            uint64_t const taken =
+                uint64_t(res->getAmount()) + uint64_t(reserved);
+            if (taken < uint64_t(res->getCapacity()))
                 return true;
         }
     }
@@ -95,6 +107,16 @@ void Resources::setCapacities(Resources const& resourcesCapacities)
 {
     for (auto& it: resourcesCapacities.m_bin)
         setCapacity(it.type(), it.getCapacity());
+}
+
+// -----------------------------------------------------------------------------
+void Resources::setAmounts(Resources const& amounts)
+{
+    for (auto& it: m_bin)
+        it.remove(it.getAmount());
+
+    for (auto const& it: amounts.m_bin)
+        findOrAddResource(it.type()).add(it.getAmount());
 }
 
 // -----------------------------------------------------------------------------
@@ -162,3 +184,5 @@ std::ostream& operator<<(std::ostream& os, Resources const& resources)
         os << "  " << it;
     return os;
 }
+
+} // namespace ogb

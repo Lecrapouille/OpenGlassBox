@@ -1,0 +1,49 @@
+RENOMMAGE
+- Maps -> Layers
+
+VILLES
+- gerer plusieurs villes: creation/suppession/selection
+- On ne peut pas relier les villes entre elles. 1 application = 1 ville. 2 applications = 2 villes qui se voient et communiquent.
+
+BUGS
+- Maps: Val ne fonctionne pas
+- Label n'enleve pas celles des zones
+- les maisons ne sont pas bien crées par les zones
+- creer polution, electricite, trash
+- quand on clique sur Maps il faut desactiver Areas
+
+TOOLS:
+- Deplacer nodes
+- manque bulldoze pour creer des zones vides
+- Quand on croise deux routes ca ne cree pas de carrefour
+
+TODO:
+- Afficher les ressources: Richesse ?
+- Zoom des plots
+- Sortir Dijkstra de OpenGlassBox: en faire une classe abstraire (Traffic ?) et implementer dans la demo
+- Implementer ForthScript
+
+ECONOMIE ET TRAFIC (voir doc/economy.md et doc/traffic.md):
+
+Fait:
+- Reservation de la place au Unit destination: Unit::reserve/release, comptees
+  par Unit::accepts, point de passage unique Agent::setRoute. Corrige le
+  all-or-nothing sur la destination (vingt agents envoyes sur la meme place)
+- Lissage des courbes: EMA dans game::TimeSeries, tracee par ChartsPanel sous
+  le bouton Trend. Cote demo uniquement, aucun consommateur dans le moteur
+
+Rejete (voir doc/traffic.md, "Why there is no assignment solver"):
+- TrafficAssignmentSolver: pas de matrice OD a resoudre, deux sources de verite
+  pour le flux, et ca traiterait le mauvais probleme. Le pas fixe est un choix
+  (ville vivante), pas une approximation de MSA
+- Modeles stochastiques (logit, probit, Dial, Bell): la dispersion visee sort
+  deja de la simulation elle-meme
+
+Pistes:
+- Score besoin/distance pour la destination: reporte, elargirait la recherche a
+  chaque itineraire de chaque agent alors que la reservation achete l'essentiel
+- ProductionModel: production a rendements decroissants (Cobb-Douglas ou goulot
+  d'etranglement) au lieu du taux constant des unitRule
+- Perturbation de cout par agent (probit bon marche, hash de (agent, way)):
+  demanderait de passer l'agent a IRouter::findRoute
+- Way oriente, et flux anticipatif plutot que mesure

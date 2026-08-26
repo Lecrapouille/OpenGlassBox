@@ -1,17 +1,9 @@
 # Project specific
-*~
-build*
-cov-int
-src/*.tar.bz2
-external/.downloaded
-external/imgui
-external/imgui_sdl
-doc/html
-doc/coverage
-doc/gprof
-gmon.out
-foo
-_*
+build/
+.cache/
+doc/code-coverage/*
+doc/doxygen/*
+external/*/
 
 # Prerequisites
 *.d
