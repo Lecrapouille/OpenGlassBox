@@ -271,11 +271,12 @@ void TrafficPanel::draw(Simulation& simulation, game::DebugState& state)
     {
         ImGui::TextDisabled(
             "SPTT > TSTT: fresh reroutes would cost more than finishing\n"
-            "current trips (traffic changed since departure, or different\n"
-            "destination picked on reroute). Gap shown as 0%%.");
+            "current trips. Expected only for agents whose destination\n"
+            "filled up while they were driving to it, and whose next best\n"
+            "one is farther. Gap shown as 0%%.");
     }
 
-    ImGui::Text("routing quality: %s", quality.label);
+    ImGui::Text("Routing quality: %s", quality.label);
     if (ImGui::IsItemHovered())
     {
         ImGui::SetTooltip("%s", quality.detail);

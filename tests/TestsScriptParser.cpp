@@ -26,7 +26,7 @@ TEST(TestsScript, Constructor)
 {
     Script script;
 
-    ASSERT_EQ(script..parseFile(testCityPath()), true);
+    ASSERT_EQ(script.parseFile(testCityPath()), true);
     ASSERT_EQ(script.errors().size(), 0u);
 
     ScriptDefinitions const& defs = script.definitions();
@@ -189,7 +189,7 @@ TEST(TestsScript, DoesNotExist)
     Script script;
 
     // Load a script that does not exist.
-    ASSERT_EQ(script..parseFile("fdsfhsdfgsdfdsf"), false);
+    ASSERT_EQ(script.parseFile("fdsfhsdfgsdfdsf"), false);
 }
 
 TEST(TestsScript, BadSyntax)
@@ -198,7 +198,7 @@ TEST(TestsScript, BadSyntax)
 
     // Load a script that contains error syntax.
     (void)system("echo \"foo\" > /tmp/foo");
-    ASSERT_EQ(script..parseFile("/tmp/foo"), false);
+    ASSERT_EQ(script.parseFile("/tmp/foo"), false);
 }
 
 TEST(TestsScript, EmptyFile)
@@ -207,7 +207,7 @@ TEST(TestsScript, EmptyFile)
 
     // Load a script that contains error syntax.
     (void)system("echo \"\" > /tmp/foo");
-    ASSERT_EQ(script..parseFile("/tmp/foo"), false);
+    ASSERT_EQ(script.parseFile("/tmp/foo"), false);
 }
 
 //------------------------------------------------------------------------------
@@ -353,7 +353,7 @@ TEST(TestsScript, FailedReloadKeepsPreviousDefinitions)
 {
     Script script;
 
-    ASSERT_EQ(script..parseFile(testCityPath()), true);
+    ASSERT_EQ(script.parseFile(testCityPath()), true);
     size_t const before = script.definitions().resources().size();
 
     ASSERT_EQ(script.parseString("this is not a script"), false);

@@ -190,6 +190,24 @@ public:
     float remainingCost() const;
 
     // -------------------------------------------------------------------------
+    //! \brief What the Agent would pay if it left for the cheapest acceptable
+    //! building right now, from where it stands, at the current travel times.
+    //!
+    //! The counterpart of remainingCost(), and what it has to be compared
+    //! against: both are counted from routingNode(). Ask for this rather than
+    //! calling IRouter::shortestPathCost directly, because the Agent has to
+    //! stand out of its own way first. The place it holds at its destination is
+    //! a claim against the other Agents, and a search made without lifting it
+    //! finds that destination full and answers with a dearer building, which
+    //! reads as an Agent that would gain by rerouting when it would not.
+    //!
+    //! \param[in] router the router of the City.
+    //! \return the cost in seconds of game time, or infinity when nothing
+    //! reachable accepts the load.
+    // -------------------------------------------------------------------------
+    float rerouteCost(IRouter& router);
+
+    // -------------------------------------------------------------------------
     //! \brief The crossroads it last stood at, which is where it is routed
     //! from, or nullptr when the road network under it has been demolished.
     // -------------------------------------------------------------------------

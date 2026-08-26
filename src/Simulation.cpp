@@ -83,20 +83,27 @@ void Simulation::updateAssignmentMetrics() const
             stride = agents.size() / size_t(budget);
         }
 
+        IRouter& router = const_cast<City&>(city).router();
+
         for (size_t i = 0u; i < agents.size(); i += stride)
         {
-            auto const& agent = agents[i];
-            tstt += agent->remainingCost();
+            Agent& agent = *agents[i];
 
-            Node* from = agent->routingNode();
-            if (from == nullptr)
+            // The two sums have to run over the same Agents, or their ratio
+            // measures the difference in populations rather than the distance
+            // to equilibrium. An Agent with no itinerary has no remaining cost
+            // to put in TSTT, so it must not put an alternative in SPTT
+            // either; one whose reroute is unreachable has no alternative, so
+            // it must not put its remaining cost in TSTT.
+            if (!agent.route().found)
                 continue;
 
-            float const shortest =
-                const_cast<City&>(city).router().shortestPathCost(
-                    *from, agent->searchTarget(), agent->resources());
-            if (std::isfinite(shortest))
-                sptt += shortest;
+            float const alternative = agent.rerouteCost(router);
+            if (!std::isfinite(alternative))
+                continue;
+
+            tstt += agent.remainingCost();
+            sptt += alternative;
         }
     }
 

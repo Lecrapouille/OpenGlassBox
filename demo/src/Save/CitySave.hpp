@@ -67,7 +67,7 @@ struct CitySaveHeader
 //!     return complain(error);
 //!
 //! Simulation simulation;
-//! simulation.script()..parseFile(header.ruleset);
+//! simulation.script().parseFile(header.ruleset);
 //! if (!CitySave::read("saves/paris.ogc", simulation, error))
 //!     return complain(error);
 //! \endcode

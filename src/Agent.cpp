@@ -419,6 +419,27 @@ float Agent::remainingCost() const
 }
 
 //------------------------------------------------------------------------------
+float Agent::rerouteCost(IRouter& router)
+{
+    Node* const from = routingNode();
+    if (from == nullptr)
+        return std::numeric_limits<float>::infinity();
+
+    // Same reason as in update(): the claim is against the other Agents, not
+    // against oneself. Restored exactly as it was, this being a measurement.
+    bool const held = (m_reservation != nullptr);
+    releaseDestination();
+
+    float const cost =
+        router.shortestPathCost(*from, m_searchTarget, m_resources);
+
+    if (held)
+        claimDestination();
+
+    return cost;
+}
+
+//------------------------------------------------------------------------------
 void Agent::maybeRecomputeRoute(IRouter& router, SimulationConfig const& config)
 {
     // The cheap answers first: no itinerary at all, one that has been held long

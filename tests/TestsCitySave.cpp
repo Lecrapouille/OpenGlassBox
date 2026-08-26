@@ -39,7 +39,7 @@ static std::string testCitySave()
 TEST(TestsCitySave, LoadShippedParis)
 {
     Simulation simulation{ 32u, 32u };
-    ASSERT_TRUE(simulation.script()..parseFile(testCityRuleset()));
+    ASSERT_TRUE(simulation.script().parseFile(testCityRuleset()));
 
     CitySaveHeader header;
     std::string error;
@@ -60,7 +60,7 @@ TEST(TestsCitySave, LoadShippedParis)
 TEST(TestsCitySave, MissingTypeIsRefused)
 {
     Simulation simulation{ 32u, 32u };
-    ASSERT_TRUE(simulation.script()..parseFile(testCityRuleset()));
+    ASSERT_TRUE(simulation.script().parseFile(testCityRuleset()));
 
     std::string const path = "/tmp/openglassbox-missing-type.ogc";
     {
@@ -99,7 +99,7 @@ TEST(TestsCitySave, LoadShippedBraessAndGrids)
 
         std::string const ruleset = "demo/data/Simulations/" + header.ruleset;
         Simulation simulation{ 32u, 32u };
-        ASSERT_TRUE(simulation.script()..parseFile(ruleset)) << ruleset;
+        ASSERT_TRUE(simulation.script().parseFile(ruleset)) << ruleset;
         ASSERT_TRUE(CitySave::matchesRuleset(header, ruleset, error)) << error;
         ASSERT_TRUE(CitySave::read(save, simulation, error))
             << save << ": " << error;
@@ -116,7 +116,7 @@ TEST(TestsCitySave, LoadShippedBraessAndGrids)
 TEST(TestsCitySave, LoadedUnitsKeepTheCapacitiesOfTheirType)
 {
     Simulation simulation{ 32u, 32u };
-    ASSERT_TRUE(simulation.script()..parseFile(testCityRuleset()));
+    ASSERT_TRUE(simulation.script().parseFile(testCityRuleset()));
 
     std::string error;
     ASSERT_TRUE(CitySave::read(testCitySave(), simulation, error)) << error;

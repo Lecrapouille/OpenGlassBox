@@ -41,7 +41,7 @@ namespace ogb
 //! Example:
 //! \code
 //! Simulation simulation(64u, 64u);
-//! if (!simulation.script()..parseFile("simulations/city.ogs"))
+//! if (!simulation.script().parseFile("simulations/city.ogs"))
 //!     return EXIT_FAILURE;
 //!
 //! City& paris = simulation.addCity("Paris", Vector3f(0.0f, 0.0f, 0.0f));

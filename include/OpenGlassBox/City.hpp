@@ -48,7 +48,7 @@ class World;
 //! Example:
 //! \code
 //! Simulation simulation;
-//! simulation.script()..parseFile("simulations/city.ogs");
+//! simulation.script().parseFile("simulations/city.ogs");
 //!
 //! City& city = simulation.addCity("Paris", Vector3f(0.0f, 0.0f, 0.0f), 32u,
 //! 32u); Path& road = city.addPath(simulation.script().getPathType("Road"));

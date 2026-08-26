@@ -233,7 +233,15 @@ Since the engine never solves for an equilibrium, it measures how far it is from
 
 $$\displaystyle \mathrm{Relgap} = \frac{\mathrm{TSTT} - \mathrm{SPTT}}{\mathrm{TSTT}}$$
 
-TSTT is the total system travel time and SPTT the shortest path travel time. `Simulation::relativeGap` sums the remaining cost of the agents for the first, and asks the router for `shortestPathCost` from where each of them stands for the second. Near zero, the agents are already on their cheapest itineraries and the network has settled. It is a diagnostic to watch in the Traffic panel, not the stopping criterion of a solver.
+TSTT is the total system travel time and SPTT the shortest path travel time. `Simulation::relativeGap` sums the remaining cost of the agents for the first, and asks each of them for its `rerouteCost` for the second. Near zero, the agents are already on their cheapest itineraries and the network has settled. It is a diagnostic to watch in the Traffic panel, not the stopping criterion of a solver.
+
+Two conditions make that ratio mean anything, and both are easy to break.
+
+The first is that the two sums must run over the **same agents**. An agent that is wandering has no remaining cost to contribute, so its alternative must be left out too, and one whose reroute reaches nothing has no alternative, so its remaining cost must be left out in turn. Summing over two different populations measures the difference between them rather than the distance to equilibrium.
+
+The second is that an agent must not be **measured against itself**. It holds a place at its destination, and `Unit::accepts` counts that place, so a search made on its behalf without lifting its own claim finds its destination full and answers with a dearer building. Every agent then looks as though it would gain by rerouting to somewhere it is already going, which shows up as SPTT larger than TSTT. That is why the measurement goes through `Agent::rerouteCost`, which lifts the claim, asks, and puts it back, rather than calling `IRouter::shortestPathCost` directly.
+
+With both respected, SPTT stays below TSTT except in one genuine case: an agent whose destination filled up while it was driving, whose next best building really is farther. The panel says so rather than showing a negative gap.
 
 **Example.** Three agents are still on the road, each heading for a building that accepts its load. Their **remaining cost** is the travel time left on the itinerary they chose when they set out (TSTT contribution). **Shortest path cost** is what the router would charge *today*, from the same crossroads, with the traffic as it is now (SPTT contribution):
 

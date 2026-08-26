@@ -569,6 +569,65 @@ TEST(TestsAgent, TwoAgentsForOnePlaceGoToDifferentBuildings)
 }
 
 //------------------------------------------------------------------------------
+//! \brief An Agent already on its cheapest itinerary must not be told it would
+//! gain by rerouting.
+//!
+//! This is the invariant behind SPTT <= TSTT in the Traffic panel. Measuring
+//! the alternative without lifting the Agent's own claim finds its destination
+//! full, answers with the far house, and reports a whole city that would be
+//! better off going somewhere else than where it is already going.
+TEST(TestsAgent, RerouteCostDoesNotSeeItsOwnClaim)
+{
+    TestWorld cityWorld("Paris", 32u, 32u);
+    City& city = cityWorld.city;
+    Path& path = city.addPath(keep<PathType>("Road"));
+    Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
+    Node& n2 = path.addNode(Vector3f(60.0f, 0.0f, 0.0f));
+    Node& n3 = path.addNode(Vector3f(120.0f, 0.0f, 0.0f));
+    Way& way1 = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
+    Way& way2 = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n2, n3);
+
+    UnitType workType("Work");
+    workType.targets.emplace_back("Work");
+    Unit& work = city.addUnit(workType, path, way1, 0.1f);
+
+    // Room for exactly one at the near house, which the Agent takes, and
+    // plenty at the far one, which is the answer a search that counted the
+    // Agent's own claim would fall back on.
+    UnitType nearType("Home");
+    nearType.targets.emplace_back("Home");
+    nearType.resources.setCapacity("People", 1u);
+    Unit& nearHome = city.addUnit(nearType, path, way1, 0.9f);
+
+    UnitType farType("Home");
+    farType.targets.emplace_back("Home");
+    farType.resources.setCapacity("People", 4u);
+    city.addUnit(farType, path, way2, 0.9f);
+
+    AgentType people("People", 10.0f, 3u, 42u);
+    Resources carried;
+    carried.addResource("People", 1u);
+    Agent agent(1u, people, work, carried, "Home");
+
+    float const dt = 1.0f / config::DEFAULT_TICKS_PER_SECOND;
+    ASSERT_FALSE(agent.update(city.router(), dt));
+    ASSERT_EQ(agent.route().destination, &nearHome);
+    ASSERT_EQ(nearHome.inbound(), 1u);
+
+    float const remaining = agent.remainingCost();
+    ASSERT_GT(remaining, 0.0f);
+
+    float const alternative = agent.rerouteCost(city.router());
+    ASSERT_LE(alternative, remaining + 1e-3f)
+        << "the Agent is on its cheapest itinerary, yet rerouting is priced "
+           "dearer than finishing";
+
+    // Measuring must leave the claim exactly as it was.
+    ASSERT_EQ(nearHome.inbound(), 1u) << "the measurement dropped the claim";
+    ASSERT_EQ(agent.m_reservation, &nearHome);
+}
+
+//------------------------------------------------------------------------------
 //! \brief The claim is against the other Agents, not against oneself: an Agent
 //! holding one through its own tick would find its destination full and never
 //! be let in.
