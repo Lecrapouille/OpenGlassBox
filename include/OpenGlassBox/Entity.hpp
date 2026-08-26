@@ -13,9 +13,6 @@
 #include "OpenGlassBox/Name.hpp"
 #include "OpenGlassBox/Vector.hpp"
 
-#include <cstdint>
-#include <string>
-
 namespace ogb
 {
 

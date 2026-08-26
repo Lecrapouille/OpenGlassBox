@@ -32,6 +32,47 @@ struct WayRow
 };
 
 // ----------------------------------------------------------------------------
+//! \brief Label for the relative gap bands described in doc/traffic.md.
+// ----------------------------------------------------------------------------
+struct RoutingQuality
+{
+    char const* label;
+    char const* detail;
+};
+
+RoutingQuality routingQuality(float const gap)
+{
+    float const percent = 100.0f * gap;
+    if (percent <= 1.0f) // 1%
+    {
+        return { "Equilibrium",
+                 "Every sampled agent is on the cheapest route available "
+                 "right now." };
+    }
+    if (percent < 5.0f) // 5%
+    {
+        return { "Near equilibrium",
+                 "Routing has largely settled. Small differences come from "
+                 "agents between deviation checks or sampling noise." };
+    }
+    if (percent < 15.0f) // 15%
+    {
+        return { "Normal churn",
+                 "Typical for a busy city. Some agents still follow "
+                 "itineraries chosen before traffic shifted." };
+    }
+    if (percent < 30.0f) // 30%
+    {
+        return { "Clearly off",
+                 "Many agents pay substantially more than today's shortest "
+                 "path: fresh congestion or deviation checks set too high." };
+    }
+    return { "Strong mismatch",
+             "Often right after a shock. Expect visible jams until agents "
+             "re-check their routes." };
+}
+
+// ----------------------------------------------------------------------------
 float TrafficPanel::totalTravelTime(Simulation& simulation)
 {
     float total = 0.0f;
@@ -185,24 +226,59 @@ void TrafficPanel::draw(Simulation& simulation, game::DebugState& state)
 
     ImGui::Text(
         "%u agent%s on the roads", travelling, (travelling > 1u) ? "s" : "");
-    ImGui::Text("total travel time: %.2f s", totalTime);
+    ImGui::Text("Link travel time: %.2f s", totalTime);
     if (ImGui::IsItemHovered())
     {
         ImGui::SetTooltip(
-            "Sum over the roads of the flow times the travel time. This is\n"
-            "the quantity a Wardrop equilibrium minimizes: once it stops\n"
-            "drifting, the routing has settled.");
+            "Sum over every road segment of (smoothed flow x travel time).\n"
+            "Measures congestion load on the network right now, in\n"
+            "segment-seconds. Not the same as TSTT below, which counts only\n"
+            "the remaining trips of agents on the road.");
     }
 
+    ImGui::SeparatorText("Assignment (sampled agents)");
+
+    float const tstt = simulation.totalSystemTravelTime();
+    float const sptt = simulation.shortestPathTravelTime();
     float const gap = simulation.relativeGap();
-    ImGui::Text("relative gap: %.2f %%", 100.0f * gap);
+    RoutingQuality const quality = routingQuality(gap);
+
+    ImGui::Text("Total system travel time: %.2f s", tstt);
     if (ImGui::IsItemHovered())
     {
         ImGui::SetTooltip(
-            "How far the current assignment is from the shortest paths at\n"
-            "the current travel times, (TSTT - SPTT) / TSTT. Inspired by\n"
-            "the Relgap of the MSA of CiudadSim. Near zero, Agents are on\n"
-            "cheapest itineraries and the network has settled.");
+            "TSTT: sum of remaining itinerary costs for a sample of agents,\n"
+            "counted from the next crossroads each agent is heading to.");
+    }
+
+    ImGui::Text("Shortest path travel time: %.2f s", sptt);
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip(
+            "SPTT: what the same sample would pay if every agent rerouted\n"
+            "instantly from its next routing crossroads at current travel\n"
+            "times.");
+    }
+
+    ImGui::Text("Relative gap: %.2f %%", 100.0f * gap);
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip(
+            "(TSTT - SPTT) / TSTT, clamped to 0 when SPTT exceeds TSTT.\n"
+            "Near zero, agents are on cheapest itineraries.");
+    }
+    if (sptt > tstt + 1e-3f)
+    {
+        ImGui::TextDisabled(
+            "SPTT > TSTT: fresh reroutes would cost more than finishing\n"
+            "current trips (traffic changed since departure, or different\n"
+            "destination picked on reroute). Gap shown as 0%%.");
+    }
+
+    ImGui::Text("routing quality: %s", quality.label);
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("%s", quality.detail);
     }
 
     // How much the congestion costs compared to an empty network. Zero means
@@ -210,7 +286,7 @@ void TrafficPanel::draw(Simulation& simulation, game::DebugState& state)
     float const excess = (freeFlowTotal > 0.0f)
                              ? (totalTime - freeFlowTotal) / freeFlowTotal
                              : 0.0f;
-    ImGui::Text("congestion overhead: %.1f %%", 100.0f * excess);
+    ImGui::Text("Congestion overhead: %.1f %%", 100.0f * excess);
 
     ImGui::SeparatorText("Busiest roads");
 
@@ -228,12 +304,12 @@ void TrafficPanel::draw(Simulation& simulation, game::DebugState& state)
     if (ImGui::BeginTable("ways", 4, flags))
     {
         ImGui::TableSetupScrollFreeze(0, 1);
-        ImGui::TableSetupColumn("road");
+        ImGui::TableSetupColumn("Road");
         ImGui::TableSetupColumn(
-            "agents", ImGuiTableColumnFlags_WidthFixed, 46.0f);
-        ImGui::TableSetupColumn("load");
+            "Agents", ImGuiTableColumnFlags_WidthFixed, 46.0f);
+        ImGui::TableSetupColumn("Load");
         ImGui::TableSetupColumn(
-            "time", ImGuiTableColumnFlags_WidthFixed, 54.0f);
+            "Time", ImGuiTableColumnFlags_WidthFixed, 54.0f);
         ImGui::TableHeadersRow();
 
         size_t const shown = std::min<size_t>(rows.size(), 40u);

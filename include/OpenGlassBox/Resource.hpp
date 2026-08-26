@@ -14,10 +14,6 @@
 
 #include "OpenGlassBox/Name.hpp"
 
-#include <cstdint>
-#include <ostream>
-#include <string>
-
 namespace ogb
 {
 

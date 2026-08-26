@@ -14,13 +14,10 @@
 
 #include "OpenGlassBox/Agent.hpp"
 #include "OpenGlassBox/Area.hpp"
-#include "OpenGlassBox/Config.hpp"
 #include "OpenGlassBox/Map.hpp"
 #include "OpenGlassBox/MapRegion.hpp"
-#include "OpenGlassBox/Path.hpp"
 #include "OpenGlassBox/Router.hpp"
 #include "OpenGlassBox/Unit.hpp"
-#include <memory>
 
 namespace ogb
 {
@@ -51,7 +48,7 @@ class World;
 //! Example:
 //! \code
 //! Simulation simulation;
-//! simulation.script().parse("simulations/city.ogs");
+//! simulation.script()..parseFile("simulations/city.ogs");
 //!
 //! City& city = simulation.addCity("Paris", Vector3f(0.0f, 0.0f, 0.0f), 32u,
 //! 32u); Path& road = city.addPath(simulation.script().getPathType("Road"));

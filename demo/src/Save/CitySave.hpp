@@ -22,9 +22,9 @@ class Simulation;
 //! \brief What a save claims about the ruleset it was written against.
 //!
 //! A save holds no rule of its own: it holds roads, buildings and the names of
-//! the types they were built from. Those types live in the ruleset, so a save is
-//! only meaningful together with the script it was written against, and this is
-//! what lets the loader check that before rebuilding anything.
+//! the types they were built from. Those types live in the ruleset, so a save
+//! is only meaningful together with the script it was written against, and this
+//! is what lets the loader check that before rebuilding anything.
 //==============================================================================
 struct CitySaveHeader
 {
@@ -67,7 +67,7 @@ struct CitySaveHeader
 //!     return complain(error);
 //!
 //! Simulation simulation;
-//! simulation.script().parse(header.ruleset);
+//! simulation.script()..parseFile(header.ruleset);
 //! if (!CitySave::read("saves/paris.ogc", simulation, error))
 //!     return complain(error);
 //! \endcode
@@ -80,14 +80,15 @@ public:
     //! \brief Fingerprint of a file on disk, which is what a save stores to
     //! recognise its ruleset again.
     //! \param[in] path the file to read.
-    //! \return the fingerprint, or an empty string when the file cannot be read.
+    //! \return the fingerprint, or an empty string when the file cannot be
+    //! read.
     // -------------------------------------------------------------------------
     static std::string hashFile(std::string const& path);
 
     // -------------------------------------------------------------------------
-    //! \brief The same fingerprint, over text already in memory. What the editor
-    //! of the demo uses to work out the fingerprint of a script the player is
-    //! still typing.
+    //! \brief The same fingerprint, over text already in memory. What the
+    //! editor of the demo uses to work out the fingerprint of a script the
+    //! player is still typing.
     //! \param[in] text the text to fingerprint.
     //! \return the fingerprint.
     // -------------------------------------------------------------------------
@@ -112,8 +113,8 @@ public:
     //! \brief Does the ruleset on disk still match the one the save was written
     //! against?
     //!
-    //! A mismatch is a flat refusal rather than a warning: the geometry would be
-    //! rebuilt out of the wrong types, giving a town that looks right and
+    //! A mismatch is a flat refusal rather than a warning: the geometry would
+    //! be rebuilt out of the wrong types, giving a town that looks right and
     //! behaves like something else.
     //!
     //! \param[in] header what the save claims, from peekHeader().
@@ -135,8 +136,8 @@ public:
     //!
     //! \param[in] path the file to write. Overwritten if it exists.
     //! \param[in] simulation the game to write out.
-    //! \param[in] rulesetPath the script the game was loaded from, fingerprinted
-    //! into the header.
+    //! \param[in] rulesetPath the script the game was loaded from,
+    //! fingerprinted into the header.
     //! \param[out] error why it failed.
     //! \return false when the file cannot be written.
     // -------------------------------------------------------------------------
@@ -153,7 +154,8 @@ public:
     //! an error saying which. Whatever the game already held is replaced.
     //!
     //! \param[in] path the save to read.
-    //! \param[in,out] simulation the game to fill, already carrying its ruleset.
+    //! \param[in,out] simulation the game to fill, already carrying its
+    //! ruleset.
     //! \param[out] error why it failed, naming the missing type or the line at
     //! fault.
     //! \return false when the save cannot be read or does not fit the ruleset,

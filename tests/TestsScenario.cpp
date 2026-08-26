@@ -15,8 +15,8 @@
 
 #include "main.hpp"
 
+#include "OpenGlassBox/DijkstraRouter.hpp"
 #include "OpenGlassBox/Simulation.hpp"
-#include "Routing/installRouter.hpp"
 #include "Save/CitySave.hpp"
 
 #include <fstream>
@@ -163,7 +163,7 @@ static Sightings watch(Simulation& simulation,
 static City& openAtEightInTheMorning(Simulation& simulation,
                                      std::string const& save)
 {
-    EXPECT_TRUE(simulation.script().parse(dataFile("test_city.ogs")))
+    EXPECT_TRUE(simulation.script()..parseFile(dataFile("test_city.ogs")))
         << simulation.script().formatErrors();
 
     CitySaveHeader header;
@@ -370,27 +370,27 @@ TEST(TestsScenario, ADayInQq2City)
 
     float const door = work->wayOffset();
     std::string wrongWay;
-    Sightings const seen = watch(
-        simulation,
-        city,
-        6u * 60u * 20u,
-        [&]()
-        {
-            for (auto const& agent : city.agents())
-            {
-                if (!wrongWay.empty())
-                    return;
-                if ((agent->currentWay() != street) ||
-                    (agent->offset() >= door - 0.01f))
-                {
-                    continue;
-                }
-                wrongWay = agent->type().str() + " looking for " +
-                           agent->searchTarget().str() +
-                           (agent->route().found ? " with a route"
-                                                 : " with none");
-            }
-        });
+    Sightings const seen =
+        watch(simulation,
+              city,
+              6u * 60u * 20u,
+              [&]()
+              {
+                  for (auto const& agent : city.agents())
+                  {
+                      if (!wrongWay.empty())
+                          return;
+                      if ((agent->currentWay() != street) ||
+                          (agent->offset() >= door - 0.01f))
+                      {
+                          continue;
+                      }
+                      wrongWay = agent->type().str() + " looking for " +
+                                 agent->searchTarget().str() +
+                                 (agent->route().found ? " with a route"
+                                                       : " with none");
+                  }
+              });
 
     ASSERT_TRUE(wrongWay.empty())
         << wrongWay
@@ -437,7 +437,7 @@ TEST(TestsScenario, ADayInQq2City)
 TEST(TestsScenario, AnHourOnTheChicagoNetwork)
 {
     Simulation simulation{ 512u, 512u };
-    ASSERT_TRUE(simulation.script().parse(dataFile("chicago.ogs")))
+    ASSERT_TRUE(simulation.script()..parseFile(dataFile("chicago.ogs")))
         << simulation.script().formatErrors();
 
     std::string error;

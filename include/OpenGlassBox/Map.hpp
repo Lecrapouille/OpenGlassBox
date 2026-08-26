@@ -16,9 +16,8 @@
 #include "OpenGlassBox/MapRegion.hpp"
 #include "OpenGlassBox/Rule.hpp"
 #include "OpenGlassBox/Vector.hpp"
-#include <algorithm>
+
 #include <array>
-#include <map>
 #include <memory>
 #include <unordered_map>
 
@@ -264,9 +263,8 @@ public:
     //! \param[in] u, v coordinates of the cell.
     //! \param[in] toRemove how much to take.
     // -------------------------------------------------------------------------
-    void removeResource(int32_t const u,
-                        int32_t const v,
-                        uint32_t const toRemove)
+    void
+    removeResource(int32_t const u, int32_t const v, uint32_t const toRemove)
     {
         uint32_t const amount = getResource(u, v);
 

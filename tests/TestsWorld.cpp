@@ -1,7 +1,7 @@
-#include "main.hpp"
-#include "OpenGlassBox/World.hpp"
+#include "OpenGlassBox/DijkstraRouter.hpp"
 #include "OpenGlassBox/Types.hpp"
-#include "Routing/installRouter.hpp"
+#include "OpenGlassBox/World.hpp"
+#include "main.hpp"
 
 using namespace ogb;
 
@@ -9,8 +9,8 @@ TEST(TestsWorld, AddRoadSplitsAtBorder)
 {
     World world;
     City& west = world.addCity("West", Vector3f(0.0f, 0.0f, 0.0f), 4u, 4u);
-    City& east = world.addCity("East", Vector3f(4.0f * world.cellSize(), 0.0f, 0.0f),
-                               4u, 4u);
+    City& east = world.addCity(
+        "East", Vector3f(4.0f * world.cellSize(), 0.0f, 0.0f), 4u, 4u);
 
     PathType road("Road");
     WayType dirt("Dirt");
@@ -31,6 +31,7 @@ TEST(TestsWorld, ListenerCanRefuseCrossing)
     class Refuse: public World::Listener
     {
     public:
+
         bool allowWayAcross(City&, City&, WayProposal const&) override
         {
             return false;
@@ -42,7 +43,8 @@ TEST(TestsWorld, ListenerCanRefuseCrossing)
     world.setListener(refuse);
 
     City& west = world.addCity("West", Vector3f(0.0f, 0.0f, 0.0f), 4u, 4u);
-    world.addCity("East", Vector3f(4.0f * world.cellSize(), 0.0f, 0.0f), 4u, 4u);
+    world.addCity(
+        "East", Vector3f(4.0f * world.cellSize(), 0.0f, 0.0f), 4u, 4u);
 
     PathType road("Road");
     WayType dirt("Dirt");

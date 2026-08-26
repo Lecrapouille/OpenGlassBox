@@ -13,10 +13,10 @@
 
 #include "OpenGlassBox/Types.hpp"
 #include "OpenGlassBox/Vector.hpp"
+
 #include <deque>
 #include <map>
 #include <memory>
-#include <vector>
 
 namespace ogb
 {

@@ -5,18 +5,16 @@
 //-----------------------------------------------------------------------------
 
 //! \file IScriptParser.hpp
-//! \brief Parser interface, parse errors and factory for script language backends.
-
+//! \brief Parser interface, parse errors and factory for script language
+//! backends.
 
 #ifndef OPEN_GLASSBOX_SCRIPT_ISCRIPT_PARSER_HPP
-#  define OPEN_GLASSBOX_SCRIPT_ISCRIPT_PARSER_HPP
+#define OPEN_GLASSBOX_SCRIPT_ISCRIPT_PARSER_HPP
 
-#  include "OpenGlassBox/Script/ScriptDefinitions.hpp"
-#  include <memory>
-#  include <string>
-#  include <vector>
+#include "OpenGlassBox/Script/ScriptDefinitions.hpp"
 
-namespace ogb {
+namespace ogb
+{
 
 //==============================================================================
 //! \brief One thing wrong with a script, and where.
@@ -43,9 +41,9 @@ struct ParseError
     std::string source;
 
     //--------------------------------------------------------------------------
-    //! \brief \return the error as \c file:line:column:\ message, followed by the
-    //! offending line and a caret under the column. The first line is in the
-    //! format every editor knows how to jump from.
+    //! \brief \return the error as \c file:line:column:\ message, followed by
+    //! the offending line and a caret under the column. The first line is in
+    //! the format every editor knows how to jump from.
     //--------------------------------------------------------------------------
     std::string format() const;
 };
@@ -66,8 +64,8 @@ public:
     //--------------------------------------------------------------------------
     //! \brief Read a script file into a ruleset.
     //! \param[in] filename the script to read.
-    //! \param[out] definitions where to put what was understood. Added to rather
-    //! than replaced.
+    //! \param[out] definitions where to put what was understood. Added to
+    //! rather than replaced.
     //! \return true when nothing was wrong. On failure the ruleset holds
     //! whatever could be understood, which is what lets an editor show a
     //! half-broken script instead of nothing at all.
@@ -82,7 +80,8 @@ public:
     //! \param[out] definitions where to put what was understood.
     //! \return true when nothing was wrong.
     //--------------------------------------------------------------------------
-    virtual bool parseString(std::string const& source, std::string const& name,
+    virtual bool parseString(std::string const& source,
+                             std::string const& name,
                              ScriptDefinitions& definitions) = 0;
 
     //--------------------------------------------------------------------------

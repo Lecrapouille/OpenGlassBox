@@ -15,8 +15,8 @@
 #include "OpenGlassBox/Entity.hpp"
 #include "OpenGlassBox/OpeningHours.hpp"
 #include "OpenGlassBox/Rule.hpp"
+
 #include <memory>
-#include <vector>
 
 namespace ogb
 {

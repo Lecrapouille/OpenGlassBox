@@ -12,8 +12,6 @@
 #define OPEN_GLASSBOX_ROUTER_HPP
 
 #include "OpenGlassBox/Path.hpp"
-#include <string>
-#include <vector>
 
 namespace ogb
 {
@@ -173,9 +171,8 @@ public:
     //! destination is right there, or a random neighbour when nothing was
     //! found: an Agent with nowhere to go wanders rather than stops.
     //--------------------------------------------------------------------------
-    virtual Node* findNextPoint(Node& fromNode,
-                                Name& searchTarget,
-                                Resources& resources) = 0;
+    virtual Node*
+    findNextPoint(Node& fromNode, Name& searchTarget, Resources& resources) = 0;
 
     //--------------------------------------------------------------------------
     //! \brief Seed the generator behind the wandering, so that a run can be

@@ -40,7 +40,7 @@ public:
     //!
     //! \return true in case of success. See errors() for what went wrong.
     //--------------------------------------------------------------------------
-    bool parse(std::string const& filename);
+    bool parseFile(std::string const& filename);
 
     //--------------------------------------------------------------------------
     //! \brief Load a script held in memory, reported under the given name.

@@ -12,7 +12,6 @@
 #define OPEN_GLASSBOX_VECTOR_HPP
 
 #include <cmath>
-#include <ostream>
 
 namespace ogb
 {

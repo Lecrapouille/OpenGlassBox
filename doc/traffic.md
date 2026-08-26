@@ -8,7 +8,7 @@ The reference implementation of the theory is [CiudadSim](https://www.rocq.inria
 
 The road network is a directed graph $G = (N, A)$, where $N$ is the set of nodes (crossroads) and $A$ the set of links $a$ (street segments).
 
-Travel demand is an **origin-destination matrix**: $d_{ij}$ is the number of trips wanting to go from node $i$ to node $j$ during the period considered.
+Travel demand is an **origin-destination matrix**: $d_{ij}$ is the number of trips from node $i$ to node $j$, expressed as vehicles per hour over the period considered.
 
 Everything below is written with one piece of shorthand, the **indicator**, which turns a yes-or-no question into a number that can be summed:
 
@@ -16,15 +16,44 @@ $$\displaystyle \mathbb{1}[P] = \begin{cases} 1 & \text{if the proposition } P \
 
 It is worth naming because it is the only thing separating the formulas of the next three sections from one another. They all sum a demand multiplied by an indicator; what differs is the proposition inside the brackets.
 
-For a pair $(i,j)$ there is a set of possible routes $K_{ij}$. Writing $f_k$ for the flow assigned to route $k$, and
-
-$$\displaystyle \delta_{a,k} = \mathbb{1}\!\left[a \in k\right]$$
-
-for the indicator that route $k$ uses link $a$, the flow on a link is the sum of the flows of every route using it:
+For a pair $(i,j)$ there is a set of possible routes $K_{ij}$. Writing $f_k$ for the flow assigned to route $k$, and $\displaystyle \delta_{a,k} = \mathbb{1}\!\left[a \in k\right]$ for the indicator that route $k$ uses link $a$, the flow on a link is the sum of the flows of every route using it:
 
 $$\displaystyle x_a = \sum_{(i,j)} \sum_{k \in K_{ij}} f_k \, \delta_{a,k}$$
 
 Every algorithm below answers the same question: how to spread $d_{ij}$ over the routes of $K_{ij}$, knowing that the cost of a route depends on the flow it carries. That circularity is the whole difficulty. The flow determines the cost, the cost determines the flow, and what is wanted is a fixed point of the two.
+
+### Example of $\delta_{a,k}$ and link flows
+
+From origin $i$ to destination $j$, suppose two routes are available:
+
+```mermaid
+flowchart LR
+    i(("i"))
+    m(("m"))
+    j(("j"))
+    i -->|"link a"| m
+    m -->|"link b"| j
+    i -->|"link c"| j
+```
+
+- Route $k_1$: $i \to m \to j$, using links $\{a, b\}$. Flow $f_{k_1} = 100$ veh/h.
+- Route $k_2$: $i \to j$ directly, using link $\{c\}$ only. Flow $f_{k_2} = 50$ veh/h.
+
+The indicator $\delta_{a,k}$ is 1 when route $k$ passes through link $a$, and 0 otherwise:
+
+| Link $a$ | Route $k_1$ | Route $k_2$ | Meaning |
+| --- | --- | --- | --- |
+| $a$ | $\delta_{a,k_1} = 1$ | $\delta_{a,k_2} = 0$ | only $k_1$ uses the upper-left segment |
+| $b$ | $\delta_{b,k_1} = 1$ | $\delta_{b,k_2} = 0$ | only $k_1$ uses the upper-right segment |
+| $c$ | $\delta_{c,k_1} = 0$ | $\delta_{c,k_2} = 1$ | only $k_2$ uses the diagonal shortcut |
+
+Applied to this pair $(i,j)$, the formula gives the flow on each link:
+
+$$\displaystyle x_a = f_{k_1}\,\delta_{a,k_1} + f_{k_2}\,\delta_{a,k_2} = 100 \times 1 + 50 \times 0 = 100 \;\text{veh/h}$$
+
+$$\displaystyle x_b = 100 \times 1 + 50 \times 0 = 100 \;\text{veh/h}, \qquad x_c = 100 \times 0 + 50 \times 1 = 50 \;\text{veh/h}$$
+
+Link $c$ carries only the shortcut traffic; links $a$ and $b$ carry only the traffic that goes through $m$.
 
 ## Travel time on a road: the BPR function
 
@@ -64,9 +93,9 @@ $t_a^0$ is computed once per segment by `Way::updateMagnitude`, as the length of
 segment Dirt color 0xAAAAAA speed 30 capacity 20 beta 4
 ```
 
-A word on the units, because they are not the ones a traffic engineer would expect. Here the flow is a **number of agents currently on the road**, not a number of vehicles per hour, and the capacity is the number of agents a street carries before it starts to feel it. Nothing forbids the flow from exceeding the capacity: a saturated street stays passable, it just becomes expensive, and that is precisely what makes the router send the next agent somewhere else instead of queueing everybody through the same place. Times are in seconds of game time, which the clock converts from ticks, so lengthening a tick does not make the city drive faster.
+A word on the units, because they are not the ones a traffic engineer would expect. Here the flow is a **number of agents currently on the road**, not a number of vehicles per hour, and the capacity is the number of agents a street carries before it starts to feel it. Nothing forbids the flow from exceeding the capacity: a saturated street stays passable, it just becomes expensive, and that is precisely what makes the [router](#the-router) send the next agent somewhere else instead of queueing everybody through the same place. Times are in seconds of game time, which the clock converts from ticks, so lengthening a tick does not make the city drive faster.
 
-An empty road costs $t_a^0$. A road loaded exactly to its capacity costs 15 % more. Twice its capacity costs about three and a half times the free flow time.
+On an empty road, travel time is $t_a^0$. At capacity ($x_a = c_a$), it is 15 % higher. At twice the capacity ($x_a = 2c_a$), it is about three and a half times the free-flow time.
 
 ## AON: All-or-nothing
 
@@ -134,7 +163,15 @@ That is more faithful than the logit, and it has no closed form: it needs numeri
 
 ## What OpenGlassBox does instead
 
-The key simplification is that OpenGlassBox does not have to simulate a flow, because the flow is already there. In CiudadSim, $x_a$ is an aggregate quantity the solver computes. Here it is the `Agent` objects physically crossing the `Way` objects one by one; `Way::addAgent` and `Way::removeAgent` merely count them.
+In CiudadSim, $x_a$ is an aggregate quantity the solver computes. OpenGlassBox does not have to simulate a flow, because the flow is already there and this is a great simplification. Here it is the `Agent` objects physically crossing the `Way` objects one by one; `Way::addAgent` and `Way::removeAgent` merely count them.
+
+### The router
+
+Classical assignment algorithms spread $d_{ij}$ over routes in one batch. OpenGlassBox does the opposite: each **agent** decides where to go, one at a time, when a rule sends it out with a load. Something has to answer that question on the road graph, and that component is the **router**.
+
+A router is the object a `City` holds to plan agent trips. It implements the `IRouter` interface (`include/OpenGlassBox/Router.hpp`): given a crossroads, a target name, and a load, it searches the network for a building that accepts them and returns a `Route` (crossroads to follow, optional last leg along a segment, travel time). Agents call it when they need a next crossroads or when they check whether their current road is still the cheapest option. Edge costs are always read from `Way::travelTime`, so the router sees the traffic picture built by the four steps below.
+
+Each city owns one router instance for the lifetime of the simulation (`City::setRouter`), so scratch buffers are allocated once rather than on every search. The shipped default is `Dijkstra` in `OpenGlassBox/DijkstraRouter.hpp`; attach it with `installDijkstraRouter` (see the [integration guide](integration.md)). You can replace it with any other `IRouter` without changing `City` or `Agent`.
 
 So there is no assignment loop, and no iteration index. What is left of the MSA structure runs once per tick, in four steps.
 
@@ -176,9 +213,7 @@ The same exponential moving average is the mechanism proposed for smoothing macr
 
 ### Finding a destination: a search with no goal
 
-"The router" here means one concrete class: `Dijkstra`, declared in `demo/src/Routing/DijkstraRouter.hpp`. It implements the engine-side interface `IRouter` of `include/OpenGlassBox/Router.hpp`, and a `City` owns one instance so that its scratch buffers are allocated once instead of on every search. It lives in the demo rather than in the engine on purpose: pathfinding is the piece a host is most likely to want to replace, and `City::setRouter` is how it does so.
-
-It does two things a textbook shortest path does not.
+The default router, `Dijkstra`, does two things a textbook shortest path does not.
 
 The first is the cost: an edge costs its travel time under the current traffic, not its length. A short road carrying two hundred agents costs more than a long empty one.
 
@@ -199,6 +234,32 @@ Since the engine never solves for an equilibrium, it measures how far it is from
 $$\displaystyle \mathrm{Relgap} = \frac{\mathrm{TSTT} - \mathrm{SPTT}}{\mathrm{TSTT}}$$
 
 TSTT is the total system travel time and SPTT the shortest path travel time. `Simulation::relativeGap` sums the remaining cost of the agents for the first, and asks the router for `shortestPathCost` from where each of them stands for the second. Near zero, the agents are already on their cheapest itineraries and the network has settled. It is a diagnostic to watch in the Traffic panel, not the stopping criterion of a solver.
+
+**Example.** Three agents are still on the road, each heading for a building that accepts its load. Their **remaining cost** is the travel time left on the itinerary they chose when they set out (TSTT contribution). **Shortest path cost** is what the router would charge *today*, from the same crossroads, with the traffic as it is now (SPTT contribution):
+
+| Agent | Remaining cost (TSTT) | Shortest cost today (SPTT) | Interpretation |
+| --- | --- | --- | --- |
+| A | 120 s | 120 s | already on the cheapest route |
+| B | 80 s | 60 s | a parallel road opened up since departure |
+| C | 100 s | 50 s | still on a road that became congested |
+
+$$\displaystyle \mathrm{TSTT} = 120 + 80 + 100 = 300 \;\text{s}, \qquad \mathrm{SPTT} = 120 + 60 + 50 = 230 \;\text{s}$$
+
+$$\displaystyle \mathrm{Relgap} = \frac{300 - 230}{300} \approx 0.23 \;\;(23\%)$$
+
+About a quarter of the remaining travel time is "extra" compared with rerouting everyone instantly at current prices. The city is not in equilibrium yet, but it is not catastrophically off either. If every agent were on its cheapest route today, each remaining cost would match its shortest cost, so TSTT = SPTT and **Relgap = 0**. After a sudden jam on one artery, the gap can spike until agents reconsider on their next `pathCheckTicks`.
+
+The table below is a rule of thumb for reading the value in the Traffic panel. Assignment solvers often stop near 1 %; here the gap is a **live** measure and never forced to zero, because demand and travel times keep moving.
+
+| Relgap | Situation | What it usually means |
+| --- | --- | --- |
+| **0 %** | TSTT = SPTT | Every sampled agent is on the cheapest route available *right now*. Wardrop-like for the trips still on the road. |
+| **0–5 %** | Near equilibrium | Routing has largely settled. Small differences come from agents between `pathCheckTicks`, sampling noise, or a destination that just filled up. |
+| **5–15 %** | Normal churn | Typical for a busy city. Some agents are still on itineraries chosen before traffic shifted; others could save a noticeable slice of time by rerouting. |
+| **15–30 %** | Clearly off | Many agents pay substantially more than today's shortest path: fresh congestion, a new road not yet used, or `pathCheckTicks` set too high. |
+| **30 %+** | Strong mismatch | Often right after a shock (closed road, rush of new agents, capacity collapse on one link). Expect visible jams and agents committed to bad routes until they re-check. |
+
+These bands are indicative, not thresholds to tune for. A city can sit at 10 % for long stretches and still look healthy; what matters is whether the gap **drifts down** after a disturbance and whether jams match what you see on the map.
 
 Being a diagnostic is what its cost has to be measured against, and the cost is a whole graph search per agent examined. Two things keep it affordable while a panel reads it on every frame. The result is memoized until the next tick, since nothing it depends on can move within one. And the agents are sampled rather than all walked, at most `SimulationConfig::relativeGapSamples` of them, taken at a regular stride so that the sample covers the whole population instead of whichever end of the list the loop starts at. The gap being a ratio of two sums scaled the same way, a regular sample estimates it without any correction.
 

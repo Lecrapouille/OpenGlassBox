@@ -1,4 +1,10 @@
-# Improvements over MultiAgentSimulation
+# Differences and Improvements over MultiAgentSimulation
+
+- The original project uses C# for Unity. This is C++14, with no game engine underneath.
+- The simulation is a library that knows nothing about drawing; the demo is a separate program on top of it.
+- Confusing names from the GDC talk were renamed: `Box` → `City`, `Point`/`Segment` → `Node`/`Way`, `ResourceBinCollection` → `Resources`, `SimulationDefinitionLoader` → `ScriptParser`. The term `Unit` was kept (it means building). New classes include `Area` (zone).
+- The original project had neither unit tests nor comments. This one has both.
+- Several parts of the code were optimized for larger cities.
 
 ## Simulation model
 

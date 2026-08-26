@@ -4,8 +4,9 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+#include "OpenGlassBox/DijkstraRouter.hpp"
+
 #include "Game/GlassBoxApp.hpp"
-#include "Routing/installRouter.hpp"
 #include "Save/CitySave.hpp"
 #include "UI/Theme.hpp"
 
@@ -412,7 +413,7 @@ bool GlassBoxApp::loadRuleset(std::string const& filename, bool loadSiblingSave)
     wireSimulation(*simulation);
     try
     {
-        if (!simulation->script().parse(path))
+        if (!simulation->script().parseFile(path))
         {
             m_script_error = "Failed parsing '" + path + "'";
             if (!simulation->script().formatErrors().empty())
@@ -538,7 +539,7 @@ bool GlassBoxApp::loadCity(std::string const& filename)
     wireSimulation(*simulation);
     try
     {
-        if (!simulation->script().parse(ruleset))
+        if (!simulation->script().parseFile(ruleset))
         {
             m_script_error = "Failed parsing '" + ruleset + "'";
             return false;

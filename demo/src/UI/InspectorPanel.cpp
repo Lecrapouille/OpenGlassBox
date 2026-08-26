@@ -190,7 +190,7 @@ OpeningStatus openingStatus(Unit const& unit, uint32_t hourOfDay)
     {
         status.known = true;
         status.open = false;
-        status.text = "inactive (no rules)";
+        status.text = "Inactive (no rules)";
         return status;
     }
 
@@ -200,7 +200,7 @@ OpeningStatus openingStatus(Unit const& unit, uint32_t hourOfDay)
     {
         status.known = true;
         status.open = true;
-        status.text = "active (always)";
+        status.text = "Active (always)";
         return status;
     }
 
@@ -210,8 +210,8 @@ OpeningStatus openingStatus(Unit const& unit, uint32_t hourOfDay)
     {
         uint32_t const last = hours.closingAfter(hourOfDay);
         status.text = (last == OpeningHours::NEVER)
-                          ? "active"
-                          : "active until " +
+                          ? "Active"
+                          : "Active until " +
                                 std::to_string((last + 1u) %
                                                OpeningHours::HOURS_PER_DAY) +
                                 "h";
@@ -220,8 +220,8 @@ OpeningStatus openingStatus(Unit const& unit, uint32_t hourOfDay)
 
     uint32_t const next = hours.nextOpening(hourOfDay);
     status.text = (next == OpeningHours::NEVER)
-                      ? "inactive (never opens)"
-                      : "inactive until " + std::to_string(next) + "h";
+                      ? "Inactive (never opens)"
+                      : "Inactive until " + std::to_string(next) + "h";
     return status;
 }
 
@@ -280,11 +280,11 @@ static void drawRules(RuleContainer const& rules,
         {
             ImGui::TextUnformatted(rule->type().c_str());
             ImGui::Separator();
-            ImGui::Text("every %u tick%s (%s of game time)",
+            ImGui::Text("Every %u tick%s (%s of game time)",
                         period,
                         (period > 1u) ? "s" : "",
                         gameTimeText(period, ticksPerMinute).c_str());
-            ImGui::Text("next attempt in %u tick%s",
+            ImGui::Text("Next attempt in %u tick%s",
                         remaining,
                         (remaining > 1u) ? "s" : "");
             if (hours.bounded())
@@ -294,20 +294,20 @@ static void drawRules(RuleContainer const& rules,
                 {
                     ImGui::TextColored(
                         ImGui::ColorConvertU32ToFloat4(theme::FAILURE),
-                        "inactive until %uh: attempts are skipped",
+                        "Inactive until %uh: attempts are skipped",
                         next);
                 }
                 else if (asleep)
                 {
                     ImGui::TextColored(
                         ImGui::ColorConvertU32ToFloat4(theme::FAILURE),
-                        "the hours it keeps are empty: it never fires");
+                        "The hours it keeps are empty: it never fires");
                 }
                 else
                 {
                     ImGui::TextColored(
                         ImGui::ColorConvertU32ToFloat4(theme::SUCCESS),
-                        "active within its hours");
+                        "Active within its hours");
                 }
             }
             ImGui::Separator();
@@ -563,10 +563,10 @@ void InspectorPanel::drawRuleset(Simulation& simulation)
     if (!ImGui::BeginTable("ruleset", 4, flags))
         return;
 
-    ImGui::TableSetupColumn("rule", ImGuiTableColumnFlags_WidthStretch, 1.6f);
-    ImGui::TableSetupColumn("run by", ImGuiTableColumnFlags_WidthStretch, 0.8f);
-    ImGui::TableSetupColumn("every", ImGuiTableColumnFlags_WidthStretch, 0.6f);
-    ImGui::TableSetupColumn("does", ImGuiTableColumnFlags_WidthStretch, 3.0f);
+    ImGui::TableSetupColumn("Rule", ImGuiTableColumnFlags_WidthStretch, 1.6f);
+    ImGui::TableSetupColumn("Run by", ImGuiTableColumnFlags_WidthStretch, 0.8f);
+    ImGui::TableSetupColumn("Every", ImGuiTableColumnFlags_WidthStretch, 0.6f);
+    ImGui::TableSetupColumn("Does", ImGuiTableColumnFlags_WidthStretch, 3.0f);
     ImGui::TableSetupScrollFreeze(0, 1);
     ImGui::TableHeadersRow();
 
@@ -650,15 +650,6 @@ void InspectorPanel::drawUnit(Simulation& simulation,
         "Building %s #%u",
         unit->type().c_str(),
         unit->id());
-
-    uint32_t const hour = simulation.clock().hourOfDay();
-    OpeningStatus const opening = openingStatus(*unit, hour);
-
-    ImGui::TextColored(
-        ImGui::ColorConvertU32ToFloat4(theme::fromScript(unit->color())),
-        "Building %s #%u",
-        unit->type().c_str(),
-        unit->id());
     ImGui::Spacing();
 
     auto const cityIt = simulation.cities().find(state.selection.city);
@@ -682,18 +673,20 @@ void InspectorPanel::drawUnit(Simulation& simulation,
 
     if (beginFields("unit"))
     {
-        field("city", "%s", state.selection.city.c_str());
-        field("cell", "(%d, %d)", unit->mapU(), unit->mapV());
+        uint32_t const hour = simulation.clock().hourOfDay();
+        OpeningStatus const opening = openingStatus(*unit, hour);
+
+        field("City", "%s", state.selection.city.c_str());
+        field("Cell", "(%d, %d)", unit->mapU(), unit->mapV());
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
-        ImGui::TextUnformatted("status");
+        ImGui::TextUnformatted("Status");
         ImGui::TableNextColumn();
-        ImGui::TextColored(
-            ImGui::ColorConvertU32ToFloat4(opening.open ? theme::SUCCESS
-                                                         : theme::FAILURE),
-            "%s",
-            opening.text.c_str());
+        ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(
+                               opening.open ? theme::SUCCESS : theme::FAILURE),
+                           "%s",
+                           opening.text.c_str());
         if (ImGui::IsItemHovered())
         {
             ImGui::SetTooltip(
@@ -702,18 +695,24 @@ void InspectorPanel::drawUnit(Simulation& simulation,
                 hour);
         }
 
-        field("map radius", "%u", unit->mapRadius());
-        field("zone", "%s", zones.empty() ? "outside any zone" : zones.c_str());
+        field("Map radius", "%u", unit->mapRadius());
+        field("Zone", "%s", zones.empty() ? "outside any zone" : zones.c_str());
         if (unit->node() != nullptr)
-            field("stands on", "node #%u", unit->node()->id());
+        {
+            field("Stands on", "node #%u", unit->node()->id());
+        }
         else if (unit->way() != nullptr)
-            field("stands on",
+        {
+            field("Stands on",
                   "%s #%u at %.0f%%",
                   unit->way()->type().c_str(),
                   unit->way()->id(),
                   100.0f * unit->wayOffset());
+        }
         else
-            field("stands on", "nothing");
+        {
+            field("Stands on", "nothing");
+        }
         endFields();
     }
 
@@ -758,7 +757,7 @@ void InspectorPanel::drawUnit(Simulation& simulation,
     drawRules(unit->rules(),
               unit->ticks(),
               simulation.clock().ticksPerMinute(),
-              hour);
+              simulation.clock().hourOfDay());
     ImGui::Spacing();
 
     // Outcome of the last attempts recorded for this very unit type.
@@ -828,17 +827,17 @@ void InspectorPanel::drawAgent(Simulation& simulation, game::DebugState& state)
     Way const* const way = agent->currentWay();
     if (beginFields("agent"))
     {
-        field("city", "%s", state.selection.city.c_str());
-        field("looking for",
+        field("City", "%s", state.selection.city.c_str());
+        field("Looking for",
               "a building accepting %s",
               agent->searchTarget().c_str());
-        field("speed", "%.2f world units per second", agent->speed());
-        field("position",
+        field("Speed", "%.2f world units per second", agent->speed());
+        field("Position",
               "(%.1f, %.1f)",
               agent->position().x,
               agent->position().y);
         if (way == nullptr)
-            field("driving on", "nothing: waiting on a node for a route");
+            field("Driving on", "nothing: waiting on a node for a route");
         else
             field("driving on",
                   "%s, %.0f%% travelled",
@@ -851,24 +850,24 @@ void InspectorPanel::drawAgent(Simulation& simulation, game::DebugState& state)
     Route const& route = agent->route();
     if (beginFields("route"))
     {
-        field("time to go", "%.2f s", agent->remainingCost());
+        field("Time to go", "%.2f s", agent->remainingCost());
         if (!route.found)
         {
-            field("route", "none cached: it is looking for one");
+            field("Route", "none cached: it is looking for one");
         }
         else
         {
-            field("nodes left", "%zu", route.waypointCount());
+            field("Nodes left", "%zu", route.waypointCount());
             if (route.destination != nullptr)
             {
-                field("destination",
+                field("Destination",
                       "%s #%u",
                       route.destination->type().c_str(),
                       route.destination->id());
             }
             if (route.approachWay != nullptr)
             {
-                field("arrives on",
+                field("Arrives on",
                       "%s at %.0f%%",
                       route.approachWay->type().c_str(),
                       100.0f * route.approachOffset);
@@ -895,9 +894,9 @@ void InspectorPanel::drawNode(game::DebugState& state)
 
     if (beginFields("node"))
     {
-        field("city", "%s", state.selection.city.c_str());
+        field("City", "%s", state.selection.city.c_str());
         field(
-            "position", "(%.1f, %.1f)", node->position().x, node->position().y);
+            "Position", "(%.1f, %.1f)", node->position().x, node->position().y);
         endFields();
     }
 
@@ -905,7 +904,7 @@ void InspectorPanel::drawNode(game::DebugState& state)
     if (node->ways().empty())
     {
         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(theme::FAILURE),
-                           "orphan node: no agent can reach it");
+                           "Orphan node: no agent can reach it");
     }
     for (Way const* way : node->ways())
     {
@@ -943,12 +942,12 @@ void InspectorPanel::drawWay(game::DebugState& state)
 
     if (beginFields("way"))
     {
-        field("city", "%s", state.selection.city.c_str());
-        field("from", "node #%u", way->from().id());
-        field("to", "node #%u", way->to().id());
-        field("length", "%.1f", way->magnitude());
-        field("free flow", "%.2f s", way->freeFlowTime());
-        field("now", "%.2f s", way->travelTime());
+        field("City", "%s", state.selection.city.c_str());
+        field("From", "node #%u", way->from().id());
+        field("To", "node #%u", way->to().id());
+        field("Length", "%.1f", way->magnitude());
+        field("Free flow", "%.2f s", way->freeFlowTime());
+        field("Now", "%.2f s", way->travelTime());
         endFields();
     }
 
@@ -990,9 +989,9 @@ void InspectorPanel::drawArea(Simulation& simulation, game::DebugState& state)
 
     if (beginFields("area"))
     {
-        field("city", "%s", state.selection.city.c_str());
-        field("size", "%u x %u cells", footprint.sizeU, footprint.sizeV);
-        field("top left", "(%d, %d)", footprint.u0, footprint.v0);
+        field("City", "%s", state.selection.city.c_str());
+        field("Size", "%u x %u cells", footprint.sizeU, footprint.sizeV);
+        field("Top left", "(%d, %d)", footprint.u0, footprint.v0);
         endFields();
     }
 

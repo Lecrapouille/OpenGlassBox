@@ -3,7 +3,7 @@
 
 #define protected public
 #define private public
-#  include "OpenGlassBox/ScriptParser.hpp"
+#include "OpenGlassBox/ScriptParser.hpp"
 #undef protected
 #undef private
 
@@ -13,7 +13,7 @@ static std::string testCityPath()
         "../demo/data/Simulations/test_city.ogs",
         "demo/data/Simulations/test_city.ogs",
     };
-    for (char const* path: candidates)
+    for (char const* path : candidates)
     {
         std::ifstream file(path);
         if (file.good())
@@ -26,7 +26,7 @@ TEST(TestsScript, Constructor)
 {
     Script script;
 
-    ASSERT_EQ(script.parse(testCityPath()), true);
+    ASSERT_EQ(script..parseFile(testCityPath()), true);
     ASSERT_EQ(script.errors().size(), 0u);
 
     ScriptDefinitions const& defs = script.definitions();
@@ -73,12 +73,12 @@ TEST(TestsScript, Constructor)
     {
         ASSERT_GE(defs.agentTypes().size(), 3u);
         AgentType const& a1 = script.getAgentType("People");
-        //ASSERT_STREQ(a1.name.c_str(), "People");
+        // ASSERT_STREQ(a1.name.c_str(), "People");
         ASSERT_EQ(a1.color, 0xFFFF00u);
         ASSERT_EQ(a1.speed, 10u);
 
         AgentType const& a2 = script.getAgentType("Worker");
-        //ASSERT_STREQ(a2.name.c_str(), "Worker");
+        // ASSERT_STREQ(a2.name.c_str(), "Worker");
         ASSERT_EQ(a2.color, 0xFFFFFFu);
         ASSERT_EQ(a2.speed, 10u);
     }
@@ -137,14 +137,14 @@ TEST(TestsScript, Constructor)
     // -- Map Rules
     {
         ASSERT_GE(defs.ruleMaps().size(), 1u);
-         RuleMap const& rm1 = script.getRuleMap("CreateGrass");
-         ASSERT_STREQ(rm1.m_type.c_str(), "CreateGrass");
-         // "rate 20 minutes": twenty game minutes, four hundred ticks.
-         ASSERT_EQ(rm1.rateMinutes(), 20u);
-         ASSERT_EQ(rm1.periodTicks(20u), 400u);
-         ASSERT_EQ(rm1.isRandom(), true);
-         // Both 'map' commands of the rule, in the order they were written.
-         ASSERT_EQ(rm1.m_commands.size(), 2u);
+        RuleMap const& rm1 = script.getRuleMap("CreateGrass");
+        ASSERT_STREQ(rm1.m_type.c_str(), "CreateGrass");
+        // "rate 20 minutes": twenty game minutes, four hundred ticks.
+        ASSERT_EQ(rm1.rateMinutes(), 20u);
+        ASSERT_EQ(rm1.periodTicks(20u), 400u);
+        ASSERT_EQ(rm1.isRandom(), true);
+        // Both 'map' commands of the rule, in the order they were written.
+        ASSERT_EQ(rm1.m_commands.size(), 2u);
     }
 
     // -- Unit Rules
@@ -174,7 +174,7 @@ TEST(TestsScript, Constructor)
         MapType const& pollution = script.getMapType("Pollution");
         bool spreads = false;
         bool cleans = false;
-        for (auto const* rule: pollution.rules)
+        for (auto const* rule : pollution.rules)
         {
             spreads = spreads || (rule->type() == "SpreadPollution");
             cleans = cleans || (rule->type() == "CleanPollution");
@@ -189,7 +189,7 @@ TEST(TestsScript, DoesNotExist)
     Script script;
 
     // Load a script that does not exist.
-    ASSERT_EQ(script.parse("fdsfhsdfgsdfdsf"), false);
+    ASSERT_EQ(script..parseFile("fdsfhsdfgsdfdsf"), false);
 }
 
 TEST(TestsScript, BadSyntax)
@@ -198,7 +198,7 @@ TEST(TestsScript, BadSyntax)
 
     // Load a script that contains error syntax.
     (void)system("echo \"foo\" > /tmp/foo");
-    ASSERT_EQ(script.parse("/tmp/foo"), false);
+    ASSERT_EQ(script..parseFile("/tmp/foo"), false);
 }
 
 TEST(TestsScript, EmptyFile)
@@ -207,11 +207,12 @@ TEST(TestsScript, EmptyFile)
 
     // Load a script that contains error syntax.
     (void)system("echo \"\" > /tmp/foo");
-    ASSERT_EQ(script.parse("/tmp/foo"), false);
+    ASSERT_EQ(script..parseFile("/tmp/foo"), false);
 }
 
 //------------------------------------------------------------------------------
-//! \brief An error carries where it happened, so the demo can point at the line.
+//! \brief An error carries where it happened, so the demo can point at the
+//! line.
 //------------------------------------------------------------------------------
 TEST(TestsScript, ErrorPosition)
 {
@@ -263,7 +264,8 @@ TEST(TestsScript, UnterminatedSection)
 
     ASSERT_EQ(script.parseString("resources\n  resource Water\n"), false);
     ASSERT_EQ(script.errors().size(), 1u) << script.formatErrors();
-    ASSERT_NE(script.errors()[0].message.find("end of script"), std::string::npos)
+    ASSERT_NE(script.errors()[0].message.find("end of script"),
+              std::string::npos)
         << script.formatErrors();
 }
 
@@ -308,7 +310,8 @@ TEST(TestsScript, DuplicateDefinition)
                   "resources\n  resource Water\n  resource Water\nend\n"),
               false);
     ASSERT_NE(script.errors().size(), 0u);
-    ASSERT_NE(script.errors()[0].message.find("defined twice"), std::string::npos)
+    ASSERT_NE(script.errors()[0].message.find("defined twice"),
+              std::string::npos)
         << script.formatErrors();
 }
 
@@ -337,19 +340,20 @@ TEST(TestsScript, ForwardReference)
         << script.formatErrors();
 
     ASSERT_EQ(script.getMapType("Grass").rules.size(), 1u);
-    ASSERT_EQ(script.getMapType("Grass").rules[0], &script.getRuleMap("CreateGrass"));
+    ASSERT_EQ(script.getMapType("Grass").rules[0],
+              &script.getRuleMap("CreateGrass"));
     ASSERT_EQ(script.getRuleMap("CreateGrass").rate(), 7u);
 }
 
 //------------------------------------------------------------------------------
-//! \brief A failed load leaves the previously loaded script untouched, so a typo
-//! during a hot reload does not empty a running simulation.
+//! \brief A failed load leaves the previously loaded script untouched, so a
+//! typo during a hot reload does not empty a running simulation.
 //------------------------------------------------------------------------------
 TEST(TestsScript, FailedReloadKeepsPreviousDefinitions)
 {
     Script script;
 
-    ASSERT_EQ(script.parse(testCityPath()), true);
+    ASSERT_EQ(script..parseFile(testCityPath()), true);
     size_t const before = script.definitions().resources().size();
 
     ASSERT_EQ(script.parseString("this is not a script"), false);
@@ -366,37 +370,39 @@ TEST(TestsScript, HourAndArea)
 {
     Script script;
 
-    ASSERT_EQ(script.parseString(
-                  "resources\n  resource People\nend\n"
-                  "paths\n  path Road color 0xAAAAAA\nend\n"
-                  "segments\n  segment Dirt color 0xAAAAAA speed 10.5 "
-                  "capacity 20 beta 4\nend\n"
-                  "agents\n  agent Worker color 0xFFFFFF speed 10\nend\n"
-                  "rules\n"
-                  "  unitRule Morning\n"
-                  "    rate 1\n"
-                  "    hour between 8 18\n"
-                  "    local People remove 1\n"
-                  "  end\n"
-                  "  areaRule Grow\n"
-                  "    rate 2\n"
-                  "    count Home less 3\n"
-                  "    spawn Home at nearestWay\n"
-                  "  end\n"
-                  "  areaRule Replace\n"
-                  "    rate 3\n"
-                  "    upgrade Home to Shop\n"
-                  "  end\n"
-                  "end\n"
-                  "units\n"
-                  "  unit Home color 0xFF00FF mapRadius 1 rules [ Morning ] "
-                  "targets [ Home ] caps [ People 4 ] resources [ People 1 ]\n"
-                  "  unit Shop color 0xFFAA00 mapRadius 1 rules [ ] "
-                  "targets [ Shop ] caps [ People 4 ] resources [ ]\n"
-                  "end\n"
-                  "maps\n  map People color 0xFFFF00 capacity 10 rules [ ]\nend\n"
-                  "areas\n  area Residential color 0x44AA44 rules [ Grow Replace ]\nend\n"),
-              true)
+    ASSERT_EQ(
+        script.parseString(
+            "resources\n  resource People\nend\n"
+            "paths\n  path Road color 0xAAAAAA\nend\n"
+            "segments\n  segment Dirt color 0xAAAAAA speed 10.5 "
+            "capacity 20 beta 4\nend\n"
+            "agents\n  agent Worker color 0xFFFFFF speed 10\nend\n"
+            "rules\n"
+            "  unitRule Morning\n"
+            "    rate 1\n"
+            "    hour between 8 18\n"
+            "    local People remove 1\n"
+            "  end\n"
+            "  areaRule Grow\n"
+            "    rate 2\n"
+            "    count Home less 3\n"
+            "    spawn Home at nearestWay\n"
+            "  end\n"
+            "  areaRule Replace\n"
+            "    rate 3\n"
+            "    upgrade Home to Shop\n"
+            "  end\n"
+            "end\n"
+            "units\n"
+            "  unit Home color 0xFF00FF mapRadius 1 rules [ Morning ] "
+            "targets [ Home ] caps [ People 4 ] resources [ People 1 ]\n"
+            "  unit Shop color 0xFFAA00 mapRadius 1 rules [ ] "
+            "targets [ Shop ] caps [ People 4 ] resources [ ]\n"
+            "end\n"
+            "maps\n  map People color 0xFFFF00 capacity 10 rules [ ]\nend\n"
+            "areas\n  area Residential color 0x44AA44 rules [ Grow Replace "
+            "]\nend\n"),
+        true)
         << script.formatErrors();
 
     ASSERT_EQ(script.getWayType("Dirt").speed, 10.5f);
@@ -405,7 +411,8 @@ TEST(TestsScript, HourAndArea)
 
     RuleUnit const& morning = script.getRuleUnit("Morning");
     ASSERT_EQ(morning.m_commands.size(), 2u);
-    ASSERT_EQ(morning.m_commands[0]->type(), std::string("Hour between 8 and 18"));
+    ASSERT_EQ(morning.m_commands[0]->type(),
+              std::string("Hour between 8 and 18"));
 
     RuleArea const& grow = script.getRuleArea("Grow");
     ASSERT_EQ(grow.rate(), 2u);
@@ -414,40 +421,43 @@ TEST(TestsScript, HourAndArea)
     ASSERT_EQ(grow.commands()[1]->type(), std::string("Spawn Home"));
 
     RuleArea const& replace = script.getRuleArea("Replace");
-    ASSERT_EQ(replace.commands()[0]->type(), std::string("Upgrade Home to Shop"));
+    ASSERT_EQ(replace.commands()[0]->type(),
+              std::string("Upgrade Home to Shop"));
     ASSERT_STREQ(script.getAreaType("Residential").name.c_str(), "Residential");
 }
 
 //------------------------------------------------------------------------------
 //! \brief A period may be written as a duration of game time. Ticks are an
-//! implementation detail: nobody reading "rate 600" knows it means half an hour.
+//! implementation detail: nobody reading "rate 600" knows it means half an
+//! hour.
 //------------------------------------------------------------------------------
 TEST(TestsScript, RatesInGameTime)
 {
     Script script;
 
-    ASSERT_EQ(script.parseString(
-                  "resources\n  resource People\nend\n"
-                  "rules\n"
-                  "  unitRule EveryTick\n    rate 7\n"
-                  "    local People remove 1\n  end\n"
-                  "  unitRule Spelled\n    rate 7 ticks\n"
-                  "    local People remove 1\n  end\n"
-                  "  unitRule HalfHour\n    rate 30 minutes\n"
-                  "    local People remove 1\n  end\n"
-                  "  unitRule OneMinute\n    rate 1 minute\n"
-                  "    local People remove 1\n  end\n"
-                  "  mapRule TwoHours\n    rate 2 hours\n"
-                  "    map People add 1\n  end\n"
-                  "  areaRule Daily\n    rate 1 day\n"
-                  "    count Home less 3\n  end\n"
-                  "end\n"
-                  "units\n"
-                  "  unit Home color 0xFF00FF mapRadius 1 rules [ ] "
-                  "targets [ Home ] caps [ People 4 ] resources [ ]\n"
-                  "end\n"
-                  "maps\n  map People color 0xFFFF00 capacity 10 rules [ ]\nend\n"),
-              true)
+    ASSERT_EQ(
+        script.parseString(
+            "resources\n  resource People\nend\n"
+            "rules\n"
+            "  unitRule EveryTick\n    rate 7\n"
+            "    local People remove 1\n  end\n"
+            "  unitRule Spelled\n    rate 7 ticks\n"
+            "    local People remove 1\n  end\n"
+            "  unitRule HalfHour\n    rate 30 minutes\n"
+            "    local People remove 1\n  end\n"
+            "  unitRule OneMinute\n    rate 1 minute\n"
+            "    local People remove 1\n  end\n"
+            "  mapRule TwoHours\n    rate 2 hours\n"
+            "    map People add 1\n  end\n"
+            "  areaRule Daily\n    rate 1 day\n"
+            "    count Home less 3\n  end\n"
+            "end\n"
+            "units\n"
+            "  unit Home color 0xFF00FF mapRadius 1 rules [ ] "
+            "targets [ Home ] caps [ People 4 ] resources [ ]\n"
+            "end\n"
+            "maps\n  map People color 0xFFFF00 capacity 10 rules [ ]\nend\n"),
+        true)
         << script.formatErrors();
 
     // Counted in ticks: unchanged, whatever the length of a minute.

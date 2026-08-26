@@ -14,7 +14,6 @@
 
 #include "OpenGlassBox/Config.hpp"
 #include "OpenGlassBox/Entity.hpp"
-#include "OpenGlassBox/Path.hpp"
 #include "OpenGlassBox/Router.hpp"
 
 namespace ogb
@@ -32,13 +31,14 @@ class Unit;
 //! ruleset would cost more than the rest of the simulation put together.
 //!
 //! What an Agent knows is what it carries, the name it is looking for, and an
-//! itinerary. It does not know which building it will end at: the router returns
-//! the cheapest one answering to that name and having room, and the answer may
-//! change while the Agent drives, which is why the itinerary is recomputed from
-//! time to time. Finding nothing at all is not an error, and an Agent that has
-//! looked for SimulationConfig::agentGiveUpTicks hands its load back to the
-//! building that sent it out. That is the wandering the demo shows: it means
-//! the city is short of somewhere to deliver, not that the router is broken.
+//! itinerary. It does not know which building it will end at: the router
+//! returns the cheapest one answering to that name and having room, and the
+//! answer may change while the Agent drives, which is why the itinerary is
+//! recomputed from time to time. Finding nothing at all is not an error, and an
+//! Agent that has looked for SimulationConfig::agentGiveUpTicks hands its load
+//! back to the building that sent it out. That is the wandering the demo shows:
+//! it means the city is short of somewhere to deliver, not that the router is
+//! broken.
 //!
 //! An Agent lives on a Way at an offset, not on a Node, and it counts towards
 //! the traffic of that Way, which is what makes the road slower for everybody
@@ -199,6 +199,12 @@ public:
     }
 
     // -------------------------------------------------------------------------
+    //! \brief The crossroads the router starts from: the one being driven to,
+    //! or the one last stood at. Matches remainingCost().
+    // -------------------------------------------------------------------------
+    Node* routingNode() const;
+
+    // -------------------------------------------------------------------------
     //! \brief The building that sent it out, or nullptr once that building has
     //! been demolished. Where the load goes back when the Agent gives up.
     // -------------------------------------------------------------------------
@@ -336,12 +342,6 @@ private:
     //! \param[in] way the segment to drive on, or nullptr to leave the network.
     // -------------------------------------------------------------------------
     void setCurrentWay(Way* way);
-
-    // -------------------------------------------------------------------------
-    //! \brief The Node the router starts from: the one being driven to, or the
-    //! one last stood at.
-    // -------------------------------------------------------------------------
-    Node* routingNode() const;
 
     // -------------------------------------------------------------------------
     //! \brief Whether the Agent stands between the two ends of a Way, which is

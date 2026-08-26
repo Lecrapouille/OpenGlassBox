@@ -13,10 +13,9 @@
 
 #include "OpenGlassBox/SimulationClock.hpp"
 #include "OpenGlassBox/Types.hpp"
+
 #include <algorithm>
 #include <cstddef>
-#include <string>
-#include <vector>
 
 namespace ogb
 {

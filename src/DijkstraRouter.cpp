@@ -5,7 +5,7 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
-#include "Routing/DijkstraRouter.hpp"
+#include "OpenGlassBox/DijkstraRouter.hpp"
 
 #include "OpenGlassBox/Unit.hpp"
 #include "OpenGlassBox/Vector.hpp"

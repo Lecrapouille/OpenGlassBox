@@ -1,6 +1,8 @@
 # Integrating OpenGlassBox into your project
 
-OpenGlassBox ships as a C++14 library. The demo application is optional: your project links against the library, loads a ruleset, creates one or more cities, and drives the simulation from your own game loop.
+OpenGlassBox ships as a C++14 library. The demo application is optional: the engine is meant to be linked from another application. Your project shall link against the library, load a `.ogs` ruleset, create one or more cities, attach a router, build the world (maps, roads, buildings), and drive the simulation from your own game loop by calling `simulation.update()`.
+
+A working consumer project lives in [LinkAgainstMyLibs/OpenGlassBox](https://github.com/Lecrapouille/LinkAgainstMyLibs/tree/master/OpenGlassBox). The steps below follow its `src/main.cpp`.
 
 ## Build and install the library
 
@@ -14,12 +16,18 @@ make -j8
 sudo make install   # optional
 ```
 
-After `make`, the build folder contains `libOpenGlassBox.a` and, on most platforms, `libOpenGlassBox.so`. Headers live in `include/OpenGlassBox/`.
+After `make`, the build folder contains `libOpenGlassBox.a` and, on most platforms, `libOpenGlassBox.so`. Headers live in `include/OpenGlassBox/`, with the entry point header `OpenGlassBox/OpenGlassBox.hpp`.
 
 After `make install`, pkg-config can find the library:
 
 ```sh
 pkg-config --cflags --libs OpenGlassBox
+```
+
+For static linking:
+
+```sh
+pkg-config --static --cflags --libs OpenGlassBox
 ```
 
 ## Link your project
@@ -31,16 +39,7 @@ CXXFLAGS += $(shell pkg-config --cflags OpenGlassBox)
 LDFLAGS  += $(shell pkg-config --libs OpenGlassBox)
 ```
 
-### Against a local build tree
-
-Point your compiler at the OpenGlassBox tree without installing:
-
-```makefile
-OPENGLASSBOX := ../OpenGlassBox
-
-CXXFLAGS += -I$(OPENGLASSBOX)/include
-LDFLAGS  += -L$(OPENGLASSBOX)/build -lOpenGlassBox
-```
+For a static link, pass `--static` to pkg-config in `LDFLAGS`.
 
 ### Working example
 
@@ -53,6 +52,8 @@ make -j8
 ./build/OpenGlassBox
 ```
 
+If OpenGlassBox is not installed system-wide, set `PKG_CONFIG_PATH` to its `build/` folder before running `make`.
+
 ## Minimal program
 
 Every host follows the same pattern:
@@ -61,29 +62,68 @@ Every host follows the same pattern:
 2. parse a `.ogs` ruleset into `simulation.script()`;
 3. add at least one `City`;
 4. attach a router to each city (required before agents can travel);
-5. call `simulation.update()` from your game loop.
+5. add maps, roads and buildings to the city;
+6. call `simulation.update()` from your game loop (or run a fixed number of ticks).
+
+The LinkAgainstMyLibs example embeds its ruleset as a string and builds a small triangle road network with two buildings:
 
 ```cpp
-#include "OpenGlassBox/Simulation.hpp"
+#include <OpenGlassBox/OpenGlassBox.hpp>
+
+#include <cstdlib>
+#include <iostream>
 
 int main()
 {
     ogb::Simulation simulation(64u, 64u);
 
-    if (!simulation.script().parse("my_rules.ogs"))
-        return 1; // see simulation.script().formatErrors()
+    if (!simulation.script().parseFile("my_rules.ogs"))
+    {
+        std::cout << "Error parsing script: "
+                  << simulation.script().formatErrors() << std::endl;
+        return EXIT_FAILURE;
+    }
 
     ogb::City& city = simulation.addCity("MyCity", ogb::Vector3f(0.f, 0.f, 0.f));
+    ogb::installDijkstraRouter(city, simulation.config());
 
-    // A router is mandatory for agent routing. The default Dijkstra
-    // implementation lives in demo/src/Routing/ (see below).
-    // installDijkstraRouter(city, simulation.config());
+    city.addMap(simulation.script().getMapType("Water"));
+    city.addMap(simulation.script().getMapType("Grass"));
 
-    while (running)
-    {
-        simulation.update(secondsSinceLastFrame);
-        // read city.units(), city.agents(), maps, etc., and render
-    }
+    ogb::Path& road = city.addPath(simulation.script().getPathType("Road"));
+    ogb::WayType const& dirt = simulation.script().getWayType("Dirt");
+
+    ogb::Node& a = road.addNode(ogb::Vector3f(0.f, 0.f, 0.f));
+    ogb::Node& b = road.addNode(ogb::Vector3f(60.f, 0.f, 0.f));
+    ogb::Node& c = road.addNode(ogb::Vector3f(30.f, 52.f, 0.f));
+
+    road.addWay(dirt, a, b);
+    road.addWay(dirt, b, c);
+    road.addWay(dirt, c, a);
+
+    city.addUnit(simulation.script().getUnitType("Home"), a);
+    city.addUnit(simulation.script().getUnitType("Work"), b);
+
+    simulation.clock().setTimeOfDay(0u, 8u, 0u);
+    simulation.setTotalTicks(simulation.clock().ticks());
+
+    for (uint32_t tick = 0u; tick < 200u; ++tick)
+        simulation.update(simulation.config().tickDuration());
+
+    std::cout << city.units().size() << " units, "
+              << city.agents().size() << " agents\n";
+
+    return EXIT_SUCCESS;
+}
+```
+
+In [LinkAgainstMyLibs/OpenGlassBox/src/main.cpp](https://github.com/Lecrapouille/LinkAgainstMyLibs/blob/master/OpenGlassBox/src/main.cpp), instead of `parseFile()`, the full embedded ruleset (`kScript`) is used. It defines two map layers (Water, Grass), a road path, two agent types, and two buildings (Home, Work) whose rules send people back and forth.
+
+In a real game loop, replace the fixed tick loop with wall-time driven updates:
+
+```cpp
+while (running) {
+    simulation.update(secondsSinceLastFrame);
 }
 ```
 
@@ -94,39 +134,52 @@ int main()
 Rulesets are plain-text `.ogs` files. Parse them through `Script`:
 
 ```cpp
-if (!simulation.script().parse("demo/data/Simulations/test_city.ogs"))
+if (!simulation.script().parseFile("demo/data/Simulations/test_city.ogs"))
 {
     std::cerr << simulation.script().formatErrors();
     return 1;
 }
 ```
 
-You can also load from a string with `script().parseString(source, "my_mod.ogs")`. On failure, the previous definitions are kept so a running city is not left empty.
+You can also load from a string with `script().parseString(source)`, as in the LinkAgainstMyLibs example. On failure, the previous definitions are kept so a running city is not left empty.
 
 The ruleset must **outlive every city** loaded from it: buildings hold references to their recipes (`UnitType`, `WayType`, …). `Simulation` stores its `Script` before its `World` so destruction order remains safe.
 
 ## Creating and updating cities
 
+After parsing the ruleset and adding a city, populate it from the script definitions:
+
 ```cpp
-ogb::City& city = simulation.addCity("Paris", ogb::Vector3f(0.f, 0.f, 0.f));
-city.update(); // one tick at the configured duration
+ogb::City& city = simulation.addCity("MyCity", ogb::Vector3f(0.f, 0.f, 0.f));
+
+city.addMap(simulation.script().getMapType("Water"));
+city.addMap(simulation.script().getMapType("Grass"));
+
+ogb::Path& road = city.addPath(simulation.script().getPathType("Road"));
+ogb::Node& node = road.addNode(ogb::Vector3f(0.f, 0.f, 0.f));
+city.addUnit(simulation.script().getUnitType("Home"), node);
 ```
 
 Use `simulation.world()` for shared map layers and `simulation.clock()` for the in-game calendar. Rules can depend on time (`hour between 8 18`) and on periods expressed in game minutes (`rate 30 minutes`).
 
-## Routing
-
-Agents need an `IRouter` on their city. The engine defines the interface in `OpenGlassBox/Router.hpp`; the shipped **Dijkstra** implementation is in `demo/src/Routing/DijkstraRouter.hpp`, with helpers in `demo/src/Routing/installRouter.hpp`:
+For a single tick outside a loop:
 
 ```cpp
-#include "Routing/installRouter.hpp"
-
-installDijkstraRouter(city, simulation.config());
-// or, for every city already in the simulation:
-installDijkstraRouters(simulation);
+city.update(); // one tick at the configured duration
 ```
 
-You can provide your own `IRouter` and call `city.setRouter(std::move(router))` instead. See the [traffic documentation](traffic.md) for how travel times and destination search work.
+## Routing
+
+Agents need an `IRouter` on their city. The engine defines the interface in `OpenGlassBox/Router.hpp`; the default **Dijkstra** implementation and install helpers are in `OpenGlassBox/DijkstraRouter.hpp` (also pulled in by `OpenGlassBox/OpenGlassBox.hpp`):
+
+```cpp
+ogb::installDijkstraRouter(city, simulation.config());
+
+// Alternative: for every city already in the simulation:
+ogb::installDijkstraRouters(simulation);
+```
+
+Install the router **before** agents need to travel. You can provide your own `IRouter` and call `city.setRouter(std::move(router))` instead. See the [traffic documentation](traffic.md) for how travel times and destination search work.
 
 ## Loading and saving cities (optional)
 

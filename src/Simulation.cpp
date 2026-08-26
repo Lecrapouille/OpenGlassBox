@@ -9,6 +9,7 @@
 #include "OpenGlassBox/Agent.hpp"
 
 #include <cmath>
+#include <limits>
 
 //------------------------------------------------------------------------------
 namespace ogb
@@ -54,13 +55,13 @@ void Simulation::update(float const deltaTime)
 }
 
 //------------------------------------------------------------------------------
-float Simulation::relativeGap() const
+void Simulation::updateAssignmentMetrics() const
 {
-    // A panel reads this on every frame while the simulation advances twenty
+    // A panel reads these on every frame while the simulation advances twenty
     // times a second, and the answer cannot change between two ticks. Nothing
     // below runs again until the world has actually moved.
-    if (m_relativeGapTick == m_totalTicks)
-        return m_relativeGap;
+    if (m_assignmentMetricsTick == m_totalTicks)
+        return;
 
     float tstt = 0.0f;
     float sptt = 0.0f;
@@ -87,7 +88,7 @@ float Simulation::relativeGap() const
             auto const& agent = agents[i];
             tstt += agent->remainingCost();
 
-            Node* from = agent->lastNode();
+            Node* from = agent->routingNode();
             if (from == nullptr)
                 continue;
 
@@ -107,9 +108,31 @@ float Simulation::relativeGap() const
             gap = 0.0f;
     }
 
+    m_tstt = tstt;
+    m_sptt = sptt;
     m_relativeGap = gap;
-    m_relativeGapTick = m_totalTicks;
-    return gap;
+    m_assignmentMetricsTick = m_totalTicks;
+}
+
+//------------------------------------------------------------------------------
+float Simulation::relativeGap() const
+{
+    updateAssignmentMetrics();
+    return m_relativeGap;
+}
+
+//------------------------------------------------------------------------------
+float Simulation::totalSystemTravelTime() const
+{
+    updateAssignmentMetrics();
+    return m_tstt;
+}
+
+//------------------------------------------------------------------------------
+float Simulation::shortestPathTravelTime() const
+{
+    updateAssignmentMetrics();
+    return m_sptt;
 }
 
 //------------------------------------------------------------------------------

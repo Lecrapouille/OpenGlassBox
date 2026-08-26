@@ -10,15 +10,12 @@
 #ifndef OPEN_GLASSBOX_SCRIPT_DEFINITIONS_HPP
 #define OPEN_GLASSBOX_SCRIPT_DEFINITIONS_HPP
 
-#include "OpenGlassBox/Rule.hpp"
 #include "OpenGlassBox/RuleCommand.hpp"
 #include "OpenGlassBox/RuleValue.hpp"
-#include "OpenGlassBox/Types.hpp"
+
 #include <map>
 #include <memory>
 #include <stdexcept>
-#include <string>
-#include <vector>
 
 namespace ogb
 {

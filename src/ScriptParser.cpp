@@ -15,12 +15,14 @@
 //! parse succeeded. A script that fails to load therefore leaves the simulation
 //! that is already running exactly as it was.
 // -----------------------------------------------------------------------------
-namespace ogb {
+namespace ogb
+{
 
-template<class Load>
+template <class Load>
 static bool loadInto(ScriptDefinitions& definitions,
                      std::vector<ParseError>& errors,
-                     std::unique_ptr<IScriptParser>& parser, Load load)
+                     std::unique_ptr<IScriptParser>& parser,
+                     Load load)
 {
     ScriptDefinitions parsed;
     bool const success = load(*parser, parsed);
@@ -36,16 +38,17 @@ static bool loadInto(ScriptDefinitions& definitions,
 }
 
 // -----------------------------------------------------------------------------
-bool Script::parse(std::string const& filename)
+bool Script::parseFile(std::string const& filename)
 {
     std::cout << "Parsing script '" << filename << "'" << std::endl;
 
     auto parser = makeScriptParser(filename);
-    bool const success = loadInto(
-        m_definitions, m_errors, parser,
-        [&filename](IScriptParser& p, ScriptDefinitions& out) {
-            return p.parseFile(filename, out);
-        });
+    bool const success =
+        loadInto(m_definitions,
+                 m_errors,
+                 parser,
+                 [&filename](IScriptParser& p, ScriptDefinitions& out)
+                 { return p.parseFile(filename, out); });
 
     if (success)
     {
@@ -64,10 +67,11 @@ bool Script::parseString(std::string const& source, std::string const& name)
 {
     auto parser = makeScriptParser(name);
 
-    return loadInto(m_definitions, m_errors, parser,
-                    [&source, &name](IScriptParser& p, ScriptDefinitions& out) {
-                        return p.parseString(source, name, out);
-                    });
+    return loadInto(m_definitions,
+                    m_errors,
+                    parser,
+                    [&source, &name](IScriptParser& p, ScriptDefinitions& out)
+                    { return p.parseString(source, name, out); });
 }
 
 // -----------------------------------------------------------------------------
@@ -76,7 +80,7 @@ std::string Script::formatErrors() const
     std::ostringstream stream;
     bool first = true;
 
-    for (auto const& e: m_errors)
+    for (auto const& e : m_errors)
     {
         if (!first)
         {

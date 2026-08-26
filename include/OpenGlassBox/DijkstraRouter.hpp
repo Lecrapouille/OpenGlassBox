@@ -8,13 +8,12 @@
 //! \file DijkstraRouter.hpp
 //! \brief Default best-first router over the road graph.
 
-#ifndef OPEN_GLASSBOX_DEMO_DIJKSTRA_ROUTER_HPP
-#define OPEN_GLASSBOX_DEMO_DIJKSTRA_ROUTER_HPP
+#ifndef OPEN_GLASSBOX_DIJKSTRA_ROUTER_HPP
+#define OPEN_GLASSBOX_DIJKSTRA_ROUTER_HPP
 
-#include "OpenGlassBox/Router.hpp"
+#include "OpenGlassBox/Simulation.hpp"
 
 #include <random>
-#include <vector>
 
 namespace ogb
 {
@@ -207,6 +206,29 @@ private:
     //! used for security; reproducibility goes through setRandomSeed().
     std::mt19937 m_rng; // NOSONAR cpp:S2245
 };
+
+// -------------------------------------------------------------------------
+//! \brief Give a town the default Dijkstra router.
+//! \param[in,out] city receives ownership of the router.
+//! \param[in] config read for SimulationConfig::randomSeed.
+// -------------------------------------------------------------------------
+inline void installDijkstraRouter(City& city, SimulationConfig const& config)
+{
+    auto router = std::make_unique<Dijkstra>();
+    if (config.randomSeed != 0u)
+        router->setRandomSeed(config.randomSeed);
+    city.setRouter(std::move(router));
+}
+
+// -------------------------------------------------------------------------
+//! \brief Install a router on every town already held by a simulation.
+//! \param[in,out] simulation the towns to wire up.
+// -------------------------------------------------------------------------
+inline void installDijkstraRouters(Simulation& simulation)
+{
+    for (auto const& it : simulation.cities())
+        installDijkstraRouter(*it.second, simulation.config());
+}
 
 } // namespace ogb
 

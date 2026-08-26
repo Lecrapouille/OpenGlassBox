@@ -41,7 +41,7 @@ namespace ogb
 //! Example:
 //! \code
 //! Simulation simulation(64u, 64u);
-//! if (!simulation.script().parse("simulations/city.ogs"))
+//! if (!simulation.script()..parseFile("simulations/city.ogs"))
 //!     return EXIT_FAILURE;
 //!
 //! City& paris = simulation.addCity("Paris", Vector3f(0.0f, 0.0f, 0.0f));
@@ -256,6 +256,22 @@ public:
     float relativeGap() const;
 
     // -------------------------------------------------------------------------
+    //! \brief Total remaining travel time of the sampled agents (TSTT).
+    //!
+    //! Computed together with relativeGap() and shortestPathTravelTime(); the
+    //! result is memoized until the next tick.
+    // -------------------------------------------------------------------------
+    float totalSystemTravelTime() const;
+
+    // -------------------------------------------------------------------------
+    //! \brief Total shortest-path travel time for the same sample (SPTT).
+    //!
+    //! Computed together with relativeGap() and totalSystemTravelTime(); the
+    //! result is memoized until the next tick.
+    // -------------------------------------------------------------------------
+    float shortestPathTravelTime() const;
+
+    // -------------------------------------------------------------------------
     //! \brief Found a town spanning the default number of cells given at
     //! construction. A town of the same name is replaced.
     //! \param[in] name unique name of the town.
@@ -322,12 +338,20 @@ private:
     bool m_paused = true;
     //! \brief How many ticks have been run since the beginning.
     uint64_t m_totalTicks = 0u;
-    //! \brief Last value returned by relativeGap(), and the tick it was
-    //! computed at. Mutable because the memoization has to happen inside a
-    //! const method. The sentinel tick is one no run ever reaches, so the
-    //! first call always computes.
+    //! \brief Last assignment metrics and the tick they were computed at.
+    //! Mutable because the memoization has to happen inside const methods. The
+    //! sentinel tick is one no run ever reaches, so the first call always
+    //! computes.
+    void updateAssignmentMetrics() const;
+    //! \brief Total remaining travel time of the sampled agents (TSTT).
+    mutable float m_tstt = 0.0f;
+    //! \brief Total shortest-path travel time for the same sample (SPTT).
+    mutable float m_sptt = 0.0f;
+    //! \brief Relative gap of the current assignment against the cheapest
+    //! itineraries at the current travel times.
     mutable float m_relativeGap = 0.0f;
-    mutable uint64_t m_relativeGapTick = std::numeric_limits<uint64_t>::max();
+    mutable uint64_t m_assignmentMetricsTick =
+        std::numeric_limits<uint64_t>::max();
     //! \brief Who to tell when a town is founded or dropped, or nullptr when
     //! nobody is listening. Not owned.
     Simulation::Listener* m_listener;

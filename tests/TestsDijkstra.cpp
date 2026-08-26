@@ -4,7 +4,7 @@
 #define private public
 #include "OpenGlassBox/City.hpp"
 #include "OpenGlassBox/Unit.hpp"
-#include "Routing/DijkstraRouter.hpp"
+#include "OpenGlassBox/DijkstraRouter.hpp"
 #include "TestWorld.hpp"
 #undef protected
 #undef private

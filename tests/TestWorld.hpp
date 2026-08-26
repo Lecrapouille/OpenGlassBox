@@ -10,8 +10,8 @@
 #ifndef OPEN_GLASSBOX_TESTS_TEST_WORLD_HPP
 #define OPEN_GLASSBOX_TESTS_TEST_WORLD_HPP
 
+#include "OpenGlassBox/DijkstraRouter.hpp"
 #include "OpenGlassBox/World.hpp"
-#include "Routing/installRouter.hpp"
 
 #include <memory>
 #include <utility>
@@ -54,8 +54,7 @@ struct TestWorld
                        uint32_t sizeV = 32u,
                        Vector3f const& position = Vector3f(0.0f, 0.0f, 0.0f),
                        SimulationConfig const& config = {})
-        : world(config),
-          city(world.addCity(name, position, sizeU, sizeV))
+        : world(config), city(world.addCity(name, position, sizeU, sizeV))
     {
         installDijkstraRouter(city, world.config());
     }

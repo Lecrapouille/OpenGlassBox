@@ -13,9 +13,8 @@
 #include "OpenGlassBox/MapRegion.hpp"
 #include "OpenGlassBox/Rule.hpp"
 #include "OpenGlassBox/Vector.hpp"
+
 #include <memory>
-#include <string>
-#include <vector>
 
 namespace ogb
 {

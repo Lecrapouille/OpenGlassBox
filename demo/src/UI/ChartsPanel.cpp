@@ -4,21 +4,23 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+#include "OpenGlassBox/Simulation.hpp"
 #include "UI/Panels.hpp"
 #include "UI/Theme.hpp"
-#include "OpenGlassBox/Simulation.hpp"
 
 #include <implot.h>
 
 #include <algorithm>
 #include <map>
 
-namespace ogb {
-namespace ui {
-
+namespace ogb
+{
+namespace ui
+{
 
 // ----------------------------------------------------------------------------
-game::TimeSeries& ChartsPanel::series(std::string const& group, std::string const& name)
+game::TimeSeries& ChartsPanel::series(std::string const& group,
+                                      std::string const& name)
 {
     auto& groupSeries = m_series[group];
     auto const it = groupSeries.find(name);
@@ -58,43 +60,49 @@ void ChartsPanel::sample(Simulation& simulation)
     std::map<std::string, float> globals;
     float agents = 0.0f;
 
-    for (auto& it: simulation.cities())
+    for (auto& it : simulation.cities())
     {
         City& city = *it.second;
 
-        for (auto& map: city.maps())
+        for (auto& map : city.maps())
         {
             mapTotals[map.second->type()] += float(map.second->totalResource());
         }
 
-        for (auto& agent: city.agents())
+        for (auto& agent : city.agents())
         {
             agentCounts[agent->type()] += 1.0f;
             agents += 1.0f;
         }
 
-        for (Resource const& resource: city.globals().container())
+        for (Resource const& resource : city.globals().container())
         {
             globals[resource.type()] += float(resource.getAmount());
         }
     }
 
-    for (auto const& it: mapTotals)
+    for (auto const& it : mapTotals)
     {
         series("Maps", it.first).pushHours(hours, it.second);
     }
-    for (auto const& it: agentCounts)
+    for (auto const& it : agentCounts)
     {
         series("Agents", it.first).pushHours(hours, it.second);
     }
-    for (auto const& it: globals)
+    for (auto const& it : globals)
     {
         series("Globals", it.first).pushHours(hours, it.second);
     }
+    series("Agents", "Total").pushHours(hours, agents);
 
-    series("Agents", "total").pushHours(hours, agents);
-    series("Traffic", "total travel time")
+    series("Traffic", "Link travel time")
         .pushHours(hours, TrafficPanel::totalTravelTime(simulation));
+    series("Traffic", "TSTT")
+        .pushHours(hours, simulation.totalSystemTravelTime());
+    series("Traffic", "SPTT")
+        .pushHours(hours, simulation.shortestPathTravelTime());
+    series("Traffic quality", "relative gap")
+        .pushHours(hours, 100.0f * simulation.relativeGap());
 }
 
 // ----------------------------------------------------------------------------
@@ -107,18 +115,31 @@ void ChartsPanel::draw(Simulation& simulation, game::DebugState& state)
     }
 
     ImGui::SetNextItemWidth(160.0f);
-    ImGui::SliderInt("sample every", &m_sample_period, 1, 60, "%d ticks");
+    ImGui::SliderInt("Sample every", &m_sample_period, 1, 60, "%d ticks");
+    ImGui::SameLine();
+    ImGui::Checkbox("Raw", &m_show_raw);
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("Draw the sampled values as recorded.\n"
+                          "Step-shaped when rules fire in bursts.");
+    }
     ImGui::SameLine();
     ImGui::Checkbox("Trend", &m_show_smoothed);
     if (ImGui::IsItemHovered())
     {
-        ImGui::SetTooltip("Draw a moving average next to each raw curve.\n"
-                          "Reading aid only: the simulation never sees it.");
+        ImGui::SetTooltip(
+            "Draw the exponential moving average of each series.\n"
+            "Reading aid only: the simulation never sees it.");
     }
     ImGui::SameLine();
     if (ImGui::Button("Clear history"))
     {
         clear();
+    }
+
+    if (!m_show_raw && !m_show_smoothed)
+    {
+        ImGui::TextDisabled("Enable Raw or Trend to display curves.");
     }
 
     if (m_series.empty())
@@ -128,7 +149,7 @@ void ChartsPanel::draw(Simulation& simulation, game::DebugState& state)
         return;
     }
 
-    for (auto& group: m_series)
+    for (auto& group : m_series)
     {
         if (!ImGui::CollapsingHeader(group.first.c_str(),
                                      ImGuiTreeNodeFlags_DefaultOpen))
@@ -137,30 +158,48 @@ void ChartsPanel::draw(Simulation& simulation, game::DebugState& state)
         ImGui::PushID(group.first.c_str());
         if (ImPlot::BeginPlot("##plot", ImVec2(-1.0f, 190.0f)))
         {
-            ImPlot::SetupAxes("hours", nullptr,
-                              ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+            char const* yLabel =
+                (group.first == "Traffic quality") ? "percent" : nullptr;
+            ImPlot::SetupAxes("hours",
+                              yLabel,
+                              ImPlotAxisFlags_AutoFit,
+                              ImPlotAxisFlags_AutoFit);
 
-            for (auto& entry: group.second)
+            for (auto& entry : group.second)
             {
                 game::TimeSeries const& serie = entry.second;
                 if (serie.empty())
                     continue;
 
-                ImPlot::PlotLine(serie.name().c_str(), serie.hours(),
-                                 serie.values(), int(serie.size()));
+                if (!m_show_raw && !m_show_smoothed)
+                    continue;
+
+                if (m_show_raw)
+                {
+                    ImPlot::PlotLine(serie.name().c_str(),
+                                     serie.hours(),
+                                     serie.values(),
+                                     int(serie.size()));
+                }
 
                 if (!m_show_smoothed)
                     continue;
 
-                // Same colour as the curve it follows, so that the two read as
-                // one quantity rather than as two.
+                // Same colour as the raw curve when both are shown, so that the
+                // two read as one quantity rather than as two.
                 ImPlotSpec spec;
-                spec.LineColor = ImPlot::GetLastItemColor();
+                if (m_show_raw)
+                {
+                    spec.LineColor = ImPlot::GetLastItemColor();
+                }
                 spec.LineWeight = 2.0f;
 
                 std::string const trend = serie.name() + " (trend)";
-                ImPlot::PlotLine(trend.c_str(), serie.hours(),
-                                 serie.smoothed(), int(serie.size()), spec);
+                ImPlot::PlotLine(trend.c_str(),
+                                 serie.hours(),
+                                 serie.smoothed(),
+                                 int(serie.size()),
+                                 spec);
             }
 
             ImPlot::EndPlot();

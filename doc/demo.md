@@ -1,5 +1,7 @@
 # Using the demo application
 
+![OpenGlassBox](OpenGlassBox.png)
+
 The map holds a SimCity-style vertical rail on its left. From top to bottom: **Play / Pause**, then the six tools: **Inspect**, **Roads**, **Zones**, **Buildings**, **Maps**, **Demolish**: then **Undo** and **Redo**. Keys `1` to `6` select a tool; the space bar toggles pause.
 
 The row to the right of the rail holds the settings of the selected tool, and only those:
