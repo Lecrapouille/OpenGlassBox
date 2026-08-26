@@ -9,9 +9,10 @@
 #include "Game/RuleTrace.hpp"
 #include "OpenGlassBox/Simulation.hpp"
 
+#include <imgui_stdlib.h>
+
 #include <algorithm>
 #include <cctype>
-#include <cstring>
 
 namespace ogb {
 namespace ui {
@@ -19,13 +20,14 @@ using namespace ogb::theme;
 
 
 // ----------------------------------------------------------------------------
-static bool containsInsensitive(std::string const& haystack, char const* needle)
+static bool containsInsensitive(std::string const& haystack,
+                                  std::string const& needle)
 {
-    if ((needle == nullptr) || (needle[0] == '\0'))
+    if (needle.empty())
         return true;
 
     auto const it = std::search(
-        haystack.begin(), haystack.end(), needle, needle + std::strlen(needle),
+        haystack.begin(), haystack.end(), needle.begin(), needle.end(),
         [](char a, char b) {
             return std::tolower(static_cast<unsigned char>(a)) ==
                    std::tolower(static_cast<unsigned char>(b));
@@ -74,7 +76,7 @@ void RuleLogPanel::draw(Simulation& simulation, game::DebugState& state,
 
     ImGui::SetNextItemWidth(-1.0f);
     ImGui::InputTextWithHint("##filter", "filter on the entity or the rule",
-                             m_filter, sizeof(m_filter));
+                             &m_filter);
 
     ImGui::Checkbox("ok", &m_show_success);
     ImGui::SameLine();

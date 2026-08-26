@@ -47,13 +47,13 @@ TEST(TestsMapCoordinatesInsideRadius, ConstructorZeroUnitRadius)
     // Without random
     coord1.init(RADIUS, 2u, 3u, 4u, 5u, 6u, 7u, false);
     ASSERT_NE(coord1.m_relativeCoord, nullptr);
-    ASSERT_EQ(coord1.m_centerU, 2u);
-    ASSERT_EQ(coord1.m_centerV, 3u);
+    ASSERT_EQ(coord1.m_centerU, 2);
+    ASSERT_EQ(coord1.m_centerV, 3);
     ASSERT_EQ(coord1.m_offset, 0u);
-    ASSERT_EQ(coord1.m_minU, 4u);
-    ASSERT_EQ(coord1.m_maxU, 5u);
-    ASSERT_EQ(coord1.m_minV, 6u);
-    ASSERT_EQ(coord1.m_maxV, 7u);
+    ASSERT_EQ(coord1.m_minU, 4);
+    ASSERT_EQ(coord1.m_maxU, 5);
+    ASSERT_EQ(coord1.m_minV, 6);
+    ASSERT_EQ(coord1.m_maxV, 7);
     ASSERT_EQ(coord1.m_startingIndex, 0u);
     ASSERT_EQ(MCIR::relativeCoordinates(RADIUS).size(), 1u);
     ASSERT_EQ(MCIR::relativeCoordinates(RADIUS)[0], ZERO);
@@ -63,13 +63,13 @@ TEST(TestsMapCoordinatesInsideRadius, ConstructorZeroUnitRadius)
     // With random
     coord2.init(RADIUS, 2u, 3u, 4u, 5u, 6u, 7u, true);
     ASSERT_NE(coord2.m_relativeCoord, nullptr);
-    ASSERT_EQ(coord2.m_centerU, 2u);
-    ASSERT_EQ(coord2.m_centerV, 3u);
+    ASSERT_EQ(coord2.m_centerU, 2);
+    ASSERT_EQ(coord2.m_centerV, 3);
     ASSERT_EQ(coord2.m_offset, 0u);
-    ASSERT_EQ(coord2.m_minU, 4u);
-    ASSERT_EQ(coord2.m_maxU, 5u);
-    ASSERT_EQ(coord2.m_minV, 6u);
-    ASSERT_EQ(coord2.m_maxV, 7u);
+    ASSERT_EQ(coord2.m_minU, 4);
+    ASSERT_EQ(coord2.m_maxU, 5);
+    ASSERT_EQ(coord2.m_minV, 6);
+    ASSERT_EQ(coord2.m_maxV, 7);
     ASSERT_TRUE((coord2.m_startingIndex == 0u) || (coord2.m_startingIndex == 1u));
     ASSERT_EQ(MCIR::relativeCoordinates(RADIUS).size(), 1u);
     ASSERT_EQ(MCIR::relativeCoordinates(RADIUS)[0], ZERO);
@@ -93,7 +93,7 @@ TEST(TestsMapCoordinatesInsideRadius, relativeCoordinates)
         ASSERT_EQ(coord.m_relativeCoord->size(), 0u);
     }
 
-    coord.init(RADIUS, centerU, centerV, 0u, 10u, 0u, 10u, false);
+    coord.init(RADIUS, int32_t(centerU), int32_t(centerV), 0u, 10u, 0u, 10u, false);
     MCIR::RelativeCoordinates& c = MCIR::relativeCoordinates(RADIUS);
 
     // Because of the previous test: m_relativeCoord is static
@@ -110,22 +110,22 @@ TEST(TestsMapCoordinatesInsideRadius, relativeCoordinates)
                ));
 
     ASSERT_EQ(coord.next(u, v), true);
-    ASSERT_EQ(u, centerU - 1); ASSERT_EQ(v, centerV + 0);
+    ASSERT_EQ(u, int32_t(centerU) - 1); ASSERT_EQ(v, int32_t(centerV));
 
     ASSERT_EQ(coord.next(u, v), true);
-    ASSERT_EQ(u, centerU + 0); ASSERT_EQ(v, centerV - 1);
+    ASSERT_EQ(u, int32_t(centerU)); ASSERT_EQ(v, int32_t(centerV) - 1);
 
     ASSERT_EQ(coord.next(u, v), true);
-    ASSERT_EQ(u, centerU + 0); ASSERT_EQ(v, centerV + 0);
+    ASSERT_EQ(u, int32_t(centerU)); ASSERT_EQ(v, int32_t(centerV));
 
     ASSERT_EQ(coord.next(u, v), true);
-    ASSERT_EQ(u, centerU + 0); ASSERT_EQ(v, centerV + 1);
+    ASSERT_EQ(u, int32_t(centerU)); ASSERT_EQ(v, int32_t(centerV) + 1);
 
     ASSERT_EQ(coord.next(u, v), true);
-    ASSERT_EQ(u, centerU + 1); ASSERT_EQ(v, centerV + 0);
+    ASSERT_EQ(u, int32_t(centerU) + 1); ASSERT_EQ(v, int32_t(centerV));
 
     ASSERT_EQ(coord.next(u, v), false);
-    ASSERT_EQ(u, 0u); ASSERT_EQ(v, 0u);
+    ASSERT_EQ(u, 0); ASSERT_EQ(v, 0);
 }
 
 // -----------------------------------------------------------------------------
@@ -144,7 +144,7 @@ TEST(TestsMapCoordinatesInsideRadius, cachedRelativeCoordinatesClipped)
         ASSERT_EQ(coord.m_relativeCoord->size(), 0u);
     }
 
-    coord.init(RADIUS, centerU, centerV, 2u, 4u, 2u, 4u, false);
+    coord.init(RADIUS, int32_t(centerU), int32_t(centerV), 2u, 4u, 2u, 4u, false);
     MCIR::RelativeCoordinates& c = MCIR::relativeCoordinates(RADIUS);
 
     // Because of the previous test: m_relativeCoord is static
@@ -160,14 +160,14 @@ TEST(TestsMapCoordinatesInsideRadius, cachedRelativeCoordinatesClipped)
     ));
 
     ASSERT_EQ(coord.next(u, v), true);
-    ASSERT_EQ(u, centerU - 1); ASSERT_EQ(v, centerV + 0);
+    ASSERT_EQ(u, int32_t(centerU) - 1); ASSERT_EQ(v, int32_t(centerV));
 
     ASSERT_EQ(coord.next(u, v), true);
-    ASSERT_EQ(u, centerU + 0); ASSERT_EQ(v, centerV - 1);
+    ASSERT_EQ(u, int32_t(centerU)); ASSERT_EQ(v, int32_t(centerV) - 1);
 
     ASSERT_EQ(coord.next(u, v), true);
-    ASSERT_EQ(u, centerU + 0); ASSERT_EQ(v, centerV + 0);
+    ASSERT_EQ(u, int32_t(centerU)); ASSERT_EQ(v, int32_t(centerV));
 
     ASSERT_EQ(coord.next(u, v), false);
-    ASSERT_EQ(u, 0u); ASSERT_EQ(v, 0u);
+    ASSERT_EQ(u, 0); ASSERT_EQ(v, 0);
 }

@@ -75,12 +75,12 @@ TEST(TestsScript, Constructor)
         AgentType const& a1 = script.getAgentType("People");
         // ASSERT_STREQ(a1.name.c_str(), "People");
         ASSERT_EQ(a1.color, 0xFFFF00u);
-        ASSERT_EQ(a1.speed, 10u);
+        ASSERT_EQ(a1.speed, 10.0f);
 
         AgentType const& a2 = script.getAgentType("Worker");
         // ASSERT_STREQ(a2.name.c_str(), "Worker");
         ASSERT_EQ(a2.color, 0xFFFFFFu);
-        ASSERT_EQ(a2.speed, 10u);
+        ASSERT_EQ(a2.speed, 10.0f);
     }
 
     // -- Map types
@@ -197,7 +197,10 @@ TEST(TestsScript, BadSyntax)
     Script script;
 
     // Load a script that contains error syntax.
-    (void)system("echo \"foo\" > /tmp/foo");
+    {
+        std::ofstream out("/tmp/foo");
+        out << "foo\n";
+    }
     ASSERT_EQ(script.parseFile("/tmp/foo"), false);
 }
 
@@ -206,7 +209,10 @@ TEST(TestsScript, EmptyFile)
     Script script;
 
     // Load a script that contains error syntax.
-    (void)system("echo \"\" > /tmp/foo");
+    {
+        std::ofstream out("/tmp/foo");
+        out << "\n";
+    }
     ASSERT_EQ(script.parseFile("/tmp/foo"), false);
 }
 

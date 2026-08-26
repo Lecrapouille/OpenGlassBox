@@ -96,24 +96,24 @@ public:
 
     void draw(Simulation& simulation,
               game::DebugState& state,
-              game::RuleTrace const& trace);
+              game::RuleTrace const& trace) const;
 
 private:
 
     void drawUnit(Simulation& simulation,
                   game::DebugState& state,
-                  game::RuleTrace const& trace);
-    void drawAgent(Simulation& simulation, game::DebugState& state);
-    void drawNode(game::DebugState& state);
-    void drawWay(game::DebugState& state);
-    void drawCell(Simulation& simulation, game::DebugState& state);
-    void drawArea(Simulation& simulation, game::DebugState& state);
-    void drawRuleset(Simulation& simulation);
+                  game::RuleTrace const& trace) const;
+    void drawAgent(Simulation& simulation, game::DebugState const& state) const;
+    void drawNode(game::DebugState& state) const;
+    void drawWay(game::DebugState& state) const;
+    void drawCell(Simulation& simulation, game::DebugState& state) const;
+    void drawArea(Simulation& simulation, game::DebugState& state) const;
+    void drawRuleset(Simulation& simulation) const;
 
 private:
 
     //! \brief Substring the rule name or one of its commands must contain.
-    char m_filter[64] = "";
+    mutable std::string m_filter;
 };
 
 // ****************************************************************************
@@ -184,7 +184,7 @@ public:
 private:
 
     //! \brief Case insensitive substring the entity or the rule must contain.
-    char m_filter[64] = "";
+    std::string m_filter;
     bool m_show_success = true;
     bool m_show_failure = true;
     bool m_auto_scroll = true;

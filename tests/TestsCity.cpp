@@ -82,23 +82,23 @@ TEST(TestsCity, GridPosition)
 
     // Upper bound of the City
     city.world2mapPosition(Vector3f(100.0f, 100.0f, 100.0f), u, v);
-    ASSERT_EQ(u, GRILL - 1u); ASSERT_EQ(v, GRILL - 1u);
+    ASSERT_EQ(u, int32_t(GRILL - 1u)); ASSERT_EQ(v, int32_t(GRILL - 1u));
 
     // At the origin of the City
     city.world2mapPosition(Vector3f(1.0f, 2.0f, 3.0f), u, v);
-    ASSERT_EQ(u, 0u); ASSERT_EQ(v, 0u);
+    ASSERT_EQ(u, 0); ASSERT_EQ(v, 0);
 
     // 1 cell from the origin for each axis
     city.world2mapPosition(Vector3f(1.0f + city.gridCellSize(),
                                     2.0f + city.gridCellSize(),
                                     3.0f), u, v);
-    ASSERT_EQ(u, 1u); ASSERT_EQ(v, 1u);
+    ASSERT_EQ(u, 1); ASSERT_EQ(v, 1);
 
     // A little shift from previous test: still in the same cell
     city.world2mapPosition(Vector3f(1.0f + city.gridCellSize() + 0.5f,
                                     2.0f + city.gridCellSize() + 0.5f,
                                     3.0f), u, v);
-    ASSERT_EQ(u, 1u); ASSERT_EQ(v, 1u);
+    ASSERT_EQ(u, 1); ASSERT_EQ(v, 1);
 }
 
 // -----------------------------------------------------------------------------

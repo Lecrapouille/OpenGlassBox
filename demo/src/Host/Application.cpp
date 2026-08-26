@@ -85,9 +85,11 @@ bool Application::initializeGLFW()
         std::cerr << "GLFW error " << code << ": " << description << std::endl;
     });
 
-    // GLFW picks Wayland whenever it is available, and a Wayland window cannot
-    // be driven by xdotool or captured by window id. OGB_PLATFORM=x11 forces
-    // XWayland, which is what makes scripted runs and screenshots possible.
+    // GLFW 3.4+ picks Wayland whenever it is available, and a Wayland window
+    // cannot be driven by xdotool or captured by window id. OGB_PLATFORM=x11
+    // forces XWayland, which is what makes scripted runs and screenshots
+    // possible. Distro packages often ship GLFW 3.3, so guard these hints.
+#if GLFW_VERSION_MAJOR > 3 || (GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 4)
     char const* platform = std::getenv("OGB_PLATFORM");
     if (platform != nullptr)
     {
@@ -96,6 +98,7 @@ bool Application::initializeGLFW()
         else if (std::string(platform) == "wayland")
             glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_WAYLAND);
     }
+#endif
 
     if (glfwInit() == GLFW_FALSE)
     {

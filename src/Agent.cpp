@@ -423,7 +423,7 @@ float Agent::rerouteCost(IRouter& router)
 {
     Node* const from = routingNode();
     if (from == nullptr)
-        return std::numeric_limits<float>::infinity();
+        return config::ROUTING_INFINITY;
 
     // Same reason as in update(): the claim is against the other Agents, not
     // against oneself. Restored exactly as it was, this being a measurement.
@@ -505,7 +505,7 @@ void Agent::computeRouteAlongWay(IRouter& router)
     Node& from = m_currentWay->from();
     Node& to = m_currentWay->to();
     float const travel = m_currentWay->travelTime();
-    float const infinity = std::numeric_limits<float>::infinity();
+    float const infinity = config::ROUTING_INFINITY;
 
     Route byFrom = router.findRoute(from, m_searchTarget, m_resources);
     float const costFrom =
@@ -517,7 +517,7 @@ void Agent::computeRouteAlongWay(IRouter& router)
 
     m_ticksOnRoute = 0u;
 
-    if (std::isinf(costFrom) && std::isinf(costTo))
+    if (routingCostUnreachable(costFrom) && routingCostUnreachable(costTo))
     {
         setRoute(Route());
         return;

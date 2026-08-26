@@ -13,6 +13,7 @@
 #define OPEN_GLASSBOX_CONFIG_HPP
 
 #include <cstdint>
+#include <limits>
 
 namespace ogb
 {
@@ -38,7 +39,18 @@ constexpr uint32_t DEFAULT_MAX_TICKS_PER_UPDATE = 20u;
 //! indices. It is not a number of pixels: how a world unit is rendered is
 //! the sole responsibility of the renderer.
 constexpr float DEFAULT_GRID_CELL_SIZE = 30.0f;
+
+//! \brief Sentinel for an unreachable routing cost. Uses max() rather than
+//! infinity() so the value stays defined when the project is built with
+//! -ffast-math (-Wnan-infinity-disabled).
+constexpr float ROUTING_INFINITY = std::numeric_limits<float>::max();
 } // namespace config
+
+//! \brief Whether a routing cost marks “no route”, including ROUTING_INFINITY.
+inline bool routingCostUnreachable(float cost) noexcept
+{
+    return cost >= config::ROUTING_INFINITY * 0.5f;
+}
 
 //==============================================================================
 //! \brief Runtime settings of a Simulation. Passed at construction and shared

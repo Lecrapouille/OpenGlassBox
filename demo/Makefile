@@ -36,12 +36,23 @@ SRC_FILES += $(P)/external/ImGuiFileDialog/ImGuiFileDialog.cpp
 INCLUDES := $(P)/external/imgui $(P)/external/imgui/backends \
     $(P)/external/imgui/misc/cpp $(P)/external/implot \
     $(P)/external/ImGuiFileDialog
-PKG_LIBS := glfw3 glew gl
 
-USER_CXXFLAGS += -Wno-useless-cast -Wno-conversion -Wno-sign-conversion -Wno-float-equal
+# GLFW and GLEW everywhere; OpenGL is platform-specific (see below and the
+# macOS bundle block).
+PKG_LIBS := glfw3 glew
+ifeq ($(OS),Linux)
+    PKG_LIBS += gl
+else ifeq ($(OS),Windows)
+    LINKER_FLAGS += -lopengl32
+endif
+
+USER_CXXFLAGS += -Wno-format-nonliteral -Wno-conversion -Wno-sign-conversion -Wno-float-equal
 USER_CXXFLAGS += -Wno-float-equal -Wno-float-conversion -Wno-shadow -Wno-unused-parameter
 USER_CXXFLAGS += -Wno-unused-result -Wno-double-promotion -Wno-cast-qual
 USER_CXXFLAGS += -Wno-unused-variable -Wno-old-style-cast -Wno-null-dereference -Wno-switch-enum
+ifneq ($(OS),Darwin)
+USER_CXXFLAGS += -Wno-useless-cast
+endif
 
 ###################################################
 # Compile the standalone application
@@ -58,7 +69,7 @@ ifeq ($(OS),Darwin)
     BUILD_MACOS_APP_BUNDLE = 1
     APPLE_IDENTIFIER := lecrapouille
     MACOS_BUNDLE_ICON := $(PROJECT_DATA_DIR)/$(PROJECT_NAME).icns
-    LINKER_FLAGS := -framework CoreFoundation
+    LINKER_FLAGS := -framework CoreFoundation -framework OpenGL
 endif
 
 ###################################################

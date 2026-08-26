@@ -6,6 +6,7 @@
 
 #include "UI/CityViewer.hpp"
 #include "Editor/Editor.hpp"
+#include "OpenGlassBox/Config.hpp"
 #include "OpenGlassBox/Simulation.hpp"
 #include "UI/Panels.hpp"
 #include "UI/Theme.hpp"
@@ -426,7 +427,7 @@ game::Selection CityViewer::pickAt(Simulation& simulation,
                                    ImVec2 const& screen) const
 {
     float const reach = PICK_RADIUS * PICK_RADIUS;
-    float bestDistance = std::numeric_limits<float>::infinity();
+    float bestDistance = config::ROUTING_INFINITY;
     game::Selection best;
 
     // Candidates are offered building first, then agent, then node, and a tie

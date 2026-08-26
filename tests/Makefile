@@ -22,9 +22,9 @@ SRC_FILES := $(call rwildcard,$(P)/src,*.cpp) \
     $(call rwildcard,$(P)/tests,*.cpp)
 INCLUDES := $(P)/include $(P)/demo/src
 VPATH := $(P)/src $(P)/demo/src/Save
-USER_CXX_FLAGS += -Wno-unused-function -Wno-undef \
+USER_CXXFLAGS += -Wno-unused-function -Wno-undef \
   -Wno-keyword-macro -Wno-float-equal \
-  -Wno-gnu-zero-variadic-macro-arguments
+  -Wno-gnu-zero-variadic-macro-arguments -Wno-null-dereference
 PKG_LIBS += gtest gmock
 
 ###################################################

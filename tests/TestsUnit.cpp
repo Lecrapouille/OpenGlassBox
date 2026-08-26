@@ -105,8 +105,8 @@ TEST(TestsUnit, Constructor)
     ASSERT_EQ(u.m_context.unit, &u);
     ASSERT_EQ(u.m_context.locals, &u.m_resources);
     ASSERT_EQ(u.m_context.globals, &city.globals());
-    ASSERT_EQ(u.m_context.u, 1u); // node.position.x / city.gridCellSize()
-    ASSERT_EQ(u.m_context.v, 2u); // node.position.y / city.gridCellSize()
+    ASSERT_EQ(u.m_context.u, 1); // node.position.x / city.gridCellSize()
+    ASSERT_EQ(u.m_context.v, 2); // node.position.y / city.gridCellSize()
     ASSERT_EQ(u.m_context.radius, 2u);
     ASSERT_EQ(u.m_ticks, 0u);
 

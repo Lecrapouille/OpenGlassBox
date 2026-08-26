@@ -3,37 +3,18 @@
 #include "OpenGlassBox/DijkstraRouter.hpp"
 #include "OpenGlassBox/Simulation.hpp"
 #include "Save/CitySave.hpp"
+#include "TestDataPath.hpp"
 
 #include <fstream>
 
 static std::string testCityRuleset()
 {
-    std::vector<std::string> candidates = {
-        "../demo/data/Simulations/test_city.ogs",
-        "demo/data/Simulations/test_city.ogs",
-    };
-    for (std::string const& path : candidates)
-    {
-        std::ifstream file(path);
-        if (file.good())
-            return path;
-    }
-    return candidates[0];
+    return testDataPath("test_city.ogs");
 }
 
 static std::string testCitySave()
 {
-    std::vector<std::string> candidates = {
-        "../demo/data/Simulations/test_city.ogc",
-        "demo/data/Simulations/test_city.ogc",
-    };
-    for (std::string const& path : candidates)
-    {
-        std::ifstream file(path);
-        if (file.good())
-            return path;
-    }
-    return candidates[0];
+    return testDataPath("test_city.ogc");
 }
 
 TEST(TestsCitySave, LoadShippedParis)
@@ -62,7 +43,7 @@ TEST(TestsCitySave, MissingTypeIsRefused)
     Simulation simulation{ 32u, 32u };
     ASSERT_TRUE(simulation.script().parseFile(testCityRuleset()));
 
-    std::string const path = "/tmp/openglassbox-missing-type.ogc";
+    std::string const path = tempTestPath("openglassbox-missing-type.ogc");
     {
         std::ofstream out(path);
         out << "save\n"
@@ -86,9 +67,9 @@ TEST(TestsCitySave, MissingTypeIsRefused)
 TEST(TestsCitySave, LoadShippedBraessAndGrids)
 {
     std::vector<std::string> saves = {
-        "demo/data/Simulations/braess.ogc",
-        "demo/data/Simulations/regular.ogc",
-        "demo/data/Simulations/chicago.ogc",
+        testDataPath("braess.ogc"),
+        testDataPath("regular.ogc"),
+        testDataPath("chicago.ogc"),
     };
 
     for (std::string const& save : saves)
@@ -97,7 +78,7 @@ TEST(TestsCitySave, LoadShippedBraessAndGrids)
         std::string error;
         ASSERT_TRUE(CitySave::peekHeader(save, header, error)) << error;
 
-        std::string const ruleset = "demo/data/Simulations/" + header.ruleset;
+        std::string const ruleset = testDataPath(header.ruleset);
         Simulation simulation{ 32u, 32u };
         ASSERT_TRUE(simulation.script().parseFile(ruleset)) << ruleset;
         ASSERT_TRUE(CitySave::matchesRuleset(header, ruleset, error)) << error;

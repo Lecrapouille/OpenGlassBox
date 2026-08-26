@@ -5,6 +5,8 @@ on:
   push:
     branches:
       - master
+    tags:
+      - '*'
   pull_request:
     branches:
       - master
@@ -13,19 +15,72 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
-
 jobs:
-  non_regression_windows:
-    name: Non regression tests on Windows
-    runs-on: windows-latest
-    continue-on-error: true
+  # ============================================================================
+  # Linux
+  # ============================================================================
+  build-linux:
+    name: Build and test on Linux
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           submodules: recursive
+
+      - name: Install packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install pkg-config libdw-dev lcov libglfw3-dev libglew-dev libgl1-mesa-dev
+
+      - name: Download, configure and install Google test
+        run: |
+          wget https://github.com/google/googletest/releases/download/v1.17.0/googletest-1.17.0.tar.gz
+          tar xf googletest-1.17.0.tar.gz
+          cd googletest-1.17.0
+          cmake -DBUILD_SHARED_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON .
+          sudo make install
+
+      - name: Compile OpenGlassBox
+        run: |
+          make download-external-libs
+          V=1 make compile-external-libs
+          V=1 make -j$(nproc --all)
+
+      - name: Run non regression tests
+        run: |
+          cd tests
+          V=1 make -j$(nproc --all)
+          ../build/OpenGlassBox-tests
+
+      - name: Stage build artifacts
+        run: bash .github/scripts/stage-artifacts.sh linux
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: openglassbox-linux-x86_64
+          path: ci-artifacts/linux/
+          if-no-files-found: error
+
+  # ============================================================================
+  # Windows
+  # ============================================================================
+  build-windows:
+    name: Build and test on Windows
+    runs-on: windows-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
       - name: Install MSYS2
         uses: msys2/setup-msys2@v2
         with:
@@ -39,86 +94,54 @@ jobs:
             mingw-w64-x86_64-pkg-config
             mingw-w64-x86_64-glfw
             mingw-w64-x86_64-glew
+            mingw-w64-x86_64-gtest
             mingw-w64-x86_64-make
-      - name: Download, configure and install Google test
-        shell: msys2 {0}
-        run: |
-          wget https://github.com/google/googletest/releases/download/v1.17.0/googletest-1.17.0.tar.gz
-          tar xf googletest-1.17.0.tar.gz
-          cd googletest-1.17.0
-          cmake -G "MinGW Makefiles" -DBUILD_SHARED_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON .
-          mingw32-make install
+
       - name: Compile OpenGlassBox
         shell: msys2 {0}
         run: |
           mingw32-make download-external-libs
           V=1 mingw32-make compile-external-libs
           V=1 mingw32-make -j8
-          mingw32-make install
-      - name: Do non regression tests
+
+      - name: Run non regression tests
         shell: msys2 {0}
         run: |
           cd tests
           V=1 mingw32-make -j8
           ../build/OpenGlassBox-tests
-      - name: Check if the library can be linked against a project
-        shell: msys2 {0}
-        run: |
-          export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/C:/Program Files (x86)/googletest-distribution/lib/pkgconfig"
-          git clone https://github.com/Lecrapouille/LinkAgainstMyLibs.git --recurse-submodules --depth=1
-          cd LinkAgainstMyLibs/OpenGlassBox
-          V=1 mingw32-make -j8
-          ./build/OpenGlassBox
 
-  non_regression_linux:
-    name: Non regression tests on Linux
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Stage build artifacts
+        shell: msys2 {0}
+        run: bash .github/scripts/stage-artifacts.sh windows
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v6
         with:
-          submodules: recursive
-      - name: Install packages
-        run: |
-          sudo apt-get update
-          sudo apt-get install pkg-config libdw-dev lcov libglfw3-dev libglew-dev libgl1-mesa-dev
-      - name: Download, configure and install Google test
-        run: |
-          wget https://github.com/google/googletest/releases/download/v1.17.0/googletest-1.17.0.tar.gz
-          tar xf googletest-1.17.0.tar.gz
-          cd googletest-1.17.0
-          cmake -DBUILD_SHARED_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON .
-          sudo make install
-      - name: Compile OpenGlassBox
-        run: |
-          make download-external-libs
-          V=1 make compile-external-libs
-          V=1 make -j$(nproc --all)
-          sudo make install
-      - name: Do non regression tests
-        run: |
-          cd tests
-          V=1 make -j$(nproc --all)
-          ../build/OpenGlassBox-tests
-      - name: Check if the library can be linked against a project
-        run: |
-          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/
-          git clone https://github.com/Lecrapouille/LinkAgainstMyLibs.git --recurse-submodules --depth=1
-          cd LinkAgainstMyLibs/OpenGlassBox
-          V=1 make -j$(nproc --all)
-          ./build/OpenGlassBox
+          name: openglassbox-windows-x86_64
+          path: ci-artifacts/windows/
+          if-no-files-found: error
 
-  non_regression_macos:
-    name: Non regression tests on MacOS X
+  # ============================================================================
+  # macOS
+  # ============================================================================
+  build-macos:
+    name: Build and test on macOS
     runs-on: macos-latest
+    permissions:
+      contents: read
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           submodules: recursive
+
       - name: Install packages
         run: |
           brew install pkg-config lcov glfw glew
+          echo "PKG_CONFIG_PATH=$(brew --prefix)/lib/pkgconfig:$(brew --prefix)/share/pkgconfig" >> "$GITHUB_ENV"
+
       - name: Download, configure and install Google test
         run: |
           wget https://github.com/google/googletest/releases/download/v1.17.0/googletest-1.17.0.tar.gz
@@ -126,13 +149,102 @@ jobs:
           cd googletest-1.17.0
           cmake -DBUILD_SHARED_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON .
           sudo make install
+
       - name: Compile OpenGlassBox
         run: |
           make download-external-libs
           make compile-external-libs
           make -j$(sysctl -n hw.logicalcpu)
-      - name: Do non regression tests
+
+      - name: Run non regression tests
         run: |
           cd tests
           make -j$(sysctl -n hw.logicalcpu)
           ../build/OpenGlassBox-tests
+
+      - name: Stage build artifacts
+        run: bash .github/scripts/stage-artifacts.sh macos
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: openglassbox-macos-arm64
+          path: ci-artifacts/macos/
+          if-no-files-found: error
+
+  # ============================================================================
+  # Release packaging (tags and manual runs)
+  # ============================================================================
+  package:
+    name: Package release
+    needs: [build-linux, build-windows, build-macos]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    env:
+      RELEASE_DIR: release/OpenGlassBox
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Read version
+        id: version
+        run: |
+          VERSION=$(grep '^PROJECT_VERSION' Makefile.common | awk '{print $3}')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v7
+        with:
+          path: artifacts
+
+      - name: Combine artifacts
+        run: |
+          mkdir -p "$RELEASE_DIR/linux-x86_64" "$RELEASE_DIR/windows-x86_64" "$RELEASE_DIR/macos-arm64"
+
+          if [ -d artifacts/openglassbox-linux-x86_64 ]; then
+            cp -a artifacts/openglassbox-linux-x86_64/. "$RELEASE_DIR/linux-x86_64/"
+            find "$RELEASE_DIR/linux-x86_64" -name "*.so*" -exec chmod +x {} \;
+            chmod +x "$RELEASE_DIR/linux-x86_64/bin/"* 2>/dev/null || true
+            echo "Linux artifacts copied"
+          fi
+
+          if [ -d artifacts/openglassbox-windows-x86_64 ]; then
+            cp -a artifacts/openglassbox-windows-x86_64/. "$RELEASE_DIR/windows-x86_64/"
+            echo "Windows artifacts copied"
+          fi
+
+          if [ -d artifacts/openglassbox-macos-arm64 ]; then
+            cp -a artifacts/openglassbox-macos-arm64/. "$RELEASE_DIR/macos-arm64/"
+            find "$RELEASE_DIR/macos-arm64/bin" -path "*.app/Contents/MacOS/*" -type f -exec chmod +x {} \; 2>/dev/null || true
+            echo "macOS artifacts copied"
+          fi
+
+          cp LICENSE "$RELEASE_DIR/"
+          echo "${{ steps.version.outputs.version }}" > "$RELEASE_DIR/VERSION"
+
+      - name: Create release archive
+        run: |
+          ZIP_NAME="OpenGlassBox-${{ steps.version.outputs.version }}.zip"
+          cd "$(dirname "$RELEASE_DIR")"
+          zip -ry "../$ZIP_NAME" "$(basename "$RELEASE_DIR")"/
+          echo "ZIP_NAME=$ZIP_NAME" >> "$GITHUB_ENV"
+
+      - name: Upload combined artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: OpenGlassBox-${{ steps.version.outputs.version }}
+          path: ${{ env.RELEASE_DIR }}/
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.ZIP_NAME }}
+          draft: false
+          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
