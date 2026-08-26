@@ -1,0 +1,6 @@
+{
+    "recommendations": [
+        "xaver.clang-format",
+        "ms-vscode.cpptools"
+    ]
+}

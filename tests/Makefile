@@ -18,10 +18,10 @@ include $(M)/project/Makefile
 # Compile the unit tests
 #
 SRC_FILES := $(call rwildcard,$(P)/src,*.cpp) \
+    $(P)/demo/src/Save/CitySave.cpp \
     $(call rwildcard,$(P)/tests,*.cpp)
-INCLUDES := $(P)/include
-VPATH := $(P)/src
-DEFINES += -DVIRTUAL=virtual -DDESIRED_GRID_SIZE=2u
+INCLUDES := $(P)/include $(P)/demo/src
+VPATH := $(P)/src $(P)/demo/src/Save
 USER_CXX_FLAGS += -Wno-unused-function -Wno-undef \
   -Wno-keyword-macro -Wno-float-equal \
   -Wno-gnu-zero-variadic-macro-arguments

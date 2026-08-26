@@ -1,4 +1,5 @@
 name: Non regression tests for OpenGlassBox
+
 on:
   workflow_dispatch:
   push:
@@ -8,6 +9,13 @@ on:
     branches:
       - master
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
   non_regression_windows:
     name: Non regression tests on Windows
@@ -15,14 +23,23 @@ jobs:
     continue-on-error: true
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: recursive
       - name: Install MSYS2
         uses: msys2/setup-msys2@v2
         with:
           msystem: MINGW64
-          install: mingw-w64-x86_64-toolchain git mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja mingw-w64-x86_64-bc mingw-w64-x86_64-pkg-config mingw-w64-x86_64-SDL2 mingw-w64-x86_64-SDL2_image mingw-w64-x86_64-make
+          install: >-
+            mingw-w64-x86_64-toolchain
+            git
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja
+            mingw-w64-x86_64-bc
+            mingw-w64-x86_64-pkg-config
+            mingw-w64-x86_64-glfw
+            mingw-w64-x86_64-glew
+            mingw-w64-x86_64-make
       - name: Download, configure and install Google test
         shell: msys2 {0}
         run: |
@@ -58,13 +75,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: recursive
       - name: Install packages
         run: |
           sudo apt-get update
-          sudo apt-get install pkg-config libdw-dev lcov libsdl2-dev libsdl2-image-dev
+          sudo apt-get install pkg-config libdw-dev lcov libglfw3-dev libglew-dev libgl1-mesa-dev
       - name: Download, configure and install Google test
         run: |
           wget https://github.com/google/googletest/releases/download/v1.17.0/googletest-1.17.0.tar.gz
@@ -76,19 +93,19 @@ jobs:
         run: |
           make download-external-libs
           V=1 make compile-external-libs
-          V=1 make -j`nproc --all`
+          V=1 make -j$(nproc --all)
           sudo make install
       - name: Do non regression tests
         run: |
           cd tests
-          V=1 make -j`nproc --all`
+          V=1 make -j$(nproc --all)
           ../build/OpenGlassBox-tests
       - name: Check if the library can be linked against a project
         run: |
           export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/
           git clone https://github.com/Lecrapouille/LinkAgainstMyLibs.git --recurse-submodules --depth=1
           cd LinkAgainstMyLibs/OpenGlassBox
-          V=1 make -j`nproc --all`
+          V=1 make -j$(nproc --all)
           ./build/OpenGlassBox
 
   non_regression_macos:
@@ -96,12 +113,12 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: recursive
       - name: Install packages
         run: |
-          brew install pkg-config lcov sdl2 sdl2_image
+          brew install pkg-config lcov glfw glew
       - name: Download, configure and install Google test
         run: |
           wget https://github.com/google/googletest/releases/download/v1.17.0/googletest-1.17.0.tar.gz
@@ -113,16 +130,9 @@ jobs:
         run: |
           make download-external-libs
           make compile-external-libs
-          make -j`sysctl -n hw.logicalcpu`
-#          sudo make install
+          make -j$(sysctl -n hw.logicalcpu)
       - name: Do non regression tests
         run: |
           cd tests
-          make -j`sysctl -n hw.logicalcpu`
+          make -j$(sysctl -n hw.logicalcpu)
           ../build/OpenGlassBox-tests
-#      - name: Check if the library can be linked against a project
-#        run: |
-#          git clone https://github.com/Lecrapouille/LinkAgainstMyLibs.git --recurse-submodules --depth=1
-#          cd LinkAgainstMyLibs/OpenGlassBox
-#          make -j`sysctl -n hw.logicalcpu`
-#          ./build/OpenGlassBox

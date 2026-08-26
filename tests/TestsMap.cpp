@@ -2,6 +2,7 @@
 
 #define protected public
 #define private public
+#  include "TestWorld.hpp"
 #  include "OpenGlassBox/Map.hpp"
 #undef protected
 #undef private
@@ -13,193 +14,182 @@
 // -----------------------------------------------------------------------------
 TEST(TestsMap, Constants)
 {
-    ASSERT_GT(config::GRID_SIZE, 0u);
+    ASSERT_GT(config::DEFAULT_GRID_CELL_SIZE, 0.0f);
+    ASSERT_EQ(Map::CHUNK_SIZE, 16);
 }
 
 // -----------------------------------------------------------------------------
 TEST(TestsMap, Constructor)
 {
-    const uint32_t GRILL = 4u;
-    City city("Paris", Vector3f(1.0f, 2.0f, 3.0f), GRILL, GRILL + 1u);
-
+    TestWorld cityWorld("Paris", 4u, 5u, Vector3f(1.0f, 2.0f, 3.0f));
     MapType type = { "petrol", 0xFFFFAA, 40u, {} };
-    Map map(type, city);
+    Map map(type, cityWorld.world);
 
     ASSERT_STREQ(map.type().c_str(), "petrol");
     ASSERT_EQ(map.m_type.color, 0xFFFFAAu);
     ASSERT_EQ(map.m_type.capacity, 40u);
     ASSERT_EQ(map.m_type.rules.size(), 0u);
-    ASSERT_EQ(int32_t(map.m_position.x), 1);
-    ASSERT_EQ(int32_t(map.m_position.y), 2);
-    ASSERT_EQ(int32_t(map.m_position.z), 3);
-    ASSERT_EQ(map.m_gridSizeU, GRILL);
-    ASSERT_EQ(map.m_gridSizeV, GRILL + 1u);
     ASSERT_EQ(map.m_ticks, 0u);
-    ASSERT_EQ(map.m_resources.size(), GRILL * (GRILL + 1u));
+    ASSERT_EQ(map.allocatedChunks(), 0u);
+    ASSERT_EQ(map.totalResource(), 0u);
 }
 
 // -----------------------------------------------------------------------------
 TEST(TestsMap, setResource)
 {
-    const uint32_t GRILL = 4u;
-    City city("Paris", Vector3f(1.0f, 2.0f, 3.0f), GRILL, GRILL + 1u);
-
+    TestWorld cityWorld("Paris", 4u, 5u);
     MapType type("map");
-    Map map(type, city);
+    Map map(type, cityWorld.world);
     ASSERT_EQ(map.m_type.capacity, Resource::MAX_CAPACITY);
 
-    map.setResource(0u, 0u, 42u);
-    ASSERT_EQ(map.getResource(0u, 0u), 42u);
+    map.setResource(0, 0, 42u);
+    ASSERT_EQ(map.getResource(0, 0), 42u);
+    ASSERT_EQ(map.allocatedChunks(), 1u);
 
-    map.setResource(0u, 0u, 42u);
-    ASSERT_EQ(map.getResource(0u, 0u), 42u);
+    map.setResource(0, 0, 0u);
+    ASSERT_EQ(map.getResource(0, 0), 0u);
 
-    map.setResource(0u, 0u, 0u);
-    ASSERT_EQ(map.getResource(0u, 0u), 0u);
+    map.addResource(0, 0, 42u);
+    ASSERT_EQ(map.getResource(0, 0), 42u);
 
-    map.addResource(0u, 0u, 42u);
-    ASSERT_EQ(map.getResource(0u, 0u), 42u);
+    map.addResource(0, 0, 42u);
+    ASSERT_EQ(map.getResource(0, 0), 84u);
 
-    map.addResource(0u, 0u, 42u);
-    ASSERT_EQ(map.getResource(0u, 0u), 84u);
+    map.addResource(0, 0, Resource::MAX_CAPACITY);
+    ASSERT_EQ(map.getResource(0, 0), Resource::MAX_CAPACITY);
 
-    map.addResource(0u, 0u, Resource::MAX_CAPACITY);
-    ASSERT_EQ(map.getResource(0u, 0u), Resource::MAX_CAPACITY);
-
-    map.addResource(0u, 0u, 42u);
-    ASSERT_EQ(map.getResource(0u, 0u), Resource::MAX_CAPACITY);
-
-    map.removeResource(0u, 0u, Resource::MAX_CAPACITY);
-    ASSERT_EQ(map.getResource(0u, 0u), 0u);
-
-    map.removeResource(0u, 0u, Resource::MAX_CAPACITY);
-    ASSERT_EQ(map.getResource(0u, 0u), 0u);
+    map.removeResource(0, 0, Resource::MAX_CAPACITY);
+    ASSERT_EQ(map.getResource(0, 0), 0u);
 }
 
 // -----------------------------------------------------------------------------
 TEST(TestsMap, setCapacity)
 {
-    const uint32_t GRILL = 4u;
-    City city("Paris", Vector3f(1.0f, 2.0f, 3.0f), GRILL, GRILL + 1u);
-
+    TestWorld cityWorld("Paris", 4u, 5u);
     MapType type("map", 0xFFFFFF, 42u);
-    Map map(type, city);
+    Map map(type, cityWorld.world);
 
-    map.addResource(0u, 0u, 41u);
-    ASSERT_EQ(map.getResource(0u, 0u), 41u);
+    map.addResource(0, 0, 41u);
+    ASSERT_EQ(map.getResource(0, 0), 41u);
 
-    map.addResource(0u, 0u, 10u);
-    ASSERT_EQ(map.getResource(0u, 0u), 42u);
+    map.addResource(0, 0, 10u);
+    ASSERT_EQ(map.getResource(0, 0), 42u);
 
-    map.removeResource(0u, 0u, 10u);
-    ASSERT_EQ(map.getResource(0u, 0u), 32u);
+    map.removeResource(0, 0, 10u);
+    ASSERT_EQ(map.getResource(0, 0), 32u);
 }
 
 // -----------------------------------------------------------------------------
 TEST(TestsMap, addResourceRadius)
 {
-    using MCIR = MapCoordinatesInsideRadius;
-    uint32_t const RADIUS = 1u;
-    uint32_t const GRILL = 8u;
+    TestWorld cityWorld("Paris", 8u, 8u);
+    City& city = cityWorld.city;
+    Map map(keep<MapType>("map"), cityWorld.world);
+    MapRegion const region = city.region();
 
-    City city("Paris", Vector3f(1.0f, 2.0f, 3.0f), GRILL, GRILL);
-    Map map(MapType("map"), city);
+    map.setResource(3, 4, 34u);
+    map.setResource(4, 3, 43u);
+    map.setResource(4, 4, 44u);
+    map.setResource(4, 5, 45u);
+    map.setResource(5, 4, 54u);
 
-    // Clear chached values (that may be set by other tests)
-    if (map.m_coordinates.m_relativeCoord != nullptr)
-        map.m_coordinates.m_relativeCoord->clear();
-
-    // Set some resources
-    map.setResource(3u, 4u, 34u);
-    map.setResource(4u, 3u, 43u);
-    map.setResource(4u, 4u, 44u);
-    map.setResource(4u, 5u, 45u);
-    map.setResource(5u, 4u, 54u);
-
-    // Compute Resources
-    uint32_t total = map.getResource(4u, 4u, RADIUS);
-    ASSERT_EQ(map.m_coordinates.m_offset, 5u);
-    ASSERT_EQ(map.m_coordinates.m_centerU, 4u);
-    ASSERT_EQ(map.m_coordinates.m_centerV, 4u);
-    ASSERT_EQ(map.m_coordinates.m_minU, 0u);
-    ASSERT_EQ(map.m_coordinates.m_maxU, GRILL);
-    ASSERT_EQ(map.m_coordinates.m_minV, 0u);
-    ASSERT_EQ(map.m_coordinates.m_maxV, GRILL);
-    ASSERT_NE(map.m_coordinates.m_relativeCoord, nullptr);
-    ASSERT_EQ(map.m_coordinates.m_relativeCoord->size(), 5u);
-    MCIR::RelativeCoordinates& c = MCIR::relativeCoordinates(RADIUS);
-    ASSERT_THAT(c, UnorderedElementsAre(
-                    MCIR::compress(-1, 0),
-                    MCIR::compress(0, -1),
-                    MCIR::compress(0, 0),
-                    MCIR::compress(0, 1),
-                    MCIR::compress(1, 0)
-    ));
-
+    uint32_t total = map.getResource(4, 4, 1u, region);
     ASSERT_EQ(total, 34u + 43u + 44u + 45u + 54u);
 
-    // Add the same amount of resource for each cells
-    map.addResource(4u, 4u, RADIUS, 10u, false);
-    total = total + 5u * 10u; // + 5 cells x 10 resource
-    ASSERT_EQ(map.getResource(4u, 4u, RADIUS), total);
-
-    // Add shared resource for each cells
-    map.addResource(4u, 4u, RADIUS, 10u, true);
-    total = total + 10u; // + 10 resource
-    ASSERT_EQ(map.getResource(4u, 4u, RADIUS), total);
-
-    // Remove shared resource for each cells
-    map.removeResource(4u, 4u, RADIUS, 10u, true);
-    total = total - 10u; // - 10 resource
-    ASSERT_EQ(map.getResource(4u, 4u, RADIUS), total);
-
-    // Add the same amount of resource for each cells
-    map.removeResource(4u, 4u, RADIUS, 10u, false);
-    total = total - 5u * 10u; // - 5 cells x 10 resource
-    ASSERT_EQ(map.getResource(4u, 4u, RADIUS), total);
+    map.addResource(4, 4, 1u, region, 10u, false);
+    total = total + 5u * 10u;
+    ASSERT_EQ(map.getResource(4, 4, 1u, region), total);
 }
 
 // -----------------------------------------------------------------------------
 TEST(TestsMap, getWorldPosition)
 {
-    const uint32_t GRILL = 4u;
-    City city("Paris", Vector3f(1.0f, 2.0f, 3.0f), GRILL, GRILL + 1u);
+    TestWorld cityWorld("Paris", 4u, 5u);
+    City& city = cityWorld.city;
+    Map map(keep<MapType>("map"), cityWorld.world);
 
-    MapType type("map");
-    Map map(type, city);
-
-    Vector3f v;
-
-    v = map.getWorldPosition(0u, 0u);
+    Vector3f v = map.getWorldPosition(0, 0);
     ASSERT_EQ(v.x, 0.0f);
     ASSERT_EQ(v.y, 0.0f);
-    ASSERT_EQ(v.z, 0.0f);
 
-    v = map.getWorldPosition(1u, 1u);
-    ASSERT_EQ(v.x, config::GRID_SIZE);
-    ASSERT_EQ(v.y, config::GRID_SIZE);
-    ASSERT_EQ(v.z, 0.0f);
-
-    v = map.getWorldPosition(GRILL, GRILL + 1u);
-    ASSERT_EQ(v.x, config::GRID_SIZE * float(GRILL));
-    ASSERT_EQ(v.y, config::GRID_SIZE * float(GRILL + 1u));
-    ASSERT_EQ(v.z, 0.0f);
+    v = map.getWorldPosition(1, 1);
+    ASSERT_EQ(v.x, city.gridCellSize());
+    ASSERT_EQ(v.y, city.gridCellSize());
 }
 
 // -----------------------------------------------------------------------------
-TEST(TestsMap, Translate)
+TEST(TestsMap, SparseNegativeCells)
 {
-    City city("Paris", Vector3f(1.0f, 2.0f, 3.0f), 2u, 2u);
+    TestWorld cityWorld("Paris");
+    Map map(keep<MapType>("map"), cityWorld.world);
 
-    Map map(MapType("map"), city);
-    ASSERT_EQ(int32_t(map.m_position.x), 1);
-    ASSERT_EQ(int32_t(map.m_position.y), 2);
-    ASSERT_EQ(int32_t(map.m_position.z), 3);
+    map.setResource(-3, -2, 7u);
+    ASSERT_EQ(map.getResource(-3, -2), 7u);
+    ASSERT_EQ(map.getResource(0, 0), 0u);
+    ASSERT_GE(map.allocatedChunks(), 1u);
+}
 
-    map.translate(Vector3f(1.0f, 2.0f, 3.0f));
-    ASSERT_EQ(int32_t(map.m_position.x), 2);
-    ASSERT_EQ(int32_t(map.m_position.y), 4);
-    ASSERT_EQ(int32_t(map.m_position.z), 6);
+// -----------------------------------------------------------------------------
+//! \brief The sum of a block is kept as cells are written, because the panels
+//! and the renderer ask for it on every frame and walking the grid would cost
+//! the whole city.
+// -----------------------------------------------------------------------------
+TEST(TestsMap, TotalAndRegionIterationFollowWrites)
+{
+    TestWorld cityWorld("Paris", 4u, 4u);
+    Map map(keep<MapType>("map"), cityWorld.world);
+
+    map.setResource(1, 1, 10u);
+    map.setResource(2, 1, 5u);
+    ASSERT_EQ(map.totalResource(), 15u);
+
+    map.setResource(1, 1, 3u);
+    ASSERT_EQ(map.totalResource(), 8u);
+
+    map.removeResource(2, 1, 5u);
+    ASSERT_EQ(map.totalResource(), 3u);
+
+    // A far away cell allocates its own block, and only the cells inside the
+    // asked region are visited.
+    map.setResource(100, 100, 7u);
+    ASSERT_EQ(map.totalResource(), 10u);
+
+    uint64_t visited = 0u;
+    uint64_t sum = 0u;
+    map.forEachBlockInRegion(MapRegion{ 0, 0, 4u, 4u },
+                             1,
+                             [&](int32_t, int32_t, int32_t, uint32_t amount) {
+                                 ++visited;
+                                 sum += amount;
+                             });
+    ASSERT_EQ(visited, 1u);
+    ASSERT_EQ(sum, 3u);
+
+    // Coarser squares of the same region hand out the average over the cells
+    // of the square that lie inside it, which is the one cell holding three.
+    visited = 0u;
+    sum = 0u;
+    map.forEachBlockInRegion(MapRegion{ 0, 0, 4u, 4u },
+                             4,
+                             [&](int32_t, int32_t, int32_t side,
+                                 uint32_t amount) {
+                                 ++visited;
+                                 sum += amount;
+                                 ASSERT_EQ(side, 4);
+                             });
+    ASSERT_EQ(visited, 1u);
+    // Three spread over the sixteen cells of the square rounds down to zero:
+    // a lone cell fades as the picture gets coarser, which is the point.
+    ASSERT_EQ(sum, 0u);
+
+    // A square as wide as a block visits each of the two blocks once, which is
+    // what the renderer draws a layer with when it is zoomed all the way out.
+    uint64_t blocks = 0u;
+    map.forEachBlockInRegion(MapRegion{ -1000, -1000, 4000u, 4000u },
+                             Map::CHUNK_SIZE,
+                             [&](int32_t, int32_t, int32_t, uint32_t)
+                             { ++blocks; });
+    ASSERT_EQ(blocks, 2u);
 }
 
 // -----------------------------------------------------------------------------
@@ -208,7 +198,6 @@ class MockRuleMap: public RuleMap
 public:
 
     MockRuleMap(RuleMapType const& type) : RuleMap(type) {}
-    ~MockRuleMap() = default;
     MOCK_METHOD(bool, execute, (RuleContext&), (override));
 };
 
@@ -216,8 +205,7 @@ public:
 TEST(TestsMap, executeRulesNonRandom)
 {
     const uint32_t GRILL = 2u;
-    City city("Paris", Vector3f(1.0f, 2.0f, 3.0f), GRILL, GRILL);
-
+    TestWorld cityWorld("Paris", GRILL, GRILL);
     RuleMapType rule_type("rule");
     rule_type.randomTiles = false;
 
@@ -225,13 +213,13 @@ TEST(TestsMap, executeRulesNonRandom)
     rule1.m_rate = 2u;
     MapType map_type("map");
     map_type.rules.push_back(&rule1);
-    Map map(map_type, city);
+    Map map(map_type, cityWorld.world);
 
     EXPECT_CALL(rule1, execute(_)).Times(0);
-    map.executeRules();
+    map.executeRules(cityWorld.world.cities());
     ASSERT_EQ(map.m_ticks, 1u);
 
     EXPECT_CALL(rule1, execute(_)).Times(GRILL * GRILL);
-    map.executeRules();
+    map.executeRules(cityWorld.world.cities());
     ASSERT_EQ(map.m_ticks, 2u);
 }

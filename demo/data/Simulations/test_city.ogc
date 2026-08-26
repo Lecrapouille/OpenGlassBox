@@ -1,0 +1,30 @@
+save
+	ruleset test_city.ogs
+	hash e5bba970acdfa150fa3646a8b6c873c92dee46e9bba1f286b416a42c2aaa995f
+	types [ Road Dirt Home Work Shop Residential ]
+end
+
+clock 0
+
+city Paris size 12 12
+globals [ ]
+path Road
+	node 1 1 1
+	node 2 10 1
+	node 3 10 10
+	node 4 1 10
+	node 5 6 6
+	way 1 Dirt 1 2 flow 0
+	way 2 Dirt 2 3 flow 0
+	way 3 Dirt 3 4 flow 0
+	way 4 Dirt 4 1 flow 0
+	way 5 Dirt 1 5 flow 0
+	way 6 Dirt 5 3 flow 0
+end
+unit Home on way 1 0.25 resources [ People 4 ]
+unit Home on way 1 0.60 resources [ People 4 ]
+unit Home on way 4 0.50 resources [ People 4 ]
+unit Work on way 2 0.50 resources [ ]
+unit Work on way 3 0.40 resources [ ]
+unit Shop on way 3 0.75 resources [ ]
+area Residential 0 0 12 12

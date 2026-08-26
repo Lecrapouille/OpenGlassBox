@@ -1,46 +1,141 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2020 Quentin Quadrat.
+// Copyright (c) 2020-2026 Quentin Quadrat.
 // https://github.com/Lecrapouille/OpenGlassBox
 // Based on https://github.com/federicodangelo/MultiAgentSimulation
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
-#ifndef OPEN_GLASSBOX_MAPRANDOMCOORDINATES_HPP
-#  define OPEN_GLASSBOX_MAPRANDOMCOORDINATES_HPP
+//! \file MapRandomCoordinates.hpp
+//! \brief Draw a share of the cells of a Map, spread over the whole of it.
 
-#  include <vector>
-#  include <stdint.h>
+#ifndef OPEN_GLASSBOX_MAPRANDOMCOORDINATES_HPP
+#define OPEN_GLASSBOX_MAPRANDOMCOORDINATES_HPP
+
+#include <cstdint>
+
+namespace ogb
+{
 
 //==============================================================================
-//! \brief
+//! \brief Hands out a given number of cells of a rectangle, drawn at random,
+//! each at most once, in reading order.
+//!
+//! A map rule that only acts on part of its cells has to pick which ones, and
+//! taking the first ones in reading order would draw a front sweeping the map
+//! from one corner: grass would grow in stripes. What the rule wants is a
+//! sample spread over the whole map, and every subset of the size asked for has
+//! to be equally likely.
+//!
+//! What this does not have to be is a sample handed out in a random *order*.
+//! The rule is applied to each drawn cell on its own, so only the set matters,
+//! and a set handed out in reading order is a set read along the rows of the
+//! blocks the Map stores its cells in. Handing them out shuffled instead costs
+//! a cache miss on every cell, on a grid that is megabytes wide.
+//!
+//! So the rectangle is scanned once, in order, and each cell is taken with the
+//! probability that makes the sample come out right: \c wanted out of the cells
+//! that are left. That is selection sampling, and it draws exactly the number
+//! asked for, uniformly, in one pass, holding nothing but a handful of
+//! integers. The previous implementation held two vectors as large as the map
+//! and copied one into the other on every run.
+//!
+//! Example:
+//! \code
+//! MapRandomCoordinates walk;
+//! walk.init(sizeU, sizeV, rule.percent(uint64_t(sizeU) * sizeV));
+//!
+//! uint32_t u, v;
+//! while (walk.next(u, v))
+//! {
+//!     // apply the rule on the cell (u, v)
+//! }
+//! \endcode
+//!
+//! The matching script, where the percentage is what makes only part of the map
+//! move on each run:
+//! \code
+//! mapRule CreateGrass
+//!     rate 20 minutes
+//!     map Water remove 10 randomTilesPercent 90
+//!     map Grass add 1
+//! end
+//! \endcode
+//!
+//! \note The draw is not reproducible from one run of the program to the next:
+//! the generator is seeded from the system.
 //==============================================================================
 class MapRandomCoordinates
 {
 public:
 
-    MapRandomCoordinates() = default;
+    MapRandomCoordinates();
 
     //--------------------------------------------------------------------------
-    //! \brief Initialize internal states with values from parameters.
-    //! \param[in] mapSizeU: map dimension along axis-U.
-    //! \param[in] mapSizeV: map dimension along axis-V.
+    //! \brief Start a fresh draw over a rectangle of that size.
+    //!
+    //! Called at the start of every run of a map rule. Allocates nothing, so a
+    //! rule firing on every tick costs no memory traffic beyond the cells it
+    //! actually visits. Whatever was left of a previous draw is forgotten.
+    //!
+    //! \param[in] mapSizeU number of columns.
+    //! \param[in] mapSizeV number of rows.
+    //! \param[in] wanted how many cells to hand out. Clamped to the number of
+    //! cells the rectangle holds.
+    //!
+    //! \note A rectangle of more than four billion cells is scanned in part
+    //! only. No grid that large fits in memory in the first place.
     //--------------------------------------------------------------------------
-    void init(uint32_t mapSizeU, uint32_t mapSizeV);
+    void init(uint32_t mapSizeU, uint32_t mapSizeV, uint64_t wanted);
 
     // -------------------------------------------------------------------------
-    //! \brief Iterator: return the next Map coordinate for iteration around the
-    //! Map coordinate initialized from the method init().
-    //! \param[out] u: the next Map coordinate on the U-axis.
-    //! \param[out] v: the next Map coordinate on the V-axis.
-    //! \return true if we can iterate, else return false when reached the last
-    //! iteration.
+    //! \brief Hand out the next drawn cell.
+    //! \param[out] u column of the cell, in [0..mapSizeU[. Zero when there is
+    //! nothing left.
+    //! \param[out] v row of the cell, in [0..mapSizeV[. Zero when there is
+    //! nothing left.
+    //! \return true when a cell was handed out, false once the whole sample has
+    //! been handed out.
     // -------------------------------------------------------------------------
     bool next(uint32_t& u, uint32_t& v);
 
 private:
 
-    std::vector<uint32_t> m_randomCoordinates;
-    std::vector<uint32_t> m_returnedCoordinates;
+    //--------------------------------------------------------------------------
+    //! \brief \return the next number of the generator. A xorshift, which is a
+    //! few instructions rather than the hundreds a Mersenne twister spends
+    //! refilling its state, and far better than good enough to decide which
+    //! cells grass grows on.
+    //--------------------------------------------------------------------------
+    uint32_t random();
+
+    //--------------------------------------------------------------------------
+    //! \brief \param[in] bound one past the largest value wanted, never zero.
+    //! \return a number in [0..bound[, by the multiply and shift of Lemire:
+    //! no division, and a bias too small to be worth a rejection loop.
+    //--------------------------------------------------------------------------
+    uint32_t random(uint32_t bound)
+    {
+        return uint32_t((uint64_t(random()) * uint64_t(bound)) >> 32);
+    }
+
+private:
+
+    //! \brief State of the generator, never zero.
+    uint64_t m_state = 0u;
+    //! \brief Number of columns of the rectangle being scanned.
+    uint32_t m_sizeU = 0u;
+    //! \brief Column of the cell the scan has reached.
+    uint32_t m_u = 0u;
+    //! \brief Row of the cell the scan has reached.
+    uint32_t m_v = 0u;
+    //! \brief How many cells are still to be handed out.
+    uint32_t m_wanted = 0u;
+    //! \brief How many cells the scan has not reached yet, this one included.
+    //! The draw takes the current cell with probability m_wanted / m_left,
+    //! which is what makes every sample of the size asked for equally likely.
+    uint32_t m_left = 0u;
 };
+
+} // namespace ogb
 
 #endif

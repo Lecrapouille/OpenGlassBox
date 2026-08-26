@@ -2,6 +2,7 @@
 
 #define protected public
 #define private public
+#  include "TestWorld.hpp"
 #  include "OpenGlassBox/City.hpp"
 #  include "OpenGlassBox/Unit.hpp"
 #undef protected
@@ -39,7 +40,8 @@ TEST(TestsNode, AddUnit)
     ASSERT_EQ(n2.units().size(), 0u);
 
     // Create an Unit "house" holding resources "people" attached to Node1.
-    City city("Paris", 1u, 1u);
+    TestWorld cityWorld("Paris", 1u, 1u);
+    City& city = cityWorld.city;
     UnitType unit_type("house");
     unit_type.color = 0xFF00FF;
     unit_type.radius = 2u;
@@ -51,16 +53,15 @@ TEST(TestsNode, AddUnit)
     ASSERT_EQ(n1.units().size(), 1u);
     ASSERT_EQ(n1.m_units[0], &u1);
     ASSERT_EQ(n1.units()[0], &u1);
-    ASSERT_EQ(&(n1.unit(0)), &u1);
-    ASSERT_EQ(&(n1.unit(0).m_node), &n1);
-    ASSERT_STREQ(n1.unit(0).type().c_str(), "house");
+    ASSERT_EQ(n1.units()[0]->m_node, &n1);
+    ASSERT_STREQ(n1.units()[0]->type().c_str(), "house");
 
     // Add Unit1 to Node2. Check if the Unit has been attached.
     n2.addUnit(u1);
     ASSERT_EQ(n2.units().size(), 1u);
     ASSERT_EQ(n2.m_units[0], &u1);
     ASSERT_EQ(n2.units()[0], &u1);
-    ASSERT_EQ(&(n2.m_units[0]->m_node), &n1);
+    ASSERT_EQ(n2.m_units[0]->m_node, &n1);
     ASSERT_STREQ(n2.m_units[0]->type().c_str(), "house");
 
     // Add Unit2 to Node1. Check if the Unit has been attached.
@@ -73,8 +74,8 @@ TEST(TestsNode, AddUnit)
     ASSERT_EQ(n1.units()[1], &u2);
     ASSERT_STREQ(n1.m_units[0]->type().c_str(), "house");
     ASSERT_STREQ(n1.m_units[1]->type().c_str(), "house");
-    ASSERT_EQ(&(n1.m_units[0]->m_node), &n1);
-    ASSERT_EQ(&(n1.m_units[1]->m_node), &n2);
+    ASSERT_EQ(n1.m_units[0]->m_node, &n1);
+    ASSERT_EQ(n1.m_units[1]->m_node, &n2);
 }
 
 TEST(TestsWay, Constuctor)
@@ -406,4 +407,108 @@ TEST(TestsPath, MoveNode)
     // Check segments they magnitude updated.
     ASSERT_EQ(s1.magnitude(), std::sqrt(2.0f));
     ASSERT_EQ(s2.magnitude(), std::sqrt(2.0f));
+}
+
+TEST(TestsPath, RemoveWayDetachesItsExtremities)
+{
+    PathType type1("route");
+    Path p(type1);
+    WayType type2("Dirt", 0xAAAAAA);
+
+    Node& n1 = p.addNode(Vector3f(0.0f, 0.0f, 0.0f));
+    Node& n2 = p.addNode(Vector3f(10.0f, 0.0f, 0.0f));
+    Node& n3 = p.addNode(Vector3f(10.0f, 10.0f, 0.0f));
+
+    Way& s1 = p.addWay(type2, n1, n2);
+    p.addWay(type2, n2, n3);
+
+    uint32_t const id = s1.id();
+    ASSERT_EQ(n1.ways().size(), 1u);
+    ASSERT_EQ(n2.ways().size(), 2u);
+
+    p.removeWay(s1);
+
+    // The segment is gone from the graph and from both of its extremities,
+    // which are kept even when they become orphan.
+    ASSERT_EQ(p.ways().size(), 1u);
+    ASSERT_EQ(p.nodes().size(), 3u);
+    ASSERT_EQ(p.way(id), nullptr);
+    ASSERT_EQ(n1.ways().size(), 0u);
+    ASSERT_EQ(n2.ways().size(), 1u);
+    ASSERT_EQ(n1.hasWays(), false);
+}
+
+TEST(TestsPath, RemoveNodeTakesItsIncidentWays)
+{
+    PathType type1("route");
+    Path p(type1);
+    WayType type2("Dirt", 0xAAAAAA);
+
+    Node& n1 = p.addNode(Vector3f(0.0f, 0.0f, 0.0f));
+    Node& n2 = p.addNode(Vector3f(10.0f, 0.0f, 0.0f));
+    Node& n3 = p.addNode(Vector3f(10.0f, 10.0f, 0.0f));
+
+    p.addWay(type2, n1, n2);
+    p.addWay(type2, n2, n3);
+    p.addWay(type2, n3, n1);
+
+    uint32_t const id = n2.id();
+    p.removeNode(n2);
+
+    ASSERT_EQ(p.nodes().size(), 2u);
+    ASSERT_EQ(p.node(id), nullptr);
+    // Only the segment that avoided n2 is left.
+    ASSERT_EQ(p.ways().size(), 1u);
+    ASSERT_EQ(p.nodes()[0]->ways().size(), 1u);
+    ASSERT_EQ(p.nodes()[1]->ways().size(), 1u);
+}
+
+TEST(TestsPath, RecreatedNodeKeepsItsIdentifier)
+{
+    PathType type1("route");
+    Path p(type1);
+
+    Node& n1 = p.addNode(Vector3f(0.0f, 0.0f, 0.0f));
+    Node& n2 = p.addNode(Vector3f(10.0f, 0.0f, 0.0f));
+    uint32_t const id = n2.id();
+    ASSERT_NE(n1.id(), id);
+
+    p.removeNode(n2);
+    ASSERT_EQ(p.node(id), nullptr);
+
+    // Undoing an edit gives the identifier back, which is what the commands
+    // stacked above the removal refer to.
+    Node& restored = p.addNode(id, Vector3f(10.0f, 0.0f, 0.0f));
+    ASSERT_EQ(restored.id(), id);
+    ASSERT_EQ(p.node(id), &restored);
+
+    // And the identifiers handed out afterwards do not collide with it.
+    Node& n3 = p.addNode(Vector3f(20.0f, 0.0f, 0.0f));
+    ASSERT_NE(n3.id(), id);
+    ASSERT_NE(n3.id(), n1.id());
+}
+
+TEST(TestsPath, RemoveWayLowersTheMaxFreeFlowSpeed)
+{
+    PathType type1("route");
+    Path p(type1);
+
+    WayType slow("Dirt", 0xAAAAAA);
+    slow.speed = 10.0f;
+    WayType fast("Highway", 0xBBBBBB);
+    fast.speed = 100.0f;
+
+    Node& n1 = p.addNode(Vector3f(0.0f, 0.0f, 0.0f));
+    Node& n2 = p.addNode(Vector3f(10.0f, 0.0f, 0.0f));
+    Node& n3 = p.addNode(Vector3f(20.0f, 0.0f, 0.0f));
+
+    p.addWay(slow, n1, n2);
+    Way& highway = p.addWay(fast, n2, n3);
+    ASSERT_EQ(p.maxFreeFlowSpeed(), 100.0f);
+
+    // Demolishing the fastest segment has to bring the cache back down: a
+    // router turning a distance into a lower bound of a travel time divides by
+    // this speed, and a stale value would make that bound unsound.
+    p.removeWay(highway);
+    ASSERT_EQ(p.maxFreeFlowSpeed(), 10.0f);
 }

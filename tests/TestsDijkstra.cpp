@@ -2,27 +2,29 @@
 
 #define protected public
 #define private public
-#  include "OpenGlassBox/City.hpp"
-#  include "OpenGlassBox/Dijkstra.hpp"
-#  include "OpenGlassBox/Unit.hpp"
+#include "OpenGlassBox/City.hpp"
+#include "OpenGlassBox/Unit.hpp"
+#include "OpenGlassBox/DijkstraRouter.hpp"
+#include "TestWorld.hpp"
 #undef protected
 #undef private
 
 namespace
 {
-    UnitType makeFactoryType()
-    {
-        UnitType type("Factory");
-        type.targets.push_back("People");
-        type.resources.setCapacity("People", 10u);
-        return type;
-    }
+UnitType makeFactoryType()
+{
+    UnitType type("Factory");
+    type.targets.emplace_back("People");
+    type.resources.setCapacity("People", 10u);
+    return type;
 }
+} // namespace
 
 TEST(TestsDijkstra, DirectPath)
 {
-    City city("Paris", 32u, 32u);
-    Path& path = city.addPath(PathType("Road"));
+    TestWorld cityWorld("Paris", 32u, 32u);
+    City& city = cityWorld.city;
+    Path& path = city.addPath(keep<PathType>("Road"));
     Node& home = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& mid = path.addNode(Vector3f(1.0f, 0.0f, 0.0f));
     Node& factory = path.addNode(Vector3f(2.0f, 0.0f, 0.0f));
@@ -37,7 +39,7 @@ TEST(TestsDijkstra, DirectPath)
     carried.addResource("People", 1u);
 
     Dijkstra router;
-    std::string target = "People";
+    Name target = "People";
     Node* next = router.findNextPoint(home, target, carried);
 
     ASSERT_EQ(next, &mid);
@@ -45,8 +47,9 @@ TEST(TestsDijkstra, DirectPath)
 
 TEST(TestsDijkstra, ShortestBranch)
 {
-    City city("Paris", 32u, 32u);
-    Path& path = city.addPath(PathType("Road"));
+    TestWorld cityWorld("Paris", 32u, 32u);
+    City& city = cityWorld.city;
+    Path& path = city.addPath(keep<PathType>("Road"));
     Node& start = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& longRoute = path.addNode(Vector3f(10.0f, 0.0f, 0.0f));
     Node& shortRoute = path.addNode(Vector3f(1.0f, 0.0f, 0.0f));
@@ -64,7 +67,7 @@ TEST(TestsDijkstra, ShortestBranch)
     carried.addResource("People", 1u);
 
     Dijkstra router;
-    std::string target = "People";
+    Name target = "People";
     Node* next = router.findNextPoint(start, target, carried);
 
     ASSERT_EQ(next, &shortRoute);
@@ -72,8 +75,9 @@ TEST(TestsDijkstra, ShortestBranch)
 
 TEST(TestsDijkstra, AlreadyAtDestination)
 {
-    City city("Paris", 32u, 32u);
-    Path& path = city.addPath(PathType("Road"));
+    TestWorld cityWorld("Paris", 32u, 32u);
+    City& city = cityWorld.city;
+    Path& path = city.addPath(keep<PathType>("Road"));
     Node& factory = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     UnitType factoryType = makeFactoryType();
     city.addUnit(factoryType, factory);
@@ -82,7 +86,7 @@ TEST(TestsDijkstra, AlreadyAtDestination)
     carried.addResource("People", 1u);
 
     Dijkstra router;
-    std::string target = "People";
+    Name target = "People";
     Node* next = router.findNextPoint(factory, target, carried);
 
     ASSERT_EQ(next, &factory);
@@ -90,18 +94,19 @@ TEST(TestsDijkstra, AlreadyAtDestination)
 
 TEST(TestsDijkstra, RandomFallbackWhenNoDestination)
 {
-    City city("Paris", 32u, 32u);
-    Path& path = city.addPath(PathType("Road"));
+    TestWorld cityWorld("Paris", 32u, 32u);
+    City& city = cityWorld.city;
+    Path& path = city.addPath(keep<PathType>("Road"));
     Node& start = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& other = path.addNode(Vector3f(1.0f, 0.0f, 0.0f));
-    path.addWay(WayType("Dirt", 0xAAAAAA), start, other);
+    path.addWay(keep<WayType>("Dirt", 0xAAAAAA), start, other);
 
     Resources carried;
     carried.addResource("People", 1u);
 
     Dijkstra router;
     router.setRandomSeed(42u);
-    std::string target = "People";
+    Name target = "People";
     Node* next = router.findNextPoint(start, target, carried);
 
     ASSERT_EQ(next, &other);
@@ -115,7 +120,7 @@ TEST(TestsDijkstra, DisconnectedGraph)
     carried.addResource("People", 1u);
 
     Dijkstra router;
-    std::string target = "People";
+    Name target = "People";
     Node* next = router.findNextPoint(orphan, target, carried);
 
     ASSERT_EQ(next, nullptr);
@@ -123,9 +128,10 @@ TEST(TestsDijkstra, DisconnectedGraph)
 
 TEST(TestsDijkstra, PathScopedRouting)
 {
-    City city("Paris", 32u, 32u);
-    Path& road = city.addPath(PathType("Road"));
-    Path& rail = city.addPath(PathType("Rail"));
+    TestWorld cityWorld("Paris", 32u, 32u);
+    City& city = cityWorld.city;
+    Path& road = city.addPath(keep<PathType>("Road"));
+    Path& rail = city.addPath(keep<PathType>("Rail"));
 
     Node& start = road.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& roadMid = road.addNode(Vector3f(1.0f, 0.0f, 0.0f));
@@ -144,7 +150,7 @@ TEST(TestsDijkstra, PathScopedRouting)
     carried.addResource("People", 1u);
 
     Dijkstra router;
-    std::string target = "People";
+    Name target = "People";
     Node* next = router.findNextPoint(start, target, carried);
 
     ASSERT_EQ(next, &roadMid);
