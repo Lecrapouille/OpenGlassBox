@@ -17,24 +17,6 @@ namespace ogb
 {
 
 //==============================================================================
-//! \brief A road about to be laid, as it is offered to a neighbouring town for
-//! approval. Described in world coordinates and by the name of a segment type,
-//! rather than by references, so that it means something to a town that has not
-//! agreed to it yet.
-//==============================================================================
-struct WayProposal
-{
-    //! \brief Where the road starts, in world coordinates.
-    Vector3f from;
-
-    //! \brief Where it ends, in world coordinates.
-    Vector3f to;
-
-    //! \brief Name of the kind of segment to lay, such as "Dirt".
-    std::string wayType;
-};
-
-//==============================================================================
 //! \brief The ground every town is founded on: one grid, one calendar, and one
 //! layer per kind of resource.
 //!
@@ -83,6 +65,24 @@ public:
     class Listener
     {
     public:
+
+        // ---------------------------------------------------------------------
+        //! \brief A segment about to be laid, offered to a neighbouring town for
+        //! approval. Described in world coordinates and by the name of a segment
+        //! type, rather than by references, so that it means something to a
+        //! town that has not agreed to it yet.
+        // ---------------------------------------------------------------------
+        struct WayProposal
+        {
+            //! \brief Where the road starts, in world coordinates.
+            Vector3f from;
+
+            //! \brief Where it ends, in world coordinates.
+            Vector3f to;
+
+            //! \brief Name of the kind of segment to lay, such as "Dirt".
+            std::string wayType;
+        };
 
         virtual ~Listener() = default;
 

@@ -199,7 +199,7 @@ Node& ensureNode(Path& path, Vector3f const& position)
 bool World::addRoad(City& owner, std::string const& pathType, WayType const& wayType,
                     Vector3f const& from, Vector3f const& to)
 {
-    WayProposal const proposal{ from, to, wayType.name };
+    Listener::WayProposal const proposal{ from, to, wayType.name };
 
     struct Piece
     {
