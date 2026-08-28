@@ -39,7 +39,7 @@ TEST(TestsWorld, ListenerCanRefuseCrossing)
     {
     public:
 
-        bool allowWayAcross(City&, City&, WayProposal const&) override
+        bool allowWayAcross(City&, City&, World::Listener::WayProposal const&) override
         {
             return false;
         }
