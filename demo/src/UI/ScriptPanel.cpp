@@ -17,11 +17,13 @@
 namespace ogb {
 namespace ui {
 
-//! \brief Heights, in pixels, the two halves of the panel are never squeezed
-//! below. Whichever is docked in a short slot, the editor keeps a few lines to
-//! type in and the breakdown keeps a few rows to scroll.
+//! \brief Heights, in pixels, the two halves of the panel are shared by.
+//! Docked in a short slot, the editor keeps a few lines to type in and the
+//! breakdown a few rows to scroll; docked in a shorter one still, the window
+//! scrolls rather than either of them collapsing.
 static constexpr float MIN_EDITOR_HEIGHT = 120.0f;
 static constexpr float MIN_RULES_HEIGHT = 90.0f;
+static constexpr float SQUEEZED_EDITOR_HEIGHT = 60.0f;
 
 
 // ----------------------------------------------------------------------------
@@ -340,13 +342,15 @@ void ScriptPanel::draw(Simulation& simulation,
 
     // The script and what it parses into share the panel: the breakdown of the
     // rules answers questions about the text right above it, and reading one
-    // while the other is on another tab is reading them one at a time.
+    // while the other is on another tab is reading them one at a time. The
+    // text takes the larger share, and gives way down to a few lines rather
+    // than leaving the rules nothing at all.
     float const available = ImGui::GetContentRegionAvail().y;
-    float const rules =
-        std::min(std::max(0.45f * available, MIN_RULES_HEIGHT),
-                 std::max(0.0f, available - MIN_EDITOR_HEIGHT));
+    float const editor =
+        std::min(std::max(0.55f * available, MIN_EDITOR_HEIGHT),
+                 std::max(SQUEEZED_EDITOR_HEIGHT, available - MIN_RULES_HEIGHT));
 
-    ImGui::InputTextMultiline("##script", &text, ImVec2(-1.0f, -rules),
+    ImGui::InputTextMultiline("##script", &text, ImVec2(-1.0f, editor),
                               ImGuiInputTextFlags_AllowTabInput);
 
     ImGui::SeparatorText("Rules of this ruleset");
