@@ -16,6 +16,8 @@
 #include "OpenGlassBox/Simulation.hpp"
 #include "OpenGlassBox/Vector.hpp"
 
+#include <functional>
+
 namespace ogb
 {
 namespace editor
@@ -186,6 +188,10 @@ private:
                           game::DebugState const& state,
                           editor::Editor const& editor);
     void drawDisplayToggles(game::DebugState& state) const;
+    //! \param[in] wrap called with the width of the next widget, to lay it out
+    //! on the current row or to start a new one.
+    void drawZoneDisplayCombo(game::DebugState& state,
+                              std::function<void(float)> const& wrap) const;
     void drawClockHud(Simulation const& simulation);
     void drawHint(editor::Editor const& editor);
 
