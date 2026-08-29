@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------------
 
 //! \file City.hpp
-//! \brief One city: roads, buildings, agents and zones.
+//! \brief One city: roads, buildings, agents, and zones.
 
 #ifndef OPEN_GLASSBOX_CITY_HPP
 #define OPEN_GLASSBOX_CITY_HPP
@@ -16,7 +16,7 @@
 #include "OpenGlassBox/Layer.hpp"
 #include "OpenGlassBox/CellRegion.hpp"
 #include "OpenGlassBox/Router.hpp"
-#include "OpenGlassBox/Unit.hpp"
+#include "OpenGlassBox/Building.hpp"
 
 namespace ogb
 {
@@ -27,23 +27,20 @@ class World;
 class SimulationClock;
 
 //==============================================================================
-//! \brief One city: its roads, its buildings, the agents travelling between
-//! them, and the zones growing new ones.
+//! \brief One city with roads, buildings, agents, and zones.
 //!
-//! A City is the thing that ticks. Every tick it moves its agents along the
-//! roads, runs the rules of its buildings and of its zones, and lets the
-//! traffic averages of its streets settle. It owns all of that and hands out
-//! references to it.
+//! Each tick moves agents on roads, runs building and zone rules, and updates
+//! street traffic averages. The city owns these objects and returns references
+//! to them.
 //!
-//! It does not own the layers of the environment. Those belong to the World and
-//! are shared with the neighbouring cities: pollution does not stop at a
-//! border. What a city owns on the grid is a rectangle of cells, and that
-//! rectangle bounds every rule run on its behalf. This is why two cities can
-//! read the same layer without treading on each other.
+//! The city does not own environment layers. The World owns layers and shares
+//! them between cities. Pollution does not stop at a city border. The city
+//! owns a rectangle of cells on the grid. That rectangle bounds every rule run
+//! for this city. Two cities can read the same layer without changing each
+//! other.
 //!
-//! Nothing here is thread safe, and nothing may be added or removed while a
-//! tick is running: the demo queues the edits of the player and applies them
-//! between two ticks.
+//! This class is not thread safe. Do not add or remove objects during a tick.
+//! The demo queues player edits and applies them between ticks.
 //!
 //! Example:
 //! \code
@@ -57,8 +54,8 @@ class SimulationClock;
 //! ogb::Node& b = road.addNode({ 60.0f, 0.0f, 0.0f });
 //! road.addSegment(rules.getSegmentType("Dirt"), a, b);
 //!
-//! city.addUnit(rules.getUnitType("Home"), a);
-//! city.addUnit(rules.getUnitType("Work"), b);
+//! city.addBuilding(rules.getBuildingType("Home"), a);
+//! city.addBuilding(rules.getBuildingType("Work"), b);
 //!
 //! // One minute of game time.
 //! for (uint32_t i = 0u; i < 1200u; ++i)
@@ -72,13 +69,13 @@ class City
 public:
 
     //==========================================================================
-    //! \brief Callbacks telling a renderer what changed inside the city, so
-    //! that it does not have to walk the whole city on every frame.
+    //! \brief Callbacks that tell a renderer what changed in the city.
     //!
-    //! Every method does nothing by default, so an implementation overrides
-    //! only what it cares about. The reference handed to a callback is valid
-    //! for the duration of the call only: a removal callback fires while the
-    //! thing is still alive, and it is gone by the time the callback returns.
+    //! A renderer can use these callbacks instead of scanning the whole city
+    //! each frame. Each method does nothing by default. Override only what you
+    //! need. References passed to a callback are valid only during the call. A
+    //! removal callback runs while the object still exists. The object is gone
+    //! when the callback returns.
     //==========================================================================
     class Listener
     {
@@ -86,53 +83,51 @@ public:
 
         virtual ~Listener() = default;
 
-        //! \brief A layer was made available to this city by the World.
+        //! \brief The World made a layer available to this city.
         virtual void onLayerAdded(Layer& /*layer*/) {}
 
-        //! \brief A layer is about to go away.
+        //! \brief A layer will be removed.
         virtual void onLayerRemoved(Layer& /*layer*/) {}
 
-        //! \brief A network was created, empty of crossroads and segments.
+        //! \brief A network was created. It has no crossroads or segments yet.
         virtual void onPathAdded(Path& /*path*/) {}
 
-        //! \brief A network is about to go away, with everything it holds.
+        //! \brief A network will be removed, with all its contents.
         virtual void onPathRemoved(Path& /*path*/) {}
 
-        //! \brief A building was put up, by the player or by a zone.
-        virtual void onUnitAdded(Unit& /*unit*/) {}
+        //! \brief A building was added by the player or by a zone.
+        virtual void onBuildingAdded(Building& /*building*/) {}
 
-        //! \brief A building is about to be demolished.
-        virtual void onUnitRemoved(Unit& /*unit*/) {}
+        //! \brief A building will be removed.
+        virtual void onBuildingRemoved(Building& /*building*/) {}
 
-        //! \brief A building sent an agent out.
+        //! \brief A building sent out an agent.
         virtual void onAgentAdded(Agent& /*agent*/) {}
 
-        //! \brief An agent is about to go away, having arrived or been stranded
-        //! by a demolished road.
+        //! \brief An agent will be removed. It arrived or lost its road.
         virtual void onAgentRemoved(Agent& /*agent*/) {}
 
         //! \brief A zone was painted.
         virtual void onZoneAdded(Zone& /*zone*/) {}
 
-        //! \brief A zone is about to go away. The buildings it grew stay.
+        //! \brief A zone will be removed. Its buildings stay.
         virtual void onZoneRemoved(Zone& /*zone*/) {}
     };
 
 public:
 
     // -------------------------------------------------------------------------
-    //! \brief Found a city over a rectangle of the world grid.
+    //! \brief Create a city over a rectangle of the world grid.
     //!
-    //! Prefer Simulation::addCity(), which also registers the city in the
-    //! world. A City built directly is not known to the World, and the layers
-    //! it asks for will not be run.
+    //! Prefer Simulation::addCity(). It also registers the city in the world.
+    //! A City built directly is unknown to the World. Layers it requests will
+    //! not run.
     //!
-    //! \param[in] name unique name of the city, such as "Paris".
-    //! \param[in] position world position of the top-left corner of its cells.
-    //! \param[in] sizeU how many cells it owns along U.
-    //! \param[in] sizeV how many cells it owns along V.
-    //! \param[in] world the world it belongs to. Kept by reference and has to
-    //! outlive the City.
+    //! \param[in] name Unique city name, such as "Paris".
+    //! \param[in] position World position of the top-left corner of its cells.
+    //! \param[in] sizeU Number of cells along U.
+    //! \param[in] sizeV Number of cells along V.
+    //! \param[in] world The world this city belongs to. Must outlive the City.
     // -------------------------------------------------------------------------
     City(std::string const& name,
          Vector3f const& position,
@@ -146,222 +141,210 @@ public:
     City& operator=(City&&) = delete;
 
     // -------------------------------------------------------------------------
-    //! \brief Register the callbacks. One listener at a time: a second call
-    //! replaces the first.
-    //! \param[in] listener kept by address, has to outlive the City.
+    //! \brief Register callbacks. A second call replaces the first listener.
+    //! \param[in] listener Kept by address. Must outlive the City.
     // -------------------------------------------------------------------------
     void setListener(City::Listener& listener);
 
     // -------------------------------------------------------------------------
-    //! \brief One tick: move the agents, run the rules of the buildings and of
-    //! the zones, let the traffic averages settle.
+    //! \brief Run one tick: move agents, run building and zone rules, update
+    //! traffic averages.
     //!
-    //! The rules of the layers are not run here. They belong to the World,
-    //! which runs them once for every city.
+    //! Layer rules do not run here. The World runs them once for all cities.
     //!
-    //! \param[in] dt how long the tick lasts, in seconds of game time. This is
-    //! what turns the speed of an agent into a distance.
+    //! \param[in] dt Tick duration in seconds of game time. Used to turn agent
+    //! speed into distance.
     // -------------------------------------------------------------------------
     void update(float dt);
 
     // -------------------------------------------------------------------------
-    //! \brief One tick lasting whatever the settings say, which is what the
-    //! game loop calls.
+    //! \brief Run one tick using the duration from settings. The game loop
+    //! calls this.
     // -------------------------------------------------------------------------
     void update();
 
     // -------------------------------------------------------------------------
-    //! \brief Ask the World for a layer, which it creates when this is the
-    //! first city to need it.
-    //! \param[in] type recipe of the layer, from the ruleset.
-    //! \return the layer, owned by the World and shared with the other cities.
+    //! \brief Request a layer from the World. The World creates it when the
+    //! first city needs it.
+    //! \param[in] type Layer type from the ruleset.
+    //! \return The layer. The World owns it and shares it with other cities.
     // -------------------------------------------------------------------------
     Layer& addLayer(LayerType const& type);
 
     // -------------------------------------------------------------------------
-    //! \brief Look a layer up by name.
-    //! \param[in] name name of the layer, such as "Water".
-    //! \return the layer.
-    //! \throw std::out_of_range when no city ever asked for that layer.
+    //! \brief Find a layer by name.
+    //! \param[in] name Layer name, such as "Water".
+    //! \return The layer.
+    //! \throw std::out_of_range if no city ever requested that layer.
     // -------------------------------------------------------------------------
     [[nodiscard]] Layer& getLayer(std::string const& name);
 
     // -------------------------------------------------------------------------
-    //! \brief Create a network. An existing one of the same name is destroyed
-    //! first, together with its crossroads and segments.
-    //! \param[in] type recipe of the network, from the ruleset.
-    //! \return the new, empty network.
+    //! \brief Create a network. An existing network with the same name is
+    //! removed first, with its crossroads and segments.
+    //! \param[in] type Network type from the ruleset.
+    //! \return The new empty network.
     // -------------------------------------------------------------------------
     Path& addPath(PathType const& type);
 
     // -------------------------------------------------------------------------
-    //! \brief Look a network up by name.
-    //! \param[in] name name of the network, such as "Road".
-    //! \return the network.
-    //! \throw std::out_of_range when the city has no such network.
+    //! \brief Find a network by name.
+    //! \param[in] name Network name, such as "Road".
+    //! \return The network.
+    //! \throw std::out_of_range if the city has no such network.
     // -------------------------------------------------------------------------
     [[nodiscard]] Path& getPath(std::string const& name);
 
     // -------------------------------------------------------------------------
-    //! \brief Put a building up on a crossroads, which becomes its address.
-    //! \param[in] type recipe of the building, from the ruleset.
-    //! \param[in] node the crossroads it stands on. An agent reaching that
-    //! crossroads has reached the building.
-    //! \return the new building.
+    //! \brief Place a building on a crossroads. The crossroads becomes its
+    //! address.
+    //! \param[in] type Building type from the ruleset.
+    //! \param[in] node Crossroads where it stands. An agent at that crossroads
+    //! has reached the building.
+    //! \return The new building.
     // -------------------------------------------------------------------------
-    Unit& addUnit(UnitType const& type, Node& node);
+    Building& addBuilding(BuildingType const& type, Node& node);
 
     // -------------------------------------------------------------------------
-    //! \brief Put a building up along a segment, without cutting it. This is
-    //! how a street of forty houses stays one segment instead of becoming
-    //! forty.
+    //! \brief Place a building along a segment without splitting it. A street
+    //! with forty houses stays one segment.
     //!
-    //! An agent driving along the segment may hand its load over to such a
-    //! building; one routing towards it aims at the nearer end of the segment.
+    //! An agent on the segment may deliver to this building. Routing targets
+    //! the nearer segment end.
     //!
-    //! \param[in] type recipe of the building.
-    //! \param[in] path the network the segment belongs to.
-    //! \param[in] segment the segment it stands along.
-    //! \param[in] offset where along it, from 0 at segment.getFrom() to 1 at
-    //! segment.getTo().
-    //! \return the new building.
+    //! \param[in] type Building type from the ruleset.
+    //! \param[in] path Network that owns the segment.
+    //! \param[in] segment Segment where the building stands.
+    //! \param[in] offset Position along the segment, from 0 at segment.getFrom()
+    //! to 1 at segment.getTo().
+    //! \return The new building.
     // -------------------------------------------------------------------------
-    Unit& addUnit(UnitType const& type, Path& path, Segment& segment, float offset);
+    Building& addBuilding(BuildingType const& type, Path& path, Segment& segment, float offset);
 
     // -------------------------------------------------------------------------
-    //! \brief Put a building up in the middle of nowhere, attached to no road.
+    //! \brief Place a building with no road attachment.
     //!
-    //! Such a building runs its rules like any other, but no agent can reach it
-    //! and the agents it sends out have nowhere to go. Used by the tests and by
-    //! a zone that has not found a road yet.
+    //! The building runs its rules, but no agent can reach it. Agents it sends
+    //! out have no destination. Used in tests and when a zone has no road yet.
     //!
-    //! \param[in] type recipe of the building.
-    //! \param[in] position where it stands, in world coordinates.
-    //! \return the new building.
+    //! \param[in] type Building type from the ruleset.
+    //! \param[in] position World position.
+    //! \return The new building.
     // -------------------------------------------------------------------------
-    Unit& addUnit(UnitType const& type, Vector3f const& position);
+    Building& addBuilding(BuildingType const& type, Vector3f const& position);
 
     // -------------------------------------------------------------------------
     //! \brief Paint a zone over a rectangle of cells.
-    //! \param[in] type recipe of the zone, from the ruleset.
-    //! \param[in] footprint the cells it covers, on the grid of the World.
-    //! \return the new zone, which starts growing buildings on the next tick.
+    //! \param[in] type Zone type from the ruleset.
+    //! \param[in] footprint Cells the zone covers on the World grid.
+    //! \return The new zone. It starts growing buildings on the next tick.
     // -------------------------------------------------------------------------
     Zone& addZone(ZoneType const& type, CellRegion const& footprint);
 
     // -------------------------------------------------------------------------
-    //! \brief Send an agent out of a building, carrying something and looking
-    //! for somewhere to put it. Called by the rules, and rarely by hand.
+    //! \brief Send an agent out of a building with a load and a search target.
+    //! Rules call this. Manual calls are rare.
     //!
-    //! \param[in] type recipe of the agent: how fast it drives, what colour it
-    //! is drawn.
-    //! \param[in] owner the building it leaves from, and where it stands to
-    //! begin with.
-    //! \param[in] resources what it carries. Copied: the load is the agent's
-    //! own from now on.
-    //! \param[in] searchTarget what it is looking for, which is the name of a
-    //! kind of resource a building will take, such as "People".
-    //! \return the new agent.
+    //! \param[in] type Agent type from the ruleset: speed, draw color.
+    //! \param[in] owner Building the agent leaves. Its starting position.
+    //! \param[in] resources Load the agent carries. Copied to the agent.
+    //! \param[in] searchTarget Resource name a building will accept, such as
+    //! "People".
+    //! \return The new agent.
     // -------------------------------------------------------------------------
     Agent& addAgent(AgentType const& type,
-                    Unit& owner,
+                    Building& owner,
                     Resources const& resources,
                     Name const& searchTarget);
 
     // -------------------------------------------------------------------------
-    //! \brief Demolish a building and take it out of the crossroads or the
-    //! segment it stood on. The road itself is left alone.
+    //! \brief Remove a building from its crossroads or segment. The road stays.
     //!
-    //! The agents it sent out keep going: they are looking for a kind of
-    //! building, not for this one, and they will find another or be dropped for
-    //! having nowhere to unload.
+    //! Agents from this building keep going. They search for a building type,
+    //! not this building. They find another or are removed with nowhere to
+    //! unload.
     //!
-    //! \param[in] unit the building to demolish. Nothing may refer to it
-    //! afterwards.
+    //! \param[in] building Building to remove. Nothing may refer to it after this
+    //! call.
     // -------------------------------------------------------------------------
-    void removeUnit(Unit& unit);
+    void removeBuilding(Building& building);
 
     // -------------------------------------------------------------------------
-    //! \brief Unpaint a zone. The buildings it grew stay: they belong to the
-    //! city now, and unpainting a zone is not the same as bulldozing it.
-    //! \param[in] zone the zone to unpaint.
+    //! \brief Remove a zone. Its buildings stay in the city. Removing a zone is
+    //! not the same as demolishing its buildings.
+    //! \param[in] zone Zone to remove.
     // -------------------------------------------------------------------------
     void removeZone(Zone& zone);
 
     // -------------------------------------------------------------------------
-    //! \brief Demolish a segment, together with the buildings standing along
-    //! it.
+    //! \brief Remove a segment and buildings along it.
     //!
-    //! The agents driving on it, or waiting at either end for it, are taken
-    //! away rather than left addressing a road that is gone. What they carried
-    //! goes back to the building that sent them out, or to another that will
-    //! take it, so demolishing a road does not quietly destroy resources.
+    //! Agents on the segment or waiting at its ends are removed. Their load
+    //! goes back to the sender or to another building that accepts it. Removing
+    //! a road does not destroy resources.
     //!
-    //! \param[in] path the network the segment belongs to.
-    //! \param[in] segment the segment to demolish.
+    //! \param[in] path Network that owns the segment.
+    //! \param[in] segment Segment to remove.
     // -------------------------------------------------------------------------
     void removeSegment(Path& path, Segment& segment);
 
     // -------------------------------------------------------------------------
-    //! \brief Demolish a crossroads, the segments touching it and the buildings
-    //! standing on any of them.
+    //! \brief Remove a crossroads, its connected segments, and buildings on
+    //! them.
     //!
-    //! The agents concerned are recycled the same way as in removeSegment().
+    //! Agents are handled the same way as in removeSegment().
     //!
-    //! \param[in] path the network the crossroads belongs to.
-    //! \param[in] node the crossroads to demolish.
+    //! \param[in] path Network that owns the crossroads.
+    //! \param[in] node Crossroads to remove.
     // -------------------------------------------------------------------------
     void removeNode(Path& path, Node& node);
 
     // -------------------------------------------------------------------------
-    //! \brief Cut a segment in two and give back the junction, which is a
-    //! crossroads an agent may stop at and a building may stand on.
+    //! \brief Split a segment and return the new junction crossroads.
     //!
-    //! Path::splitSegment() only rewires the graph. Here the city also puts things
-    //! back where they belong: the buildings that stood along the segment move
-    //! onto the half now running under them, and the agents driving on it let
-    //! go and route again from where they are, so none of them is left
-    //! addressing a segment that stops short of it.
+    //! Path::splitSegment() only rewires the graph. This method also updates
+    //! buildings and agents. Buildings along the segment move to the correct
+    //! half. Agents on the segment reroute from their current position.
     //!
-    //! This is what putting a building on a street does, which is why a street
-    //! gains a crossroads every time a house is built on it.
+    //! Placing a building on a street uses this. Each house adds a crossroads
+    //! to the street.
     //!
-    //! \param[in] path the network the segment belongs to.
-    //! \param[in] segment the segment to cut.
-    //! \param[in] offset where to cut, from 0 at segment.getFrom() to 1 at
+    //! \param[in] path Network that owns the segment.
+    //! \param[in] segment Segment to split.
+    //! \param[in] offset Split position, from 0 at segment.getFrom() to 1 at
     //! segment.getTo().
-    //! \return the junction, or the end of the segment when the offset falls on
-    //! one, in which case nothing was cut.
+    //! \return The junction, or a segment end if offset is on an end. No split
+    //! happens in that case.
     // -------------------------------------------------------------------------
     Node& splitSegment(Path& path, Segment& segment, float offset);
 
     // -------------------------------------------------------------------------
-    //! \brief Move the city in the world, taking its roads, its buildings and
-    //! its agents along. The cells it owns do not move: the rectangle is worked
-    //! out again from the new position.
-    //! \param[in] direction how far to move it, in world units.
+    //! \brief Move the city in the world. Roads, buildings, and agents move
+    //! with it. Owned cells do not move. The cell rectangle is recomputed from
+    //! the new position.
+    //! \param[in] direction Move vector in world units.
     // -------------------------------------------------------------------------
     void translate(Vector3f const& direction);
 
     // -------------------------------------------------------------------------
-    //! \brief Which cell of the city a place falls in.
-    //! \param[in] position the place, in world coordinates.
-    //! \return the cell.
-    //! \note Clamped to the cells of the city: a place outside them gives the
-    //! nearest cell inside, not the cell it really falls in. Use
-    //! Simulation::worldToCell() for the unclamped answer.
+    //! \brief Return the city cell for a world position.
+    //! \param[in] position Position in world coordinates.
+    //! \return The cell.
+    //! \note Result is clamped to city cells. A position outside returns the
+    //! nearest inside cell. Use Simulation::worldToCell() for the unclamped
+    //! cell.
     // -------------------------------------------------------------------------
     Cell worldToCell(Vector3f const& position) const;
 
     // -------------------------------------------------------------------------
-    //! \brief Where a cell sits in the world.
-    //! \param[in] cell the cell.
-    //! \return the world position of its top-left corner.
+    //! \brief Return the world position of a cell corner.
+    //! \param[in] cell The cell.
+    //! \return World position of its top-left corner.
     // -------------------------------------------------------------------------
     Vector3f cellToWorld(Cell cell) const;
 
     // -------------------------------------------------------------------------
-    //! \brief \return the name of the city, unique in the World.
+    //! \return City name, unique in the World.
     // -------------------------------------------------------------------------
     [[nodiscard]] std::string const& getName() const
     {
@@ -369,7 +352,7 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \return the world position of the top-left corner of its cells.
+    //! \return World position of the top-left corner of its cells.
     // -------------------------------------------------------------------------
     [[nodiscard]] Vector3f const& getPosition() const
     {
@@ -377,13 +360,11 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \return the cells of the grid the city owns, worked out from its
-    //! position and its size. This bounds every rule run on its behalf.
+    //! \return Cells the city owns, from its position and size. This
+    //! bounds every rule run for this city.
     //!
-    //! Every command of a rule reaching into a layer asks for this, and a rule
-    //! of a layer runs on every cell of it, so it is read hundreds of thousands
-    //! of times per tick on a large city. It is therefore worked out once, when
-    //! the city is founded or moved, and only read here.
+    //! Rule commands read this often. A layer rule runs on every cell in this
+    //! region. The value is computed once when the city is created or moved.
     // -------------------------------------------------------------------------
     [[nodiscard]] CellRegion const& getRegion() const
     {
@@ -391,30 +372,29 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \return the game calendar, shared by the whole world. This is
-    //! what the opening hours of a building are read against.
+    //! \return Game clock shared by the world. Buildings use it for
+    //! opening hours.
     // -------------------------------------------------------------------------
     [[nodiscard]] SimulationClock const& getClock() const;
 
     // -------------------------------------------------------------------------
-    //! \brief \return the runtime settings, held by the World and shared with
-    //! every other city. Change them through Simulation::setConfig().
+    //! \return Runtime settings from the World, shared by all cities.
+    //! Change them through Simulation::setConfig().
     // -------------------------------------------------------------------------
     [[nodiscard]] Config const& getConfig() const;
 
     // -------------------------------------------------------------------------
-    //! \brief \return the side of a grid cell, in world units. Comes from the
-    //! World, so every city of a world shares the same grid.
+    //! \return Grid cell side length in world units. Comes from the
+    //! World. All cities in a world share the same grid.
     // -------------------------------------------------------------------------
     [[nodiscard]] float getCellSize() const;
 
     // -------------------------------------------------------------------------
-    //! \brief \return the resources belonging to the city as a whole rather
-    //! than to a building: money, oil, electricity. This is what a \c global
-    //! rule reads and writes.
+    //! \return City-wide resources: money, oil, electricity. Global
+    //! rules read and write this.
     //!
-    //! \note Writable, and the only accessor of City that is: a \c global rule
-    //! is expected to spend and to earn.
+    //! \note Writable. This is the only non-const City accessor. Global rules
+    //! spend and earn resources.
     // -------------------------------------------------------------------------
     [[nodiscard]] Resources& getGlobals()
     {
@@ -428,13 +408,12 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \return the layers of the World, by name. Shared with the other
-    //! cities.
+    //! \return World layers by name, shared with other cities.
     // -------------------------------------------------------------------------
     [[nodiscard]] Layers const& getLayers() const;
 
     // -------------------------------------------------------------------------
-    //! \brief \return the networks of the city, by name.
+    //! \return City networks by name.
     // -------------------------------------------------------------------------
     [[nodiscard]] Paths const& getPaths() const
     {
@@ -442,17 +421,16 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \return the buildings of the city, in creation order.
+    //! \return City buildings in creation order.
     // -------------------------------------------------------------------------
-    [[nodiscard]] Units const& getUnits() const
+    [[nodiscard]] Buildings const& getBuildings() const
     {
-        return m_units;
+        return m_buildings;
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \return the agents on the road, in creation order. The list turns
-    //! over quickly: an agent lives from the building that sent it out to the
-    //! one that takes its load.
+    //! \return Agents on roads in creation order. The list changes
+    //! often. An agent lives from send to delivery.
     // -------------------------------------------------------------------------
     [[nodiscard]] Agents const& getAgents() const
     {
@@ -460,7 +438,7 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \return the zones painted on the city, in creation order.
+    //! \return Painted zones in creation order.
     // -------------------------------------------------------------------------
     [[nodiscard]] Zones const& getZones() const
     {
@@ -468,11 +446,11 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \return the router the agents ask for an itinerary. One per city,
-    //! so the memory it needs is allocated once instead of on every search.
+    //! \return Router agents use for routes. One router per city saves
+    //! memory on each search.
     //!
-    //! \note Const, though the router it hands out is not: a router is a
-    //! service the city hosts, and using it does not change the city.
+    //! \note Const accessor. The returned router is not const. Using it does
+    //! not change the city.
     // -------------------------------------------------------------------------
     [[nodiscard]] IRouter& getRouter() const
     {
@@ -480,87 +458,79 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief Install the router the agents use. It has to be set before an
-    //! agent needs to travel. See installDijkstraRouter().
-    //! \param[in] router the router, whose ownership is taken.
+    //! \brief Set the router agents use. Set it before agents need routes. See
+    //! installDijkstraRouter().
+    //! \param[in] router Router. The city takes ownership.
     // -------------------------------------------------------------------------
     void setRouter(std::unique_ptr<IRouter> router);
 
     // -------------------------------------------------------------------------
-    //! \brief Empty the city: agents, buildings, zones, networks and globals.
+    //! \brief Remove all agents, buildings, zones, networks, and globals.
     //!
-    //! The layers of the World stay, being shared, and so does the ruleset:
-    //! what the player drew goes away, what the script declared remains, so the
-    //! city can be rebuilt without loading anything again.
+    //! World layers and the ruleset stay. Player content is removed. Script
+    //! definitions stay. The city can be rebuilt without reloading.
     // -------------------------------------------------------------------------
     void clear();
 
     // -------------------------------------------------------------------------
-    //! \brief Sweep away the crossroads left with no segment at all, which is
-    //! what demolishing a street leaves behind. The agents standing on such a
-    //! crossroads let go of it first.
-    //! \param[in] path the network to sweep.
+    //! \brief Remove crossroads with no segments. Demolishing a street can
+    //! leave these. Agents on such crossroads release them first.
+    //! \param[in] path Network to clean.
     // -------------------------------------------------------------------------
     void removeIsolatedNodes(Path& path) const;
 
     // -------------------------------------------------------------------------
-    //! \brief Take away the agents left with no road under them, which is what
-    //! happens to every one of them when the last street of the city is
-    //! demolished. Their load is handed back the same way as in removeSegment().
+    //! \brief Remove agents with no road under them. This happens when the last
+    //! street is removed. Load is returned the same way as in removeSegment().
     // -------------------------------------------------------------------------
     void removeStuckAgents();
 
 private:
 
     // -------------------------------------------------------------------------
-    //! \brief Work m_region out from the position of the city and the size of a
-    //! grid cell. Called when the city is founded and whenever it moves.
+    //! \brief Recompute m_region from city position and cell size. Called at
+    //! creation and on move.
     //!
-    //! \note The size of a cell is settled when the World is built and is not
-    //! meant to change afterwards. Changing it under a city that already exists
-    //! would leave its cells behind.
+    //! \note Cell size is fixed when the World is created. Changing it later
+    //! would leave existing city cells behind.
     // -------------------------------------------------------------------------
     void updateRegion();
 
 private:
 
-    //! \brief Name of the city, unique in the World: "Paris", "Seattle", "NYC".
+    //! \brief City name, unique in the World.
     std::string m_name;
-    //! \brief The world holding the grid and the layers. Not owned.
+    //! \brief World that holds the grid and layers. Not owned.
     World& m_world;
-    //! \brief World position of the top-left corner of the owned cells.
+    //! \brief World position of the top-left corner of owned cells.
     Vector3f m_position;
-    //! \brief How many owned cells along U.
+    //! \brief Number of owned cells along U.
     uint32_t m_gridSizeU;
-    //! \brief How many owned cells along V.
+    //! \brief Number of owned cells along V.
     uint32_t m_gridSizeV;
-    //! \brief The owned cells, kept in step with the three fields above by
-    //! updateRegion().
+    //! \brief Owned cells. updateRegion() keeps this in sync.
     CellRegion m_region;
-    //! \brief Identifier the next agent will be given. Never reused, so a stale
-    //! identifier names nothing rather than something else.
+    //! \brief Next agent id. Never reused.
     uint32_t m_nextAgentId = 0u;
-    //! \brief Identifier the next building will be given.
-    uint32_t m_nextUnitId = 0u;
-    //! \brief Identifier the next zone will be given.
+    //! \brief Next building id.
+    uint32_t m_nextBuildingId = 0u;
+    //! \brief Next zone id.
     uint32_t m_nextZoneId = 0u;
-    //! \brief Resources belonging to the city as a whole: money, oil,
-    //! electricity.
+    //! \brief City-wide resources: money, oil, electricity.
     Resources m_globals;
-    //! \brief The networks, owned: roads, power lines, water pipes.
+    //! \brief Owned networks: roads, power lines, water pipes.
     Paths m_paths;
-    //! \brief The buildings, owned: houses, factories, shops.
-    Units m_units;
-    //! \brief The agents on the road, owned: cars, citizens, trucks.
+    //! \brief Owned buildings: houses, factories, shops.
+    Buildings m_buildings;
+    //! \brief Owned agents on roads: cars, citizens, trucks.
     Agents m_agents;
-    //! \brief The zones painted by the player, owned.
+    //! \brief Owned zones painted by the player.
     Zones m_zones;
-    //! \brief The router, one per city so its scratch memory is allocated once
-    //! rather than on every search.
+    //! \brief Router for this city. One per city saves search memory.
     std::unique_ptr<IRouter> m_router;
-    //! \brief The default callbacks, which do nothing.
+    //! \brief Default callbacks that do nothing.
     City::Listener m_defaultListener;
-    //! \brief The registered callbacks. Not owned.
+    //! \brief Registered callbacks. Not owned.
     City::Listener* m_listener = &m_defaultListener;
 };
 

@@ -1,6 +1,6 @@
 save
 	ruleset test_city.ogs
-	hash 1e4d63929d2bf96ed42abec8da8d3aeb604918f946799021acf39e14da2c0907
+	hash 82862f71c57b3ecd64a7ef1e1e31fcf04e688c5bc68d99dfadb313ccbf057bc8
 	types [ Road Dirt Home Work Shop Residential ]
 end
 
@@ -21,10 +21,10 @@ path Road
 	segment 5 Dirt 1 5 flow 0
 	segment 6 Dirt 5 3 flow 0
 end
-unit Home on segment 1 0.25 resources [ People 4 ]
-unit Home on segment 1 0.60 resources [ People 4 ]
-unit Home on segment 4 0.50 resources [ People 4 ]
-unit Work on segment 2 0.50 resources [ ]
-unit Work on segment 3 0.40 resources [ ]
-unit Shop on segment 3 0.75 resources [ ]
+building Home on segment 1 0.25 resources [ People 4 ]
+building Home on segment 1 0.60 resources [ People 4 ]
+building Home on segment 4 0.50 resources [ People 4 ]
+building Work on segment 2 0.50 resources [ ]
+building Work on segment 3 0.40 resources [ ]
+building Shop on segment 3 0.75 resources [ ]
 zone Residential 0 0 12 12

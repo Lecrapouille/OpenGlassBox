@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------------
 
 //! \file Name.hpp
-//! \brief An interned string: a name the simulation compares by number.
+//! \brief Interned string: a name compared by number, not by text.
 
 #ifndef OPEN_GLASSBOX_NAME_HPP
 #define OPEN_GLASSBOX_NAME_HPP
@@ -19,47 +19,38 @@ namespace ogb
 {
 
 //==============================================================================
-//! \brief A name of the ruleset, held as a number rather than as characters.
+//! \brief A ruleset name stored as a number, not as characters.
 //!
-//! Everything a script names (resources, types of building, what an Agent is
-//! looking for) is a short string drawn from a list the ruleset fixes once
-//! and never adds to afterwards. Yet those strings are compared in the hottest
-//! loops there are: the router asks every building it walks past whether it
-//! accepts what an Agent carries, and that question is a handful of string
-//! comparisons.
+//! The script names resources, Building types, and what an Agent seeks. These names
+//! are compared often in hot loops. The router checks every Building it passes.
 //!
-//! A Name is the answer: the text is stored once in a table shared by the whole
-//! process, and what gets passed around and compared is its rank in that table.
-//! Comparing two Names is comparing two integers, and copying one costs four
-//! bytes rather than a heap block.
+//! A Name stores each text once in a shared table. Comparisons use the table
+//! index. Two Names compare as two integers. Copying one costs four bytes.
 //!
-//! It converts to and from \c std::string on its own, so a call site that reads
-//! naturally with a literal keeps reading that way:
+//! It converts to and from \c std::string, so literals still work:
 //!
 //! \code
 //! ogb::Name const people = "People";
-//! if (unit.accepts("Work", agent.resources())) { ... }
+//! if (building.accepts("Work", agent.resources())) { ... }
 //! std::cout << people << " " << people.str().size() << '\n';
 //! \endcode
 //!
-//! The conversion from text is the expensive one -- a hash lookup -- so it
-//! belongs where the ruleset is read, not in a loop. Interning the same text
-//! twice gives the same Name, which is what makes equality trustworthy.
+//! The text-to-Name conversion is slow (hash lookup). Do it when the ruleset
+//! loads, not in a loop. The same text always gives the same Name.
 //!
-//! \note Names are never removed from the table, so a Name stays valid for as
-//! long as the process lives. Loading one ruleset after another leaks the names
-//! of the first, which for a list of a few dozen words is not worth reclaiming.
+//! \note Names are never removed. A Name stays valid for the process lifetime.
+//! Loading a new ruleset keeps old names in memory. For a few dozen names this
+//! is acceptable.
 //!
-//! \note The table is not guarded by a lock. Interning from several threads at
-//! once is not supported; reading a Name already interned is.
+//! \note The table is not thread-safe. Do not intern from several threads at
+//! once. Reading an already interned Name from several threads is safe.
 //==============================================================================
 class Name
 {
 public:
 
     //--------------------------------------------------------------------------
-    //! \brief The empty name, which is what an unset field reads as. Compares
-    //! equal to Name("") and to nothing else.
+    //! \brief The empty name. Same as Name(""). Compares equal to nothing else.
     //--------------------------------------------------------------------------
     Name() = default;
 
@@ -76,14 +67,12 @@ public:
     Name(std::string const& text); // NOSONAR: no explicit constructor needed
 
     //--------------------------------------------------------------------------
-    //! \brief \return the text behind the name. Valid for the life of the
-    //! process.
+    //! \return the text for this name. Valid for the process lifetime.
     //--------------------------------------------------------------------------
     std::string const& str() const;
 
     //--------------------------------------------------------------------------
-    //! \brief \return the text as a C string, for the printf-shaped calls of
-    //! the demo.
+    //! \return the text as a C string. Used by printf-style calls in the demo.
     //--------------------------------------------------------------------------
     char const* c_str() const
     {
@@ -91,8 +80,7 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief Read as a string wherever one is expected, so that a Name can be
-    //! printed, concatenated or written to a save without ceremony.
+    //! \brief Converts to string for print, concat, or save.
     //--------------------------------------------------------------------------
     explicit operator std::string const&() const
     {
@@ -100,8 +88,8 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \return the rank in the table, which is what makes a Name usable
-    //! as an index. Zero is the empty name.
+    //! \return the index in the table. Zero is the empty name.
+    //! Use this to index arrays keyed by Name.
     //--------------------------------------------------------------------------
     [[nodiscard]] uint32_t getId() const
     {
@@ -109,7 +97,7 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \return whether the name is the empty one.
+    //! \return whether the name is the empty one.
     //--------------------------------------------------------------------------
     bool empty() const
     {
@@ -117,8 +105,7 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \return whether the two names are the same word. One integer
-    //! comparison, which is the whole point of the class.
+    //! \return true if the two names are the same. One integer comparison.
     //--------------------------------------------------------------------------
     bool operator==(Name const& other) const noexcept
     {
@@ -132,9 +119,8 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief Order by the text, so that a container keyed by Name comes out in
-    //! the order a reader expects rather than in the order the ruleset happened
-    //! to mention the names.
+    //! \brief Sort by text, not by table index.
+    //! Containers keyed by Name appear in alphabetical order.
     //--------------------------------------------------------------------------
     bool operator<(Name const& other) const
     {
@@ -142,23 +128,22 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \return how many distinct names have been interned, the empty one
-    //! included. The bound on id().
+    //! \return how many distinct names were interned, including the empty one.
     //--------------------------------------------------------------------------
     static size_t count();
 
 private:
 
-    //! \brief Rank in the table of names. Zero is the empty name, which is why
-    //! a default built Name needs no constructor to be valid.
+    //! \brief Index in the name table. Zero is the empty name.
+    //! A default Name needs no constructor.
     uint32_t m_id = 0u;
 };
 
-//! \brief Write the text behind the name.
+//! \brief Write the name text to a stream.
 std::ostream& operator<<(std::ostream& os, Name const& name);
 
-//! \brief Compare a name against a literal without interning the literal twice
-//! over. Present so that the assertions of the unit tests read naturally.
+//! \brief Compare a Name to a literal without interning the literal twice.
+//! Used by unit test assertions.
 bool operator==(Name const& name, char const* text);
 
 //! \copydoc operator==(Name const&, char const*)
@@ -182,9 +167,8 @@ bool operator!=(Name const& name, std::string const& text);
 //! \copydoc operator==(Name const&, char const*)
 bool operator!=(std::string const& text, Name const& name);
 
-//! \brief Order a name against a plain string by their texts. What lets a Name
-//! look up a container keyed by \c std::string with a transparent comparator,
-//! as ScriptDefinitions does.
+//! \brief Compare a Name to a string by text.
+//! Lets a Name look up a container keyed by \c std::string, as ScriptDefinitions does.
 bool operator<(Name const& name, std::string const& text);
 
 //! \copydoc operator<(Name const&, std::string const&)
@@ -194,7 +178,7 @@ bool operator<(std::string const& text, Name const& name);
 
 namespace std
 {
-//! \brief Hash a Name by its rank, so that it can key an unordered container.
+//! \brief Hash a Name by its table index. Use in unordered containers.
 template <>
 struct hash<ogb::Name>
 {

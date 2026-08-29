@@ -5,12 +5,11 @@
 //-----------------------------------------------------------------------------
 
 //! \file InstallRouter.hpp
-//! \brief Give every city of a simulation the default router.
+//! \brief Install the default router on every city in a simulation.
 //!
-//! Kept apart from DijkstraRouter.hpp so that the router only needs to know
-//! about a City. A city loaded from a save has no router at all, and an agent
-//! without one never leaves the crossroads it was sent from, so this is what a
-//! loader calls once the cities are in place.
+//! Kept separate from DijkstraRouter.hpp so the router only needs a City.
+//! A city loaded from a save has no router. An Agent without one never moves.
+//! Call this after all cities are loaded.
 
 #ifndef OPEN_GLASSBOX_INSTALL_ROUTER_HPP
 #define OPEN_GLASSBOX_INSTALL_ROUTER_HPP
@@ -22,8 +21,8 @@ namespace ogb
 {
 
 // -----------------------------------------------------------------------------
-//! \brief Install a router on every city a simulation already holds.
-//! \param[in,out] simulation the cities to wire up.
+//! \brief Install a router on every city in the simulation.
+//! \param[in,out] simulation the simulation whose cities get a router.
 // -----------------------------------------------------------------------------
 inline void installDijkstraRouters(Simulation const& simulation)
 {

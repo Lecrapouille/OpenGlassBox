@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------------
 
 //! \file Listener.hpp
-//! \brief Callbacks for what happens to the world as a whole.
+//! \brief Callbacks for world-level events.
 
 #ifndef OPEN_GLASSBOX_LISTENER_HPP
 #define OPEN_GLASSBOX_LISTENER_HPP
@@ -21,17 +21,14 @@ class City;
 class Segment;
 
 //==============================================================================
-//! \brief What happens to the world as a whole: cities appearing and going
-//! away, and roads asking to cross a border.
+//! \brief Events for the whole world: cities added or removed, and roads that
+//! cross a city border.
 //!
-//! One interface rather than one per class, because there is one answer to
-//! give: an application registers a single object through
-//! Simulation::setListener(). What happens inside one city is on
-//! City::Listener instead.
+//! One interface for all events. The application registers one object with
+//! Simulation::setListener(). Events inside one city use City::Listener instead.
 //!
-//! Every method has a default, so an implementation overrides only what it
-//! cares about. The default answer to a road crossing a border is yes, which is
-//! what a single city application wants.
+//! Every method has a default. Override only what you need.
+//! By default, a road may cross a border. This fits a single-city application.
 //!
 //! Example:
 //! \code
@@ -51,8 +48,8 @@ public:
     //==========================================================================
     //! \brief A road segment waiting for approval.
     //!
-    //! Holds world coordinates and a type name rather than pointers, so the
-    //! neighbouring city can read it before it exists.
+    //! Uses world coordinates and a type name, not pointers.
+    //! The neighbour city can read it before the segment exists.
     //==========================================================================
     struct SegmentProposal
     {
@@ -73,8 +70,8 @@ public:
     virtual void onCityAdded(City& /*city*/) {}
 
     //--------------------------------------------------------------------------
-    //! \brief A city is about to go away, with everything it holds.
-    //! \param[in] city the city, still alive for the duration of the call.
+    //! \brief A city is about to be removed, with everything it holds.
+    //! \param[in] city the city. It is still valid during this call.
     //--------------------------------------------------------------------------
     virtual void onCityRemoved(City& /*city*/) {}
 
@@ -83,7 +80,7 @@ public:
     //! \param[in] owner the city that wants to build the road.
     //! \param[in] neighbor the city the segment would stand in.
     //! \param[in] proposal the segment, in world coordinates.
-    //! \return false to refuse. The whole road is cancelled: nothing is built.
+    //! \return false to refuse. The whole road is cancelled. Nothing is built.
     //--------------------------------------------------------------------------
     virtual bool allowSegmentAcross(City& /*owner*/,
                                 City& /*neighbor*/,

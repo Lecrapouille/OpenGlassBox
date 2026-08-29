@@ -99,14 +99,14 @@ void SimpleScriptParser::runPass(Pass pass)
             parseSegments();
         else if (token.text == "agents")
             parseAgents();
-        else if (token.text == "units")
-            parseUnits();
+        else if (token.text == "buildings")
+            parseBuildings();
         else if (token.text == "zones")
             parseZones();
         else
         {
             error(token, "Expected a section (resources, rules, layers, paths, "
-                         "segments, agents, units, zones) but read '" +
+                         "segments, agents, buildings, zones) but read '" +
                              token.text + "'");
             // Resume at the next section rather than reporting its whole body
             // one word at a time: a misspelled header should cost one error,
@@ -178,7 +178,7 @@ bool SimpleScriptParser::isSectionKeyword(std::string const& text)
 {
     return (text == "resources") || (text == "rules") || (text == "layers") ||
            (text == "paths") || (text == "segments") || (text == "agents") ||
-           (text == "units") || (text == "zones");
+           (text == "buildings") || (text == "zones");
 }
 
 // -----------------------------------------------------------------------------
@@ -343,24 +343,24 @@ void SimpleScriptParser::parseRate(uint32_t& rate, uint32_t& rateMinutes)
     // has to sit on the same line as the number: "hour" is also the name of a
     // command, and a rule that reads "rate 1" then "hour between 8 18" on the
     // next line is not asking for a period of one hour.
-    Token const& unit = m_lexer.peek();
-    if (unit.valid() && (unit.line == number.line))
+    Token const& timeUnit = m_lexer.peek();
+    if (timeUnit.valid() && (timeUnit.line == number.line))
     {
-        if ((unit.text == "tick") || (unit.text == "ticks"))
+        if ((timeUnit.text == "tick") || (timeUnit.text == "ticks"))
         {
             m_lexer.next();
         }
-        else if ((unit.text == "minute") || (unit.text == "minutes"))
+        else if ((timeUnit.text == "minute") || (timeUnit.text == "minutes"))
         {
             m_lexer.next();
             rateMinutes = value;
         }
-        else if ((unit.text == "hour") || (unit.text == "hours"))
+        else if ((timeUnit.text == "hour") || (timeUnit.text == "hours"))
         {
             m_lexer.next();
             rateMinutes = value * 60u;
         }
-        else if ((unit.text == "day") || (unit.text == "days"))
+        else if ((timeUnit.text == "day") || (timeUnit.text == "days"))
         {
             m_lexer.next();
             rateMinutes = value * 60u * 24u;
@@ -761,22 +761,22 @@ void SimpleScriptParser::parseLayer()
 // =============================================================================
 
 // -----------------------------------------------------------------------------
-void SimpleScriptParser::parseUnits()
+void SimpleScriptParser::parseBuildings()
 {
     while (!tooManyErrors())
     {
-        Token const& token = expectToken("'unit' or 'end'");
+        Token const& token = expectToken("'building' or 'end'");
         if (!token.valid() || (token.text == "end"))
             return;
 
-        if (token.text == "unit")
+        if (token.text == "building")
         {
-            parseUnit();
+            parseBuilding();
         }
         else
         {
             error(token,
-                  "Expected 'unit' or 'end' but read '" + token.text + "'");
+                  "Expected 'building' or 'end' but read '" + token.text + "'");
             skipToEnd();
             return;
         }
@@ -784,20 +784,20 @@ void SimpleScriptParser::parseUnits()
 }
 
 // -----------------------------------------------------------------------------
-void SimpleScriptParser::parseUnit()
+void SimpleScriptParser::parseBuilding()
 {
-    Token const name = expectToken("the name of the unit");
+    Token const name = expectToken("the name of the building");
     if (!name.valid())
         return;
 
-    UnitType* unit = nullptr;
+    BuildingType* building = nullptr;
     if (defining())
     {
-        unit = m_definitions->findUnitType(name.text);
+        building = m_definitions->findBuildingType(name.text);
     }
-    else if (m_definitions->addUnitType(name.text) == nullptr)
+    else if (m_definitions->addBuildingType(name.text) == nullptr)
     {
-        error(name, "The unit '" + name.text + "' is defined twice");
+        error(name, "The building '" + name.text + "' is defined twice");
     }
 
     while (!tooManyErrors())
@@ -810,28 +810,28 @@ void SimpleScriptParser::parseUnit()
         {
             m_lexer.next();
             uint32_t const color = nextColor("a color");
-            if (unit != nullptr)
+            if (building != nullptr)
             {
-                unit->color = color;
+                building->color = color;
             }
         }
         else if (token.text == "layerRadius")
         {
             m_lexer.next();
             uint32_t const radius = nextUint("a radius");
-            if (unit != nullptr)
+            if (building != nullptr)
             {
-                unit->radius = radius;
+                building->radius = radius;
             }
         }
         else if (token.text == "rules")
         {
             m_lexer.next();
-            std::vector<RuleUnit*> rules;
-            parseRuleUnitArray(rules);
-            if (unit != nullptr)
+            std::vector<RuleBuilding*> rules;
+            parseRuleBuildingArray(rules);
+            if (building != nullptr)
             {
-                unit->rules = std::move(rules);
+                building->rules = std::move(rules);
             }
         }
         else if (token.text == "targets")
@@ -839,9 +839,9 @@ void SimpleScriptParser::parseUnit()
             m_lexer.next();
             std::vector<std::string> targets;
             parseStringArray(targets);
-            if (unit != nullptr)
+            if (building != nullptr)
             {
-                unit->targets.assign(targets.begin(), targets.end());
+                building->targets.assign(targets.begin(), targets.end());
             }
         }
         else if (token.text == "caps")
@@ -849,9 +849,9 @@ void SimpleScriptParser::parseUnit()
             m_lexer.next();
             Resources caps;
             parseCapacitiesArray(caps);
-            if (unit != nullptr)
+            if (building != nullptr)
             {
-                unit->resources.setCapacities(caps);
+                building->resources.setCapacities(caps);
             }
         }
         else if (token.text == "resources")
@@ -859,9 +859,9 @@ void SimpleScriptParser::parseUnit()
             m_lexer.next();
             Resources resources;
             parseResourcesArray(resources);
-            if (unit != nullptr)
+            if (building != nullptr)
             {
-                unit->resources.addAll(resources);
+                building->resources.addAll(resources);
             }
         }
         else
@@ -880,7 +880,7 @@ void SimpleScriptParser::parseRules()
 {
     while (!tooManyErrors())
     {
-        Token const& token = expectToken("'layerRule', 'unitRule', 'zoneRule' or 'end'");
+        Token const& token = expectToken("'layerRule', 'buildingRule', 'zoneRule' or 'end'");
         if (!token.valid() || (token.text == "end"))
             return;
 
@@ -888,9 +888,9 @@ void SimpleScriptParser::parseRules()
         {
             parseRuleLayer();
         }
-        else if (token.text == "unitRule")
+        else if (token.text == "buildingRule")
         {
-            parseRuleUnit();
+            parseRuleBuilding();
         }
         else if (token.text == "zoneRule")
         {
@@ -898,7 +898,7 @@ void SimpleScriptParser::parseRules()
         }
         else
         {
-            error(token, "Expected 'layerRule', 'unitRule', 'zoneRule' or 'end' but read '" +
+            error(token, "Expected 'layerRule', 'buildingRule', 'zoneRule' or 'end' but read '" +
                              token.text + "'");
             skipToEnd();
             return;
@@ -968,7 +968,7 @@ void SimpleScriptParser::parseRuleLayer()
 }
 
 // -----------------------------------------------------------------------------
-void SimpleScriptParser::parseRuleUnit()
+void SimpleScriptParser::parseRuleBuilding()
 {
     Token const name = expectToken("the name of the rule");
     if (!name.valid())
@@ -976,15 +976,15 @@ void SimpleScriptParser::parseRuleUnit()
 
     if (!defining())
     {
-        if (m_definitions->addRuleUnit(name.text) == nullptr)
+        if (m_definitions->addRuleBuilding(name.text) == nullptr)
         {
-            error(name, "The unit rule '" + name.text + "' is defined twice");
+            error(name, "The building rule '" + name.text + "' is defined twice");
         }
         skipToEnd();
         return;
     }
 
-    RuleUnitType type(name.text);
+    RuleBuildingType type(name.text);
 
     while (!tooManyErrors())
     {
@@ -994,7 +994,7 @@ void SimpleScriptParser::parseRuleUnit()
 
         if (token.text == "end")
         {
-            RuleUnit* rule = m_definitions->findRuleUnit(name.text);
+            RuleBuilding* rule = m_definitions->findRuleBuilding(name.text);
             if (rule != nullptr)
             {
                 rule->configureFrom(type);
@@ -1021,11 +1021,11 @@ void SimpleScriptParser::parseRuleUnit()
             }
             else
             {
-                type.onFail = m_definitions->findRuleUnit(target.text);
+                type.onFail = m_definitions->findRuleBuilding(target.text);
                 if (type.onFail == nullptr)
                 {
                     error(target,
-                          "Unknown unit rule '" + target.text + "'");
+                          "Unknown building rule '" + target.text + "'");
                 }
             }
         }
@@ -1163,10 +1163,10 @@ IRuleCommand* SimpleScriptParser::parseCommand(Token const& token)
 
             if (cmd.text == "to")
             {
-                Token const unit = expectToken("the type of unit to look for");
-                if (!unit.valid())
+                Token const buildingToken = expectToken("the type of building to look for");
+                if (!buildingToken.valid())
                     return nullptr;
-                searchTarget = unit.text;
+                searchTarget = buildingToken.text;
             }
             else if (cmd.text == "add")
             {
@@ -1197,13 +1197,13 @@ IRuleCommand* SimpleScriptParser::parseCommand(Token const& token)
     }
     else if (token.text == "spawn")
     {
-        Token const name = expectToken("the name of a unit");
+        Token const name = expectToken("the name of a building");
         if (!name.valid())
             return nullptr;
-        UnitType* const unit = m_definitions->findUnitType(name.text);
-        if (defining() && (unit == nullptr))
+        BuildingType* const buildingType = m_definitions->findBuildingType(name.text);
+        if (defining() && (buildingType == nullptr))
         {
-            error(name, "Unknown unit '" + name.text + "'");
+            error(name, "Unknown building '" + name.text + "'");
             return nullptr;
         }
         if (!expectWord("at"))
@@ -1218,14 +1218,14 @@ IRuleCommand* SimpleScriptParser::parseCommand(Token const& token)
                              where.text + "'");
             return nullptr;
         }
-        if (unit == nullptr)
+        if (buildingType == nullptr)
             return nullptr;
         return m_definitions->own(std::unique_ptr<IRuleCommand>(
-            new RuleCommandSpawn(*unit, placement)));
+            new RuleCommandSpawn(*buildingType, placement)));
     }
     else if (token.text == "count")
     {
-        Token const name = expectToken("the name of a unit");
+        Token const name = expectToken("the name of a building");
         if (!name.valid())
             return nullptr;
         Token const cmp = expectToken("'greater', 'less' or 'equals'");
@@ -1246,26 +1246,26 @@ IRuleCommand* SimpleScriptParser::parseCommand(Token const& token)
     }
     else if (token.text == "upgrade")
     {
-        Token const from = expectToken("the unit to replace");
+        Token const from = expectToken("the building to replace");
         if (!from.valid())
             return nullptr;
         if (!expectWord("to"))
             return nullptr;
-        Token const to = expectToken("the unit to replace it with");
+        Token const to = expectToken("the building to replace it with");
         if (!to.valid())
             return nullptr;
-        UnitType* const fromType = m_definitions->findUnitType(from.text);
-        UnitType* const toType = m_definitions->findUnitType(to.text);
+        BuildingType* const fromType = m_definitions->findBuildingType(from.text);
+        BuildingType* const toType = m_definitions->findBuildingType(to.text);
         if (defining())
         {
             if (fromType == nullptr)
             {
-                error(from, "Unknown unit '" + from.text + "'");
+                error(from, "Unknown building '" + from.text + "'");
                 return nullptr;
             }
             if (toType == nullptr)
             {
-                error(to, "Unknown unit '" + to.text + "'");
+                error(to, "Unknown building '" + to.text + "'");
                 return nullptr;
             }
         }
@@ -1276,7 +1276,7 @@ IRuleCommand* SimpleScriptParser::parseCommand(Token const& token)
     }
     else if (token.text == "destroy")
     {
-        Token const name = expectToken("the name of a unit");
+        Token const name = expectToken("the name of a building");
         if (!name.valid())
             return nullptr;
         return m_definitions->own(std::unique_ptr<IRuleCommand>(
@@ -1456,7 +1456,7 @@ void SimpleScriptParser::parseRuleLayerArray(std::vector<RuleLayer*>& rules)
 }
 
 // -----------------------------------------------------------------------------
-void SimpleScriptParser::parseRuleUnitArray(std::vector<RuleUnit*>& rules)
+void SimpleScriptParser::parseRuleBuildingArray(std::vector<RuleBuilding*>& rules)
 {
     if (!expectWord("["))
     {
@@ -1466,17 +1466,17 @@ void SimpleScriptParser::parseRuleUnitArray(std::vector<RuleUnit*>& rules)
 
     while (!tooManyErrors())
     {
-        Token const name = expectToken("a unit rule or ']'");
+        Token const name = expectToken("a building rule or ']'");
         if (!name.valid() || (name.text == "]"))
             return;
 
         if (!defining())
             continue;
 
-        RuleUnit* const rule = m_definitions->findRuleUnit(name.text);
+        RuleBuilding* const rule = m_definitions->findRuleBuilding(name.text);
         if (rule == nullptr)
         {
-            error(name, "Unknown unit rule '" + name.text + "'");
+            error(name, "Unknown building rule '" + name.text + "'");
             continue;
         }
 

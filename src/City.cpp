@@ -107,10 +107,10 @@ void City::update(float dt)
         m_zones[i]->executeRules();
     }
 
-    i = m_units.size();
+    i = m_buildings.size();
     while (i--)
     {
-        m_units[i]->executeRules();
+        m_buildings[i]->executeRules();
     }
 }
 
@@ -121,7 +121,7 @@ void City::update()
 }
 
 // -----------------------------------------------------------------------------
-// Since Units are attached to a Path Node
+// Since buildings are attached to a Path Node
 // They are directly translated.
 void City::translate(Vector3f const& direction)
 {
@@ -138,7 +138,7 @@ void City::translate(Vector3f const& direction)
         it->translate(direction);
     }
 
-    for (auto const& it : m_units)
+    for (auto const& it : m_buildings)
     {
         it->translate(direction);
     }
@@ -147,7 +147,7 @@ void City::translate(Vector3f const& direction)
 // -----------------------------------------------------------------------------
 Cell City::worldToCell(Vector3f const& position) const
 {
-    // A Unit built just outside the region still has to act on cells this City
+    // A Building built just outside the region still has to act on cells this City
     // administers, so bring it back inside rather than let it write into the
     // territory of a neighbour.
     return m_region.clamp(m_world.worldToCell(position));
@@ -191,39 +191,39 @@ Path& City::getPath(std::string const& name)
 }
 
 // -----------------------------------------------------------------------------
-Unit& City::addUnit(UnitType const& type, Node& node)
+Building& City::addBuilding(BuildingType const& type, Node& node)
 {
-    m_units.push_back(std::make_unique<Unit>(type, node, *this));
-    Unit& unit = *(m_units.back());
-    unit.setId(m_nextUnitId++);
-    unit.spreadRuleStart();
-    m_listener->onUnitAdded(unit);
-    return unit;
+    m_buildings.push_back(std::make_unique<Building>(type, node, *this));
+    Building& building = *(m_buildings.back());
+    building.setId(m_nextBuildingId++);
+    building.spreadRuleStart();
+    m_listener->onBuildingAdded(building);
+    return building;
 }
 
 // -----------------------------------------------------------------------------
-Unit& City::addUnit(UnitType const& type,
+Building& City::addBuilding(BuildingType const& type,
                     Path& /*path*/,
                     Segment& segment,
                     float offset)
 {
-    m_units.push_back(std::make_unique<Unit>(type, segment, offset, *this));
-    Unit& unit = *(m_units.back());
-    unit.setId(m_nextUnitId++);
-    unit.spreadRuleStart();
-    m_listener->onUnitAdded(unit);
-    return unit;
+    m_buildings.push_back(std::make_unique<Building>(type, segment, offset, *this));
+    Building& building = *(m_buildings.back());
+    building.setId(m_nextBuildingId++);
+    building.spreadRuleStart();
+    m_listener->onBuildingAdded(building);
+    return building;
 }
 
 // -----------------------------------------------------------------------------
-Unit& City::addUnit(UnitType const& type, Vector3f const& position)
+Building& City::addBuilding(BuildingType const& type, Vector3f const& position)
 {
-    m_units.push_back(std::make_unique<Unit>(type, position, *this));
-    Unit& unit = *(m_units.back());
-    unit.setId(m_nextUnitId++);
-    unit.spreadRuleStart();
-    m_listener->onUnitAdded(unit);
-    return unit;
+    m_buildings.push_back(std::make_unique<Building>(type, position, *this));
+    Building& building = *(m_buildings.back());
+    building.setId(m_nextBuildingId++);
+    building.spreadRuleStart();
+    m_listener->onBuildingAdded(building);
+    return building;
 }
 
 // -----------------------------------------------------------------------------
@@ -238,7 +238,7 @@ Zone& City::addZone(ZoneType const& type, CellRegion const& footprint)
 
 // -----------------------------------------------------------------------------
 Agent& City::addAgent(AgentType const& type,
-                      Unit& owner,
+                      Building& owner,
                       Resources const& resources,
                       Name const& searchTarget)
 {
@@ -250,23 +250,23 @@ Agent& City::addAgent(AgentType const& type,
 }
 
 // -----------------------------------------------------------------------------
-void City::removeUnit(Unit& unit)
+void City::removeBuilding(Building& building)
 {
     // The Agents point at the building both as the one that sent them out and
     // as the destination of their itinerary. Both have to go before it does.
     for (auto const& agent : m_agents)
     {
-        agent->forget(unit);
+        agent->forget(building);
     }
 
-    m_listener->onUnitRemoved(unit);
-    unit.detach();
+    m_listener->onBuildingRemoved(building);
+    building.detach();
 
-    m_units.erase(std::remove_if(m_units.begin(),
-                                 m_units.end(),
-                                 [&unit](std::unique_ptr<Unit> const& it)
-                                 { return it.get() == &unit; }),
-                  m_units.end());
+    m_buildings.erase(std::remove_if(m_buildings.begin(),
+                                 m_buildings.end(),
+                                 [&building](std::unique_ptr<Building> const& it)
+                                 { return it.get() == &building; }),
+                  m_buildings.end());
 }
 
 // -----------------------------------------------------------------------------
@@ -316,11 +316,11 @@ void City::removeSegment(Path& path, Segment& segment)
         agent->invalidateRoute();
     }
 
-    size_t i = m_units.size();
+    size_t i = m_buildings.size();
     while (i--)
     {
-        if (m_units[i]->getSegment() == &segment)
-            removeUnit(*m_units[i]);
+        if (m_buildings[i]->getSegment() == &segment)
+            removeBuilding(*m_buildings[i]);
     }
 
     path.removeSegment(segment);
@@ -338,10 +338,10 @@ Node& City::splitSegment(Path& path, Segment& segment, float offset)
 
     // Where the buildings stand has to be read before the segment is shortened,
     // and moveOntoSegment() mutates the very list being walked.
-    std::vector<std::pair<Unit*, float>> anchored;
-    anchored.reserve(segment.getUnits().size());
-    for (Unit* unit : segment.getUnits())
-        anchored.emplace_back(unit, unit->getSegmentOffset());
+    std::vector<std::pair<Building*, float>> anchored;
+    anchored.reserve(segment.getBuildings().size());
+    for (Building* building : segment.getBuildings())
+        anchored.emplace_back(building, building->getSegmentOffset());
 
     // The Agents hold the segment and an offset along it, both of which mean
     // something else once it is half as long. They keep their position and the
@@ -382,7 +382,7 @@ void City::removeIsolatedNodes(Path& path) const
         Node& node = *path.getNodes()[i];
         if (node.hasSegments())
             continue;
-        if (!node.getUnits().empty())
+        if (!node.getBuildings().empty())
             continue;
 
         for (auto const& agent : m_agents)
@@ -400,8 +400,8 @@ void City::clear()
         m_listener->onAgentRemoved(*m_agents.back());
         m_agents.pop_back();
     }
-    while (!m_units.empty())
-        removeUnit(*m_units.back());
+    while (!m_buildings.empty())
+        removeBuilding(*m_buildings.back());
     while (!m_zones.empty())
         removeZone(*m_zones.back());
 
@@ -429,20 +429,20 @@ void City::removeNode(Path& path, Node& node)
         agent->invalidateRoute();
     }
 
-    size_t i = m_units.size();
+    size_t i = m_buildings.size();
     while (i--)
     {
-        Unit& unit = *m_units[i];
-        if (unit.getNode() == &node)
+        Building& building = *m_buildings[i];
+        if (building.getNode() == &node)
         {
-            removeUnit(unit);
+            removeBuilding(building);
             continue;
         }
         for (Segment const* segment : incident)
         {
-            if (unit.getSegment() == segment)
+            if (building.getSegment() == segment)
             {
-                removeUnit(unit);
+                removeBuilding(building);
                 break;
             }
         }

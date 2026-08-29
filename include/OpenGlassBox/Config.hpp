@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------------
 
 //! \file Config.hpp
-//! \brief Runtime settings of a Simulation, grouped by topic.
+//! \brief Runtime settings for a Simulation, grouped by topic.
 
 #ifndef OPEN_GLASSBOX_CONFIG_HPP
 #define OPEN_GLASSBOX_CONFIG_HPP
@@ -18,59 +18,54 @@ namespace ogb
 {
 
 //==============================================================================
-//! \brief Default values of the settings.
+//! \brief Default setting values.
 //!
-//! This header is installed with the library. It shall not depend on any macro
-//! defined by the build system.
+//! This header is installed with the library. It must not depend on build macros.
 //==============================================================================
 namespace defaults
 {
-//! \brief Simulation steps run per second of game time.
+//! \brief Simulation ticks per second of game time.
 constexpr float TICKS_PER_SECOND = 20.0f;
 
-//! \brief Largest number of ticks caught up by one call to
-//! Simulation::update(). Without this bound, a caller that stalled for a long
-//! time asks for so many ticks that the next call stalls too.
+//! \brief Max ticks processed in one Simulation::update() call.
+//! Without this limit, a long pause would trigger too many ticks at once.
 constexpr uint32_t MAX_TICKS_PER_UPDATE = 20u;
 
-//! \brief Side of a grid cell, in world units. This is how a world position
-//! becomes a cell. It is not a number of pixels: the renderer decides how a
-//! world unit is drawn.
+//! \brief Side of one grid cell, in world units.
+//! World position divided by this value gives a Cell.
+//! This is not pixels: the renderer chooses how to draw world units.
 constexpr float GRID_CELL_SIZE = 30.0f;
 } // namespace defaults
 
-//! \brief Cost of a route that does not exist. Uses max() rather than
-//! infinity() so the value stays defined when the project is built with
-//! -ffast-math (-Wnan-infinity-disabled).
+//! \brief Cost for a route that does not exist.
+//! Uses max() instead of infinity() so it stays valid with -ffast-math
+//! (-Wnan-infinity-disabled).
 constexpr float ROUTING_INFINITY = std::numeric_limits<float>::max();
 
-//! \brief Whether a routing cost means "no route", including ROUTING_INFINITY.
+//! \brief Return true if a routing cost means "no route", including ROUTING_INFINITY.
 inline bool routingCostUnreachable(float cost) noexcept
 {
     return cost >= ROUTING_INFINITY * 0.5f;
 }
 
 //==============================================================================
-//! \brief How fast the simulation runs, and how a tick maps to game time.
+//! \brief Simulation speed and the mapping from ticks to game time.
 //==============================================================================
 struct TimeConfig
 {
-    //! \brief Simulation steps run per second of game time. Raise it to make
-    //! the simulation run faster.
+    //! \brief Ticks per second of game time. Higher values run the simulation faster.
     float ticksPerSecond = defaults::TICKS_PER_SECOND;
-    //! \brief Largest number of ticks caught up by one call to
-    //! Simulation::update().
+    //! \brief Max ticks processed in one Simulation::update() call.
     uint32_t maxTicksPerUpdate = defaults::MAX_TICKS_PER_UPDATE;
-    //! \brief Ticks in one game minute. Twenty matches the default tick rate,
-    //! so one second of game time lasts one game minute.
+    //! \brief Ticks in one game minute. Default 20 matches the default tick rate:
+    //! one second of game time equals one game minute.
     uint32_t ticksPerMinute = 20u;
-    //! \brief Hour of the day a new simulation starts at. Starting at midnight
-    //! means waiting a third of a day before the rules that keep office hours
-    //! do anything.
+    //! \brief Hour when a new simulation starts.
+    //! Midnight would delay Rules that depend on office hours.
     uint32_t startHour = 8u;
 
     //--------------------------------------------------------------------------
-    //! \brief \return how long one tick lasts, in seconds of game time.
+    //! \return the duration of one tick, in seconds of game time.
     //--------------------------------------------------------------------------
     float tickDuration() const
     {
@@ -79,73 +74,62 @@ struct TimeConfig
 };
 
 //==============================================================================
-//! \brief Size of the grid cells, and size of a city that does not give one.
+//! \brief Grid cell size and default city size.
 //==============================================================================
 struct GridConfig
 {
     //! \brief Side of a grid cell, in world units.
     float cellSize = defaults::GRID_CELL_SIZE;
-    //! \brief Cells a city spans along U when Simulation::addCity() is called
-    //! without a size.
+    //! \brief Default city width in cells when Simulation::addCity() gets no size.
     uint32_t defaultCitySizeU = 32u;
-    //! \brief Cells a city spans along V when Simulation::addCity() is called
-    //! without a size.
+    //! \brief Default city height in cells when Simulation::addCity() gets no size.
     uint32_t defaultCitySizeV = 32u;
 };
 
 //==============================================================================
-//! \brief How the traffic on the segments is measured.
+//! \brief How traffic on Segments is measured.
 //==============================================================================
 struct TrafficConfig
 {
-    //! \brief Step of the moving average that smooths the traffic flow, in
-    //! ]0..1]. Small values damp harder. One routes on the raw count, which
-    //! makes the population swing between itineraries. See Segment::smoothFlow.
+    //! \brief Smoothing factor for traffic flow, in ]0..1].
+    //! Lower values smooth more. Routing uses the raw count.
+    //! See Segment::smoothFlow.
     float smoothing = 0.05f;
-    //! \brief Largest number of agents Simulation::getTrafficMetrics() looks
-    //! at. That measure costs one graph search per agent, so a large city
-    //! would spend more time measuring how settled it is than settling. The
-    //! agents are picked at a regular stride over the whole population. Zero
-    //! means every agent.
+    //! \brief Max Agents sampled by Simulation::getTrafficMetrics().
+    //! Each sample needs one graph search. Zero means all Agents.
     uint32_t relativeGapSamples = 256u;
 };
 
 //==============================================================================
-//! \brief When an agent recomputes its itinerary, and when it gives up.
+//! \brief When an Agent recomputes its path and when it gives up.
 //==============================================================================
 struct RoutingConfig
 {
-    //! \brief Ticks between two full recomputations of the remaining
-    //! itinerary. Routing a congested network is expensive, and doing it at
-    //! every node makes the population swing from one road to the other.
+    //! \brief Ticks between full path recomputations.
+    //! Routing a busy network is expensive. Too often causes route switching.
     uint32_t pathRecalcTicks = 40u;
-    //! \brief Ticks between two comparisons of the current itinerary against
-    //! the shortest one. That comparison costs a whole graph search, so doing
-    //! it on every tick for every agent dwarfs everything else. Zero and one
-    //! both mean every tick.
+    //! \brief Ticks between checks of current path vs shortest path.
+    //! Each check costs one graph search. Zero and one mean every tick.
     uint32_t pathCheckTicks = 10u;
-    //! \brief How much more expensive the current itinerary has to be, as a
-    //! fraction in [0..1], before the agent recomputes at once. Zero means
-    //! always recompute.
+    //! \brief Extra cost fraction in [0..1] before the Agent recomputes at once.
+    //! Zero means always recompute.
     float pathCostDeviation = 0.25f;
-    //! \brief How long an agent looks for something that accepts its load
-    //! before it gives up, in ticks. Two game hours by default. Zero lets it
-    //! roam for ever, which piles up agents nothing will ever remove.
+    //! \brief Ticks before an Agent gives up finding a destination.
+    //! Default is two game hours. Zero means never give up.
     uint32_t agentGiveUpTicks = 2400u;
 };
 
 //==============================================================================
-//! \brief Runtime settings of a Simulation, shared with its cities and agents.
+//! \brief Runtime settings for a Simulation, shared with its cities and Agents.
 //!
-//! These used to be compilation constants, which made the speed of the
-//! simulation impossible to change while it runs, and forced every user of the
-//! library to define the same macros as the build system.
+//! These used to be compile-time constants. Now you can change speed at runtime
+//! without rebuilding or defining the same macros as the build system.
 //!
-//! Nothing here belongs to a ruleset: a script says what a city does, this says
-//! how finely and how fast it is simulated. Two settings do reach the rules,
-//! and both are conversions rather than behaviour: \c time.ticksPerMinute turns
-//! \c rate \c 30 \c minutes into a number of ticks, and \c grid.cellSize turns
-//! a world position into the cell whose layers a rule reads.
+//! Nothing here belongs to a ruleset. The script defines city behaviour.
+//! Config defines how fast and how finely the simulation runs.
+//! Two settings reach Rules as conversions only: \c time.ticksPerMinute turns
+//! \c rate \c 30 \c minutes into ticks, and \c grid.cellSize turns a world
+//! position into the Cell whose Layers a Rule reads.
 //!
 //! Example:
 //! \code
@@ -161,14 +145,13 @@ struct Config
 {
     //! \brief How fast the simulation runs.
     TimeConfig time;
-    //! \brief Size of the grid cells and of a new city.
+    //! \brief Grid cell size and default city size.
     GridConfig grid;
-    //! \brief How the traffic is measured.
+    //! \brief How traffic is measured.
     TrafficConfig traffic;
-    //! \brief When an agent recomputes its itinerary.
+    //! \brief When an Agent recomputes its path.
     RoutingConfig routing;
-    //! \brief Seed of the random generators. Set it to a fixed value to make a
-    //! run reproducible.
+    //! \brief Random seed. Set a fixed value for a reproducible run.
     uint32_t randomSeed = 0u;
 };
 

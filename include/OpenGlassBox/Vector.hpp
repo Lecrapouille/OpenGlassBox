@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------------
 
 //! \file Vector.hpp
-//! \brief World position, grid cell, and the arithmetic the simulation needs.
+//! \brief World position, grid Cell, and basic math for the simulation.
 
 #ifndef OPEN_GLASSBOX_VECTOR_HPP
 #define OPEN_GLASSBOX_VECTOR_HPP
@@ -19,15 +19,14 @@ namespace ogb
 {
 
 //==============================================================================
-//! \brief A point or a direction in world coordinates.
+//! \brief A point or direction in world coordinates.
 //!
-//! Deliberately small: the simulation only adds, subtracts, scales and
-//! measures, so a linear algebra library would buy nothing. The third axis is
-//! carried around but nothing reads it yet: the world is flat.
+//! Small on purpose: the simulation only adds, subtracts, scales, and measures.
+//! A full linear algebra library is not needed. The z axis exists but is unused:
+//! the world is flat.
 //!
-//! Entities live in world coordinates. Layers and zones work in grid cells,
-//! which are world coordinates divided by GridConfig::cellSize. World converts
-//! both ways.
+//! Entities use world coordinates. Layers and Zones use grid cells.
+//! A cell is world position divided by GridConfig::cellSize. World converts both ways.
 //!
 //! Example:
 //! \code
@@ -44,14 +43,13 @@ struct Vector3f
     Vector3f() = default;
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] _x, _y, _z the three components, in world units.
+    //! \param[in] _x, _y, _z the three components, in world units.
     //--------------------------------------------------------------------------
     Vector3f(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
 
     //--------------------------------------------------------------------------
-    //! \brief Move in place.
-    //! \param[in] direction how far to move along each axis.
-    //! \return this vector, moved.
+    //! \brief Move this vector by \c direction.
+    //! \return this vector after the move.
     //--------------------------------------------------------------------------
     Vector3f& operator+=(Vector3f const& direction)
     {
@@ -62,9 +60,8 @@ struct Vector3f
     }
 
     //--------------------------------------------------------------------------
-    //! \brief Move in place, the other way.
-    //! \param[in] direction how far to move along each axis.
-    //! \return this vector, moved.
+    //! \brief Move this vector by minus \c direction.
+    //! \return this vector after the move.
     //--------------------------------------------------------------------------
     Vector3f& operator-=(Vector3f const& direction)
     {
@@ -78,16 +75,15 @@ struct Vector3f
     float x = 0.0f;
     //! \brief North-south axis, in world units.
     float y = 0.0f;
-    //! \brief Elevation, in world units. Carried but unused: the world is flat.
+    //! \brief Elevation in world units. Unused: the world is flat.
     float z = 0.0f;
 };
 
 //==============================================================================
-//! \brief One square of the world grid.
+//! \brief One square on the world grid.
 //!
-//! The grid has no bounds and the coordinates are signed: every world position
-//! falls in a cell, even outside every city. A city owns the rectangle of cells
-//! given by its CellRegion.
+//! The grid has no bounds. Coordinates are signed. Every world position maps to
+//! a cell, even outside any city. A city owns the cells in its CellRegion.
 //==============================================================================
 struct Cell
 {
@@ -98,7 +94,7 @@ struct Cell
 };
 
 //------------------------------------------------------------------------------
-//! \brief \return true when the two cells are the same square.
+//! \return true if the two cells are the same square.
 //------------------------------------------------------------------------------
 inline bool operator==(Cell const& c1, Cell const& c2)
 {
@@ -106,7 +102,7 @@ inline bool operator==(Cell const& c1, Cell const& c2)
 }
 
 //------------------------------------------------------------------------------
-//! \brief \return true when the two cells are different squares.
+//! \return true if the two cells are different squares.
 //------------------------------------------------------------------------------
 inline bool operator!=(Cell const& c1, Cell const& c2)
 {
@@ -114,7 +110,7 @@ inline bool operator!=(Cell const& c1, Cell const& c2)
 }
 
 //------------------------------------------------------------------------------
-//! \brief Write a cell as "[u, v]", which is what a failing unit test prints.
+//! \brief Write a cell as "[u, v]". Used in unit test output.
 //------------------------------------------------------------------------------
 inline std::ostream& operator<<(std::ostream& os, Cell const& cell)
 {
@@ -123,8 +119,7 @@ inline std::ostream& operator<<(std::ostream& os, Cell const& cell)
 }
 
 //------------------------------------------------------------------------------
-//! \brief Write a vector as "(x, y, z)", which is what a failing unit test
-//! prints.
+//! \brief Write a vector as "(x, y, z)". Used in unit test output.
 //------------------------------------------------------------------------------
 inline std::ostream& operator<<(std::ostream& os, Vector3f const& v)
 {
@@ -133,7 +128,7 @@ inline std::ostream& operator<<(std::ostream& os, Vector3f const& v)
 }
 
 //------------------------------------------------------------------------------
-//! \brief \return the sum of the two vectors, component by component.
+//! \return the sum of the two vectors, component by component.
 //------------------------------------------------------------------------------
 inline Vector3f operator+(Vector3f const& v1, Vector3f const& v2)
 {
@@ -141,7 +136,7 @@ inline Vector3f operator+(Vector3f const& v1, Vector3f const& v2)
 }
 
 //------------------------------------------------------------------------------
-//! \brief \return the vector going from \c v2 to \c v1.
+//! \return \c v1 minus \c v2.
 //------------------------------------------------------------------------------
 inline Vector3f operator-(Vector3f const& v1, Vector3f const& v2)
 {
@@ -149,7 +144,7 @@ inline Vector3f operator-(Vector3f const& v1, Vector3f const& v2)
 }
 
 //------------------------------------------------------------------------------
-//! \brief \return the vector stretched by \c scalar.
+//! \return \c v1 scaled by \c scalar.
 //------------------------------------------------------------------------------
 inline Vector3f operator*(Vector3f const& v1, float scalar)
 {
@@ -157,13 +152,11 @@ inline Vector3f operator*(Vector3f const& v1, float scalar)
 }
 
 //------------------------------------------------------------------------------
-//! \brief \return true when the two vectors have exactly the same three
-//! components.
+//! \return true if all three components are exactly equal.
 //!
-//! \note Exact equality on purpose: this answers "is it the very same
-//! position", as when checking that a translation changed nothing. Two
-//! positions worked out along different routes are never compared this way,
-//! and a distance under some tolerance is length(v1 - v2) instead.
+//! \note Uses exact equality on purpose. This checks "same position", for
+//! example after a translation. Do not use this to compare positions from
+//! different routes. Use length(v1 - v2) with a tolerance instead.
 //------------------------------------------------------------------------------
 #if defined(__GNUC__) || defined(__clang__)
 #    pragma GCC diagnostic push
@@ -178,7 +171,7 @@ inline bool operator==(Vector3f const& v1, Vector3f const& v2)
 #endif
 
 //------------------------------------------------------------------------------
-//! \brief \return true when the two vectors differ by at least one component.
+//! \return true when the two vectors differ by at least one component.
 //------------------------------------------------------------------------------
 inline bool operator!=(Vector3f const& v1, Vector3f const& v2)
 {
@@ -186,8 +179,8 @@ inline bool operator!=(Vector3f const& v1, Vector3f const& v2)
 }
 
 //------------------------------------------------------------------------------
-//! \brief \return the squared length of \c v. Comparing two of these compares
-//! two lengths without paying for a square root.
+//! \return the squared length of \c v.
+//! Compare two squared lengths to compare distances without sqrt.
 //------------------------------------------------------------------------------
 inline float lengthSquared(Vector3f const& v)
 {
@@ -195,7 +188,7 @@ inline float lengthSquared(Vector3f const& v)
 }
 
 //------------------------------------------------------------------------------
-//! \brief \return the length of \c v, in world units.
+//! \return the length of \c v, in world units.
 //------------------------------------------------------------------------------
 inline float length(Vector3f const& v)
 {

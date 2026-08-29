@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------------
 
 //! \file SimulationClock.hpp
-//! \brief Game calendar, derived from the tick counter.
+//! \brief Game calendar derived from the tick counter.
 
 #ifndef OPEN_GLASSBOX_SIMULATION_CLOCK_HPP
 #define OPEN_GLASSBOX_SIMULATION_CLOCK_HPP
@@ -16,15 +16,14 @@ namespace ogb
 {
 
 //==============================================================================
-//! \brief Game calendar: day, hour and minute, worked out from the tick
-//! counter.
+//! \brief Game calendar: day, hour, and minute from the tick counter.
 //!
-//! Ticks are raw simulation steps. This class turns them into a time of day, so
-//! a rule can say \c hour \c between \c 8 \c 18 instead of counting ticks.
+//! Ticks are raw simulation steps. This class converts them to time of day.
+//! Rules can write \c hour \c between \c 8 \c 18 instead of counting ticks.
 //!
-//! TimeConfig::ticksPerMinute sets the pace. With the default of twenty ticks
-//! per minute and twenty ticks per second of game time, one game second lasts
-//! one game minute and one day lasts twenty-four game minutes.
+//! TimeConfig::ticksPerMinute sets the pace. Default: 20 ticks per minute and
+//! 20 ticks per second of game time. One game second equals one game minute.
+//! One day lasts 24 game minutes.
 //!
 //! Days start at zero and never wrap.
 //!
@@ -41,13 +40,12 @@ class SimulationClock
 public:
 
     //--------------------------------------------------------------------------
-    //! \brief A clock at the very start of the first day, at the default pace.
+    //! \brief Clock at the start of day zero, default pace.
     //--------------------------------------------------------------------------
     SimulationClock() = default;
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] ticksPerMinute ticks in one game minute. Zero is read
-    //! as one: a minute has to take some time.
+    //! \param[in] ticksPerMinute ticks in one game minute. Zero is treated as 1.
     //--------------------------------------------------------------------------
     explicit SimulationClock(uint32_t ticksPerMinute)
         : m_ticksPerMinute(ticksPerMinute == 0u ? 1u : ticksPerMinute)
@@ -55,8 +53,7 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief Move the calendar on by one tick. Called once per tick by
-    //! World::update().
+    //! \brief Advance the calendar by one tick. Called once per tick by World::update().
     //--------------------------------------------------------------------------
     void tick()
     {
@@ -64,8 +61,8 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief Restore the tick counter. For loading a save.
-    //! \param[in] ticks the counter to restore.
+    //! \brief Restore the tick counter when loading a save.
+    //! \param[in] ticks tick count to restore.
     //--------------------------------------------------------------------------
     void setTicks(uint64_t ticks)
     {
@@ -74,9 +71,9 @@ public:
 
     //--------------------------------------------------------------------------
     //! \brief Set the date. Used at startup and when loading a save.
-    //! \param[in] day whole days gone by, counted from zero.
-    //! \param[in] hour hour of the day, in [0..23].
-    //! \param[in] minute minute of the hour, in [0..59].
+    //! \param[in] day days since start, from zero.
+    //! \param[in] hour hour in [0..23].
+    //! \param[in] minute minute in [0..59].
     //--------------------------------------------------------------------------
     void setTimeOfDay(uint32_t day, uint32_t hour, uint32_t minute)
     {
@@ -87,8 +84,7 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \return the ticks gone by since the beginning. The only state the
-    //! clock holds: everything else is worked out from it.
+    //! \return ticks since the start. All other fields derive from this.
     //--------------------------------------------------------------------------
     [[nodiscard]] uint64_t getTicks() const
     {
@@ -96,7 +92,7 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \return the ticks in one game minute. Never zero.
+    //! \return ticks in one game minute. Never zero.
     //--------------------------------------------------------------------------
     [[nodiscard]] uint32_t getTicksPerMinute() const
     {
@@ -104,12 +100,12 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief Change how fast the day goes by.
+    //! \brief Change how fast the day passes.
     //!
-    //! \note The tick counter is left alone, so the current date changes: at
-    //! twice the ticks per minute, the same counter is half as much game time.
+    //! \note The tick counter is unchanged. The current date changes:
+    //! twice the ticks per minute means half as much game time for the same ticks.
     //!
-    //! \param[in] value ticks in one game minute. Zero is read as one.
+    //! \param[in] value ticks in one game minute. Zero is treated as 1.
     //--------------------------------------------------------------------------
     void setTicksPerMinute(uint32_t value)
     {
@@ -117,7 +113,7 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \return the minute of the current hour, in [0..59].
+    //! \return minute of the current hour, in [0..59].
     //--------------------------------------------------------------------------
     [[nodiscard]] uint32_t getMinuteOfHour() const
     {
@@ -125,8 +121,8 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \return the hour of the current day, in [0..23]. This is what the
-    //! opening hours of a building are read against.
+    //! \return hour of the current day, in [0..23].
+    //! Used by Building OpeningHours.
     //--------------------------------------------------------------------------
     [[nodiscard]] uint32_t getHourOfDay() const
     {
@@ -134,7 +130,7 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \return the whole days gone by, counted from zero.
+    //! \return days since start, from zero.
     //--------------------------------------------------------------------------
     [[nodiscard]] uint32_t getDay() const
     {
@@ -142,15 +138,14 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief Is it inside a window of the day? This is what \c hour \c between
-    //! asks.
+    //! \brief Check if the current hour is inside a window.
+    //! Used by \c hour \c between Rules.
     //!
-    //! \param[in] from first hour of the window, included.
-    //! \param[in] to first hour past the window, excluded. When it is the
-    //! smaller of the two, the window wraps around midnight, so
-    //! \c isHourBetween(22, 6) means night. When the two are equal the window
-    //! holds no hour at all and the answer is always false.
-    //! \return true while the current hour falls inside the window.
+    //! \param[in] from first hour included.
+    //! \param[in] to first hour excluded. If \c to < \c from, the window wraps
+    //! midnight (e.g. \c isHourBetween(22, 6) is night).
+    //! If \c from == \c to, the window is empty and the result is always false.
+    //! \return true if the current hour is inside the window.
     //--------------------------------------------------------------------------
     [[nodiscard]] bool isHourBetween(uint32_t from, uint32_t to) const
     {
@@ -164,8 +159,7 @@ public:
 
 private:
 
-    //! \brief Ticks gone by since the beginning. Wide enough that it will not
-    //! wrap in any game anybody plays.
+    //! \brief Ticks since start. Large enough to avoid wrap in normal play.
     uint64_t m_ticks = 0u;
     //! \brief Ticks in one game minute. Never zero.
     uint32_t m_ticksPerMinute = 20u;

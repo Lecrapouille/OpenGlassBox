@@ -217,7 +217,7 @@ The default router, `Dijkstra`, does two things a textbook shortest path does no
 
 The first is the cost: an edge costs its travel time under the current traffic, not its length. A short road carrying two hundred agents costs more than a long empty one.
 
-The second is stranger. **There is no goal.** An agent does not know which building it is going to; it knows the *name* of what it is looking for. `Dijkstra::findRoute` walks the network outwards from the crossroads the agent stands at and stops at the first building that answers to that name **and has room for the load**, which `Unit::accepts` decides. A building standing along a street is kept as a candidate rather than accepted at once, because a crossroads one hop away may hold a cheaper one.
+The second is stranger. **There is no goal.** An agent does not know which building it is going to; it knows the *name* of what it is looking for. `Dijkstra::findRoute` walks the network outwards from the crossroads the agent stands at and stops at the first building that answers to that name **and has room for the load**, which `Building::accepts` decides. A building standing along a street is kept as a candidate rather than accepted at once, because a crossroads one hop away may hold a cheaper one.
 
 Having no goal is also why there is no A\* here: an A\* estimate needs something to aim at. Searching outwards until the predicate is satisfied is already the best that can be done without a target, since the search stops as soon as it has expanded everything cheaper than its answer, and nothing cheaper can be hiding further out.
 
@@ -239,7 +239,7 @@ Two conditions make that ratio mean anything, and both are easy to break.
 
 The first is that the two sums must run over the **same agents**. An agent that is wandering has no remaining cost to contribute, so its alternative must be left out too, and one whose reroute reaches nothing has no alternative, so its remaining cost must be left out in turn. Summing over two different populations measures the difference between them rather than the distance to equilibrium.
 
-The second is that an agent must not be **measured against itself**. It holds a place at its destination, and `Unit::accepts` counts that place, so a search made on its behalf without lifting its own claim finds its destination full and answers with a dearer building. Every agent then looks as though it would gain by rerouting to somewhere it is already going, which shows up as SPTT larger than TSTT. That is why the measurement goes through `Agent::computeRerouteCost`, which lifts the claim, asks, and puts it back, rather than calling `IRouter::computeShortestPathCost` directly.
+The second is that an agent must not be **measured against itself**. It holds a place at its destination, and `Building::accepts` counts that place, so a search made on its behalf without lifting its own claim finds its destination full and answers with a dearer building. Every agent then looks as though it would gain by rerouting to somewhere it is already going, which shows up as SPTT larger than TSTT. That is why the measurement goes through `Agent::computeRerouteCost`, which lifts the claim, asks, and puts it back, rather than calling `IRouter::computeShortestPathCost` directly.
 
 With both respected, SPTT stays below TSTT except in one genuine case: an agent whose destination filled up while it was driving, whose next best building really is farther. The panel says so rather than showing a negative gap.
 
@@ -313,9 +313,9 @@ If the continuous BPR curve proves hard to tune, the official SimCity (2013) pat
 
 The counterpart of all-or-nothing on the destination side, and the one place it did have to be fixed.
 
-`Unit::accepts` used to ask a boolean question: is there any room left. A shop missing one crate and a shop missing twenty both answered yes, so the nearer one won every time. Worse, twenty agents dispatched on the same tick all saw the same single free slot and were all sent to claim it; nineteen arrived to find it taken.
+`Building::accepts` used to ask a boolean question: is there any room left. A shop missing one crate and a shop missing twenty both answered yes, so the nearer one won every time. Worse, twenty agents dispatched on the same tick all saw the same single free slot and were all sent to claim it; nineteen arrived to find it taken.
 
-A `Unit` therefore counts the agents currently travelling towards it, and `accepts` tests the room against the stock **plus** those already on their way. The count is maintained through a single point in `Agent`, so that an agent releases its claim whether it delivers, gives up, is destroyed, or merely recomputes its itinerary and picks somewhere else. An agent that loses its route and starts wandering releases immediately rather than holding a slot it may never use.
+A `Building` therefore counts the agents currently travelling towards it, and `accepts` tests the room against the stock **plus** those already on their way. The count is maintained through a single point in `Agent`, so that an agent releases its claim whether it delivers, gives up, is destroyed, or merely recomputes its itinerary and picks somewhere else. An agent that loses its route and starts wandering releases immediately rather than holding a slot it may never use.
 
 The cost is one integer per building and one comparison per acceptance test. What it buys is that the twentieth agent sees a shop that is already spoken for and looks elsewhere, which is the behaviour the score of the [economy documentation](economy.md#choosing-a-destination) was meant to produce, obtained without widening the search.
 

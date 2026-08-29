@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------------
 
 //! \file Simulation.hpp
-//! \brief The way in: ruleset, cities, time control.
+//! \brief Entry point: ruleset, cities, time control.
 
 #ifndef OPEN_GLASSBOX_SIMULATION_HPP
 #define OPEN_GLASSBOX_SIMULATION_HPP
@@ -21,31 +21,26 @@ namespace ogb
 {
 
 //==============================================================================
-//! \brief The whole game: the ruleset, the world it applies to, the cities
-//! founded in it, and the clock driving all of them.
+//! \brief The full game: ruleset, world, cities, and clock.
 //!
-//! This is where a program starts, and it is meant to be the only class an
-//! application has to reach for. Everything the world holds is reachable from
-//! here: layers, cities, the grid, the calendar. The World itself stays inside.
+//! Start here. This is the main class for applications. Reach layers, cities,
+//! the grid, and the calendar from here. The World stays internal.
 //!
-//! A Simulation holds the ruleset and the World, in that order, so the ruleset
-//! outlives everything referring to it: a building keeps a reference to the
-//! recipe it was built from, and that recipe lives in the ruleset.
+//! The ruleset is declared before the World. The ruleset outlives all
+//! references to it. A building holds a reference to its recipe. The recipe
+//! lives in the ruleset.
 //!
-//! It also turns real time into game time. update() is handed the seconds
-//! elapsed since the previous frame; it scales them by getTimeScale(),
-//! accumulates them, and runs as many fixed ticks as fit. The simulation
-//! therefore advances at the same rate whatever the frame rate, and a slow
-//! machine drops behind rather than simulating differently.
+//! update() turns real time into game time. Pass seconds since the last frame.
+//! It scales time by getTimeScale(), accumulates it, and runs fixed ticks.
+//! The simulation runs at the same rate at any frame rate. A slow machine
+//! falls behind. It does not simulate differently.
 //!
-//! Cities are not connected to each other yet: an agent never leaves the city
-//! it was sent out from. What they do share is the grid, and therefore the
-//! layers of the environment.
+//! Cities are not connected yet. An agent never leaves its home city. Cities
+//! share the grid and the environment layers.
 //!
-//! Anything that changes the game goes through here, and anything that only
-//! reads may go through the object that holds it. So a road is built with
-//! addRoad() but read through getCity(), and a script is loaded with
-//! loadScriptFile() but read through getRuleset().
+//! All writes go through Simulation. Reads may use nested objects. Build a road
+//! with addRoad(). Read cities with getCity(). Load a script with
+//! loadScriptFile(). Read the ruleset with getRuleset().
 //!
 //! Example:
 //! \code
@@ -57,7 +52,7 @@ namespace ogb
 //! ogb::installDijkstraRouter(paris, simulation.getConfig());
 //! simulation.setPaused(false);
 //!
-//! // A game loop: real seconds in, fixed ticks out.
+//! // Game loop: real seconds in, fixed ticks out.
 //! while (running)
 //! {
 //!     simulation.update(secondsSinceLastFrame);
@@ -72,43 +67,41 @@ public:
     //! \brief Runtime settings. See ogb::Config.
     using Config = ogb::Config;
 
-    //! \brief Callbacks for cities appearing, going away, and roads crossing a
-    //! border. What happens inside one city is on City::Listener.
+    //! \brief Callbacks when cities appear, disappear, or roads cross a border.
+    //! City events use City::Listener.
     using Listener = SimulationListener;
 
     //==========================================================================
-    //! \brief How far the traffic is from equilibrium, measured over a sample
-    //! of the agents.
+    //! \brief How far traffic is from equilibrium. Measured on a sample of
+    //! agents.
     //!
-    //! The three numbers are worked out together and memoized until the next
-    //! tick, so a panel may read them on every frame.
+    //! Compute all three values together and cache them until the next tick.
+    //! A panel can read them every frame.
     //==========================================================================
     struct TrafficMetrics
     {
-        //! \brief The relative gap of the current assignment against the
-        //! cheapest itineraries at the current travel times:
+        //! \brief Relative gap between the current assignment and the cheapest
+        //! routes at current travel times:
         //!
         //!     (totalTravelTime - shortestPathTime) / totalTravelTime
         //!
-        //! Zero means every agent is already on a cheapest itinerary, which is
-        //! Wardrop equilibrium. A large value means the traffic is still
-        //! settling. Zero too when nobody is on the road. Borrowed from the
-        //! Relgap of the method of successive averages of CiudadSim.
+        //! Zero means every agent uses a cheapest route. This is Wardrop
+        //! equilibrium. A large value means traffic is still settling. Zero
+        //! when nobody is on the road. From Relgap in CiudadSim successive
+        //! averages.
         float relativeGap = 0.0f;
-        //! \brief Time the sampled agents will actually spend travelling
-        //! (TSTT).
+        //! \brief Total time sampled agents spend travelling (TSTT).
         float totalTravelTime = 0.0f;
-        //! \brief Time the same agents would spend on the cheapest itineraries
-        //! (SPTT).
+        //! \brief Time the same agents would spend on cheapest routes (SPTT).
         float shortestPathTime = 0.0f;
     };
 
 public:
 
     // -------------------------------------------------------------------------
-    //! \brief A game with an empty ruleset and no city yet.
-    //! \param[in] config the runtime settings, copied and then shared with
-    //! every city. Defaults to the values of ogb::Config.
+    //! \brief Create a game with an empty ruleset and no city.
+    //! \param[in] config Runtime settings. Copied and shared with every city.
+    //! Defaults to ogb::Config.
     // -------------------------------------------------------------------------
     explicit Simulation(Config const& config = {});
 
@@ -118,13 +111,12 @@ public:
     Simulation& operator=(Simulation&&) = delete;
 
     // -------------------------------------------------------------------------
-    //! \brief Register the callbacks. One listener at a time: a second call
-    //! replaces the first.
+    //! \brief Register callbacks. Only one listener at a time. A new call
+    //! replaces the old one.
     //!
-    //! Register before founding the first city, or the callback for it will be
-    //! missed.
+    //! Register before you add the first city. Otherwise you miss its callback.
     //!
-    //! \param[in] listener kept by address, has to outlive the Simulation.
+    //! \param[in] listener Stored by address. Must outlive the Simulation.
     // -------------------------------------------------------------------------
     void setListener(Listener& listener);
 
@@ -134,33 +126,33 @@ public:
     //--------------------------------------------------------------------------
 
     // -------------------------------------------------------------------------
-    //! \brief Load a script from a file, replacing what was loaded before.
+    //! \brief Load a script from a file. Replaces the previous ruleset.
     //!
-    //! On failure the previous ruleset is kept, so a bad reload leaves a
-    //! running game alone rather than emptying it.
+    //! On failure, keep the previous ruleset. A bad reload does not empty a
+    //! running game.
     //!
-    //! \param[in] filename the script to read. The language is picked from the
+    //! \param[in] filename Script file to read. Pick the language from the
     //! extension.
-    //! \return true on success. See getScriptErrors() for what went wrong.
+    //! \return true on success. See getScriptErrors() for errors.
     //!
-    //! \note The cities already founded keep references into the previous
-    //! ruleset. Load the script before founding anything.
+    //! \note Existing cities hold references into the old ruleset. Load the
+    //! script before you add cities.
     // -------------------------------------------------------------------------
     bool loadScriptFile(std::string const& filename);
 
     // -------------------------------------------------------------------------
-    //! \brief Load a script held in memory. Used by the tests and by an editor
-    //! that has the text but no file.
-    //! \param[in] source the script itself.
-    //! \param[in] name what the errors should call it, there being no path.
+    //! \brief Load a script from memory. Used by tests and editors without a
+    //! file.
+    //! \param[in] source The script text.
+    //! \param[in] name Name for error messages. No file path exists.
     //! \return true on success.
     // -------------------------------------------------------------------------
     bool loadScriptString(std::string const& source,
                           std::string const& name = "<string>");
 
     // -------------------------------------------------------------------------
-    //! \brief \return everything found wrong by the last load, in the order it
-    //! was found. Empty after a load that went well.
+    //! \return All errors from the last load, in order. Empty after
+    //! success.
     // -------------------------------------------------------------------------
     [[nodiscard]] std::vector<ParseError> const& getScriptErrors() const
     {
@@ -168,8 +160,7 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \return the errors of the last load, one per line, ready to be
-    //! shown.
+    //! \return Last load errors, one per line, ready to display.
     // -------------------------------------------------------------------------
     std::string formatScriptErrors() const
     {
@@ -177,8 +168,8 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \return what the script declared: the recipes a city is built
-    //! from. Read only, since the cities hold references into it.
+    //! \return What the script declared: recipes for building cities.
+    //! Read only. Cities hold references into it.
     // -------------------------------------------------------------------------
     [[nodiscard]] Ruleset const& getRuleset() const
     {
@@ -193,27 +184,25 @@ public:
     //--------------------------------------------------------------------------
 
     // -------------------------------------------------------------------------
-    //! \brief Let the game catch up with real time.
+    //! \brief Advance the game to match real time.
     //!
-    //! The elapsed time is scaled by getTimeScale(), added to what was left
-    //! over from the previous call, and spent one fixed tick at a time. What
-    //! does not fill a tick is kept for next time, so no game time is lost or
-    //! invented. Does nothing while paused.
+    //! Scale elapsed time by getTimeScale(). Add leftover time from the last
+    //! call. Spend time one fixed tick at a time. Keep unused time for the next
+    //! call. Do not lose or invent game time. Does nothing while paused.
     //!
-    //! \param[in] deltaTime seconds elapsed since the previous call.
+    //! \param[in] deltaTime Seconds since the last call.
     // -------------------------------------------------------------------------
     void update(float deltaTime); // TODO: use std::chrono::ms
 
     // -------------------------------------------------------------------------
-    //! \brief Run exactly one tick, ignoring the leftover time, the pause and
-    //! the time scale. This is what the step button of the debugger calls.
+    //! \brief Run one tick. Ignore leftover time, pause, and time scale. The
+    //! debugger step button calls this.
     // -------------------------------------------------------------------------
     void stepOneTick();
 
     // -------------------------------------------------------------------------
-    //! \brief \return how much game time passes per second of wall time. One is
-    //! real time, two is twice as fast, zero freezes the game without pausing
-    //! it.
+    //! \return Game time per second of wall time. One is real time. Two
+    //! is twice as fast. Zero freezes time without pausing.
     // -------------------------------------------------------------------------
     [[nodiscard]] float getTimeScale() const
     {
@@ -221,8 +210,8 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \param[in] scale the new multiplier. Negative values are read as
-    //! zero: time does not run backwards.
+    //! \param[in] scale New time multiplier. Treat negative values as
+    //! zero. Time does not run backwards.
     // -------------------------------------------------------------------------
     void setTimeScale(float scale)
     {
@@ -230,11 +219,10 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \return true while update() accumulates no time and runs no tick.
-    //! The leftover time is kept, so unpausing resumes rather than restarts.
+    //! \return true while update() skips time and ticks.
+    //! Keep leftover time. Unpause resumes instead of restarting.
     //!
-    //! \note A new Simulation starts paused, so an application can build its
-    //! cities before anything moves.
+    //! \note A new Simulation starts paused. Build cities before anything moves.
     // -------------------------------------------------------------------------
     [[nodiscard]] bool isPaused() const
     {
@@ -251,9 +239,8 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \return the game calendar: day, hour and minute, and the tick
-    //! count they come from. Read only: use setTicks() or setTimeOfDay() to
-    //! move it.
+    //! \return Game calendar: day, hour, minute, and tick count. Read
+    //! only. Use setTicks() or setTimeOfDay() to change it.
     // -------------------------------------------------------------------------
     [[nodiscard]] SimulationClock const& getClock() const
     {
@@ -261,8 +248,8 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief Restore the tick counter. For loading a save.
-    //! \param[in] ticks the counter to restore.
+    //! \brief Restore the tick counter. Use when loading a save.
+    //! \param[in] ticks Tick counter to restore.
     // -------------------------------------------------------------------------
     void setTicks(uint64_t ticks)
     {
@@ -271,9 +258,9 @@ public:
 
     // -------------------------------------------------------------------------
     //! \brief Set the date. Called at construction with TimeConfig::startHour.
-    //! \param[in] day whole days gone by, counted from zero.
-    //! \param[in] hour hour of the day, in [0..23].
-    //! \param[in] minute minute of the hour, in [0..59].
+    //! \param[in] day Days since zero.
+    //! \param[in] hour Hour of the day, in [0..23].
+    //! \param[in] minute Minute of the hour, in [0..59].
     // -------------------------------------------------------------------------
     void setTimeOfDay(uint32_t day, uint32_t hour, uint32_t minute)
     {
@@ -288,7 +275,7 @@ public:
     //--------------------------------------------------------------------------
 
     // -------------------------------------------------------------------------
-    //! \brief \return the runtime settings, shared with every city.
+    //! \return Runtime settings, shared with every city.
     // -------------------------------------------------------------------------
     [[nodiscard]] Config const& getConfig() const
     {
@@ -296,13 +283,12 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief Replace the runtime settings while the game runs. Read the
-    //! current ones, change what you need, hand them back.
+    //! \brief Replace runtime settings while the game runs. Read current
+    //! settings, change what you need, and pass them back.
     //!
-    //! \param[in] config the new settings, copied.
-    //! \note GridConfig::cellSize is read when a city is created and when it
-    //! moves. Changing it under a city that already exists leaves its cells
-    //! where they were.
+    //! \param[in] config New settings. Copied.
+    //! \note GridConfig::cellSize applies when a city is created or moved.
+    //! Changing it under an existing city does not move its cells.
     // -------------------------------------------------------------------------
     void setConfig(Config const& config)
     {
@@ -317,21 +303,21 @@ public:
     //--------------------------------------------------------------------------
 
     // -------------------------------------------------------------------------
-    //! \brief Found a city spanning GridConfig::defaultCitySizeU by
-    //! GridConfig::defaultCitySizeV cells. A city of the same name is replaced.
-    //! \param[in] name unique name of the city.
-    //! \param[in] position world position of the top-left corner of its cells.
-    //! \return the new city.
+    //! \brief Add a city with default size GridConfig::defaultCitySizeU by
+    //! GridConfig::defaultCitySizeV cells. Replace a city with the same name.
+    //! \param[in] name Unique city name.
+    //! \param[in] position World position of the top-left cell corner.
+    //! \return The new city.
     // -------------------------------------------------------------------------
     City& addCity(std::string const& name, Vector3f const& position);
 
     // -------------------------------------------------------------------------
-    //! \brief Found a city spanning a given number of cells.
-    //! \param[in] name unique name of the city.
-    //! \param[in] position world position of the top-left corner of its cells.
-    //! \param[in] sizeU how many cells it owns along U.
-    //! \param[in] sizeV how many cells it owns along V.
-    //! \return the new city.
+    //! \brief Add a city with a given cell size.
+    //! \param[in] name Unique city name.
+    //! \param[in] position World position of the top-left cell corner.
+    //! \param[in] sizeU Cell count along U.
+    //! \param[in] sizeV Cell count along V.
+    //! \return The new city.
     // -------------------------------------------------------------------------
     City& addCity(std::string const& name,
                   Vector3f const& position,
@@ -339,38 +325,37 @@ public:
                   uint32_t sizeV);
 
     // -------------------------------------------------------------------------
-    //! \brief Destroy a city and everything it holds. The layers stay, being
-    //! shared with the other cities.
-    //! \param[in] name name of the city.
-    //! \return false when no city goes by that name.
+    //! \brief Remove a city and everything it holds. Keep shared layers.
+    //! \param[in] name City name.
+    //! \return false when no city has that name.
     // -------------------------------------------------------------------------
     bool removeCity(std::string const& name);
 
     // -------------------------------------------------------------------------
-    //! \brief Look a city up by name.
-    //! \param[in] name name of the city.
-    //! \return the city.
-    //! \throw std::out_of_range when no city goes by that name.
+    //! \brief Find a city by name.
+    //! \param[in] name City name.
+    //! \return The city.
+    //! \throw std::out_of_range when the name is missing.
     // -------------------------------------------------------------------------
     [[nodiscard]] City& getCity(std::string const& name);
 
     // -------------------------------------------------------------------------
-    //! \brief Look a city up by name, without throwing.
-    //! \param[in] name name of the city.
-    //! \return the city, or nullptr when no city goes by that name.
+    //! \brief Find a city by name. Do not throw.
+    //! \param[in] name City name.
+    //! \return The city, or nullptr when the name is missing.
     // -------------------------------------------------------------------------
     [[nodiscard]] City* findCity(std::string const& name);
 
     // -------------------------------------------------------------------------
-    //! \brief Which city owns a place. The editor asks before building.
-    //! \param[in] position the place, in world coordinates.
-    //! \return the city whose cells hold it, or nullptr when it falls outside
-    //! every city.
+    //! \brief Find which city owns a position. The editor uses this before
+    //! building.
+    //! \param[in] position Position in world coordinates.
+    //! \return The city that contains it, or nullptr outside all cities.
     // -------------------------------------------------------------------------
     [[nodiscard]] City* findCityAt(Vector3f const& position);
 
     // -------------------------------------------------------------------------
-    //! \brief \return every city, by name.
+    //! \return All cities, by name.
     // -------------------------------------------------------------------------
     [[nodiscard]] Cities const& getCities() const
     {
@@ -385,15 +370,15 @@ public:
     //--------------------------------------------------------------------------
 
     // -------------------------------------------------------------------------
-    //! \brief Look a layer up by name.
-    //! \param[in] name name of the layer, such as "Water".
-    //! \return the layer, or nullptr when no city ever asked for it. Add one
-    //! through City::addLayer().
+    //! \brief Find a layer by name.
+    //! \param[in] name Layer name, such as "Water".
+    //! \return The layer, or nullptr if no city created it. Add one with
+    //! City::addLayer().
     // -------------------------------------------------------------------------
     [[nodiscard]] Layer* findLayer(std::string const& name);
 
     // -------------------------------------------------------------------------
-    //! \brief \return every layer, by name. Shared by every city.
+    //! \return All layers, by name. Shared by every city.
     // -------------------------------------------------------------------------
     [[nodiscard]] Layers const& getLayers() const
     {
@@ -401,37 +386,38 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief Which cell a place falls in.
+    //! \brief Find which cell contains a position.
     //!
-    //! Nothing is clamped: coordinates are signed, the grid has no bounds, and
-    //! every place falls in a cell even outside every city. City::worldToCell()
-    //! clamps to the cells of one city instead.
+    //! Do not clamp. Coordinates are signed. The grid has no bounds. Every
+    //! position maps to a cell, even outside all cities. City::worldToCell()
+    //! clamps to one city instead.
     //!
-    //! \param[in] position the place, in world coordinates.
-    //! \return the cell.
+    //! \param[in] position Position in world coordinates.
+    //! \return The cell.
     // -------------------------------------------------------------------------
     Cell worldToCell(Vector3f const& position) const;
 
     // -------------------------------------------------------------------------
-    //! \brief Where a cell sits in the world.
-    //! \param[in] cell the cell.
-    //! \return the world position of its top-left corner.
+    //! \brief Get the world position of a cell.
+    //! \param[in] cell The cell.
+    //! \return World position of its top-left corner.
     // -------------------------------------------------------------------------
     Vector3f cellToWorld(Cell cell) const;
 
     // -------------------------------------------------------------------------
-    //! \brief Build a road from one place to another, cut at every city border.
+    //! \brief Build a road from one point to another. Cut it at every city
+    //! border.
     //!
-    //! The road is clipped to the cells of each city. A road crossing a border
-    //! becomes two segments, one per city. A road outside every city goes
-    //! entirely to the city that asked. Each neighbour is asked through the
-    //! Listener before a segment is built inside it.
+    //! Clip the road to each city's cells. A road across a border becomes two
+    //! segments, one per city. A road outside all cities goes entirely to the
+    //! city that requested it. Ask each neighbor through the Listener before
+    //! you build inside it.
     //!
-    //! \param[in] owner the city that builds the road.
-    //! \param[in] pathType name of the network, such as "Road".
-    //! \param[in] segmentType recipe of the segment.
-    //! \param[in] from, to endpoints of the road, in world coordinates.
-    //! \return false when a neighbour refused. Nothing is built at all.
+    //! \param[in] owner City that builds the road.
+    //! \param[in] pathType Network name, such as "Road".
+    //! \param[in] segmentType Segment recipe.
+    //! \param[in] from, to Road endpoints in world coordinates.
+    //! \return false when a neighbor refuses. Build nothing.
     // -------------------------------------------------------------------------
     bool addRoad(City& owner,
                  std::string const& pathType,
@@ -442,48 +428,46 @@ public:
     //! @}
 
     // -------------------------------------------------------------------------
-    //! \brief How far the traffic is from equilibrium.
+    //! \brief Measure how far traffic is from equilibrium.
     //!
-    //! This costs a whole graph search per agent looked at, so it is a
-    //! diagnostic rather than something the simulation itself calls. Two things
-    //! keep it affordable when a panel reads it on every frame: the answer is
-    //! memoized until the next tick, and at most
-    //! TrafficConfig::relativeGapSamples agents are looked at.
+    //! This runs a full graph search per sampled agent. Use it as a diagnostic,
+    //! not inside the simulation loop. Two things keep it fast when a panel reads
+    //! it every frame: cache the result until the next tick, and sample at most
+    //! TrafficConfig::relativeGapSamples agents.
     //!
-    //! \return the three numbers, all zero when nobody is on the road.
+    //! \return All three values. All zero when nobody is on the road.
     // -------------------------------------------------------------------------
     [[nodiscard]] TrafficMetrics getTrafficMetrics() const;
 
 private:
 
     // -------------------------------------------------------------------------
-    //! \brief Work the traffic metrics out again, unless they were already
-    //! computed during this tick.
+    //! \brief Recompute traffic metrics unless this tick already did.
     // -------------------------------------------------------------------------
     void updateTrafficMetrics() const;
 
 private:
 
-    //! \brief The ruleset. Declared before the world on purpose: destruction
-    //! runs in reverse, so the world goes first and its buildings stop
-    //! referring to these recipes before they are destroyed.
+    //! \brief The ruleset. Declared before the world on purpose. Destruction
+    //! runs in reverse. The world is destroyed first. Buildings stop referring
+    //! to these recipes before the ruleset is destroyed.
     Ruleset m_ruleset;
-    //! \brief Game calendar, advanced once per tick.
+    //! \brief Game calendar. Advance once per tick.
     SimulationClock m_clock;
-    //! \brief The shared grid, the layers and the cities.
+    //! \brief Shared grid, layers, and cities.
     World m_world;
-    //! \brief Game time accumulated but not yet spent on a tick. This is what
-    //! keeps the rate of the simulation independent of the frame rate.
+    //! \brief Game time not yet spent on a tick. Keeps simulation rate
+    //! independent of frame rate.
     float m_time = 0.0f;
-    //! \brief How much game time passes per second of wall time.
+    //! \brief Game time per second of wall time.
     float m_timeScale = 1.0f;
-    //! \brief While true, update() does nothing at all.
+    //! \brief When true, update() does nothing.
     bool m_paused = true;
-    //! \brief Last traffic metrics. Mutable because the memoization happens
-    //! inside a const method.
+    //! \brief Last traffic metrics. Mutable because caching happens in a const
+    //! method.
     mutable TrafficMetrics m_trafficMetrics;
-    //! \brief Tick the metrics above were computed at. The starting value is a
-    //! tick no run ever reaches, so the first call always computes.
+    //! \brief Tick when the metrics above were computed. Start with a tick no
+    //! run reaches, so the first call always computes.
     mutable uint64_t m_trafficMetricsTick =
         std::numeric_limits<uint64_t>::max();
 };

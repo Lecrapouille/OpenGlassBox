@@ -34,7 +34,7 @@ static constexpr float MIN_CELL_PIXELS = 3.0f;
 //! are made to cover more cells each, so that the cost of drawing a layer
 //! follows the size of the canvas rather than the size of the city.
 static constexpr uint64_t MAX_MAP_SQUARES = 20000u;
-//! \brief Radius, in pixels, of a Node and of a Unit at zoom one.
+//! \brief Radius, in pixels, of a Node and of a Building at zoom one.
 static constexpr float NODE_RADIUS = 4.0f;
 static constexpr float UNIT_RADIUS = 7.0f;
 static constexpr float AGENT_RADIUS = 3.5f;
@@ -180,7 +180,7 @@ void CityViewer::draw(Simulation& simulation,
         if (state.showZones)
             drawZones(city);
         drawPaths(city, state);
-        drawUnits(city, state);
+        drawBuildings(city, state);
         drawAgents(city, state);
     }
 
@@ -377,21 +377,21 @@ Node* CityViewer::pickNode(City& city, ImVec2 const& world, float pixels) const
 }
 
 // ----------------------------------------------------------------------------
-Unit* CityViewer::pickUnit(City& city, ImVec2 const& world, float pixels) const
+Building* CityViewer::pickBuilding(City& city, ImVec2 const& world, float pixels) const
 {
     float const tolerance = pixels / std::max(1e-3f, m_zoom);
     float best = tolerance * tolerance;
-    Unit* found = nullptr;
+    Building* found = nullptr;
 
-    for (auto const& unit : city.getUnits())
+    for (auto const& building: city.getBuildings())
     {
-        float const dx = unit->getPosition().x - world.x;
-        float const dy = unit->getPosition().y - world.y;
+        float const dx = building->getPosition().x - world.x;
+        float const dy = building->getPosition().y - world.y;
         float const distance = dx * dx + dy * dy;
         if (distance <= best)
         {
             best = distance;
-            found = unit.get();
+            found = building.get();
         }
     }
 
@@ -450,15 +450,15 @@ game::Selection CityViewer::pickAt(Simulation& simulation,
     {
         City& city = *it.second;
 
-        if (state.showUnits)
+        if (state.showBuildings)
         {
-            for (auto const& unit : city.getUnits())
+            for (auto const& building: city.getBuildings())
             {
                 game::Selection candidate;
-                candidate.kind = game::Selection::Kind::Unit;
+                candidate.kind = game::Selection::Kind::Building;
                 candidate.city = city.getName();
-                candidate.unit = unit.get();
-                consider(worldToScreen(unit->getPosition()), candidate);
+                candidate.building = building.get();
+                consider(worldToScreen(building->getPosition()), candidate);
             }
         }
 
@@ -850,27 +850,27 @@ void CityViewer::drawPaths(City& city, game::DebugState const& state)
 }
 
 // ----------------------------------------------------------------------------
-void CityViewer::drawUnits(City& city, game::DebugState const& state)
+void CityViewer::drawBuildings(City& city, game::DebugState const& state)
 {
-    if (!state.showUnits)
+    if (!state.showBuildings)
         return;
 
     m_splitter.SetCurrentChannel(m_draw_list, CHANNEL_UNITS);
 
     bool const labels = state.showLabels && (m_zoom > LABEL_ZOOM_THRESHOLD);
 
-    for (auto const& unit : city.getUnits())
+    for (auto const& building: city.getBuildings())
     {
-        ImVec2 const position = worldToScreen(unit->getPosition());
-        ImU32 const color = theme::fromScript(unit->getColor());
+        ImVec2 const position = worldToScreen(building->getPosition());
+        ImU32 const color = theme::fromScript(building->getColor());
 
         // The driveway: a building stands on its own cell but reaches the
         // network through a Segment, and that link is what makes it part of the
         // city rather than a house in a field.
-        Segment const* const segment = unit->getSegment();
+        Segment const* const segment = building->getSegment();
         if ((segment != nullptr) && state.showPaths)
         {
-            Vector3f const anchor = segment->getPositionAt(unit->getSegmentOffset());
+            Vector3f const anchor = segment->getPositionAt(building->getSegmentOffset());
             ImVec2 const onRoad = worldToScreen(anchor);
             float const dx = onRoad.x - position.x;
             float const dy = onRoad.y - position.y;
@@ -878,12 +878,12 @@ void CityViewer::drawUnits(City& city, game::DebugState const& state)
             {
                 m_draw_list->AddLine(position,
                                      onRoad,
-                                     theme::fromScript(unit->getColor(), 0.45f),
+                                     theme::fromScript(building->getColor(), 0.45f),
                                      1.5f);
             }
         }
 
-        // A square, so that a Unit is never confused with a Node or an Agent.
+        // A square, so that a Building is never confused with a Node or an Agent.
         m_draw_list->AddRectFilled(
             ImVec2(position.x - UNIT_RADIUS, position.y - UNIT_RADIUS),
             ImVec2(position.x + UNIT_RADIUS, position.y + UNIT_RADIUS),
@@ -902,7 +902,7 @@ void CityViewer::drawUnits(City& city, game::DebugState const& state)
             m_draw_list->AddText(
                 ImVec2(position.x + UNIT_RADIUS + 3.0f, position.y - 7.0f),
                 IM_COL32(220, 225, 235, 220),
-                unit->getTypeName().c_str());
+                building->getTypeName().c_str());
         }
     }
 }
@@ -975,11 +975,11 @@ void CityViewer::drawInspectHover(Simulation& simulation,
             m_draw_list->AddLine(a, b, highlight, 6.0f);
             break;
         }
-        case game::Selection::Kind::Unit:
+        case game::Selection::Kind::Building:
         {
-            if (hover.unit == nullptr)
+            if (hover.building == nullptr)
                 break;
-            m_draw_list->AddCircle(worldToScreen(hover.unit->getPosition()),
+            m_draw_list->AddCircle(worldToScreen(hover.building->getPosition()),
                                    UNIT_RADIUS + 8.0f,
                                    highlight,
                                    0,
@@ -1044,21 +1044,21 @@ void CityViewer::drawSelectionOverlay(Simulation& simulation,
 
     switch (selection.kind)
     {
-        case game::Selection::Kind::Unit:
+        case game::Selection::Kind::Building:
         {
-            if (selection.unit == nullptr)
+            if (selection.building == nullptr)
                 break;
 
-            ImVec2 const position = worldToScreen(selection.unit->getPosition());
+            ImVec2 const position = worldToScreen(selection.building->getPosition());
             m_draw_list->AddCircle(
                 position, UNIT_RADIUS + 6.0f, highlight, 0, 2.0f);
 
             if (state.showSelectionRadius)
             {
-                // Materialize the disc the rules of this Unit read and write on
+                // Materialize the disc the rules of this Building read and write on
                 // the layers. Seeing it is the quickest way to understand why a
-                // Unit does not reach the resource next door.
-                float const radius = float(selection.unit->getLayerRadius()) *
+                // Building does not reach the resource next door.
+                float const radius = float(selection.building->getLayerRadius()) *
                                      city.getCellSize() * m_zoom;
                 if (radius > 1.0f)
                 {
@@ -1113,13 +1113,13 @@ void CityViewer::drawSelectionOverlay(Simulation& simulation,
             }
             else
             {
-                for (auto const& unit : city.getUnits())
+                for (auto const& building: city.getBuildings())
                 {
-                    if (unit->getTypeName() != agent->getTarget())
+                    if (building->getTypeName() != agent->getTarget())
                         continue;
 
                     m_draw_list->AddLine(position,
-                                         worldToScreen(unit->getPosition()),
+                                         worldToScreen(building->getPosition()),
                                          theme::fromScript(0x56AADE, 0.45f),
                                          1.5f);
                 }
@@ -1204,7 +1204,7 @@ void CityViewer::drawDisplayToggles(game::DebugState& state) const
     std::array<Toggle, 7> const toggles = { {
         { "Grid", &state.showGrid },
         { "Paths", &state.showPaths },
-        { "Units", &state.showUnits },
+        { "Buildings", &state.showBuildings },
         { "Zones", &state.showZones },
         { "Agents", &state.showAgents },
         { "Traffic", &state.showTraffic },
@@ -1246,21 +1246,21 @@ void CityViewer::drawHoverTooltip(Simulation& simulation,
 
     switch (hover.kind)
     {
-        case game::Selection::Kind::Unit:
-            if (hover.unit != nullptr)
+        case game::Selection::Kind::Building:
+            if (hover.building != nullptr)
             {
-                Unit const& unit = *hover.unit;
+                Building const& building = *hover.building;
                 uint32_t const hour = simulation.getClock().getHourOfDay();
                 ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(
-                                       theme::fromScript(unit.getColor())),
+                                       theme::fromScript(building.getColor())),
                                    "%s #%u",
-                                   unit.getTypeName().c_str(),
-                                   unit.getId());
+                                   building.getTypeName().c_str(),
+                                   building.getId());
 
                 // A building doing nothing at three in the morning is shut, not
                 // broken, and the timetable of its rules is the only thing that
                 // says which.
-                OpeningStatus const opening = openingStatus(unit, hour);
+                OpeningStatus const opening = openingStatus(building, hour);
                 ImGui::TextColored(
                     ImGui::ColorConvertU32ToFloat4(
                         opening.open ? theme::SUCCESS : theme::FAILURE),
@@ -1271,7 +1271,7 @@ void CityViewer::drawHoverTooltip(Simulation& simulation,
                 // reason to point at it. Without them the tooltip only repeated
                 // the label already drawn on the grid.
                 ImGui::Separator();
-                std::vector<Resource> const& bin = unit.getResources().getAll();
+                std::vector<Resource> const& bin = building.getResources().getAll();
                 if (bin.empty())
                 {
                     ImGui::TextDisabled("holds nothing");
@@ -1288,13 +1288,13 @@ void CityViewer::drawHoverTooltip(Simulation& simulation,
                 }
 
                 ImGui::Separator();
-                if (unit.getRules().empty())
+                if (building.getRules().empty())
                 {
                     ImGui::TextDisabled("no rule");
                 }
                 else
                 {
-                    for (RuleUnit const* rule : unit.getRules())
+                    for (RuleBuilding const* rule : building.getRules())
                     {
                         if (rule == nullptr)
                             continue;
@@ -1324,7 +1324,7 @@ void CityViewer::drawHoverTooltip(Simulation& simulation,
                     }
                 }
 
-                if (!unit.hasSegments())
+                if (!building.hasSegments())
                 {
                     ImGui::TextColored(
                         ImGui::ColorConvertU32ToFloat4(theme::FAILURE),
@@ -1355,13 +1355,13 @@ void CityViewer::drawHoverTooltip(Simulation& simulation,
                         "%s, %.1f m", segment->getTypeName().c_str(), segment->getLength());
                 }
 
-                for (Unit const* unit : hover.node->getUnits())
+                for (Building const* building : hover.node->getBuildings())
                 {
                     ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(
-                                           theme::fromScript(unit->getColor())),
+                                           theme::fromScript(building->getColor())),
                                        "%s #%u stands here",
-                                       unit->getTypeName().c_str(),
-                                       unit->getId());
+                                       building->getTypeName().c_str(),
+                                       building->getId());
                 }
             }
             break;
@@ -1404,7 +1404,7 @@ void CityViewer::drawHoverTooltip(Simulation& simulation,
             ImGui::TextDisabled(
                 "%u x %u cells", footprint.sizeU, footprint.sizeV);
             ImGui::Text("%zu building(s) inside",
-                        hover.zone->getUnitsInside().size());
+                        hover.zone->getBuildingsInside().size());
             for (RuleZone const* rule : hover.zone->getRules())
             {
                 if (rule != nullptr)

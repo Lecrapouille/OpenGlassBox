@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------------
 
 //! \file Layer.hpp
-//! \brief Grid-backed resource layer shared by cities on the world grid.
+//! \brief Resource layer on the world grid. Cities share it.
 
 #ifndef OPEN_GLASSBOX_LAYER_HPP
 #define OPEN_GLASSBOX_LAYER_HPP
@@ -27,43 +27,39 @@ namespace ogb
 class City;
 class World;
 
-//! \brief Collection of City, declared here because a Layer runs its rules over
-//! the region of each of them.
+//! \brief Map of City objects. A Layer runs rules over each city's region.
 using Cities = std::map<std::string, std::unique_ptr<City>, std::less<>>;
 
 //==============================================================================
-//! \brief One layer of the environment: coal, oil, forest, but also air
-//! pollution, land value or desirability. Every cell of the grid holds an
-//! amount of that one thing, and rules read and write those amounts.
+//! \brief One environment layer: coal, oil, forest, air pollution, land value,
+//! or desirability. Each grid cell holds an amount. Rules read and write those
+//! amounts.
 //!
-//! A Layer is what lets a rule ask a question about a place rather than about a
-//! building: "is there water within three cells of here?" A building reads and
-//! writes its neighbourhood through its footprint, which is a radius around the
-//! cell it stands on.
+//! A Layer lets a rule ask about a place, not a building.
+//! Example: "Is there water within three cells?"
+//! A building reads and writes through its footprint: a radius around its cell.
 //!
-//! The grid is the one of the World, shared by every City and unbounded in the
-//! four directions, which is why cell coordinates are signed. Storage is
-//! sparse, by blocks of CHUNK_SIZE x CHUNK_SIZE cells allocated the first time
-//! something is written into them: an empty layer costs nothing, and a city can
-//! be founded anywhere without deciding on a size beforehand.
+//! The grid belongs to the World. Every City shares it.
+//! Cell coordinates are signed. The grid has no fixed size.
+//! Storage is sparse. Blocks of CHUNK_SIZE x CHUNK_SIZE cells allocate on first
+//! write. An empty layer uses no memory. A city can start anywhere without a
+//! preset size.
 //!
-//! Each cell is capped at the capacity of the layer type, so a resource cannot
-//! pile up without bound in one place. A rule asking over a radius therefore
-//! reads at most capacity times the number of cells covered, which is what
-//! countCellsInRadius() is for.
+//! Each cell is capped at the layer capacity.
+//! A rule over a radius reads at most capacity times the cell count.
+//! countCellsInRadius() returns that cell count.
 //!
 //! Example:
 //! \code
 //! Layer& water = city.addLayer(simulation.getRuleset().getLayerType("Water"));
 //!
-//! // Fill a pond by hand, then read what a building standing at (10,10) with a
-//! // footprint of three cells would see.
+//! // Fill a pond. Read what a building at (10,10) with footprint 3 sees.
 //! water.setResource({ 10, 10 }, water.getCellCapacity());
 //! uint32_t const seen = water.getResource({ 10, 10 }, 3u, city.getRegion());
 //! \endcode
 //!
-//! The matching script. The rule below turns water into grass, one cell at a
-//! time, which is how a forest grows or pollution creeps:
+//! Matching script. This rule turns water into grass, one cell at a time.
+//! Forests grow and pollution spreads the same way:
 //! \code
 //! rules
 //!     layerRule CreateGrass
@@ -83,17 +79,15 @@ class Layer
 {
 public:
 
-    //! \brief Side of an allocation unit, in cells. A power of two, so that
-    //! finding the block a cell belongs to is a shift rather than a division.
+    //! \brief Block size in cells. A power of two.
+    //! Block lookup uses a shift, not division.
     static constexpr int32_t CHUNK_SIZE = 16;
 
     // -------------------------------------------------------------------------
-    //! \brief An empty layer: every cell reads as zero until written to, and
-    //! nothing is allocated yet.
-    //! \param[in] type recipe of the layer: its name, its colour, the cap of a
-    //! cell and the rules to run. Kept by reference and has to outlive the Layer.
-    //! \param[in] world the world owning the grid the layer is laid on. Kept by
-    //! reference.
+    //! \brief Create an empty layer. Unwritten cells read as zero.
+    //! \param[in] type Layer recipe: name, color, cell cap, and rules.
+    //!     Kept by reference. Must outlive the Layer.
+    //! \param[in] world World that owns the grid. Kept by reference.
     // -------------------------------------------------------------------------
     Layer(LayerType const& type, World& world);
 
@@ -103,15 +97,13 @@ public:
     Layer& operator=(Layer&&) = delete;
 
     // -------------------------------------------------------------------------
-    //! \brief Write the amount held by one cell, capped by the capacity of the
-    //! type.
+    //! \brief Write the amount in one cell. Values above capacity are clamped.
     //!
-    //! Writing zero into a cell of a block that was never touched allocates
-    //! nothing, so clearing a layer one cell at a time does not make it grow.
+    //! Writing zero does not allocate a new block.
+    //! Clearing cell by cell does not grow memory use.
     //!
-    //! \param[in] cell the cell, on the grid of the World.
-    //! \param[in] amount what to store. Values above getCellCapacity() are
-    //! clamped.
+    //! \param[in] cell Cell on the World grid.
+    //! \param[in] amount Value to store. Clamped to getCellCapacity().
     // -------------------------------------------------------------------------
     void setResource(Cell const cell, uint32_t amount)
     {
@@ -139,10 +131,10 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \param[in] cell the cell to read.
-    //! \return the amount held by that cell. A cell that was never written to
-    //! reads as zero, which is also the answer for a cell outside every
-    //! allocated block.
+    //! \brief Read the amount in one cell.
+    //! \param[in] cell Cell to read.
+    //! \return Amount in that cell. Unwritten cells return zero.
+    //!     Cells outside allocated blocks also return zero.
     // -------------------------------------------------------------------------
     [[nodiscard]] uint32_t getResource(Cell const cell) const
     {
@@ -151,15 +143,14 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief What a building with a footprint would see: the sum over its
-    //! neighbourhood.
+    //! \brief Sum resources over a building footprint.
     //!
-    //! \param[in] centre the cell the footprint is centred on.
-    //! \param[in] radius how far the footprint reaches, as a taxicab distance:
-    //! zero is the centre cell alone. See CellsInRadius.
-    //! \param[in] region the cells the calling City owns. Cells outside it are
-    //! left out, so a city never reads over the shoulder of its neighbour.
-    //! \return the sum, capped at the largest value a uint32_t holds.
+    //! \param[in] centre Cell at the footprint center.
+    //! \param[in] radius Footprint reach as taxicab distance.
+    //!     Zero means the center cell only. See CellsInRadius.
+    //! \param[in] region Cells owned by the calling City.
+    //!     Cells outside the region are skipped.
+    //! \return Sum, capped at UINT32_MAX.
     // -------------------------------------------------------------------------
     [[nodiscard]] uint32_t getResource(Cell const centre,
                          uint32_t radius,
@@ -175,17 +166,16 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief How many cells the footprint of a cell covers inside the region.
+    //! \brief Count cells in a footprint inside a region.
     //!
-    //! getResource() over a radius sums that many cells, so this is what turns
-    //! the capacity of one cell into the largest value a rule may read. A rule
-    //! comparing against a proportion needs both.
+    //! getResource() over a radius sums that many cells.
+    //! This turns cell capacity into the max value a rule can read.
+    //! Rules that compare proportions need both values.
     //!
-    //! \param[in] centre the cell the footprint is centred on.
-    //! \param[in] radius how far the footprint reaches.
-    //! \param[in] region the cells the calling City owns.
-    //! \return how many cells are covered, zero when the centre itself lies
-    //! outside the region.
+    //! \param[in] centre Cell at the footprint center.
+    //! \param[in] radius Footprint reach.
+    //! \param[in] region Cells owned by the calling City.
+    //! \return Cell count. Zero if the center lies outside the region.
     // -------------------------------------------------------------------------
     uint32_t countCellsInRadius(Cell const centre,
                                 uint32_t const radius,
@@ -198,7 +188,7 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \return the largest amount a single cell may hold, from the type.
+    //! \return Max amount one cell can hold, from the layer type.
     // -------------------------------------------------------------------------
     [[nodiscard]] uint32_t getCellCapacity() const
     {
@@ -206,10 +196,9 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief Add to one cell, up to the capacity of the type. What overflows
-    //! is dropped rather than pushed to a neighbour.
-    //! \param[in] cell the cell to fill.
-    //! \param[in] toAdd how much to add.
+    //! \brief Add to one cell, up to capacity. Overflow is dropped.
+    //! \param[in] cell Target cell.
+    //! \param[in] toAdd Amount to add.
     // -------------------------------------------------------------------------
     void addResource(Cell const cell, uint32_t const toAdd)
     {
@@ -225,20 +214,19 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief Add to the cells of a footprint.
+    //! \brief Add resources to cells in a footprint.
     //!
-    //! \param[in] centre the cell the footprint is centred on.
-    //! \param[in] radius how far the footprint reaches.
-    //! \param[in] region the cells the calling City owns. Cells outside it get
-    //! nothing.
-    //! \param[in] toAdd how much to hand out over the whole footprint when
-    //! \c distributed is true, or to each cell of it when false.
-    //! \param[in] distributed true to walk the cells in random order and take
-    //! from \c toAdd as it goes, so that the footprint receives \c toAdd in
-    //! total and the last cells may get nothing; false to give \c toAdd to
-    //! every cell.
-    //! \note Every cell is still capped at getCellCapacity(), so a saturated
-    //! footprint swallows nothing and the remainder is dropped.
+    //! \param[in] centre Cell at the footprint center.
+    //! \param[in] radius Footprint reach.
+    //! \param[in] region Cells owned by the calling City.
+    //!     Cells outside get nothing.
+    //! \param[in] toAdd When \c distributed is true, total amount for the footprint.
+    //!     When false, amount for each cell.
+    //! \param[in] distributed If true, walk cells in random order and take from \c toAdd.
+    //!     The footprint receives \c toAdd in total. Last cells may get nothing.
+    //!     If false, give \c toAdd to every cell.
+    //! \note Each cell is capped at getCellCapacity().
+    //!     A full footprint absorbs nothing. The rest is dropped.
     // -------------------------------------------------------------------------
     void addResource(Cell const centre,
                      uint32_t const radius,
@@ -257,10 +245,9 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief Take from one cell, down to zero. What is missing is simply not
-    //! taken: the cell never goes negative.
-    //! \param[in] cell the cell to empty.
-    //! \param[in] toRemove how much to take.
+    //! \brief Remove from one cell, down to zero. The cell never goes negative.
+    //! \param[in] cell Target cell.
+    //! \param[in] toRemove Amount to remove.
     // -------------------------------------------------------------------------
     void removeResource(Cell const cell, uint32_t const toRemove)
     {
@@ -270,16 +257,16 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief Take from the cells of a footprint. The mirror of
-    //! addResource(Cell, uint32_t, CellRegion const&, uint32_t, bool), going
-    //! down to zero instead of up to the capacity.
+    //! \brief Remove resources from cells in a footprint.
+    //! Mirror of addResource(Cell, uint32_t, CellRegion const&, uint32_t, bool).
+    //! Removes down to zero instead of adding up to capacity.
     //!
-    //! \param[in] centre the cell the footprint is centred on.
-    //! \param[in] radius how far the footprint reaches.
-    //! \param[in] region the cells the calling City owns.
-    //! \param[in] toRemove how much to take over the whole footprint when
-    //! \c distributed is true, or from each cell of it when false.
-    //! \param[in] distributed see the matching parameter of addResource().
+    //! \param[in] centre Cell at the footprint center.
+    //! \param[in] radius Footprint reach.
+    //! \param[in] region Cells owned by the calling City.
+    //! \param[in] toRemove When \c distributed is true, total amount to take.
+    //!     When false, amount from each cell.
+    //! \param[in] distributed Same meaning as in addResource().
     // -------------------------------------------------------------------------
     void removeResource(Cell const centre,
                         uint32_t const radius,
@@ -298,25 +285,25 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \param[in] cell the cell to locate.
-    //! \return the world position of its top-left corner, which is what the
-    //! renderer draws a rectangle from.
+    //! \brief Convert a cell to world coordinates.
+    //! \param[in] cell Cell to locate.
+    //! \return World position of the cell's top-left corner.
+    //!     The renderer draws a rectangle from this point.
     // -------------------------------------------------------------------------
     Vector3f cellToWorld(Cell cell) const;
 
     // -------------------------------------------------------------------------
-    //! \brief Run the rules of the type over the region of every City, and
-    //! count one tick.
+    //! \brief Run the layer's rules over every City's region. Increment the tick count.
     //!
-    //! A cell administered by two Cities is walked once for each of them, since
-    //! a rule reads and writes on behalf of a city.
+    //! A cell shared by two Cities is walked once per City.
+    //! Rules read and write on behalf of each city.
     //!
-    //! \param[in] cities the cities of the World, each contributing its region.
+    //! \param[in] cities Cities in the World. Each contributes its region.
     // -------------------------------------------------------------------------
     void executeRules(Cities const& cities);
 
     // -------------------------------------------------------------------------
-    //! \brief \return the name of its type, such as "Water".
+    //! \return Layer type name, such as "Water".
     // -------------------------------------------------------------------------
     [[nodiscard]] Name const& getTypeName() const
     {
@@ -324,8 +311,8 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \return the recipe itself, so that another City can be given a
-    //! layer of the same kind without looking it up by name.
+    //! \return The layer type recipe.
+    //!     Use it to add the same layer kind to another City without a name lookup.
     // -------------------------------------------------------------------------
     [[nodiscard]] LayerType const& getType() const
     {
@@ -333,8 +320,8 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \return the colour of its type, as 0xRRGGBB, which the demo
-    //! shades a cell with according to how full it is.
+    //! \return Layer color as 0xRRGGBB.
+    //!     The demo shades each cell by how full it is.
     // -------------------------------------------------------------------------
     [[nodiscard]] uint32_t getColor() const
     {
@@ -342,14 +329,14 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \return the side of a cell, in world units. Comes from the World,
-    //! so that every layer of a world lines up.
+    //! \return Cell side length in world units. Comes from the World.
+    //!     All layers in a world align.
     // -------------------------------------------------------------------------
     [[nodiscard]] float getCellSize() const;
 
     // -------------------------------------------------------------------------
-    //! \brief \return the rules the layer runs, from its type. Read by the demo
-    //! to show what a layer is doing.
+    //! \return Rules attached to this layer, from its type.
+    //!     The demo reads them to show layer activity.
     // -------------------------------------------------------------------------
     [[nodiscard]] std::vector<RuleLayer*> const& getRules() const
     {
@@ -357,8 +344,8 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \return how many ticks the layer has lived. A rule with a rate of
-    //! twenty fires when this is a multiple of twenty.
+    //! \return Tick count for this layer.
+    //!     A rule with rate 20 fires when this is a multiple of 20.
     // -------------------------------------------------------------------------
     [[nodiscard]] uint32_t getTicks() const
     {
@@ -366,15 +353,15 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \return the sum over every allocated cell. Read from the cached
-    //! total of each block, so it does not walk the grid.
+    //! \return Sum of all allocated cells.
+    //!     Uses cached block totals. Does not walk the grid.
     // -------------------------------------------------------------------------
     [[nodiscard]] uint64_t getTotalResource() const;
 
     // -------------------------------------------------------------------------
-    //! \brief \return how many blocks are allocated. Shown by the debug panel
-    //! to make the memory cost of a layer visible: each block is
-    //! CHUNK_SIZE x CHUNK_SIZE cells whether or not they hold anything.
+    //! \return Number of allocated blocks.
+    //!     Shown in the debug panel to expose memory cost.
+    //!     Each block is CHUNK_SIZE x CHUNK_SIZE cells.
     // -------------------------------------------------------------------------
     [[nodiscard]] size_t getBlockCount() const
     {
@@ -382,13 +369,12 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief Call \c function(u, v, amount) for every cell holding something.
+    //! \brief Call \c function(u, v, amount) for every non-empty cell.
     //!
-    //! This is how the renderer draws a layer without knowing where its cells
-    //! are. Empty cells are skipped, so the cost follows what the layer holds
-    //! rather than the size of the world.
+    //! The renderer uses this to draw a layer without knowing cell locations.
+    //! Empty cells are skipped. Cost follows stored data, not world size.
     //!
-    //! \param[in] function anything callable as f(int32_t, int32_t, uint32_t).
+    //! \param[in] function Callable as f(int32_t, int32_t, uint32_t).
     // -------------------------------------------------------------------------
     template <class Function>
     void forEachCell(Function function) const
@@ -400,26 +386,23 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief Call \c function(u, v, side, mean) for every square of \c side
-    //! cells inside a region that holds something, where \c mean is the average
-    //! amount over the square.
+    //! \brief Call \c function(u, v, side, mean) for each non-empty square in a region.
+    //! \c mean is the average amount over \c side x \c side cells.
     //!
-    //! This is how a layer is drawn. A side of one is cell by cell; a larger
-    //! one is a coarser picture of the same layer for a fraction of the
-    //! rectangles, which is what keeps drawing a half million cell city
-    //! affordable. The caller picks the side from the zoom: whatever keeps a
-    //! square worth a pixel or two and keeps their number bounded.
+    //! The renderer uses this to draw a layer.
+    //! side 1 draws cell by cell. A larger side draws a coarser view with fewer
+    //! rectangles. This keeps large cities affordable to draw.
+    //! The caller picks \c side from the zoom level.
     //!
-    //! Blocks falling entirely outside the region are skipped without being
-    //! read, so the cost follows what is on screen rather than the size of the
-    //! world, and empty squares are skipped altogether.
+    //! Blocks outside the region are skipped.
+    //! Empty squares are skipped.
+    //! Cost follows visible data, not world size.
     //!
-    //! \param[in] region the cells to visit. An empty region visits nothing.
-    //! \param[in] side how many cells a square spans, clamped into
-    //! [1..CHUNK_SIZE] and rounded down to a divisor of CHUNK_SIZE so that a
-    //! square never straddles two blocks.
-    //! \param[in] function anything callable as
-    //! f(int32_t, int32_t, int32_t, uint32_t).
+    //! \param[in] region Cells to visit. An empty region visits nothing.
+    //! \param[in] side Square size in cells. Clamped to [1..CHUNK_SIZE].
+    //!     Rounded down to a divisor of CHUNK_SIZE.
+    //!     A square never spans two blocks.
+    //! \param[in] function Callable as f(int32_t, int32_t, int32_t, uint32_t).
     // -------------------------------------------------------------------------
     template <class Function>
     void forEachBlockInRegion(CellRegion const& region,
@@ -453,44 +436,37 @@ public:
 private:
 
     //==========================================================================
-    //! \brief A square block of cells, allocated as a whole. The unit in which
-    //! a sparse layer grows.
+    //! \brief Square block of cells. The sparse layer allocates these as blocks.
     //==========================================================================
     struct Chunk
     {
-        //! \brief Column of the cell at the top-left of the block, a multiple
-        //! of CHUNK_SIZE.
+        //! \brief Column of the top-left cell. A multiple of CHUNK_SIZE.
         int32_t u0 = 0;
 
-        //! \brief Row of the cell at the top-left of the block, a multiple of
-        //! CHUNK_SIZE.
+        //! \brief Row of the top-left cell. A multiple of CHUNK_SIZE.
         int32_t v0 = 0;
 
-        //! \brief Sum of the cells, kept up to date on every write. Walking the
-        //! cells to get it again would cost the whole grid, and the panels ask
-        //! for it on every frame.
+        //! \brief Sum of all cells. Updated on every write.
+        //!     Panels request this every frame. Recomputing would walk the grid.
         uint64_t total = 0u;
 
-        //! \brief The cells, row major: the cell (u0 + du, v0 + dv) is at the
-        //! index dv * CHUNK_SIZE + du. Zero initialised.
+        //! \brief Cells in row-major order.
+        //!     Cell (u0 + du, v0 + dv) is at index dv * CHUNK_SIZE + du.
+        //!     Zero-initialized.
         std::array<uint32_t, size_t(CHUNK_SIZE* CHUNK_SIZE)> cells{};
     };
 
     //--------------------------------------------------------------------------
-    //! \brief Call f(u, v, amount) for the cells of one block holding
-    //! something, skipping the empty ones.
-    //! \param[in] chunk the block to walk.
-    //! \param[in] function anything callable as f(int32_t, int32_t, uint32_t).
+    //! \brief Call f(u, v, amount) for non-empty cells in one block.
+    //! \param[in] chunk Block to walk.
+    //! \param[in] function Callable as f(int32_t, int32_t, uint32_t).
     //--------------------------------------------------------------------------
     //--------------------------------------------------------------------------
-    //! \brief The part of forEachBlockInRegion() that walks one block, once it
-    //! is known to overlap the region.
-    //! \param[in] chunk the block to walk.
-    //! \param[in] region the cells to keep. Cells of the block outside it are
-    //! left out of the average rather than counted as empty.
-    //! \param[in] side how many cells a square spans, a divisor of CHUNK_SIZE.
-    //! \param[in] function anything callable as
-    //! f(int32_t, int32_t, int32_t, uint32_t).
+    //! \brief Walk one block for forEachBlockInRegion(), after overlap check.
+    //! \param[in] chunk Block to walk.
+    //! \param[in] region Cells to keep. Block cells outside are excluded from the average.
+    //! \param[in] side Square size in cells. A divisor of CHUNK_SIZE.
+    //! \param[in] function Callable as f(int32_t, int32_t, int32_t, uint32_t).
     //--------------------------------------------------------------------------
     template <class Function>
     static void forEachBlockOfChunk(Chunk const& chunk,
@@ -518,14 +494,13 @@ private:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief Add up the cells of one square of a block that lie inside a
-    //! region.
-    //! \param[in] chunk the block the square belongs to.
-    //! \param[in] region the cells to keep.
-    //! \param[in] du, dv top-left corner of the square, inside the block.
-    //! \param[in] side how many cells the square spans.
-    //! \param[out] sum what those cells hold, added up.
-    //! \param[out] counted how many of them lay inside the region.
+    //! \brief Sum cells in one square that lie inside a region.
+    //! \param[in] chunk Block containing the square.
+    //! \param[in] region Cells to include.
+    //! \param[in] du, dv Top-left corner of the square inside the block.
+    //! \param[in] side Square size in cells.
+    //! \param[out] sum Total amount in included cells.
+    //! \param[out] counted Number of included cells.
     //--------------------------------------------------------------------------
     static void sumSquare(Chunk const& chunk,
                           CellRegion const& region,
@@ -572,25 +547,24 @@ private:
     static_assert((CHUNK_SIZE & (CHUNK_SIZE - 1)) == 0,
                   "the side of a block has to be a power of two");
 
-    //! \brief Mask of the bits a coordinate uses inside its block.
+    //! \brief Bit mask for coordinates inside a block.
     static constexpr int32_t CHUNK_MASK = CHUNK_SIZE - 1;
 
-    //! \brief How far to shift a coordinate to get the number of its block.
-    //! The base two logarithm of CHUNK_SIZE.
+    //! \brief Shift to get a block index from a coordinate.
+    //!     Equal to log2(CHUNK_SIZE).
     static constexpr int32_t CHUNK_SHIFT = 4;
     static_assert((1 << CHUNK_SHIFT) == CHUNK_SIZE,
                   "CHUNK_SHIFT has to be the logarithm of CHUNK_SIZE");
 
     //--------------------------------------------------------------------------
-    //! \brief Round a coordinate down to the origin of its block.
+    //! \brief Round a coordinate down to its block origin.
     //!
-    //! Rounding is towards minus infinity rather than towards zero, so that the
-    //! cells at minus one and at zero land in different blocks instead of
-    //! sharing the one at the origin. Clearing the low bits of a two's
-    //! complement integer does exactly that, and does it without a branch.
+    //! Rounds toward negative infinity, not zero.
+    //! Cells at -1 and 0 land in different blocks.
+    //! Clearing low bits of a two's complement integer does this without a branch.
     //!
-    //! \param[in] coordinate a column or a row.
-    //! \return the matching multiple of CHUNK_SIZE.
+    //! \param[in] coordinate Column or row.
+    //! \return Nearest multiple of CHUNK_SIZE at or below the coordinate.
     //--------------------------------------------------------------------------
     static int32_t chunkOrigin(int32_t const coordinate)
     {
@@ -598,10 +572,9 @@ private:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief Pack the origin of the block holding a cell into one key, which
-    //! is what the table of blocks is indexed by.
-    //! \param[in] cell the cell.
-    //! \return the key of its block.
+    //! \brief Pack a block origin into one lookup key.
+    //! \param[in] cell Cell to locate.
+    //! \return Key for its block.
     //--------------------------------------------------------------------------
     static int64_t chunkKey(Cell const cell)
     {
@@ -615,8 +588,9 @@ private:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] cell the cell.
-    //! \return where it sits inside Chunk::cells.
+    //! \brief Index of a cell inside Chunk::cells.
+    //! \param[in] cell Cell to locate.
+    //! \return Index in Chunk::cells.
     //--------------------------------------------------------------------------
     static size_t cellIndex(Cell const cell)
     {
@@ -627,13 +601,12 @@ private:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] cell the cell.
-    //! \return the block holding it, or nullptr when nothing was ever written
-    //! anywhere near it. Reading is allowed not to allocate.
+    //! \brief Find the block for a cell. Read-only. Does not allocate.
+    //! \param[in] cell Cell to locate.
+    //! \return Block pointer, or nullptr if nothing was ever written nearby.
     //!
-    //! One rule attempt addresses the same cell three or four times over, and
-    //! consecutive cells share a block sixteen times out of seventeen, so the
-    //! last block found is remembered and the table is left alone.
+    //! Caches the last lookup. One rule may read the same cell several times.
+    //! Neighboring cells often share a block.
     //--------------------------------------------------------------------------
     [[nodiscard]] Chunk const* findChunk(Cell const cell) const
     {
@@ -646,10 +619,9 @@ private:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief The writable counterpart of findChunk(), for the caller that
-    //! clears a cell of a block it is not allowed to create.
-    //! \param[in] cell the cell.
-    //! \return the block holding it, or nullptr.
+    //! \brief Writable findChunk() for callers that clear cells without creating blocks.
+    //! \param[in] cell Cell to locate.
+    //! \return Block pointer, or nullptr.
     //--------------------------------------------------------------------------
     [[nodiscard]] Chunk* findChunk(Cell const cell)
     {
@@ -661,9 +633,9 @@ private:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] cell the cell.
-    //! \return the block holding it, allocating and zero filling it when it did
-    //! not exist yet.
+    //! \brief Find or create the block for a cell.
+    //! \param[in] cell Cell to locate.
+    //! \return Block reference. Allocates and zero-fills a new block if needed.
     //--------------------------------------------------------------------------
     Chunk& chunkFor(Cell const cell)
     {
@@ -676,42 +648,40 @@ private:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief The part of findChunk() that has to read the table: the miss.
-    //! \param[in] key key of the block, from chunkKey().
-    //! \return the block, or nullptr when there is none. Fills the memo.
+    //! \brief Table lookup on cache miss.
+    //! \param[in] key Block key from chunkKey().
+    //! \return Block pointer, or nullptr. Updates the cache.
     //--------------------------------------------------------------------------
     Chunk const* lookupChunk(int64_t const key) const;
 
     //--------------------------------------------------------------------------
-    //! \brief The part of chunkFor() that has to read or grow the table.
-    //! \param[in] key key of the block, from chunkKey().
-    //! \param[in] cell a cell of the block, which gives its origin when it has
-    //! to be created.
-    //! \return the block. Fills the memo.
+    //! \brief Table lookup or create on cache miss.
+    //! \param[in] key Block key from chunkKey().
+    //! \param[in] cell Any cell in the block. Gives the origin for a new block.
+    //! \return Block reference. Updates the cache.
     //--------------------------------------------------------------------------
     Chunk& createChunk(int64_t const key, Cell const cell);
 
     //--------------------------------------------------------------------------
-    //! \brief The part of getResource() that walks a footprint of more than one
-    //! cell. Same parameters and same result.
-    //! \note Const, but it reuses the walk held by the Layer, which is therefore
-    //! mutable: a rule firing on every cell of every tick must not allocate.
+    //! \brief Sum resources over a multi-cell footprint. Called by getResource().
+    //! Same parameters and result.
+    //! \note Const but uses mutable CellsInRadius to avoid allocation per rule call.
     //--------------------------------------------------------------------------
     uint32_t sumInRadius(Cell const centre,
                          uint32_t const radius,
                          CellRegion const& region) const;
 
     //--------------------------------------------------------------------------
-    //! \brief The part of countCellsInRadius() that walks a footprint of more
-    //! than one cell. Same parameters and same result.
+    //! \brief Count cells over a multi-cell footprint. Called by countCellsInRadius().
+    //! Same parameters and result.
     //--------------------------------------------------------------------------
     uint32_t walkCellsInRadius(Cell const centre,
                                uint32_t const radius,
                                CellRegion const& region) const;
 
     //--------------------------------------------------------------------------
-    //! \brief The part of addResource() that walks a footprint of more than one
-    //! cell. Same parameters.
+    //! \brief Add resources over a multi-cell footprint. Called by addResource().
+    //! Same parameters.
     //--------------------------------------------------------------------------
     void addResourceInRadius(Cell const centre,
                              uint32_t const radius,
@@ -720,8 +690,8 @@ private:
                              bool const distributed);
 
     //--------------------------------------------------------------------------
-    //! \brief The part of removeResource() that walks a footprint of more than
-    //! one cell. Same parameters.
+    //! \brief Remove resources over a multi-cell footprint. Called by removeResource().
+    //! Same parameters.
     //--------------------------------------------------------------------------
     void removeResourceInRadius(Cell const centre,
                                 uint32_t const radius,
@@ -730,59 +700,51 @@ private:
                                 bool const distributed);
 
     //--------------------------------------------------------------------------
-    //! \brief Run one rule over the region of one city, cell by cell.
-    //! \param[in] rule the rule to run.
-    //! \param[in] city whose region bounds the walk and on whose behalf the
-    //! rule reads and writes.
+    //! \brief Run one rule over one City's region, cell by cell.
+    //! \param[in] rule Rule to run.
+    //! \param[in] city City whose region bounds the walk.
+    //!     The rule reads and writes on behalf of this city.
     //--------------------------------------------------------------------------
     void executeRule(RuleLayer& rule, City& city);
 
 private:
 
-    //! \brief Recipe of the layer, shared with every layer of that kind.
+    //! \brief Layer type recipe. Shared by all layers of this kind.
     LayerType const& m_type;
 
-    //! \brief The world owning the grid the layer is laid on. Where the size of
-    //! a cell comes from.
+    //! \brief World that owns the grid. Provides cell size.
     World& m_world;
 
-    //! \brief Everything a rule needs while it runs: the city, the cell, the
-    //! layer. Held here rather than built on each call, since a rule fires over
-    //! thousands of cells per tick.
+    //! \brief Rule execution context: city, cell, layer.
+    //!     Reused across thousands of cells per tick.
     RuleContext m_context;
 
-    //! \brief How many ticks the layer has lived, which is what the rate of a
-    //! rule is counted against.
+    //! \brief Tick count. Rule rates compare against this value.
     uint32_t m_ticks = 0u;
 
-    //! \brief The cells, by blocks allocated on demand and keyed by chunkKey().
+    //! \brief Sparse cell storage. Blocks allocate on demand. Keyed by chunkKey().
     std::unordered_map<int64_t, Chunk> m_chunks;
 
-    //! \brief Key of the block the last lookup landed in. Meaningless until
-    //! m_cacheFilled.
+    //! \brief Key from the last block lookup. Valid when m_cacheFilled is true.
     mutable int64_t m_cachedKey = 0;
 
-    //! \brief The block that key names, or nullptr when there is none. Blocks
-    //! are never removed and \c std::unordered_map keeps its elements put
-    //! across a rehash, so a pointer stays good for the life of the Layer.
+    //! \brief Block from the last lookup, or nullptr.
+    //!     Blocks are never removed. Map pointers stay valid for the Layer lifetime.
     mutable Chunk const* m_cachedChunk = nullptr;
 
-    //! \brief Whether the two above hold an answer. A rule sweeping the grid
-    //! walks a whole row of a block before leaving it, so remembering the last
-    //! one answers fifteen lookups out of sixteen without hashing.
+    //! \brief True when the cache holds a valid entry.
+    //!     Grid sweeps reuse the same block for many consecutive cells.
     mutable bool m_cacheFilled = false;
 
-    //! \brief Reusable walk over the cells of a footprint. Held here so that
-    //! reading a neighbourhood does not allocate. Mutable so that reading a
-    //! neighbourhood stays a const operation.
+    //! \brief Reusable footprint walker. Avoids allocation on reads.
+    //!     Mutable so reads stay const.
     mutable CellsInRadius m_coordinates;
 
-    //! \brief Reusable walk over the cells of a footprint in random order, used
-    //! when handing out a resource unevenly.
+    //! \brief Reusable random-order footprint walker for uneven distribution.
     RandomCells m_randomCoordinates;
 };
 
-//! \brief The layers of a World, by name, which owns them.
+//! \brief Map of layers in a World, keyed by name. The World owns them.
 using Layers = std::map<std::string, std::unique_ptr<Layer>, std::less<>>;
 
 } // namespace ogb

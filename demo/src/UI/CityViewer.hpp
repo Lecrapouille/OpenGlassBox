@@ -102,10 +102,10 @@ public:
     Node* pickNode(City& city, ImVec2 const& world, float pixels) const;
 
     // ------------------------------------------------------------------------
-    //! \brief Unit of the given city closest to a world position, within a
+    //! \brief Building of the given city closest to a world position, within a
     //! tolerance in pixels.
     // ------------------------------------------------------------------------
-    Unit* pickUnit(City& city, ImVec2 const& world, float pixels) const;
+    Building* pickBuilding(City& city, ImVec2 const& world, float pixels) const;
 
     // ------------------------------------------------------------------------
     //! \brief Agent of the given city closest to a world position, within a
@@ -125,7 +125,7 @@ private:
 
     // ------------------------------------------------------------------------
     //! \brief Select the entity closest to the given canvas position, within a
-    //! tolerance in pixels. Units win over Agents, which win over Nodes, and a
+    //! tolerance in pixels. Buildings win over Agents, which win over Nodes, and a
     //! click on nothing falls back on the grid cell.
     // ------------------------------------------------------------------------
     void
@@ -153,7 +153,7 @@ private:
 
     void drawLayers(Simulation& simulation, game::DebugState const& state);
     void drawPaths(City& city, game::DebugState const& state);
-    void drawUnits(City& city, game::DebugState const& state);
+    void drawBuildings(City& city, game::DebugState const& state);
     void drawAgents(City& city, game::DebugState const& state);
     void drawCityFrame(City const& city, game::DebugState const& state);
     void drawZones(City& city);

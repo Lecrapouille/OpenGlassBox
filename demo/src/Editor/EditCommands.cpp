@@ -261,7 +261,7 @@ void AddSegmentCommand::undo(Simulation& simulation)
             return;
 
         Node* node = path->findNode(id);
-        if ((node != nullptr) && !node->hasSegments() && node->getUnits().empty())
+        if ((node != nullptr) && !node->hasSegments() && node->getBuildings().empty())
         {
             city->removeNode(*path, *node);
         }
@@ -294,51 +294,51 @@ void AddSegmentCommand::onWorldRebuilt()
 // =============================================================================
 
 // ----------------------------------------------------------------------------
-AddUnitCommand::AddUnitCommand(std::string city, std::string path,
-                               std::string unitType, uint32_t segmentId,
+AddBuildingCommand::AddBuildingCommand(std::string city, std::string path,
+                               std::string buildingType, uint32_t segmentId,
                                float offset)
     : m_city(std::move(city)),
       m_path(std::move(path)),
-      m_unitType(std::move(unitType)),
+      m_buildingType(std::move(buildingType)),
       m_segmentId(segmentId),
       m_offset(offset)
 {}
 
 // ----------------------------------------------------------------------------
-AddUnitCommand::AddUnitCommand(std::string city, std::string path,
-                               std::string unitType, uint32_t nodeId)
+AddBuildingCommand::AddBuildingCommand(std::string city, std::string path,
+                               std::string buildingType, uint32_t nodeId)
     : m_city(std::move(city)),
       m_path(std::move(path)),
-      m_unitType(std::move(unitType)),
+      m_buildingType(std::move(buildingType)),
       m_nodeId(nodeId)
 {}
 
 // ----------------------------------------------------------------------------
-bool AddUnitCommand::redo(Simulation& simulation)
+bool AddBuildingCommand::redo(Simulation& simulation)
 {
     City* city = findCity(simulation, m_city);
     Path* path = findPath(simulation, m_city, m_path);
     if ((city == nullptr) || (path == nullptr))
         return false;
 
-    UnitType const* type = nullptr;
+    BuildingType const* type = nullptr;
     try
     {
-        type = &simulation.getRuleset().getUnitType(m_unitType);
+        type = &simulation.getRuleset().getBuildingType(m_buildingType);
     }
     catch (...)
     {
         return false;
     }
 
-    Unit* unit = nullptr;
+    Building* building = nullptr;
 
     if (m_segmentId == NO_ID)
     {
         Node* node = path->findNode(m_nodeId);
         if (node == nullptr)
             return false;
-        unit = &city->addUnit(*type, *node);
+        building = &city->addBuilding(*type, *node);
     }
     else
     {
@@ -366,25 +366,25 @@ bool AddUnitCommand::redo(Simulation& simulation)
             }
         }
 
-        unit = &city->addUnit(*type, junction);
+        building = &city->addBuilding(*type, junction);
     }
 
-    m_unitId = unit->getId();
+    m_buildingId = building->getId();
     return true;
 }
 
 // ----------------------------------------------------------------------------
-void AddUnitCommand::undo(Simulation& simulation)
+void AddBuildingCommand::undo(Simulation& simulation)
 {
     City* city = findCity(simulation, m_city);
     if (city == nullptr)
         return;
 
-    for (auto& it: city->getUnits())
+    for (auto& it: city->getBuildings())
     {
-        if (it->getId() == m_unitId)
+        if (it->getId() == m_buildingId)
         {
-            city->removeUnit(*it);
+            city->removeBuilding(*it);
             break;
         }
     }
@@ -393,7 +393,7 @@ void AddUnitCommand::undo(Simulation& simulation)
 }
 
 // ----------------------------------------------------------------------------
-void AddUnitCommand::mergeBack(Simulation& simulation)
+void AddBuildingCommand::mergeBack(Simulation& simulation)
 {
     if (m_junctionId == NO_ID)
         return;
@@ -411,9 +411,9 @@ void AddUnitCommand::mergeBack(Simulation& simulation)
 
     // Sewing the halves back is only harmless while nothing else came to lean
     // on them: another building, or a road drawn from the junction.
-    if (!junction->getUnits().empty() || (junction->getSegments().size() != 2u))
+    if (!junction->getBuildings().empty() || (junction->getSegments().size() != 2u))
         return;
-    if (!first->getUnits().empty() || !second->getUnits().empty())
+    if (!first->getBuildings().empty() || !second->getBuildings().empty())
         return;
 
     SegmentType const* type = nullptr;
@@ -446,15 +446,15 @@ void AddUnitCommand::mergeBack(Simulation& simulation)
 }
 
 // ----------------------------------------------------------------------------
-std::string AddUnitCommand::label() const
+std::string AddBuildingCommand::label() const
 {
-    return "build " + m_unitType;
+    return "build " + m_buildingType;
 }
 
 // ----------------------------------------------------------------------------
-void AddUnitCommand::onWorldRebuilt()
+void AddBuildingCommand::onWorldRebuilt()
 {
-    m_unitId = NO_ID;
+    m_buildingId = NO_ID;
     m_junctionId = NO_ID;
     m_secondHalfId = NO_ID;
 }
@@ -464,27 +464,27 @@ void AddUnitCommand::onWorldRebuilt()
 // =============================================================================
 
 // ----------------------------------------------------------------------------
-RemoveUnitCommand::RemoveUnitCommand(std::string city, std::string path,
-                                     uint32_t id, std::string unitType,
-                                     bool byUnitId)
+RemoveBuildingCommand::RemoveBuildingCommand(std::string city, std::string path,
+                                     uint32_t id, std::string buildingType,
+                                     bool byBuildingId)
     : m_city(std::move(city)),
       m_path(std::move(path)),
       m_id(id),
-      m_unitType(std::move(unitType)),
-      m_byUnitId(byUnitId)
+      m_buildingType(std::move(buildingType)),
+      m_byBuildingId(byBuildingId)
 {}
 
 // ----------------------------------------------------------------------------
-bool RemoveUnitCommand::redo(Simulation& simulation)
+bool RemoveBuildingCommand::redo(Simulation& simulation)
 {
     City* city = findCity(simulation, m_city);
     if (city == nullptr)
         return false;
 
-    Unit* target = nullptr;
-    if (m_byUnitId)
+    Building* target = nullptr;
+    if (m_byBuildingId)
     {
-        for (auto& it: city->getUnits())
+        for (auto& it: city->getBuildings())
         {
             if (it->getId() == m_id)
             {
@@ -501,11 +501,11 @@ bool RemoveUnitCommand::redo(Simulation& simulation)
         Node* node = path->findNode(m_id);
         if (node == nullptr)
             return false;
-        for (auto* unit: node->getUnits())
+        for (auto* building: node->getBuildings())
         {
-            if (unit->getTypeName() == m_unitType)
+            if (building->getTypeName() == m_buildingType)
             {
-                target = unit;
+                target = building;
                 break;
             }
         }
@@ -530,12 +530,12 @@ bool RemoveUnitCommand::redo(Simulation& simulation)
         m_onNode = true;
     }
 
-    city->removeUnit(*target);
+    city->removeBuilding(*target);
     return true;
 }
 
 // ----------------------------------------------------------------------------
-void RemoveUnitCommand::undo(Simulation& simulation)
+void RemoveBuildingCommand::undo(Simulation& simulation)
 {
     City* city = findCity(simulation, m_city);
     if (city == nullptr)
@@ -543,7 +543,7 @@ void RemoveUnitCommand::undo(Simulation& simulation)
 
     try
     {
-        UnitType const& type = simulation.getRuleset().getUnitType(m_unitType);
+        BuildingType const& type = simulation.getRuleset().getBuildingType(m_buildingType);
         if (m_onNode)
         {
             Path* path = findPath(simulation, m_city, m_path);
@@ -552,7 +552,7 @@ void RemoveUnitCommand::undo(Simulation& simulation)
             Node* node = path->findNode(m_id);
             if (node == nullptr)
                 return;
-            city->addUnit(type, *node);
+            city->addBuilding(type, *node);
         }
         else if (m_segmentId != NO_ID)
         {
@@ -562,11 +562,11 @@ void RemoveUnitCommand::undo(Simulation& simulation)
             Segment* segment = path->findSegment(m_segmentId);
             if (segment == nullptr)
                 return;
-            city->addUnit(type, *path, *segment, m_offset);
+            city->addBuilding(type, *path, *segment, m_offset);
         }
         else
         {
-            city->addUnit(type, m_position);
+            city->addBuilding(type, m_position);
         }
     }
     catch (...)
@@ -574,9 +574,9 @@ void RemoveUnitCommand::undo(Simulation& simulation)
 }
 
 // ----------------------------------------------------------------------------
-std::string RemoveUnitCommand::label() const
+std::string RemoveBuildingCommand::label() const
 {
-    return "demolish " + m_unitType;
+    return "demolish " + m_buildingType;
 }
 
 // =============================================================================

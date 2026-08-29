@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------------
 
 //! \file World.hpp
-//! \brief The grid shared by every city: layers, cities, coordinates.
+//! \brief Grid for all cities: layers, cities, coordinates.
 
 #ifndef OPEN_GLASSBOX_WORLD_HPP
 #define OPEN_GLASSBOX_WORLD_HPP
@@ -18,33 +18,32 @@ namespace ogb
 {
 
 //==============================================================================
-//! \brief The ground every city stands on: one grid, one layer per resource
-//! type.
+//! \brief Base grid for every city: one grid, one layer per resource type.
 //!
-//! The grid is unique. Layers such as pollution or land value belong to the
-//! World, not to each city, so two neighbouring cities share the same layers
-//! along their border. A city keeps its own name, roads and buildings, and owns
-//! only its rectangle of cells. Its rules run inside that rectangle.
+//! The grid is shared. Layers like pollution or land value live on the World,
+//! not in each city. Neighbouring cities share layers at their border. Each city
+//! has its own name, roads, and buildings. It owns one rectangle of cells. Its
+//! rules run inside that rectangle.
 //!
-//! World also fixes the order of a tick: cities first, so agents move and then
-//! buildings update, and layers last, so a cell reflects the whole tick.
+//! World sets tick order: cities first, then layers. Agents move and buildings
+//! update in cities first. Layers run last so each cell sees the full tick.
 //!
-//! A Simulation owns one and does not hand it out. Reach a city through
-//! Simulation::getCity() rather than here.
+//! Simulation owns one World. Do not access cities here. Use
+//! Simulation::getCity() instead.
 //==============================================================================
 class World
 {
 public:
 
-    //! \brief Callbacks for cities appearing, going away, and roads crossing a
-    //! border. See SimulationListener.
+    //! \brief Callbacks for city creation, removal, and cross-border roads. See
+    //! SimulationListener.
     using Listener = SimulationListener;
 
     // -------------------------------------------------------------------------
-    //! \brief An empty world: no city, no layer.
-    //! \param[in] config runtime settings, copied and shared with every city.
-    //! \param[in] clock game calendar, owned by the Simulation. Advanced once
-    //! per tick by update().
+    //! \brief Create an empty world with no city and no layer.
+    //! \param[in] config Runtime settings. Copied and shared with every city.
+    //! \param[in] clock Game calendar. Owned by Simulation. update() advances
+    //! it once per tick.
     // -------------------------------------------------------------------------
     World(Config const& config, SimulationClock& clock);
 
@@ -54,9 +53,9 @@ public:
     World& operator=(World&&) = delete;
 
     // -------------------------------------------------------------------------
-    //! \brief Register the callbacks. One listener at a time: a second call
-    //! replaces the first.
-    //! \param[in] listener kept by address, has to outlive the World.
+    //! \brief Register callbacks. Only one listener is active. A new call
+    //! replaces the old one.
+    //! \param[in] listener Stored by address. Must outlive the World.
     // -------------------------------------------------------------------------
     void setListener(Listener& listener)
     {
@@ -64,8 +63,8 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \return the registered callbacks, or the default ones, which
-    //! accept every road.
+    //! \return Registered callbacks, or default callbacks that accept
+    //! every road.
     // -------------------------------------------------------------------------
     [[nodiscard]] Listener& getListener()
     {
@@ -73,25 +72,25 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief Create a layer for a resource type, or return the existing one.
+    //! \brief Create a layer for a resource type, or return the existing layer.
     //!
-    //! Layers are shared: when city B asks for a layer city A already created,
-    //! both use the same one.
+    //! Layers are shared. If city B requests a layer city A already created,
+    //! both use it.
     //!
-    //! \param[in] type recipe of the layer, from the ruleset.
-    //! \return the layer, owned by the World.
+    //! \param[in] type Layer recipe from the ruleset.
+    //! \return The layer. Owned by the World.
     // -------------------------------------------------------------------------
     Layer& addLayer(LayerType const& type);
 
     // -------------------------------------------------------------------------
-    //! \brief Look a layer up by name.
-    //! \param[in] name name of the layer, such as "Water".
-    //! \return the layer, or nullptr when no city ever asked for it.
+    //! \brief Find a layer by name.
+    //! \param[in] name Layer name, such as "Water".
+    //! \return The layer, or nullptr if no city created it.
     // -------------------------------------------------------------------------
     [[nodiscard]] Layer* findLayer(std::string const& name);
 
     // -------------------------------------------------------------------------
-    //! \brief \return every layer, by name.
+    //! \return All layers, keyed by name.
     // -------------------------------------------------------------------------
     [[nodiscard]] Layers const& getLayers() const
     {
@@ -99,13 +98,13 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief Create a city over a rectangle of the grid. A city of the same
-    //! name is replaced.
-    //! \param[in] name unique name of the city.
-    //! \param[in] position world position of the top-left corner of its cells.
-    //! \param[in] sizeU cells it owns along U.
-    //! \param[in] sizeV cells it owns along V.
-    //! \return the new city.
+    //! \brief Create a city over a grid rectangle. Replaces a city with the
+    //! same name.
+    //! \param[in] name Unique city name.
+    //! \param[in] position World position of the top-left cell corner.
+    //! \param[in] sizeU Number of cells along U.
+    //! \param[in] sizeV Number of cells along V.
+    //! \return The new city.
     // -------------------------------------------------------------------------
     City& addCity(std::string const& name,
                   Vector3f const& position,
@@ -113,44 +112,44 @@ public:
                   uint32_t sizeV);
 
     // -------------------------------------------------------------------------
-    //! \brief The same, spanning GridConfig::defaultCitySizeU by
+    //! \brief Same as addCity(), but uses GridConfig::defaultCitySizeU by
     //! GridConfig::defaultCitySizeV cells.
     // -------------------------------------------------------------------------
     City& addCity(std::string const& name, Vector3f const& position);
 
     // -------------------------------------------------------------------------
-    //! \brief Destroy a city and everything it holds. The layers stay, being
-    //! shared.
-    //! \param[in] name name of the city.
-    //! \return false when no city goes by that name.
+    //! \brief Destroy a city and everything it owns. Shared layers remain.
+    //! \param[in] name City name.
+    //! \return false if no city has that name.
     // -------------------------------------------------------------------------
     bool removeCity(std::string const& name);
 
     // -------------------------------------------------------------------------
-    //! \brief Look a city up by name.
-    //! \param[in] name name of the city.
-    //! \return the city.
-    //! \throw std::out_of_range when no city goes by that name.
+    //! \brief Find a city by name.
+    //! \param[in] name City name.
+    //! \return The city.
+    //! \throw std::out_of_range if no city has that name.
     // -------------------------------------------------------------------------
     [[nodiscard]] City& getCity(std::string const& name);
 
     // -------------------------------------------------------------------------
-    //! \brief Look a city up by name, without throwing.
-    //! \param[in] name name of the city.
-    //! \return the city, or nullptr when no city goes by that name.
+    //! \brief Find a city by name without throwing.
+    //! \param[in] name City name.
+    //! \return The city, or nullptr if no city has that name.
     // -------------------------------------------------------------------------
     [[nodiscard]] City* findCity(std::string const& name);
 
     // -------------------------------------------------------------------------
-    //! \brief Which city owns a place. The editor asks before building.
-    //! \param[in] position the place, in world coordinates.
-    //! \return the city whose cells hold it, or nullptr when it falls outside
-    //! every city.
+    //! \brief Find the city that owns a position. The editor uses this before
+    //! building.
+    //! \param[in] position Position in world coordinates.
+    //! \return The city that contains it, or nullptr if it is outside every
+    //! city.
     // -------------------------------------------------------------------------
     [[nodiscard]] City* findCityAt(Vector3f const& position);
 
     // -------------------------------------------------------------------------
-    //! \brief \return every city, by name.
+    //! \return All cities, keyed by name.
     // -------------------------------------------------------------------------
     [[nodiscard]] Cities const& getCities() const
     {
@@ -158,18 +157,19 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief One tick for the whole world: every city first, then every layer.
+    //! \brief Run one tick for the whole world. Updates every city, then every
+    //! layer.
     //!
-    //! Agents move, then buildings update, then layers run their rules. The
-    //! clock is advanced here too.
+    //! Agents move and buildings update in cities first. Layers run their rules
+    //! last. The clock advances here.
     //!
-    //! \param[in] dt how long the tick lasts, in seconds of game time.
+    //! \param[in] dt Tick length in seconds of game time.
     // -------------------------------------------------------------------------
     void update(float dt);
 
     // -------------------------------------------------------------------------
-    //! \brief \return the side of a grid cell, in world units. The same for
-    //! every layer and every city.
+    //! \return Grid cell side length in world units. Same for every
+    //! layer and city.
     // -------------------------------------------------------------------------
     [[nodiscard]] float getCellSize() const
     {
@@ -177,25 +177,25 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief Which cell a place falls in.
+    //! \brief Convert a world position to a cell.
     //!
-    //! Nothing is clamped: coordinates are signed, the grid has no bounds, and
-    //! every place falls in a cell even outside every city.
+    //! Coordinates are not clamped. The grid has no bounds. Every position maps
+    //! to a cell, even outside every city.
     //!
-    //! \param[in] position the place, in world coordinates.
-    //! \return the cell.
+    //! \param[in] position Position in world coordinates.
+    //! \return The cell.
     // -------------------------------------------------------------------------
     Cell worldToCell(Vector3f const& position) const;
 
     // -------------------------------------------------------------------------
-    //! \brief Where a cell sits in the world.
-    //! \param[in] cell the cell.
-    //! \return the world position of its top-left corner.
+    //! \brief Convert a cell to world coordinates.
+    //! \param[in] cell The cell.
+    //! \return World position of its top-left corner.
     // -------------------------------------------------------------------------
     Vector3f cellToWorld(Cell cell) const;
 
     // -------------------------------------------------------------------------
-    //! \brief \return the runtime settings, shared by every city.
+    //! \return Runtime settings shared by every city.
     // -------------------------------------------------------------------------
     [[nodiscard]] Config const& getConfig() const
     {
@@ -203,17 +203,15 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief Replace the runtime settings while the simulation runs.
-    //! \param[in] config the new settings, copied.
-    //! \note GridConfig::cellSize is read when a city is created and when it
-    //! moves. Changing it under a city that already exists leaves its cells
-    //! where they were.
+    //! \brief Replace runtime settings during simulation.
+    //! \param[in] config New settings. Copied.
+    //! \note GridConfig::cellSize is read when a city is created or moved.
+    //! Changing it after a city exists does not move its cells.
     // -------------------------------------------------------------------------
     void setConfig(Config const& config);
 
     // -------------------------------------------------------------------------
-    //! \brief \return the game calendar. The Simulation owns it and advances
-    //! it.
+    //! \return Game calendar. Owned by Simulation. update() advances it.
     // -------------------------------------------------------------------------
     [[nodiscard]] SimulationClock const& getClock() const
     {
@@ -221,20 +219,20 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief Build a road from one place to another, cut at every city border.
+    //! \brief Build a road between two points. Split it at every city border.
     //!
-    //! The road is clipped to the cells of each city. A road crossing a border
-    //! becomes two segments, one per city. A road outside every city goes
-    //! entirely to the city that asked. Each neighbour is asked through the
-    //! Listener before a segment is built inside it.
+    //! The road is clipped to each city's cells. A road that crosses a border
+    //! becomes two segments, one per city. A road outside every city goes to
+    //! the requesting city only. The Listener asks each neighbour before
+    //! building inside it.
     //!
-    //! \param[in] owner the city that builds the road.
-    //! \param[in] pathType name of the network, such as "Road". When the target
-    //! city has no such network, one is created from the network of the
-    //! requester. The segment is skipped when the requester has none either.
-    //! \param[in] segmentType recipe of the segment.
-    //! \param[in] from, to endpoints of the road, in world coordinates.
-    //! \return false when a neighbour refused. Nothing is built at all.
+    //! \param[in] owner City that builds the road.
+    //! \param[in] pathType Network name, such as "Road". If the target city has
+    //! no such network, one is created from the requester's network. Skips the
+    //! segment if the requester has no network either.
+    //! \param[in] segmentType Segment recipe.
+    //! \param[in] from, to Road endpoints in world coordinates.
+    //! \return false if a neighbour refused. Nothing is built.
     // -------------------------------------------------------------------------
     bool addRoad(City& owner,
                  std::string const& pathType,
@@ -246,16 +244,16 @@ private:
 
     //! \brief Runtime settings shared by the whole world.
     Config m_config;
-    //! \brief Game calendar, not owned. Advanced once per tick by update().
+    //! \brief Game calendar. Not owned. update() advances it once per tick.
     SimulationClock& m_clock;
     //! \brief One layer per resource type, shared by every city. Declared
-    //! before the cities so it outlives the buildings pointing at it.
+    //! before cities so buildings can reference it safely.
     Layers m_layers;
-    //! \brief Every city of the world.
+    //! \brief All cities in the world.
     Cities m_cities;
-    //! \brief The default callbacks, which accept every road.
+    //! \brief Default callbacks that accept every road.
     Listener m_defaultListener;
-    //! \brief The registered callbacks. Not owned.
+    //! \brief Registered callbacks. Not owned.
     Listener* m_listener = &m_defaultListener;
 };
 

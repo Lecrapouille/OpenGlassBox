@@ -6,14 +6,16 @@
 //-----------------------------------------------------------------------------
 
 //! \file Types.hpp
-//! \brief Descriptor structs for the paths, segments, units, layers, zones,
-//! agents and rules a simulation script defines.
+//! \brief Descriptor structs for script types: Path, Segment, Building, Layer,
+//! Zone, Agent and Rule.
 //!
-//! Nothing here holds any state of a running city: these are the read-only
-//! recipes the parser produces, shared by every entity of the same kind. A city
-//! of four hundred houses holds one UnitType and four hundred Unit, each of
-//! them keeping a reference to it, which is why these objects must outlive the
-//! City and must not move in memory. ScriptDefinitions owns them.
+//! These hold no City state at runtime.
+//! The parser builds them as read-only recipes.
+//! Every entity of one kind shares the same type.
+//! A City with 400 houses has one BuildingType and 400 Building instances.
+//! Each Building keeps a reference to the BuildingType.
+//! These objects must outlive the City and must not move in memory.
+//! ScriptDefinitions owns them.
 
 #ifndef OPEN_GLASSBOX_TYPES_HPP
 #define OPEN_GLASSBOX_TYPES_HPP
@@ -23,62 +25,60 @@
 namespace ogb
 {
 
-class RuleUnit;
+class RuleBuilding;
 class RuleLayer;
 class RuleZone;
 class IRuleCommand;
 
 //==============================================================================
-//! \brief What every type a script declares has in common: the name it is
-//! referred to by, and the colour the demo paints it with.
+//! \brief Common fields for every script type: name and demo colour.
 //!
-//! The name is the identity of the type: rules, units and layers refer to each
-//! other by name, and a save file names what it puts back on the grid. The
-//! colour belongs here rather than in the renderer because a script author
-//! choosing what a thing is also chooses what it looks like.
+//! The name is the type identity.
+//! Rules, Buildings and Layers refer to each other by name.
+//! Save files use these names on the grid.
+//! Colour is here, not in the renderer.
+//! The script author picks both type and look.
 //==============================================================================
 struct EntityType
 {
-    //! \brief Name given by the script, unique among the types of its kind.
-    //! Interned, so that the engine tells two types apart by comparing four
-    //! bytes; it still reads and prints as a string. See Name.
+    //! \brief Name from the script. Unique among types of this kind.
+    //! Interned: the engine compares four bytes. See Name.
+    //! Still reads and prints as a string.
     Name name;
-    //! \brief 0xRRGGBB, as written in the script.
+    //! \brief Colour as 0xRRGGBB, from the script.
     uint32_t color = 0xFFFFFF;
 };
 
 //==============================================================================
-//! \brief What every rule a script declares has in common: a name, how often it
-//! is attempted, and the list of commands making up its body.
+//! \brief Common fields for every Rule from the script.
+//! Name, run period, and command list.
 //!
-//! A rule is a transaction: every command validates, or nothing is applied. See
-//! IRule::execute.
+//! A Rule is a transaction: every command validates, or nothing runs.
+//! See IRule::execute.
 //==============================================================================
 struct RuleType
 {
-    //! \brief Name given by the script, by which units, layers and zones list the
-    //! rules they run. Interned: see Name.
+    //! \brief Name from the script.
+    //! Buildings, Layers and Zones list Rules by this name. Interned. See Name.
     Name name;
-    //! \brief Period in simulation ticks, as written by \c rate \c 7. One means
-    //! every tick. Meaningless when \c rateMinutes is set.
+    //! \brief Period in simulation ticks, from \c rate \c 7.
+    //! One means every tick. Not used when \c rateMinutes is set.
     uint32_t rate = 1u;
-    //! \brief Period written as a duration of game time, in minutes, as written
-    //! by \c rate \c 30 \c minutes. Zero when the script counted ticks instead.
-    //! Turned into ticks by IRule::getPeriodTicks(), which is what lets the
-    //! whole ruleset follow TimeConfig::ticksPerMinute.
+    //! \brief Period in game minutes, from \c rate \c 30 \c minutes.
+    //! Zero when the script counted ticks.
+    //! IRule::getPeriodTicks() converts this using TimeConfig::ticksPerMinute.
     uint32_t rateMinutes = 0u;
-    //! \brief Body of the rule, in the order the script wrote it. The pointers
-    //! are owned by ScriptDefinitions: they are never freed here and have to
-    //! stay valid for as long as the rule may run.
+    //! \brief Rule body in script order.
+    //! ScriptDefinitions owns the command pointers.
+    //! They stay valid as long as the Rule may run.
     std::vector<IRuleCommand*> commands;
 };
 
 //==============================================================================
-//! \brief Recipe of a rule run by a Layer, on one cell of the grid at a time.
+//! \brief Recipe for a Layer Rule. It runs on one grid cell at a time.
 //!
-//! A layer rule may run on a random sample of its cells rather than on all of
-//! them, which is how a slow diffusion is written without giving every cell its
-//! own rule.
+//! A Layer Rule may run on a random sample of cells, not all cells.
+//! This models slow diffusion without one Rule per cell.
 //!
 //! Example:
 //! \code
@@ -97,33 +97,30 @@ public:
     RuleLayerType(RuleLayerType const&) = default;
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] name_ name the script gave the rule.
+    //! \param[in] name_ Rule name from the script.
     //--------------------------------------------------------------------------
     explicit RuleLayerType(std::string const& name_)
     {
         name = name_;
     }
 
-    //! \brief Whether the rule runs on a sample of the cells of the Layer instead
-    //! of on every one of them.
+    //! \brief Run on a sample of Layer cells instead of every cell.
     bool randomTiles = false;
 
-    //! \brief Size of that sample, in percent of the cells of the Layer. Clamped
-    //! to a hundred by RuleLayer.
+    //! \brief Sample size in percent of Layer cells. RuleLayer clamps to 100.
     uint32_t randomTilesPercent = 10u;
 };
 
 //==============================================================================
-//! \brief Recipe of a rule run by a Unit, once every \c rate on the building
-//! itself.
+//! \brief Recipe for a Building Rule. It runs on the Building every \c rate ticks.
 //!
-//! A unit rule is where the traffic of a city comes from: it turns resources
-//! into other resources, and sends Agents to look for a building that accepts
-//! what it produced.
+//! Building Rules drive City traffic.
+//! They turn resources into other resources.
+//! They send Agents to Buildings that accept what they produced.
 //!
 //! Example:
 //! \code
-//! unitRule SendPeopleToWork
+//! buildingRule SendPeopleToWork
 //!     rate 45 minutes
 //!     hour between 8 18
 //!     local People remove 1
@@ -131,31 +128,31 @@ public:
 //! end
 //! \endcode
 //==============================================================================
-class RuleUnitType: public RuleType
+class RuleBuildingType: public RuleType
 {
 public:
 
-    RuleUnitType(RuleUnitType const&) = default;
+    RuleBuildingType(RuleBuildingType const&) = default;
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] name_ name the script gave the rule.
+    //! \param[in] name_ Rule name from the script.
     //--------------------------------------------------------------------------
-    explicit RuleUnitType(std::string const& name_)
+    explicit RuleBuildingType(std::string const& name_)
     {
         name = name_;
     }
 
-    //! \brief Rule run instead when this one does not fire, or nullptr. Owned
-    //! by ScriptDefinitions. This is how a script writes an alternative: try to
-    //! sell, and failing that, throw the stock away.
-    RuleUnit* onFail = nullptr;
+    //! \brief Rule to run when this one fails, or nullptr.
+    //! Owned by ScriptDefinitions.
+    //! Example: try to sell, else discard stock.
+    RuleBuilding* onFail = nullptr;
 };
 
 //==============================================================================
-//! \brief Recipe of a rule run by an Zone, on the zone as a whole.
+//! \brief Recipe for a Zone Rule. It runs on the whole Zone.
 //!
-//! Zone rules are the only ones that create and destroy buildings, which is why
-//! they count what already stands inside the zone.
+//! Only Zone Rules create and destroy Buildings.
+//! They count Buildings already in the Zone.
 //!
 //! Example:
 //! \code
@@ -173,7 +170,7 @@ public:
     RuleZoneType(RuleZoneType const&) = default;
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] name_ name the script gave the rule.
+    //! \param[in] name_ Rule name from the script.
     //--------------------------------------------------------------------------
     explicit RuleZoneType(std::string const& name_)
     {
@@ -182,62 +179,59 @@ public:
 };
 
 //==============================================================================
-//! \brief Recipe of a building: what it holds, what it does and what may be
-//! delivered to it.
+//! \brief Recipe for a Building: resources, Rules and delivery targets.
 //!
 //! Example:
 //! \code
-//! unit Home color 0xFF00FF layerRadius 1 rules [ SendPeopleToWork ]
+//! building Home color 0xFF00FF layerRadius 1 rules [ SendPeopleToWork ]
 //!      targets [ Home ] caps [ People 8 ] resources [ People 8 ]
 //! \endcode
 //!
 //! \code
-//! // The type is looked up by name and outlives every building of that type.
-//! UnitType const& type = simulation.getRuleset().getUnitType("Home");
-//! Unit& home = city.addUnit(type, node);
+//! // Look up by name. The type outlives every Building of that type.
+//! BuildingType const& type = simulation.getRuleset().getBuildingType("Home");
+//! Building& home = city.addBuilding(type, node);
 //! \endcode
 //==============================================================================
-class UnitType: public EntityType
+class BuildingType: public EntityType
 {
 public:
 
-    UnitType(UnitType const&) = default;
+    BuildingType(BuildingType const&) = default;
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] name_ name the script gave the building, and the name
-    //! Agents look for. Every other field takes its default.
+    //! \param[in] name_ Building name from the script.
+    //! Also the name Agents look for. Other fields use defaults.
     //--------------------------------------------------------------------------
-    explicit UnitType(std::string const& name_)
+    explicit BuildingType(std::string const& name_)
     {
         name = name_;
     }
 
-    //! \brief How far, in grid cells, the rules of the building read and write
-    //! the Layers around it. One means the cell it stands on and its neighbours.
+    //! \brief How far Building Rules read and write Layers, in grid cells.
+    //! One means the Building cell and its neighbours.
     uint32_t radius = 1u;
 
-    //! \brief What a fresh building of that type holds, and how much of each
-    //! resource it can ever hold. The amounts are the starting stock; the
-    //! capacities are the ceiling its rules and its deliveries respect.
+    //! \brief Starting resources and capacities for a new Building of this type.
+    //! Amounts are the starting stock.
+    //! Capacities limit Rules and deliveries.
     Resources resources;
 
-    //! \brief Rules the building attempts, in the order the script listed them.
-    //! Owned by ScriptDefinitions; may contain nullptr when the script named a
-    //! rule that does not exist.
-    std::vector<RuleUnit*> rules;
+    //! \brief Rules the Building tries, in script order.
+    //! Owned by ScriptDefinitions.
+    //! May contain nullptr if the script named a missing Rule.
+    std::vector<RuleBuilding*> rules;
 
-    //! \brief The names an Agent may look for to end its trip here. A building
-    //! answering to no name at all can never be delivered to.
+    //! \brief Names an Agent may look for to deliver here.
+    //! A Building with no targets never receives deliveries.
     //!
-    //! Interned, and that is where it pays: the router asks every building it
-    //! walks past whether one of these matches what an Agent is carrying, so
-    //! this list is read thousands of times per tick.
+    //! Names are interned.
+    //! The router checks these thousands of times per tick.
     std::vector<Name> targets;
 };
 
 //==============================================================================
-//! \brief Recipe of a heatmap: one number per cell of the grid, and the rules
-//! that make it move.
+//! \brief Recipe for a heatmap Layer: one value per grid cell and its Rules.
 //!
 //! Example:
 //! \code
@@ -252,8 +246,8 @@ public:
     LayerType(LayerType const&) = default;
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] name_ name the script gave the layer. The capacity of a
-    //! cell defaults to the largest one a Resource allows.
+    //! \param[in] name_ Layer name from the script.
+    //! Cell capacity defaults to the largest Resource allows.
     //--------------------------------------------------------------------------
     explicit LayerType(std::string const& name_)
     {
@@ -261,10 +255,10 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] name_ name the script gave the layer.
-    //! \param[in] color_ 0xRRGGBB the demo shades the cells with.
-    //! \param[in] capacity_ largest amount one cell may hold.
-    //! \param[in] list rules the layer runs. Not owned.
+    //! \param[in] name_ Layer name from the script.
+    //! \param[in] color_ demo cell colour as 0xRRGGBB.
+    //! \param[in] capacity_ maximum amount one cell may hold.
+    //! \param[in] list Rules the Layer runs. Not owned.
     //--------------------------------------------------------------------------
     LayerType(std::string const& name_,
             uint32_t color_,
@@ -276,20 +270,19 @@ public:
         color = color_;
     }
 
-    //! \brief Largest amount one cell may hold. The same value for every cell
-    //! of the layer.
+    //! \brief Maximum amount one cell may hold. Same for every cell.
     uint32_t capacity = Resource::MAX_CAPACITY;
 
-    //! \brief Rules the layer attempts. Owned by ScriptDefinitions.
+    //! \brief Rules the Layer tries. Owned by ScriptDefinitions.
     std::vector<RuleLayer*> rules;
 };
 
 //==============================================================================
-//! \brief Recipe of a traveller: how fast it drives and what it looks like.
+//! \brief Recipe for an Agent: speed and demo look.
 //!
-//! Shared as read only by every Agent of that type, and held by them as a const
-//! reference: a city may have a thousand of them alive at once, and none of
-//! them owns anything.
+//! Shared read-only by every Agent of this type.
+//! Each Agent holds a const reference.
+//! A City may have thousands of Agents. None owns the type.
 //!
 //! Example:
 //! \code
@@ -304,8 +297,8 @@ public:
     AgentType(AgentType const&) = default;
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] name_ name the script gave the agent. Speed, radius
-    //! and colour take their defaults.
+    //! \param[in] name_ Agent name from the script.
+    //! Speed, radius and colour use defaults.
     //--------------------------------------------------------------------------
     explicit AgentType(std::string const& name_)
     {
@@ -314,10 +307,10 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] name_ name the script gave the agent.
-    //! \param[in] speed_ top speed, in world units per second of game time.
-    //! \param[in] radius_ radius of action on the Layers, in grid cells.
-    //! \param[in] color_ 0xRRGGBB the demo draws it with.
+    //! \param[in] name_ Agent name from the script.
+    //! \param[in] speed_ top speed in world units per game second.
+    //! \param[in] radius_ Layer action radius in grid cells.
+    //! \param[in] color_ demo colour as 0xRRGGBB.
     //--------------------------------------------------------------------------
     AgentType(std::string const& name_,
               float speed_,
@@ -329,22 +322,20 @@ public:
         color = color_;
     }
 
-    //! \brief Top speed, in world units per second of game time. What an Agent
-    //! actually drives is the lesser of this and the speed of the Segment under it,
-    //! so a fast truck on a dirt road is a slow truck.
+    //! \brief Top speed in world units per game second.
+    //! An Agent drives at the minimum of this and the Segment speed under it.
+    //! A fast truck on a dirt road is slow.
     float speed = 1.0f;
 
-    //! \brief Radius of action on the Layers, in grid cells. Reserved: an Agent
-    //! does not run rules.
+    //! \brief Layer action radius in grid cells. Reserved: Agents do not run Rules.
     uint32_t radius = 1u;
 };
 
 //==============================================================================
-//! \brief Recipe of a road segment: how fast it is, how much traffic it takes
-//! and how badly it suffers from more.
+//! \brief Recipe for a road Segment: speed, capacity and congestion factor.
 //!
-//! The three numbers are the parameters of the BPR travel time function the
-//! router uses. See Segment::getTravelTime() and doc/traffic.md.
+//! These three values feed the BPR travel time function in the router.
+//! See Segment::getTravelTime() and doc/traffic.md.
 //!
 //! Example:
 //! \code
@@ -358,7 +349,7 @@ public:
     SegmentType(SegmentType const&) = default;
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] name_ name the script gave the segment type.
+    //! \param[in] name_ Segment type name from the script.
     //--------------------------------------------------------------------------
     explicit SegmentType(std::string const& name_)
     {
@@ -366,9 +357,8 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] name_ name the script gave the segment type.
-    //! \param[in] color_ 0xRRGGBB the demo draws it with, unless the traffic
-    //! colours are on.
+    //! \param[in] name_ Segment type name from the script.
+    //! \param[in] color_ demo colour as 0xRRGGBB, unless traffic colours are on.
     //--------------------------------------------------------------------------
     SegmentType(std::string const& name_, uint32_t color_)
     {
@@ -376,27 +366,25 @@ public:
         color = color_;
     }
 
-    //! \brief Free flow speed, in world units per second of game time. Used to
-    //! derive the zero-traffic travel time of a Segment from its length.
+    //! \brief Free-flow speed in world units per game second.
+    //! Used with Segment length to get zero-traffic travel time.
     float speed = 50.0f;
 
-    //! \brief Number of Agents a Segment of this type carries before the travel
-    //! time starts to grow noticeably. This is the practical capacity of the
-    //! BPR function, not a hard limit: a saturated road stays passable, it just
-    //! becomes expensive.
+    //! \brief Agent count before travel time grows clearly.
+    //! Practical BPR capacity, not a hard limit.
+    //! A full road stays passable but costs more time.
     float capacity = 20.0f;
 
-    //! \brief Exponent of the BPR function. Four is the value published by the
-    //! Bureau of Public Roads and the one used by CiudadSim. Raising it makes
-    //! congestion bite later and harder.
+    //! \brief BPR exponent. Four is the Bureau of Public Roads value.
+    //! Also used by CiudadSim. Higher values mean congestion hits later and harder.
     float beta = 4.0f;
 };
 
 //==============================================================================
-//! \brief Recipe of a road network: a family of segments Agents may drive on.
+//! \brief Recipe for a road network: Segments Agents may drive on.
 //!
-//! Two Paths never meet, which is what separates a road network from a rail
-//! network: an Agent routed on one cannot hop onto the other.
+//! Two Paths never meet.
+//! This separates road and rail: an Agent on one Path cannot switch to another.
 //!
 //! Example:
 //! \code
@@ -410,7 +398,7 @@ public:
     PathType(PathType const&) = default;
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] name_ name the script gave the network.
+    //! \param[in] name_ Path name from the script.
     //--------------------------------------------------------------------------
     explicit PathType(std::string const& name_)
     {
@@ -418,8 +406,8 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] name_ name the script gave the network.
-    //! \param[in] color_ 0xRRGGBB the demo draws its segments with.
+    //! \param[in] name_ Path name from the script.
+    //! \param[in] color_ demo Segment colour as 0xRRGGBB.
     //--------------------------------------------------------------------------
     PathType(std::string const& name_, uint32_t color_)
     {
@@ -429,8 +417,7 @@ public:
 };
 
 //==============================================================================
-//! \brief Recipe of a zone: what the player paints on the grid, and the rules
-//! that grow, upgrade and abandon the buildings inside it.
+//! \brief Recipe for a Zone: painted area and Rules for Buildings inside it.
 //!
 //! Example:
 //! \code
@@ -444,7 +431,7 @@ public:
     ZoneType(ZoneType const&) = default;
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] name_ name the script gave the zone.
+    //! \param[in] name_ Zone name from the script.
     //--------------------------------------------------------------------------
     explicit ZoneType(std::string const& name_)
     {
@@ -452,7 +439,7 @@ public:
         color = 0x44AA44;
     }
 
-    //! \brief Rules the zone attempts. Owned by ScriptDefinitions.
+    //! \brief Rules the Zone tries. Owned by ScriptDefinitions.
     std::vector<RuleZone*> rules;
 };
 

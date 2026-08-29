@@ -13,12 +13,12 @@ TEST(TestsAgent, Constructor)
 {
     TestWorld cityWorld("Paris", 4, 4);
     City& city = cityWorld.city;
-    UnitType unit_type("Home");
-    unit_type.color = 0xFF00FF;
-    unit_type.radius = 2u;
-    unit_type.resources.addResource("oil", 5u);
+    BuildingType building_type("Home");
+    building_type.color = 0xFF00FF;
+    building_type.radius = 2u;
+    building_type.resources.addResource("oil", 5u);
     Node n(42u, Vector3f(1.0f, 2.0f, 3.0f));
-    Unit u(unit_type, n, city);
+    Building u(building_type, n, city);
     ASSERT_EQ(&n, u.m_node);
 
     // Create a new Agent
@@ -59,17 +59,17 @@ TEST(TestsAgent, Move)
     Segment& s1 = p.addSegment(type2, n1, n2);
 
     Resources r;
-    UnitType homeType("Home");
+    BuildingType homeType("Home");
     homeType.color = 0xFF00FF;
     homeType.radius = 1u;
     homeType.resources = r;
     homeType.targets.push_back("Home");
-    Unit u(homeType, n1, city);
+    Building u(homeType, n1, city);
 
-    UnitType factoryType("Factory");
+    BuildingType factoryType("Factory");
     factoryType.targets.emplace_back("People");
     factoryType.resources.setCapacity("People", 10u);
-    city.addUnit(factoryType, n2);
+    city.addBuilding(factoryType, n2);
 
     AgentType worker("Worker", 5.0f, 3u, 42u);
     Resources carried;
@@ -142,15 +142,15 @@ TEST(TestsAgent, LeavesAndReachesABuildingWithoutJumping)
     Node& n2 = path.addNode(Vector3f(60.0f, 0.0f, 0.0f));
     Segment& segment = path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n1, n2);
 
-    UnitType homeType("Home");
+    BuildingType homeType("Home");
     homeType.targets.emplace_back("Home");
-    Unit& home = city.addUnit(homeType, path, segment, 0.8f);
+    Building& home = city.addBuilding(homeType, path, segment, 0.8f);
     ASSERT_FLOAT_EQ(home.getPosition().x, 48.0f);
 
-    UnitType workType("Work");
+    BuildingType workType("Work");
     workType.targets.emplace_back("Work");
     workType.resources.setCapacity("People", 4u);
-    Unit& work = city.addUnit(workType, path, segment, 0.2f);
+    Building& work = city.addBuilding(workType, path, segment, 0.2f);
     ASSERT_FLOAT_EQ(work.getPosition().x, 12.0f);
 
     AgentType worker("Worker", 10.0f, 3u, 42u);
@@ -181,14 +181,14 @@ TEST(TestsAgent, DrivesToTheIntersectionBeforeTakingAnotherSegment)
     Segment& segment1 = path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n1, n2);
     Segment& segment2 = path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n2, n3);
 
-    UnitType homeType("Home");
+    BuildingType homeType("Home");
     homeType.targets.emplace_back("Home");
-    Unit& home = city.addUnit(homeType, path, segment1, 0.6f);
+    Building& home = city.addBuilding(homeType, path, segment1, 0.6f);
 
-    UnitType workType("Work");
+    BuildingType workType("Work");
     workType.targets.emplace_back("Work");
     workType.resources.setCapacity("People", 4u);
-    Unit& work = city.addUnit(workType, path, segment2, 0.4f);
+    Building& work = city.addBuilding(workType, path, segment2, 0.4f);
     ASSERT_FLOAT_EQ(work.getPosition().x, 84.0f);
 
     AgentType worker("Worker", 10.0f, 3u, 42u);
@@ -220,15 +220,15 @@ TEST(TestsAgent, LeavesTheSegmentByTheEndTheDestinationIsBehind)
 
     // The factory stands at a fifth of the first street, so n1 is its near end
     // and the shop is on the other side of n2.
-    UnitType workType("Work");
+    BuildingType workType("Work");
     workType.targets.emplace_back("Work");
-    Unit& work = city.addUnit(workType, path, segment1, 0.2f);
+    Building& work = city.addBuilding(workType, path, segment1, 0.2f);
     ASSERT_FLOAT_EQ(work.getPosition().x, 12.0f);
 
-    UnitType shopType("Shop");
+    BuildingType shopType("Shop");
     shopType.targets.emplace_back("Shop");
     shopType.resources.setCapacity("Goods", 4u);
-    Unit& shop = city.addUnit(shopType, n3);
+    Building& shop = city.addBuilding(shopType, n3);
 
     AgentType truck("Truck", 10.0f, 3u, 42u);
     Resources carried;
@@ -268,14 +268,14 @@ TEST(TestsAgent, DoesNotDeliverFromTheMiddleOfTheStreet)
     Node& n2 = path.addNode(Vector3f(60.0f, 0.0f, 0.0f));
     Segment& segment = path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n1, n2);
 
-    UnitType workType("Work");
+    BuildingType workType("Work");
     workType.targets.emplace_back("Work");
-    Unit& work = city.addUnit(workType, path, segment, 0.2f);
+    Building& work = city.addBuilding(workType, path, segment, 0.2f);
 
-    UnitType homeType("Home");
+    BuildingType homeType("Home");
     homeType.targets.emplace_back("Home");
     homeType.resources.setCapacity("People", 4u);
-    Unit& home = city.addUnit(homeType, n1);
+    Building& home = city.addBuilding(homeType, n1);
 
     AgentType people("People", 10.0f, 3u, 42u);
     Resources carried;
@@ -306,22 +306,22 @@ TEST(TestsAgent, DeliversToTheBuildingThatStillHasRoom)
     Segment& segment1 = path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n1, n2);
     Segment& segment2 = path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n2, n3);
 
-    UnitType workType("Work");
+    BuildingType workType("Work");
     workType.targets.emplace_back("Work");
-    Unit& work = city.addUnit(workType, path, segment2, 0.9f);
+    Building& work = city.addBuilding(workType, path, segment2, 0.9f);
 
     // The nearest home is full, the far one is not.
-    UnitType homeType("Home");
+    BuildingType homeType("Home");
     homeType.targets.emplace_back("Home");
     homeType.resources.setCapacity("People", 1u);
     homeType.resources.addResource("People", 1u);
-    Unit& full = city.addUnit(homeType, path, segment2, 0.4f);
+    Building& full = city.addBuilding(homeType, path, segment2, 0.4f);
     ASSERT_EQ(full.getResources().getAmount("People"), 1u);
 
-    UnitType freeType("Home");
+    BuildingType freeType("Home");
     freeType.targets.emplace_back("Home");
     freeType.resources.setCapacity("People", 4u);
-    Unit& free = city.addUnit(freeType, path, segment1, 0.2f);
+    Building& free = city.addBuilding(freeType, path, segment1, 0.2f);
 
     AgentType people("People", 10.0f, 3u, 42u);
     Resources carried;
@@ -350,15 +350,15 @@ TEST(TestsAgent, DoesNotLoopWhenTheDestinationFillsUpOnTheSegment)
     Node& n2 = path.addNode(Vector3f(60.0f, 0.0f, 0.0f));
     Segment& segment = path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n1, n2);
 
-    UnitType workType("Work");
+    BuildingType workType("Work");
     workType.targets.emplace_back("Work");
     workType.resources.setCapacity("People", 4u);
-    Unit& work = city.addUnit(workType, path, segment, 0.8f);
+    Building& work = city.addBuilding(workType, path, segment, 0.8f);
 
-    UnitType homeType("Home");
+    BuildingType homeType("Home");
     homeType.targets.emplace_back("Home");
     homeType.resources.setCapacity("People", 1u);
-    Unit& home = city.addUnit(homeType, path, segment, 0.2f);
+    Building& home = city.addBuilding(homeType, path, segment, 0.2f);
 
     AgentType people("People", 10.0f, 3u, 42u);
     Resources carried;
@@ -395,14 +395,14 @@ TEST(TestsAgent, ForgetsADestroyedDestination)
     Node& n2 = path.addNode(Vector3f(60.0f, 0.0f, 0.0f));
     Segment& segment = path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n1, n2);
 
-    UnitType workType("Work");
+    BuildingType workType("Work");
     workType.targets.emplace_back("Work");
-    Unit& work = city.addUnit(workType, path, segment, 0.9f);
+    Building& work = city.addBuilding(workType, path, segment, 0.9f);
 
-    UnitType homeType("Home");
+    BuildingType homeType("Home");
     homeType.targets.emplace_back("Home");
     homeType.resources.setCapacity("People", 4u);
-    Unit& home = city.addUnit(homeType, path, segment, 0.1f);
+    Building& home = city.addBuilding(homeType, path, segment, 0.1f);
 
     static AgentType const people("People", 10.0f, 3u, 42u);
     Resources carried;
@@ -414,7 +414,7 @@ TEST(TestsAgent, ForgetsADestroyedDestination)
         city.update(dt);
     ASSERT_EQ(agent.getRoute().getDestination(), &home);
 
-    city.removeUnit(home);
+    city.removeBuilding(home);
     ASSERT_EQ(agent.getRoute().getDestination(), nullptr);
     ASSERT_EQ(agent.getOwner(), &work);
     ASSERT_NO_THROW(city.update(dt));
@@ -433,14 +433,14 @@ TEST(TestsAgent, ClaimsAndGivesBackAPlaceAtItsDestination)
     Node& n2 = path.addNode(Vector3f(60.0f, 0.0f, 0.0f));
     Segment& segment = path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n1, n2);
 
-    UnitType workType("Work");
+    BuildingType workType("Work");
     workType.targets.emplace_back("Work");
-    Unit& work = city.addUnit(workType, path, segment, 0.9f);
+    Building& work = city.addBuilding(workType, path, segment, 0.9f);
 
-    UnitType homeType("Home");
+    BuildingType homeType("Home");
     homeType.targets.emplace_back("Home");
     homeType.resources.setCapacity("People", 4u);
-    Unit& home = city.addUnit(homeType, path, segment, 0.1f);
+    Building& home = city.addBuilding(homeType, path, segment, 0.1f);
 
     AgentType people("People", 10.0f, 3u, 42u);
     Resources carried;
@@ -491,15 +491,15 @@ TEST(TestsAgent, GivingUpGivesThePlaceBack)
     Node& n2 = path.addNode(Vector3f(60.0f, 0.0f, 0.0f));
     Segment& segment = path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n1, n2);
 
-    UnitType workType("Work");
+    BuildingType workType("Work");
     workType.targets.emplace_back("Work");
     workType.resources.setCapacity("People", 4u);
-    Unit& work = city.addUnit(workType, path, segment, 0.8f);
+    Building& work = city.addBuilding(workType, path, segment, 0.8f);
 
-    UnitType homeType("Home");
+    BuildingType homeType("Home");
     homeType.targets.emplace_back("Home");
     homeType.resources.setCapacity("People", 1u);
-    Unit& home = city.addUnit(homeType, path, segment, 0.2f);
+    Building& home = city.addBuilding(homeType, path, segment, 0.2f);
 
     AgentType people("People", 10.0f, 3u, 42u);
     Resources carried;
@@ -535,20 +535,20 @@ TEST(TestsAgent, TwoAgentsForOnePlaceGoToDifferentBuildings)
     Segment& segment1 = path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n1, n2);
     Segment& segment2 = path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n2, n3);
 
-    UnitType workType("Work");
+    BuildingType workType("Work");
     workType.targets.emplace_back("Work");
-    Unit& work = city.addUnit(workType, path, segment1, 0.1f);
+    Building& work = city.addBuilding(workType, path, segment1, 0.1f);
 
     // The near house has room for one, the far one for plenty.
-    UnitType nearType("Home");
+    BuildingType nearType("Home");
     nearType.targets.emplace_back("Home");
     nearType.resources.setCapacity("People", 1u);
-    Unit& nearHome = city.addUnit(nearType, path, segment1, 0.9f);
+    Building& nearHome = city.addBuilding(nearType, path, segment1, 0.9f);
 
-    UnitType farType("Home");
+    BuildingType farType("Home");
     farType.targets.emplace_back("Home");
     farType.resources.setCapacity("People", 4u);
-    Unit& farHome = city.addUnit(farType, path, segment2, 0.9f);
+    Building& farHome = city.addBuilding(farType, path, segment2, 0.9f);
 
     AgentType people("People", 10.0f, 3u, 42u);
     Resources carried;
@@ -587,22 +587,22 @@ TEST(TestsAgent, RerouteCostDoesNotSeeItsOwnClaim)
     Segment& segment1 = path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n1, n2);
     Segment& segment2 = path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n2, n3);
 
-    UnitType workType("Work");
+    BuildingType workType("Work");
     workType.targets.emplace_back("Work");
-    Unit& work = city.addUnit(workType, path, segment1, 0.1f);
+    Building& work = city.addBuilding(workType, path, segment1, 0.1f);
 
     // Room for exactly one at the near house, which the Agent takes, and
     // plenty at the far one, which is the answer a search that counted the
     // Agent's own claim would fall back on.
-    UnitType nearType("Home");
+    BuildingType nearType("Home");
     nearType.targets.emplace_back("Home");
     nearType.resources.setCapacity("People", 1u);
-    Unit& nearHome = city.addUnit(nearType, path, segment1, 0.9f);
+    Building& nearHome = city.addBuilding(nearType, path, segment1, 0.9f);
 
-    UnitType farType("Home");
+    BuildingType farType("Home");
     farType.targets.emplace_back("Home");
     farType.resources.setCapacity("People", 4u);
-    city.addUnit(farType, path, segment2, 0.9f);
+    city.addBuilding(farType, path, segment2, 0.9f);
 
     AgentType people("People", 10.0f, 3u, 42u);
     Resources carried;
@@ -640,15 +640,15 @@ TEST(TestsAgent, ItsOwnClaimDoesNotShutTheDoorOnIt)
     Node& n2 = path.addNode(Vector3f(60.0f, 0.0f, 0.0f));
     Segment& segment = path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n1, n2);
 
-    UnitType workType("Work");
+    BuildingType workType("Work");
     workType.targets.emplace_back("Work");
-    Unit& work = city.addUnit(workType, path, segment, 0.9f);
+    Building& work = city.addBuilding(workType, path, segment, 0.9f);
 
     // Room for exactly one, which is the Agent's own claim.
-    UnitType homeType("Home");
+    BuildingType homeType("Home");
     homeType.targets.emplace_back("Home");
     homeType.resources.setCapacity("People", 1u);
-    Unit& home = city.addUnit(homeType, path, segment, 0.1f);
+    Building& home = city.addBuilding(homeType, path, segment, 0.1f);
 
     AgentType people("People", 10.0f, 3u, 42u);
     Resources carried;
@@ -673,14 +673,14 @@ TEST(TestsAgent, GivesThePlaceBackBeforeTheBuildingGoes)
     Node& n2 = path.addNode(Vector3f(60.0f, 0.0f, 0.0f));
     Segment& segment = path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n1, n2);
 
-    UnitType workType("Work");
+    BuildingType workType("Work");
     workType.targets.emplace_back("Work");
-    Unit& work = city.addUnit(workType, path, segment, 0.9f);
+    Building& work = city.addBuilding(workType, path, segment, 0.9f);
 
-    UnitType homeType("Home");
+    BuildingType homeType("Home");
     homeType.targets.emplace_back("Home");
     homeType.resources.setCapacity("People", 4u);
-    Unit& home = city.addUnit(homeType, path, segment, 0.1f);
+    Building& home = city.addBuilding(homeType, path, segment, 0.1f);
 
     static AgentType const people("People", 10.0f, 3u, 42u);
     Resources carried;
@@ -693,7 +693,7 @@ TEST(TestsAgent, GivesThePlaceBackBeforeTheBuildingGoes)
     ASSERT_EQ(agent.getRoute().getDestination(), &home);
     ASSERT_EQ(home.getReservedCount(), 1u);
 
-    city.removeUnit(home);
+    city.removeBuilding(home);
     ASSERT_EQ(agent.m_reservation, nullptr);
     ASSERT_NO_THROW(city.update(dt));
 }
@@ -707,14 +707,14 @@ TEST(TestsAgent, ZeroLengthSegmentDoesNotCrash)
     Node& n2 = path.addNode(Vector3f(1.0f, 2.0f, 3.0f));
     path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n1, n2);
 
-    UnitType homeType("Home");
+    BuildingType homeType("Home");
     homeType.targets.emplace_back("Home");
-    Unit u(homeType, n1, city);
+    Building u(homeType, n1, city);
 
-    UnitType factoryType("Factory");
+    BuildingType factoryType("Factory");
     factoryType.targets.emplace_back("People");
     factoryType.resources.setCapacity("People", 10u);
-    city.addUnit(factoryType, n2);
+    city.addBuilding(factoryType, n2);
 
     Resources carried;
     carried.addResource("People", 1u);

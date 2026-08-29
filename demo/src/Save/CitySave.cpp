@@ -269,8 +269,8 @@ std::vector<std::string> usedTypes(Simulation const& simulation)
             for (auto const& segment : pathIt.second->getSegments())
                 add(segment->getTypeName());
         }
-        for (auto const& unit : city.getUnits())
-            add(unit->getTypeName());
+        for (auto const& building: city.getBuildings())
+            add(building->getTypeName());
         for (auto const& zone : city.getZones())
             add(zone->getTypeName());
         for (auto const& agent : city.getAgents())
@@ -283,7 +283,7 @@ bool typeExists(Ruleset const& script, std::string const& name)
 {
     return (script.findPathType(name) != nullptr) ||
            (script.findSegmentType(name) != nullptr) ||
-           (script.findUnitType(name) != nullptr) ||
+           (script.findBuildingType(name) != nullptr) ||
            (script.findZoneType(name) != nullptr) ||
            (script.findAgentType(name) != nullptr) ||
            (script.findLayerType(name) != nullptr);
@@ -395,24 +395,24 @@ bool CitySave::write(std::string const& path,
         out << "end\n";
     }
 
-    for (auto const& unit : city.getUnits())
+    for (auto const& building : city.getBuildings())
     {
-        out << "unit " << unit->getTypeName();
-        if (unit->getSegment() != nullptr)
+        out << "building " << building->getTypeName();
+        if (building->getSegment() != nullptr)
         {
-            out << " on segment " << unit->getSegment()->getId() << " " << unit->getSegmentOffset();
+            out << " on segment " << building->getSegment()->getId() << " " << building->getSegmentOffset();
         }
-        else if (unit->getNode() != nullptr)
+        else if (building->getNode() != nullptr)
         {
-            out << " on node " << unit->getNode()->getId();
+            out << " on node " << building->getNode()->getId();
         }
         else
         {
-            Cell const cell = city.worldToCell(unit->getPosition());
+            Cell const cell = city.worldToCell(building->getPosition());
             out << " at " << cell.u << " " << cell.v;
         }
         out << " resources ";
-        writeResources(out, unit->getResources());
+        writeResources(out, building->getResources());
         out << "\n";
     }
 
@@ -579,17 +579,17 @@ bool CitySave::read(std::string const& filePath,
             if (!expect(lexer, "end", error))
                 return false;
         }
-        else if (token.text == "unit")
+        else if (token.text == "building")
         {
             if ((city == nullptr) || (city->getPaths().empty()))
             {
-                error = "unit before path";
+                error = "building before path";
                 return false;
             }
             Token const type = lexer.next();
             Path* path = city->getPaths().begin()->second.get();
             Token const where = lexer.next();
-            Unit* unit = nullptr;
+            Building* building = nullptr;
             if ((where.text == "on") && (lexer.peek().text == "segment"))
             {
                 lexer.next();
@@ -601,11 +601,11 @@ bool CitySave::read(std::string const& filePath,
                 Segment* segment = path->findSegment(segmentId);
                 if (segment == nullptr)
                 {
-                    error = "Unknown segment for unit";
+                    error = "Unknown segment for building";
                     return false;
                 }
-                unit = &city->addUnit(
-                    script.getUnitType(type.text), *path, *segment, offset);
+                building = &city->addBuilding(
+                    script.getBuildingType(type.text), *path, *segment, offset);
             }
             else if ((where.text == "on") && (lexer.peek().text == "node"))
             {
@@ -616,10 +616,10 @@ bool CitySave::read(std::string const& filePath,
                 Node* node = path->findNode(nodeId);
                 if (node == nullptr)
                 {
-                    error = "Unknown node for unit";
+                    error = "Unknown node for building";
                     return false;
                 }
-                unit = &city->addUnit(script.getUnitType(type.text), *node);
+                building = &city->addBuilding(script.getBuildingType(type.text), *node);
             }
             else if (where.text == "at")
             {
@@ -627,12 +627,12 @@ bool CitySave::read(std::string const& filePath,
                 int32_t v = 0;
                 if (!readInt(lexer, u, error) || !readInt(lexer, v, error))
                     return false;
-                unit = &city->addUnit(script.getUnitType(type.text),
+                building = &city->addBuilding(script.getBuildingType(type.text),
                                       city->cellToWorld({ u, v }));
             }
             else
             {
-                error = "Expected on/at after unit";
+                error = "Expected on/at after building";
                 return false;
             }
             if (lexer.peek().text == "resources")
@@ -641,12 +641,12 @@ bool CitySave::read(std::string const& filePath,
                 Resources loaded;
                 if (!readResources(lexer, loaded, error))
                     return false;
-                if (unit != nullptr)
+                if (building != nullptr)
                 {
                     // Only the amounts come from the save. The capacities come
                     // from the ruleset, and overwriting them left every loaded
                     // building unable to hold anything.
-                    unit->getResources().setAmounts(loaded);
+                    building->getResources().setAmounts(loaded);
                 }
             }
         }
@@ -695,9 +695,9 @@ bool CitySave::read(std::string const& filePath,
         }
         else if (token.text == "agent")
         {
-            if ((city == nullptr) || city->getUnits().empty())
+            if ((city == nullptr) || city->getBuildings().empty())
             {
-                error = "agent before unit";
+                error = "agent before building";
                 return false;
             }
             Token const type = lexer.next();
@@ -714,7 +714,7 @@ bool CitySave::read(std::string const& filePath,
             while (lexer.peek().valid())
             {
                 std::string const& look = lexer.peek().text;
-                if ((look == "city") || (look == "path") || (look == "unit") ||
+                if ((look == "city") || (look == "path") || (look == "building") ||
                     (look == "zone") || (look == "layer") || (look == "agent") ||
                     (look == "clock"))
                 {
@@ -758,7 +758,7 @@ bool CitySave::read(std::string const& filePath,
                 }
             }
             Agent& agent = city->addAgent(script.getAgentType(type.text),
-                                          *city->getUnits().front(),
+                                          *city->getBuildings().front(),
                                           cargo,
                                           target.text);
             Segment* segment = nullptr;

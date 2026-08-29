@@ -44,18 +44,18 @@ void Zone::executeRules()
 }
 
 // -----------------------------------------------------------------------------
-uint32_t Zone::countUnits(Name const& unitType) const
+uint32_t Zone::countBuildings(Name const& buildingType) const
 {
-    return uint32_t(getUnitsInside(unitType).size());
+    return uint32_t(getBuildingsInside(buildingType).size());
 }
 
 // -----------------------------------------------------------------------------
-std::vector<Unit*> Zone::getUnitsInside(Name const& unitType) const
+std::vector<Building*> Zone::getBuildingsInside(Name const& buildingType) const
 {
-    std::vector<Unit*> found;
-    for (auto& it: m_city.getUnits())
+    std::vector<Building*> found;
+    for (auto& it: m_city.getBuildings())
     {
-        if (!unitType.empty() && (it->getTypeName() != unitType))
+        if (!buildingType.empty() && (it->getTypeName() != buildingType))
             continue;
         if (m_footprint.contains(it->getCell()))
             found.push_back(it.get());
@@ -117,12 +117,12 @@ std::optional<Cell> Zone::findFreeCell() const
     if (m_footprint.isEmpty())
         return {};
 
-    std::vector<Unit*> const occupied = getUnitsInside(Name());
+    std::vector<Building*> const occupied = getBuildingsInside(Name());
 
     auto taken = [&](Cell cell) {
-        for (Unit* unit: occupied)
+        for (Building* building: occupied)
         {
-            if (unit->getCell() == cell)
+            if (building->getCell() == cell)
                 return true;
         }
         return false;
@@ -165,12 +165,12 @@ std::optional<Cell> Zone::findFreeCellNearRoad() const
     if (m_city.getPaths().empty())
         return {};
 
-    std::vector<Unit*> const occupied = getUnitsInside(Name());
+    std::vector<Building*> const occupied = getBuildingsInside(Name());
 
     auto taken = [&](Cell cell) {
-        for (Unit* unit: occupied)
+        for (Building* building: occupied)
         {
-            if (unit->getCell() == cell)
+            if (building->getCell() == cell)
                 return true;
         }
         return false;

@@ -28,12 +28,12 @@ TEST(TestsCity, Constructors)
     ASSERT_EQ(city.m_position.z, 0.0f);
     ASSERT_EQ(city.m_gridSizeU, GRILL);
     ASSERT_EQ(city.m_gridSizeV, GRILL + 1u);
-    //FIXME: not used ASSERT_EQ(city.m_nextUnitId, 0u);
+    //FIXME: not used ASSERT_EQ(city.m_nextBuildingId, 0u);
     ASSERT_EQ(city.m_nextAgentId, 0u);
     ASSERT_EQ(city.m_globals.m_bin.size(), 0u);
     ASSERT_EQ(city.getLayers().size(), 0u);
     ASSERT_EQ(city.m_paths.size(), 0u);
-    ASSERT_EQ(city.m_units.size(), 0u);
+    ASSERT_EQ(city.m_buildings.size(), 0u);
     ASSERT_EQ(city.m_agents.size(), 0u);
 
     // Check initial values (getter methods).
@@ -47,7 +47,7 @@ TEST(TestsCity, Constructors)
     ASSERT_EQ(city.getGlobals().isEmpty(), true);
     ASSERT_EQ(city.getLayers().size(), 0u);
     ASSERT_EQ(city.getPaths().size(), 0u);
-    ASSERT_EQ(city.getUnits().size(), 0u);
+    ASSERT_EQ(city.getBuildings().size(), 0u);
     ASSERT_EQ(city.getAgents().size(), 0u);
 
     // Constructor 3
@@ -170,14 +170,14 @@ TEST(TestsCity, BuildingCity)
     ASSERT_STREQ(p4.getTypeName().c_str(), "path1");
     ASSERT_EQ(p4.m_type.color, 0xAAu);
 
-    // Add units (way 1)
-    UnitType type5("unit1");
+    // Add buildings (way 1)
+    BuildingType type5("unit1");
     type5.color = 0xFF00FF;
     type5.radius = 2u;
     Node n1(42u, Vector3f(1.0f, 2.0f, 3.0f));
-    Unit& u1 = city.addUnit(type5, n1);
-    ASSERT_EQ(city.getUnits().size(), 1u);
-    Unit& u2 = *(city.getUnits()[0]);
+    Building& b1 = city.addBuilding(type5, n1);
+    ASSERT_EQ(city.getBuildings().size(), 1u);
+    Building& u2 = *(city.getBuildings()[0]);
     ASSERT_EQ(&u1, &u2);
     ASSERT_EQ(u2.getColor(), 0xFF00FFu);
 
@@ -195,7 +195,7 @@ TEST(TestsCity, BuildingCity)
 #endif
 
 // -----------------------------------------------------------------------------
-TEST(TestsCity, AddUnitOnSegmentDoesNotSplitRoad)
+TEST(TestsCity, AddBuildingOnSegmentDoesNotSplitRoad)
 {
     TestWorld cityWorld("Paris");
     City& city = cityWorld.city;
@@ -207,13 +207,13 @@ TEST(TestsCity, AddUnitOnSegmentDoesNotSplitRoad)
     ASSERT_EQ(p1.getNodes().size(), 2u);
     ASSERT_EQ(p1.getSegments().size(), 1u);
 
-    Unit& u1 = city.addUnit(keep<UnitType>("unit"), p1, w1, 0.5f);
+    Building& b1 = city.addBuilding(keep<BuildingType>("house"), p1, w1, 0.5f);
     ASSERT_EQ(p1.getNodes().size(), 2u);
     ASSERT_EQ(p1.getSegments().size(), 1u);
     ASSERT_EQ(u1.getSegment(), &w1);
     ASSERT_EQ(u1.getNode(), nullptr);
     ASSERT_EQ(int32_t(u1.getPosition().x), 1);
-    ASSERT_EQ(w1.getUnits().size(), 1u);
+    ASSERT_EQ(w1.getBuildings().size(), 1u);
 }
 
 // -----------------------------------------------------------------------------
@@ -252,8 +252,8 @@ TEST(TestsCity, SplitSegmentKeepsTheBuildingsWhereTheyStand)
     Node& n2 = path.addNode(Vector3f(10.0f, 0.0f, 0.0f));
     Segment& segment = path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n1, n2);
 
-    Unit& near = city.addUnit(keep<UnitType>("Home"), path, segment, 0.2f);
-    Unit& far = city.addUnit(keep<UnitType>("Home"), path, segment, 0.8f);
+    Building& nearBuilding = city.addBuilding(keep<BuildingType>("Home"), path, segment, 0.2f);
+    Building& farBuilding = city.addBuilding(keep<BuildingType>("Home"), path, segment, 0.8f);
 
     Node& junction = city.splitSegment(path, segment, 0.5f);
 
@@ -267,8 +267,8 @@ TEST(TestsCity, SplitSegmentKeepsTheBuildingsWhereTheyStand)
 
     ASSERT_EQ(near.getSegment(), &segment);
     ASSERT_EQ(far.getSegment(), second);
-    ASSERT_EQ(segment.getUnits().size(), 1u);
-    ASSERT_EQ(second->getUnits().size(), 1u);
+    ASSERT_EQ(segment.getBuildings().size(), 1u);
+    ASSERT_EQ(second->getBuildings().size(), 1u);
     ASSERT_EQ(int32_t(near.getPosition().x + 0.5f), 2);
     ASSERT_EQ(int32_t(far.getPosition().x + 0.5f), 8);
 }
@@ -300,7 +300,7 @@ TEST(TestsCity, translate)
     Node& n2 = p1.addNode(Vector3f(3.0f, 3.0f, 3.0f));
     Segment& w1 = p1.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n1, n2);
     float const initialMagnitude = w1.getLength();
-    Unit& u1 = city.addUnit(keep<UnitType>("unit1"), n1);
+    Building& b1 = city.addBuilding(keep<BuildingType>("house1"), n1);
     Agent& a1 = city.addAgent(keep<AgentType>("Worker", 1.0f, 2u,
          0xFFFFFF), u1, Resources(), "target");
 
@@ -321,7 +321,7 @@ TEST(TestsCity, translate)
     ASSERT_EQ(int32_t(n2.m_position.y), 3+2);
     ASSERT_EQ(int32_t(n2.m_position.z), 3+0);
 
-    // Position of the Unit == Node1
+    // Position of the Building == Node1
     ASSERT_EQ(int32_t(n1.m_position.x), 1+1);
     ASSERT_EQ(int32_t(n1.m_position.y), 2+2);
     ASSERT_EQ(int32_t(n1.m_position.z), 3+0);
@@ -357,17 +357,17 @@ TEST(TestsCity, UpdateRunsTheRulesOfEveryBuilding)
     Resource people("People");
     RuleValueLocal local(people);
     RuleCommandAdd add(local, 1u);
-    RuleUnitType ruleType("Fill");
+    RuleBuildingType ruleType("Fill");
     ruleType.rate = 1u;
     ruleType.commands.push_back(&add);
-    RuleUnit rule(ruleType);
+    RuleBuilding rule(ruleType);
 
-    UnitType type("Home");
+    BuildingType type("Home");
     type.rules.push_back(&rule);
     type.resources.setCapacity("People", 10u);
 
-    Unit& first = city.addUnit(type, Vector3f(1.0f, 1.0f, 0.0f));
-    Unit& second = city.addUnit(type, Vector3f(3.0f, 1.0f, 0.0f));
+    Building& first = city.addBuilding(type, Vector3f(1.0f, 1.0f, 0.0f));
+    Building& second = city.addBuilding(type, Vector3f(3.0f, 1.0f, 0.0f));
     ASSERT_EQ(first.getResources().getAmount("People"), 0u);
     ASSERT_EQ(second.getResources().getAmount("People"), 0u);
 
@@ -396,8 +396,8 @@ TEST(TestsCity, UpdateTakesAwayTheAgentsThatAreDone)
     Node& n2 = path.addNode(Vector3f(10.0f, 0.0f, 0.0f));
     path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n1, n2);
 
-    UnitType homeType("Home");
-    Unit& home = city.addUnit(homeType, n1);
+    BuildingType homeType("Home");
+    Building& home = city.addBuilding(homeType, n1);
 
     AgentType worker("Worker", 1.0f, 2u, 0xFFFFFF);
     Resources load;
@@ -434,55 +434,55 @@ TEST(TestsCity, UpdateTakesAwayTheAgentsThatAreDone)
 }
 
 // -----------------------------------------------------------------------------
-TEST(TestsCity, RemoveUnitDetachesItFromItsNode)
+TEST(TestsCity, RemoveBuildingDetachesItFromItsNode)
 {
     TestWorld cityWorld("Paris", 8u, 8u);
     City& city = cityWorld.city;
     PathType pathType("Road");
     SegmentType segmentType("Dirt", 0xAAAAAA);
-    UnitType unitType("Home");
+    BuildingType buildingType("Home");
 
     Path& path = city.addPath(pathType);
     Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& n2 = path.addNode(Vector3f(10.0f, 0.0f, 0.0f));
     path.addSegment(segmentType, n1, n2);
 
-    Unit& unit = city.addUnit(unitType, n1);
-    ASSERT_EQ(city.getUnits().size(), 1u);
-    ASSERT_EQ(n1.getUnits().size(), 1u);
+    Building& building = city.addBuilding(buildingType, n1);
+    ASSERT_EQ(city.getBuildings().size(), 1u);
+    ASSERT_EQ(n1.getBuildings().size(), 1u);
 
-    city.removeUnit(unit);
+    city.removeBuilding(building);
 
-    ASSERT_EQ(city.getUnits().size(), 0u);
-    ASSERT_EQ(n1.getUnits().size(), 0u);
+    ASSERT_EQ(city.getBuildings().size(), 0u);
+    ASSERT_EQ(n1.getBuildings().size(), 0u);
     // The road it stood on is untouched.
     ASSERT_EQ(path.getNodes().size(), 2u);
     ASSERT_EQ(path.getSegments().size(), 1u);
 }
 
 // -----------------------------------------------------------------------------
-TEST(TestsCity, RemoveNodeTakesTheUnitsSittingOnIt)
+TEST(TestsCity, RemoveNodeTakesTheBuildingsSittingOnIt)
 {
     TestWorld cityWorld("Paris", 8u, 8u);
     City& city = cityWorld.city;
     PathType pathType("Road");
     SegmentType segmentType("Dirt", 0xAAAAAA);
-    UnitType unitType("Home");
+    BuildingType buildingType("Home");
 
     Path& path = city.addPath(pathType);
     Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& n2 = path.addNode(Vector3f(10.0f, 0.0f, 0.0f));
     path.addSegment(segmentType, n1, n2);
 
-    city.addUnit(unitType, n1);
-    city.addUnit(unitType, n2);
-    ASSERT_EQ(city.getUnits().size(), 2u);
+    city.addBuilding(buildingType, n1);
+    city.addBuilding(buildingType, n2);
+    ASSERT_EQ(city.getBuildings().size(), 2u);
 
-    // Demolishing the node has to take the building with it, otherwise the Unit
+    // Demolishing the node has to take the building with it, otherwise the Building
     // would be left holding a reference to freed memory.
     city.removeNode(path, n1);
 
-    ASSERT_EQ(city.getUnits().size(), 1u);
+    ASSERT_EQ(city.getBuildings().size(), 1u);
     ASSERT_EQ(path.getNodes().size(), 1u);
     ASSERT_EQ(path.getSegments().size(), 0u);
 }
@@ -494,7 +494,7 @@ TEST(TestsCity, RemovingTheLastSegmentTakesTheAgentsWithIt)
     City& city = cityWorld.city;
     PathType pathType("Road");
     SegmentType segmentType("Dirt", 0xAAAAAA);
-    UnitType unitType("Home");
+    BuildingType buildingType("Home");
     AgentType agentType("Worker", 10.0f, 1u, 0xFFFFFF);
 
     Path& path = city.addPath(pathType);
@@ -502,11 +502,11 @@ TEST(TestsCity, RemovingTheLastSegmentTakesTheAgentsWithIt)
     Node& n2 = path.addNode(Vector3f(10.0f, 0.0f, 0.0f));
     Segment& segment = path.addSegment(segmentType, n1, n2);
 
-    Unit& unit = city.addUnit(unitType, n1);
-    unit.getResources().setCapacity("People", 10u);
+    Building& building = city.addBuilding(buildingType, n1);
+    building.getResources().setCapacity("People", 10u);
     Resources resources;
     resources.addResource("People", 2u);
-    city.addAgent(agentType, unit, resources, "Home");
+    city.addAgent(agentType, building, resources, "Home");
     ASSERT_EQ(city.getAgents().size(), 1u);
 
     // n1 survives because it carries the building, but it no longer leads
@@ -524,7 +524,7 @@ TEST(TestsCity, RemovingOneSegmentKeepsTheAgentsOnTheRest)
     City& city = cityWorld.city;
     PathType pathType("Road");
     SegmentType segmentType("Dirt", 0xAAAAAA);
-    UnitType unitType("Home");
+    BuildingType buildingType("Home");
     AgentType agentType("Worker", 10.0f, 1u, 0xFFFFFF);
 
     Path& path = city.addPath(pathType);
@@ -534,11 +534,11 @@ TEST(TestsCity, RemovingOneSegmentKeepsTheAgentsOnTheRest)
     path.addSegment(segmentType, n1, n2);
     Segment& far = path.addSegment(segmentType, n2, n3);
 
-    Unit& unit = city.addUnit(unitType, n1);
-    unit.getResources().setCapacity("People", 10u);
+    Building& building = city.addBuilding(buildingType, n1);
+    building.getResources().setCapacity("People", 10u);
     Resources resources;
     resources.addResource("People", 2u);
-    city.addAgent(agentType, unit, resources, "Home");
+    city.addAgent(agentType, building, resources, "Home");
     ASSERT_EQ(city.getAgents().size(), 1u);
 
     // The Agent waits on n1, which keeps a road: demolishing the far segment
@@ -556,7 +556,7 @@ TEST(TestsCity, RemovingANodeLeavesNoAgentPointingAtIt)
     City& city = cityWorld.city;
     PathType pathType("Road");
     SegmentType segmentType("Dirt", 0xAAAAAA);
-    UnitType unitType("Home");
+    BuildingType buildingType("Home");
     AgentType agentType("Worker", 10.0f, 1u, 0xFFFFFF);
 
     Path& path = city.addPath(pathType);
@@ -564,18 +564,18 @@ TEST(TestsCity, RemovingANodeLeavesNoAgentPointingAtIt)
     Node& n2 = path.addNode(Vector3f(10.0f, 0.0f, 0.0f));
     path.addSegment(segmentType, n1, n2);
 
-    Unit& unit = city.addUnit(unitType, n2);
-    unit.getResources().setCapacity("People", 10u);
+    Building& building = city.addBuilding(buildingType, n2);
+    building.getResources().setCapacity("People", 10u);
     Resources resources;
     resources.addResource("People", 2u);
-    city.addAgent(agentType, unit, resources, "Home");
+    city.addAgent(agentType, building, resources, "Home");
     ASSERT_EQ(city.getAgents().size(), 1u);
 
     // The Agent was standing on n2. Demolishing it used to leave the Agent
     // holding a pointer on freed memory, and the next tick read through it.
     city.removeNode(path, n2);
     ASSERT_EQ(city.getAgents().size(), 0u);
-    ASSERT_EQ(city.getUnits().size(), 0u);
+    ASSERT_EQ(city.getBuildings().size(), 0u);
     ASSERT_EQ(path.getNodes().size(), 0u);
 
     // Nothing dangles: a tick over the emptied city has to be harmless.
@@ -596,12 +596,12 @@ TEST(TestsCity, ClearKeepsTheGraphsAndEmptiesThem)
     Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& n2 = path.addNode(Vector3f(10.0f, 0.0f, 0.0f));
     path.addSegment(segmentType, n1, n2);
-    city.addUnit(keep<UnitType>("Home"), n1);
+    city.addBuilding(keep<BuildingType>("Home"), n1);
     city.addZone(keep<ZoneType>("Residential"), city.getRegion());
 
     city.clear();
 
-    ASSERT_EQ(city.getUnits().size(), 0u);
+    ASSERT_EQ(city.getBuildings().size(), 0u);
     ASSERT_EQ(city.getZones().size(), 0u);
     ASSERT_EQ(city.getPaths().size(), 1u);
 

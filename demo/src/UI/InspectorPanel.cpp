@@ -183,11 +183,11 @@ static OpeningHours ruleHours(IRule const& rule)
 }
 
 // ----------------------------------------------------------------------------
-OpeningStatus openingStatus(Unit const& unit, uint32_t hourOfDay)
+OpeningStatus openingStatus(Building const& building, uint32_t hourOfDay)
 {
     OpeningStatus status;
 
-    if (unit.getRules().empty())
+    if (building.getRules().empty())
     {
         status.known = true;
         status.open = false;
@@ -195,7 +195,7 @@ OpeningStatus openingStatus(Unit const& unit, uint32_t hourOfDay)
         return status;
     }
 
-    OpeningHours const hours = unit.getOpeningHours();
+    OpeningHours const hours = building.getOpeningHours();
 
     if (!hours.isRestricted())
     {
@@ -229,7 +229,7 @@ OpeningStatus openingStatus(Unit const& unit, uint32_t hourOfDay)
 // ----------------------------------------------------------------------------
 //! \brief List the rules of the selected entity: how often each one is
 //! attempted and how long until the next attempt, both counted in ticks, which
-//! is the unit the engine actually runs on. Hovering a row spells the period
+//! is the building the engine actually runs on. Hovering a row spells the period
 //! out in game time and names what the rule does.
 //!
 //! A rule that never fires with many ticks to go is simply not due yet; one
@@ -385,25 +385,25 @@ static void drawAgentLine(Agent const& agent)
 }
 
 // ----------------------------------------------------------------------------
-//! \brief The agents this Unit sent out and the agents on their way to it.
+//! \brief The agents this Building sent out and the agents on their way to it.
 //!
 //! The engine deletes an Agent the moment it unloads, so there is no such
 //! thing as a population sitting inside a building. What a building does have
 //! is traffic: what left it and what is coming.
 // ----------------------------------------------------------------------------
-static void drawUnitAgents(City& city, Unit const& unit)
+static void drawBuildingAgents(City& city, Building const& building)
 {
     std::vector<Agent const*> outbound;
     std::vector<Agent const*> inbound;
 
     for (auto const& agent : city.getAgents())
     {
-        if (agent->getOwner() == &unit)
+        if (agent->getOwner() == &building)
         {
             outbound.push_back(agent.get());
             continue;
         }
-        if (agent->getRoute().getDestination() == &unit)
+        if (agent->getRoute().getDestination() == &building)
         {
             inbound.push_back(agent.get());
         }
@@ -469,8 +469,8 @@ void InspectorPanel::draw(Simulation& simulation,
                         "Click a building, an agent, a road, a node, a zone\n"
                         "or a cell on the layer to inspect it.");
                     break;
-                case game::Selection::Kind::Unit:
-                    drawUnit(simulation, state, trace);
+                case game::Selection::Kind::Building:
+                    drawBuilding(simulation, state, trace);
                     break;
                 case game::Selection::Kind::Agent:
                     drawAgent(simulation, state);
@@ -529,7 +529,7 @@ void InspectorPanel::drawRuleset(Simulation& simulation) const
     Ruleset const& ruleset = simulation.getRuleset();
     for (auto const& it : ruleset.getRuleLayers())
         rows.push_back({ "layer", it.second.get() });
-    for (auto const& it : ruleset.getRuleUnits())
+    for (auto const& it : ruleset.getRuleBuildings())
         rows.push_back({ "building", it.second.get() });
     for (auto const& it : ruleset.getRuleZones())
         rows.push_back({ "zone", it.second.get() });
@@ -586,7 +586,7 @@ void InspectorPanel::drawRuleset(Simulation& simulation) const
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
-        // Nothing forbids a layer rule and a unit rule from sharing a name, and
+        // Nothing forbids a layer rule and a building rule from sharing a name, and
         // two rows answering to the same identifier highlight together.
         ImGui::PushID(row.rule);
         ImGui::Selectable(row.rule->getName().c_str(),
@@ -633,22 +633,22 @@ void InspectorPanel::drawRuleset(Simulation& simulation) const
 }
 
 // ----------------------------------------------------------------------------
-void InspectorPanel::drawUnit(Simulation& simulation,
+void InspectorPanel::drawBuilding(Simulation& simulation,
                               game::DebugState& state,
                               game::RuleTrace const& trace) const
 {
-    Unit* const unit = state.selection.unit;
-    if (unit == nullptr)
+    Building* const building = state.selection.building;
+    if (building == nullptr)
     {
         state.selection.clear();
         return;
     }
 
     ImGui::TextColored(
-        ImGui::ColorConvertU32ToFloat4(theme::fromScript(unit->getColor())),
+        ImGui::ColorConvertU32ToFloat4(theme::fromScript(building->getColor())),
         "Building %s #%u",
-        unit->getTypeName().c_str(),
-        unit->getId());
+        building->getTypeName().c_str(),
+        building->getId());
     ImGui::Spacing();
 
     auto const cityIt = simulation.getCities().find(state.selection.city);
@@ -662,7 +662,7 @@ void InspectorPanel::drawUnit(Simulation& simulation,
     {
         for (auto const& zone : city->getZones())
         {
-            if (!zone->contains(unit->getCell()))
+            if (!zone->contains(building->getCell()))
                 continue;
             if (!zones.empty())
                 zones += ", ";
@@ -670,15 +670,15 @@ void InspectorPanel::drawUnit(Simulation& simulation,
         }
     }
 
-    if (beginFields("unit"))
+    if (beginFields("building"))
     {
         uint32_t const hour = simulation.getClock().getHourOfDay();
-        OpeningStatus const opening = openingStatus(*unit, hour);
+        OpeningStatus const opening = openingStatus(*building, hour);
 
         field("City", state.selection.city);
         field("Cell",
-              "(" + std::to_string(unit->getCell().u) + ", " +
-                  std::to_string(unit->getCell().v) + ")");
+              "(" + std::to_string(building->getCell().u) + ", " +
+                  std::to_string(building->getCell().v) + ")");
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
@@ -696,18 +696,18 @@ void InspectorPanel::drawUnit(Simulation& simulation,
                 hour);
         }
 
-        field("Layer radius", std::to_string(unit->getLayerRadius()));
+        field("Layer radius", std::to_string(building->getLayerRadius()));
         field("Zone", zones.empty() ? "outside any zone" : zones);
-        if (unit->getNode() != nullptr)
+        if (building->getNode() != nullptr)
         {
-            field("Stands on", "node #" + std::to_string(unit->getNode()->getId()));
+            field("Stands on", "node #" + std::to_string(building->getNode()->getId()));
         }
-        else if (unit->getSegment() != nullptr)
+        else if (building->getSegment() != nullptr)
         {
             field("Stands on",
-                  unit->getSegment()->getTypeName().str() + " #" +
-                      std::to_string(unit->getSegment()->getId()) + " at " +
-                      fixed(100.0 * unit->getSegmentOffset(), 0) + "%");
+                  building->getSegment()->getTypeName().str() + " #" +
+                      std::to_string(building->getSegment()->getId()) + " at " +
+                      fixed(100.0 * building->getSegmentOffset(), 0) + "%");
         }
         else
         {
@@ -716,7 +716,7 @@ void InspectorPanel::drawUnit(Simulation& simulation,
         endFields();
     }
 
-    if (!unit->hasSegments())
+    if (!building->hasSegments())
     {
         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(theme::FAILURE),
                            "Not connected to any road: the agents it creates\n"
@@ -726,17 +726,17 @@ void InspectorPanel::drawUnit(Simulation& simulation,
 
     ImGui::Checkbox("Show the radius on the layer", &state.showSelectionRadius);
 
-    drawResources("Resources", unit->getResources().getAll());
+    drawResources("Resources", building->getResources().getAll());
 
     ImGui::SeparatorText("Accepts");
-    if (unit->getTargets().empty())
+    if (building->getTargets().empty())
     {
         ImGui::TextDisabled("nothing: no agent can deliver here");
     }
     else
     {
         std::string targets;
-        for (Name const& target : unit->getTargets())
+        for (Name const& target : building->getTargets())
         {
             if (!targets.empty())
                 targets += ", ";
@@ -749,18 +749,18 @@ void InspectorPanel::drawUnit(Simulation& simulation,
     ImGui::SeparatorText("Traffic");
     if (city != nullptr)
     {
-        drawUnitAgents(*city, *unit);
+        drawBuildingAgents(*city, *building);
     }
     ImGui::Spacing();
 
     ImGui::SeparatorText("Rules");
-    drawRules(unit->getRules(),
-              unit->getTicks(),
+    drawRules(building->getRules(),
+              building->getTicks(),
               simulation.getClock().getTicksPerMinute(),
               simulation.getClock().getHourOfDay());
     ImGui::Spacing();
 
-    // Outcome of the last attempts recorded for this very unit type.
+    // Outcome of the last attempts recorded for this very building type.
     ImGui::SeparatorText("Last attempts");
     if (!trace.recording())
     {
@@ -769,7 +769,7 @@ void InspectorPanel::drawUnit(Simulation& simulation,
         return;
     }
 
-    std::string const entity = "Unit " + unit->getTypeName().str();
+    std::string const entity = "Building " + building->getTypeName().str();
     int shown = 0;
     size_t index = trace.size();
     while ((index-- > 0u) && (shown < 6))
@@ -915,13 +915,13 @@ void InspectorPanel::drawNode(game::DebugState& state) const
     ImGui::Spacing();
 
     ImGui::SeparatorText("Buildings");
-    if (node->getUnits().empty())
+    if (node->getBuildings().empty())
     {
         ImGui::TextDisabled("none");
     }
-    for (Unit const* unit : node->getUnits())
+    for (Building const* building : node->getBuildings())
     {
-        ImGui::BulletText("%s #%u", unit->getTypeName().c_str(), unit->getId());
+        ImGui::BulletText("%s #%u", building->getTypeName().c_str(), building->getId());
     }
 }
 
@@ -994,10 +994,10 @@ void InspectorPanel::drawZone(Simulation& simulation,
         endFields();
     }
 
-    std::vector<Unit*> const units = zone->getUnitsInside();
+    std::vector<Building*> const buildings = zone->getBuildingsInside();
 
     ImGui::SeparatorText("Buildings inside");
-    if (units.empty())
+    if (buildings.empty())
     {
         ImGui::TextDisabled("Empty. An zone rule has to spawn something, and\n"
                             "its conditions are listed below.");
@@ -1005,17 +1005,17 @@ void InspectorPanel::drawZone(Simulation& simulation,
     else
     {
         // Grouped by type: what matters about a zone is its mix, not the
-        // identity of each building, which the Units themselves report.
+        // identity of each building, which the buildings themselves report.
         std::map<std::string, uint32_t, std::less<>> counts;
-        for (Unit const* unit : units)
-            ++counts[unit->getTypeName().str()];
+        for (Building const* building : buildings)
+            ++counts[building->getTypeName().str()];
 
         for (auto const& it : counts)
         {
             ImGui::BulletText("%u x %s", it.second, it.first.c_str());
         }
         ImGui::TextDisabled("%zu building(s) on %llu cell(s)",
-                            units.size(),
+                            buildings.size(),
                             (unsigned long long)footprint.getCellCount());
     }
     ImGui::Spacing();

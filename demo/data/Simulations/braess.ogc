@@ -1,6 +1,6 @@
 save
 	ruleset braess.ogs
-	hash 2e58ca718a8c2229526b3da8f2d282afc0ed7842a33587355dddc86af134a041
+	hash 98ea6456c776901b2d75bda9fe4f0a5a75578620247925d9d3406ecce5f7b490
 	types [ Road Fast Slow Shortcut Start End ]
 end
 
@@ -19,5 +19,5 @@ path Road
 	segment 4 Fast 3 4 flow 0
 	segment 5 Shortcut 2 3 flow 0
 end
-unit Start on node 1 resources [ People 80 ]
-unit End on node 4 resources [ ]
+building Start on node 1 resources [ People 80 ]
+building End on node 4 resources [ ]

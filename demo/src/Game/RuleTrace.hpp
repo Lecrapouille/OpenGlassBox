@@ -29,7 +29,7 @@ struct RuleEvent
 {
     uint64_t tick = 0u;
     std::string city;
-    //! \brief "Unit Home" or "Layer Water", the entity the rule ran on.
+    //! \brief "Building Home" or "Layer Water", the entity the rule ran on.
     std::string entity;
     std::string rule;
     //! \brief Description of the command that refused to validate, empty on

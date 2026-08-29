@@ -6,8 +6,7 @@
 //-----------------------------------------------------------------------------
 
 //! \file RuleCommand.hpp
-//! \brief Commands executed by rules: add, remove, spawn, test, upgrade and
-//! more.
+//! \brief Commands that Rules run: add, remove, spawn, test, upgrade and more.
 
 #ifndef OPEN_GLASSBOX_RULE_COMMAND_HPP
 #define OPEN_GLASSBOX_RULE_COMMAND_HPP
@@ -18,7 +17,7 @@ namespace ogb
 {
 
 //==============================================================================
-//! \brief
+//! \brief Add an amount to a resource.
 //!
 //! Example:
 //! \code
@@ -30,7 +29,8 @@ class RuleCommandAdd: public IRuleCommand
 public:
 
     //--------------------------------------------------------------------------
-    //! \brief
+    //! \param[in] target where to add.
+    //! \param[in] amount how much to add.
     //--------------------------------------------------------------------------
     RuleCommandAdd(IRuleValue& target, uint32_t amount)
         : m_target(target), m_amount(amount)
@@ -38,18 +38,17 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief Can be applied if the amount of resource has not reached the
-    //! capacity.
+    //! \brief Can run if the resource is below capacity.
     //--------------------------------------------------------------------------
     bool validate(RuleContext& context) override;
 
     //--------------------------------------------------------------------------
-    //! \brief Increase the amount of resource of the target.
+    //! \brief Add the amount to the target.
     //--------------------------------------------------------------------------
     void execute(RuleContext& context) override;
 
     // -------------------------------------------------------------------------
-    //! \brief
+    //! \brief Return text for the rule log.
     // -------------------------------------------------------------------------
     [[nodiscard]] std::string getDescription() const override;
 
@@ -60,7 +59,7 @@ private:
 };
 
 //==============================================================================
-//! \brief
+//! \brief Remove an amount from a resource.
 //!
 //! Example:
 //! \code
@@ -72,7 +71,8 @@ class RuleCommandRemove: public IRuleCommand
 public:
 
     //--------------------------------------------------------------------------
-    //! \brief
+    //! \param[in] target where to remove.
+    //! \param[in] amount how much to remove.
     //--------------------------------------------------------------------------
     RuleCommandRemove(IRuleValue& target, uint32_t amount)
         : m_target(target), m_amount(amount)
@@ -80,17 +80,17 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief Can be applied if the amount of resource is enough.
+    //! \brief Can run if enough resource is present.
     //--------------------------------------------------------------------------
     bool validate(RuleContext& context) override;
 
     //--------------------------------------------------------------------------
-    //! \brief Decrease the amount of resource of the target.
+    //! \brief Remove the amount from the target.
     //--------------------------------------------------------------------------
     void execute(RuleContext& context) override;
 
     // -------------------------------------------------------------------------
-    //! \brief
+    //! \brief Return text for the rule log.
     // -------------------------------------------------------------------------
     [[nodiscard]] std::string getDescription() const override;
 
@@ -101,7 +101,7 @@ private:
 };
 
 //==============================================================================
-//! \brief
+//! \brief Test a resource against a value.
 //!
 //! Example:
 //! \code
@@ -120,7 +120,9 @@ public:
     };
 
     //--------------------------------------------------------------------------
-    //! \brief
+    //! \param[in] target resource to test.
+    //! \param[in] comparison equals, greater, or less.
+    //! \param[in] amount value to compare against.
     //--------------------------------------------------------------------------
     RuleCommandTest(IRuleValue& target, Comparison comparison, uint32_t amount)
         : m_target(target), m_amount(amount), m_comparison(comparison)
@@ -128,17 +130,17 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief Can be applied if the amount of resource is enough.
+    //! \brief Can run if the comparison is true.
     //--------------------------------------------------------------------------
     bool validate(RuleContext& context) override;
 
     //--------------------------------------------------------------------------
-    //! \brief Decrease the amount of resource of the target.
+    //! \brief Does nothing. A test only checks a condition.
     //--------------------------------------------------------------------------
     void execute(RuleContext& context) override;
 
     // -------------------------------------------------------------------------
-    //! \brief
+    //! \brief Return text for the rule log.
     // -------------------------------------------------------------------------
     [[nodiscard]] std::string getDescription() const override;
 
@@ -150,8 +152,8 @@ private:
 };
 
 //==============================================================================
-//! \brief Send an Agent out of the current Unit, carrying a load, towards any
-//! Unit that accepts it.
+//! \brief Send an Agent from the current Building with a load.
+//! The Agent looks for a Building that accepts it.
 //!
 //! Example:
 //! \code
@@ -163,9 +165,9 @@ class RuleCommandAgent: public IRuleCommand
 public:
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] type the kind of agent to send, copied.
-    //! \param[in] target what the agent looks for, such as "Work".
-    //! \param[in] resources the load it carries, copied.
+    //! \param[in] type Agent type to send, copied.
+    //! \param[in] target name the Agent looks for, such as "Work".
+    //! \param[in] resources load the Agent carries, copied.
     //--------------------------------------------------------------------------
     RuleCommandAgent(AgentType const& type,
                      Name const& target,
@@ -179,7 +181,7 @@ public:
     [[nodiscard]] std::string getDescription() const override;
 
     //--------------------------------------------------------------------------
-    //! \brief \return the kind of agent the command sends out.
+    //! \return the Agent type this command sends.
     //--------------------------------------------------------------------------
     [[nodiscard]] AgentType const& getAgentType() const
     {
@@ -187,7 +189,7 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \return what the agent looks for, such as "Work".
+    //! \return the name the Agent looks for, such as "Work".
     //--------------------------------------------------------------------------
     [[nodiscard]] Name const& getTarget() const
     {
@@ -195,7 +197,7 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \return the load the agent carries.
+    //! \return the load the Agent carries.
     //--------------------------------------------------------------------------
     [[nodiscard]] Resources const& getResources() const
     {
@@ -204,20 +206,21 @@ public:
 
 private:
 
-    //! \brief The kind of agent to send out.
+    //! \brief Agent type to send.
     AgentType m_type;
-    //! \brief What the agent looks for.
+    //! \brief Name the Agent looks for.
     Name m_target;
-    //! \brief The load it carries.
+    //! \brief Load the Agent carries.
     Resources m_resources;
 };
 
 //==============================================================================
-//! \brief Predicate on the calendar: the rule only fires inside a window of
-//! the day, which is what gives a city a working day.
+//! \brief Check the hour. The Rule runs only inside a time window.
+//! This defines the working day of a City.
 //!
-//! The window is half open, [from, to), and wraps around midnight when \c from
-//! is the greater of the two, so \c hour \c between \c 22 \c 6 means night.
+//! The window is half-open: [from, to).
+//! If \c from is greater than \c to, the window wraps past midnight.
+//! \c hour \c between \c 22 \c 6 means night hours.
 //!
 //! Example:
 //! \code
@@ -229,32 +232,31 @@ class RuleCommandHour: public IRuleCommand
 public:
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] from first hour of the window, in [0..23].
-    //! \param[in] to first hour past the window, in [0..23]. Equal to \c from
-    //! means a window of no hour at all, and the rule never fires.
+    //! \param[in] from first hour in the window, 0 to 23.
+    //! \param[in] to first hour after the window, 0 to 23.
+    //! If \c from equals \c to, the window is empty and the Rule never runs.
     //--------------------------------------------------------------------------
     RuleCommandHour(uint32_t from, uint32_t to) : m_from(from), m_to(to) {}
 
     //--------------------------------------------------------------------------
-    //! \brief \return true while the clock of the context is inside the window.
-    //! False when the context carries no clock: a rule that asks for the time
-    //! cannot fire without one.
+    //! \return true when the clock is inside the window.
+    //! Returns false when context has no clock.
     //--------------------------------------------------------------------------
     bool validate(RuleContext& context) override;
 
     //--------------------------------------------------------------------------
-    //! \brief Does nothing: reading the clock changes nothing.
+    //! \brief Does nothing. Reading the clock changes nothing.
     //--------------------------------------------------------------------------
     void execute(RuleContext& context) override;
 
     //--------------------------------------------------------------------------
-    //! \brief \return the window in words, for the rule log of the demo.
+    //! \return the window as text for the demo rule log.
     //--------------------------------------------------------------------------
     [[nodiscard]] std::string getDescription() const override;
 
     //--------------------------------------------------------------------------
-    //! \brief First hour of the window. Read by OpeningHours to tell whether a
-    //! building is open, without parsing the script again.
+    //! \brief First hour in the window.
+    //! OpeningHours reads this to know if a Building is open.
     //--------------------------------------------------------------------------
     [[nodiscard]] uint32_t getFrom() const
     {
@@ -262,7 +264,7 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief First hour past the window. See getFrom().
+    //! \brief First hour after the window. See getFrom().
     //--------------------------------------------------------------------------
     [[nodiscard]] uint32_t getTo() const
     {
@@ -271,15 +273,15 @@ public:
 
 private:
 
-    //! \brief First hour of the window, in [0..23].
+    //! \brief First hour in the window, 0 to 23.
     uint32_t m_from;
 
-    //! \brief First hour past the window, in [0..23].
+    //! \brief First hour after the window, 0 to 23.
     uint32_t m_to;
 };
 
 //==============================================================================
-//! \brief Predicate on how many Units of a type sit inside the current Zone.
+//! \brief Test how many Buildings of one type are in the current Zone.
 //!
 //! Example:
 //! \code
@@ -290,10 +292,10 @@ class RuleCommandCount: public IRuleCommand
 {
 public:
 
-    RuleCommandCount(Name const& unitType,
+    RuleCommandCount(Name const& buildingType,
                      RuleCommandTest::Comparison comparison,
                      uint32_t amount)
-        : m_unitType(unitType), m_comparison(comparison), m_amount(amount)
+        : m_buildingType(buildingType), m_comparison(comparison), m_amount(amount)
     {
     }
 
@@ -303,13 +305,13 @@ public:
 
 private:
 
-    Name m_unitType;
+    Name m_buildingType;
     RuleCommandTest::Comparison m_comparison;
     uint32_t m_amount;
 };
 
 //==============================================================================
-//! \brief Create a Unit of the given type inside the current Zone.
+//! \brief Create a Building of the given type in the current Zone.
 //!
 //! Example:
 //! \code
@@ -327,8 +329,8 @@ public:
         FreeCell
     };
 
-    RuleCommandSpawn(UnitType const& unitType, Placement placement)
-        : m_unitType(unitType), m_placement(placement)
+    RuleCommandSpawn(BuildingType const& buildingType, Placement placement)
+        : m_buildingType(buildingType), m_placement(placement)
     {
     }
 
@@ -338,13 +340,13 @@ public:
 
 private:
 
-    UnitType const& m_unitType;
+    BuildingType const& m_buildingType;
     Placement m_placement;
 };
 
 //==============================================================================
-//! \brief Replace a Unit of one type by a Unit of another type, keeping its
-//! position and its attachment to the road.
+//! \brief Replace one Building type with another.
+//! Keeps position and road attachment.
 //!
 //! Example:
 //! \code
@@ -355,7 +357,7 @@ class RuleCommandUpgrade: public IRuleCommand
 {
 public:
 
-    RuleCommandUpgrade(UnitType const& fromType, UnitType const& toType)
+    RuleCommandUpgrade(BuildingType const& fromType, BuildingType const& toType)
         : m_fromType(fromType), m_toType(toType)
     {
     }
@@ -366,12 +368,12 @@ public:
 
 private:
 
-    UnitType const& m_fromType;
-    UnitType const& m_toType;
+    BuildingType const& m_fromType;
+    BuildingType const& m_toType;
 };
 
 //==============================================================================
-//! \brief Destroy one Unit of the given type inside the current Zone.
+//! \brief Destroy one Building of the given type in the current Zone.
 //!
 //! Example:
 //! \code
@@ -382,7 +384,7 @@ class RuleCommandDestroy: public IRuleCommand
 {
 public:
 
-    explicit RuleCommandDestroy(Name const& unitType) : m_unitType(unitType) {}
+    explicit RuleCommandDestroy(Name const& buildingType) : m_buildingType(buildingType) {}
 
     bool validate(RuleContext& context) override;
     void execute(RuleContext& context) override;
@@ -390,7 +392,7 @@ public:
 
 private:
 
-    Name m_unitType;
+    Name m_buildingType;
 };
 
 } // namespace ogb

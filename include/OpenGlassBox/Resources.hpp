@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------------
 
 //! \file Resources.hpp
-//! \brief Container of several resource stocks carried by units or agents.
+//! \brief Container of Resource stocks for Buildings or Agents.
 
 #ifndef OPEN_GLASSBOX_RESOURCES_HPP
 #define OPEN_GLASSBOX_RESOURCES_HPP
@@ -18,20 +18,16 @@ namespace ogb
 {
 
 //==============================================================================
-//! \brief Everything one thing holds: a set of stocks, one per kind, looked up
-//! by name.
+//! \brief All Resources held by one object, looked up by name.
 //!
-//! This is the state of a building, the load of an Agent, the treasury of a
-//! City and the recipe a UnitType hands to a new building. A stock appears the
-//! first time it is mentioned and starts empty with the largest capacity
-//! allowed, so a rule may add to a resource nobody declared.
+//! Used for a Building, an Agent load, a City treasury, or a BuildingType template.
+//! A Resource appears on first use, empty with maximum capacity.
+//! A Rule may add to a Resource the script never declared.
 //!
-//! Example, a house: { People 3/8, Money 1/10, Trash 0/1 }.
+//! Example for a house: { People 3/8, Money 1/10, Trash 0/1 }.
 //!
-//! Lookups are linear over a small vector rather than hashed: a building holds
-//! a handful of resources, and walking a contiguous vector beats hashing a
-//! string for that size. Names are compared as strings, so they are what has to
-//! match, not the order the script declared them in.
+//! Lookup is linear over a small vector, not hashed. A Building holds few Resources.
+//! Names are compared as strings. Order in the script does not matter.
 //!
 //! Example:
 //! \code
@@ -47,10 +43,9 @@ namespace ogb
 //!     std::cout << "empty house\n";
 //! \endcode
 //!
-//! The matching script, where \c caps sets the ceilings and \c resources the
-//! starting stock:
+//! The matching script. \c caps sets capacities. \c resources sets starting amounts:
 //! \code
-//! unit Home color 0xFF00FF caps [ People 8 Trash 1 ] resources [ People 8 ]
+//! building Home color 0xFF00FF caps [ People 8 Trash 1 ] resources [ People 8 ]
 //! \endcode
 //==============================================================================
 class Resources
@@ -58,141 +53,115 @@ class Resources
 public:
 
     // -------------------------------------------------------------------------
-    //! \brief An empty set: nothing held and nothing capped.
+    //! \brief Empty container: no Resources and no capacities set.
     // -------------------------------------------------------------------------
     Resources() = default;
 
     // -------------------------------------------------------------------------
-    //! \brief Search for a resource given its name.
-    //! \param[in] type: the type of resource (ie "Water").
-    //! \return the address of the resource if present. Return nullptr if not
-    //! found.
+    //! \brief Find a Resource by name.
+    //! \param[in] type Resource type (e.g. "Water").
+    //! \return pointer to the Resource, or nullptr if not found.
     // -------------------------------------------------------------------------
     [[nodiscard]] Resource* findResource(ResourceType const& type);
     [[nodiscard]] Resource const* findResource(ResourceType const& type) const;
 
     // -------------------------------------------------------------------------
-    //! \brief Search for a resource given its name. If the resource is not
-    //! present create one and store it before returning its reference.
-    //! \param[in] type: the type of resource (ie "Water").
-    //! \return the reference of the resource already stored or the newly
-    //! created.
+    //! \brief Find a Resource by name. Create it if missing.
+    //! \param[in] type Resource type (e.g. "Water").
+    //! \return reference to the existing or new Resource.
     // -------------------------------------------------------------------------
     [[nodiscard]] Resource& findOrAddResource(ResourceType const& type);
 
     // -------------------------------------------------------------------------
-    //! \brief Find for an existing resource in the collection. If not found
-    //! create and store a new resource with the current amount. If the resource
-    //! already existes then increase its amount of resource (limited by its
-    //! capacity).
-    //!
-    //! \param[in] type: the type of resource.
-    //! \param[in] amount: increase the current amount of resource by the given
-    //! quantity.
-    //! \return the found resource or newly created.
+    //! \brief Find or create a Resource and add to its amount (clamped by capacity).
+    //! \param[in] type Resource type.
+    //! \param[in] amount amount to add.
+    //! \return the Resource found or created.
     // -------------------------------------------------------------------------
     Resource& addResource(ResourceType const& type, uint32_t const amount);
 
     // -------------------------------------------------------------------------
-    //! \brief Reduce a given quantity of resource. If the resource does not
-    //! exist this function does nothing.
+    //! \brief Remove amount from a Resource. Does nothing if the Resource is missing.
     //!
-    //! \note this method does not delete a type of resource but acts on the
-    //! amount of resource.
+    //! \note Does not remove the Resource type. Only reduces the amount.
     //!
-    //! \param[in] type: the type of resource.
-    //! \param[in] amount: increase the current amount of resource by the given
-    //! quantity.
-    //! \return boolean indicating if the desired resource has been found.
+    //! \param[in] type Resource type.
+    //! \param[in] amount amount to remove.
+    //! \return true if the Resource was found.
     // -------------------------------------------------------------------------
     bool removeResource(ResourceType const& type, uint32_t const amount);
 
     // -------------------------------------------------------------------------
-    //! \brief Add a collection of resources. Apply addResource() for each type
-    //! of resource.
-    //!
-    //! \param[in] resourcesToAdd: what resources and what amount to increase.
+    //! \brief Add all Resources from another container. Calls addResource() for each.
+    //! \param[in] resourcesToAdd Resources and amounts to add.
     // -------------------------------------------------------------------------
     void addAll(Resources const& resourcesToAdd);
 
     // -------------------------------------------------------------------------
-    //! \brief Apply removeResource() for each resources.
-    //!
-    //! \param[in] resourcesToReduce: what resources and what amount to reduce.
+    //! \brief Remove all Resources from another container. Calls removeResource() for each.
+    //! \param[in] resourcesToReduce Resources and amounts to remove.
     // -------------------------------------------------------------------------
     void removeAll(Resources const& resourcesToReduce);
 
     // -------------------------------------------------------------------------
-    //! \brief Check if we can add at least one resource.
+    //! \brief Check if at least one Resource from another container can be added.
     //!
-    //! Conditions are: identical resource type and shall be the same
-    //! and recipient shall not be full.
+    //! Requires the same Resource type and free capacity in the recipient.
     //!
-    //! \param[in] resourcesToTryAdd: what resources and what amount to add.
-    //! \param[in] reserved: how many units of every resource are already
-    //! spoken for by something on its way here, and must therefore be counted
-    //! as if they had arrived. Zero asks the plain question.
-    //! \return true if it possible to add at least one resource, else false.
+    //! \param[in] resourcesToTryAdd Resources and amounts to test.
+    //! \param[in] reserved slots already reserved by incoming Agents.
+    //! Zero ignores reserved amounts.
+    //! \return true if at least one Resource can be added.
     // -------------------------------------------------------------------------
     [[nodiscard]] bool canAddAny(Resources const& resourcesToTryAdd,
                              uint32_t reserved = 0u);
 
     // -------------------------------------------------------------------------
-    //! \brief Transfer all resources to the recipient. For each resource the
-    //! amount of resource is limited by the capacity of the recipient.
-    //!
-    //! \param[in] resourcesTarget: the recipient.
+    //! \brief Transfer all Resources to another container.
+    //! Each amount is limited by the recipient capacity.
+    //! \param[in] resourcesTarget the recipient.
     // -------------------------------------------------------------------------
     void transferTo(Resources& resourcesTarget);
 
     // -------------------------------------------------------------------------
-    //! \brief Return the amount of resource of the given type. If the resource
-    //! does not exist return 0.
+    //! \return the amount for a Resource type. Returns 0 if missing.
     // -------------------------------------------------------------------------
     [[nodiscard]] uint32_t getAmount(ResourceType const& type) const;
 
     // -------------------------------------------------------------------------
-    //! \brief Find for an existing resource in the collection and change its
-    //! capacity. If the resource has not been found then create and store a new
-    //! resource with the current capacity. If the resource is already present
-    //! then its capacity is changed and the current amount of resource is
-    //! limited to the newly capacity.
-    //!
-    //! \param[in] type: the type of resource.
-    //! \param[in] capacity: the new capacity.
-    //! \return the found resource or newly created.
+    //! \brief Find or create a Resource and set its capacity.
+    //! If present, updates capacity and clamps amount to the new limit.
+    //! \param[in] type Resource type.
+    //! \param[in] capacity new capacity.
     // -------------------------------------------------------------------------
     void setCapacity(ResourceType const& type, uint32_t const capacity);
 
     // -------------------------------------------------------------------------
-    //! \brief Apply capacity() to a collection of resources.
+    //! \brief Set capacities for all Resources in another container.
     // -------------------------------------------------------------------------
     void setCapacities(Resources const& resourcesCapacities);
 
     // -------------------------------------------------------------------------
-    //! \brief Replace the amounts held, keeping the capacities.
+    //! \brief Replace amounts, keeping capacities.
     //!
-    //! A save stores what a building holds, not how much it can hold: the
-    //! capacities belong to the ruleset. Assigning the whole collection instead
-    //! used to leave every loaded building with a capacity of zero, which made
-    //! it refuse every Agent and every rule that adds anything.
+    //! A save stores amounts, not capacities. Capacities come from the ruleset.
+    //! Replacing the whole container avoids zero capacity after load, which would
+    //! block all Agents and Rules that add Resources.
     // -------------------------------------------------------------------------
     void setAmounts(Resources const& amounts);
 
     // -------------------------------------------------------------------------
-    //! \brief Return the maximal amount of resource of the given type. If the
-    //! resource does not exist return 0.
+    //! \return the capacity for a Resource type. Returns 0 if missing.
     // -------------------------------------------------------------------------
     [[nodiscard]] uint32_t getCapacity(ResourceType const& type) const;
 
     // -------------------------------------------------------------------------
-    //! \brief Return true if all resources are empty.
+    //! \return true if all Resources are empty.
     // -------------------------------------------------------------------------
     [[nodiscard]] bool isEmpty() const;
 
     // -------------------------------------------------------------------------
-    //! \brief Return true if the resource of the given type is present in the
-    //! collection.
+    //! \return true if a Resource of this type exists.
     // -------------------------------------------------------------------------
     [[nodiscard]] inline bool hasResource(ResourceType const& type) const
     {
@@ -200,8 +169,8 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief Every stock held, in the order they first appeared. What the
-    //! inspector of the demo walks to draw its bars, and what a save writes.
+    //! \brief All Resources, in order of first appearance.
+    //! Used by the demo inspector and by save/load.
     // -------------------------------------------------------------------------
     [[nodiscard]] std::vector<Resource> const& getAll() const
     {
@@ -209,16 +178,14 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief Write every stock as "type: amount/capacity", which is what a
-    //! failing unit test prints.
+    //! \brief Write all Resources as "type: amount/capacity". Used in unit test output.
     // -------------------------------------------------------------------------
     friend std::ostream& operator<<(std::ostream& os,
                                     Resources const& resources);
 
 private:
 
-    //! \brief The stocks, one per kind. Small enough that a linear search over
-    //! a contiguous vector is the fastest lookup.
+    //! \brief The Resource list. Linear search is fast for a small vector.
     std::vector<Resource> m_bin;
 };
 

@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------------
 
 //! \file SimpleScriptParser.hpp
-//! \brief Parser of the historical keyword-based OpenGlassBox script language.
+//! \brief Parser for the keyword-based OpenGlassBox script language.
 
 #ifndef OPEN_GLASSBOX_SCRIPT_SIMPLE_SCRIPT_PARSER_HPP
 #define OPEN_GLASSBOX_SCRIPT_SIMPLE_SCRIPT_PARSER_HPP
@@ -17,12 +17,12 @@ namespace ogb
 {
 
 //==============================================================================
-//! \brief Parser of the original keyword based language of OpenGlassBox, the
-//! one every \c .ogs file is written in.
+//! \brief Parser for the original keyword language of OpenGlassBox. Every
+//! \c .ogs file uses it.
 //!
-//! The language is a handful of sections, each closed by \c end, and inside
-//! them one declaration per line. Whitespace does not matter, apart from one
-//! place noted on parseRate(). A \c # runs to the end of the line.
+//! The language has sections closed by \c end. Each section has one
+//! declaration per line. Whitespace does not matter, except where noted on
+//! parseRate(). A \c # starts a comment to the end of the line.
 //!
 //! \code
 //! resources                       # what everything else is counted in
@@ -42,7 +42,7 @@ namespace ogb
 //! end
 //!
 //! rules                           # the behaviour of everything
-//!     unitRule SendPeopleToWork
+//!     buildingRule SendPeopleToWork
 //!         rate 45 minutes
 //!         hour between 8 18
 //!         local People greater 0
@@ -51,8 +51,8 @@ namespace ogb
 //!     end
 //! end
 //!
-//! units                           # kinds of building
-//!     unit Home color 0xFF00FF layerRadius 1 rules [ SendPeopleToWork ]
+//! buildings                       # kinds of building
+//!     building Home color 0xFF00FF layerRadius 1 rules [ SendPeopleToWork ]
 //!          targets [ Home ] caps [ People 8 ] resources [ People 8 ]
 //! end
 //!
@@ -65,16 +65,14 @@ namespace ogb
 //! end
 //! \endcode
 //!
-//! The stream of words is walked twice. The first pass only declares the names,
-//! the second fills them in. Two things follow from that: the order of the
-//! sections stops mattering, so a building may list a rule written further
-//! down, and a name resolving to nothing becomes an error with a line number
-//! rather than a null pointer quietly pushed into a list of rules.
+//! The token stream is read twice. The first pass declares names. The second
+//! pass fills them in. Section order does not matter. A building can reference
+//! a rule defined later. An unknown name becomes an error with a line number,
+//! not a null pointer in a rule list.
 //!
-//! Nothing throws on a bad word. An error is recorded and the parser
-//! resynchronises on the end of the construct it was reading, so that one typo
-//! does not hide the twenty after it. Past MAX_ERRORS it gives up, the rest
-//! being consequences of the first few.
+//! A bad word does not throw. The parser records an error and skips to the
+//! \c end of the current construct, so one typo does not hide later errors.
+//! After MAX_ERRORS the parser stops; later errors are usually side effects.
 //==============================================================================
 class SimpleScriptParser: public IScriptParser
 {
@@ -97,26 +95,26 @@ public:
 
 private:
 
-    //! \brief What the current walk of the stream of words is for.
+    //! \brief Purpose of the current pass over the token stream.
     enum class Pass
     {
-        //! \brief Declare the names and nothing else, so that the second pass
-        //! can resolve a reference to anything, wherever it was written.
+        //! \brief Declare names only, so the second pass can resolve any
+        //! reference.
         Declare,
 
-        //! \brief Fill those names in, resolving every reference.
+        //! \brief Fill in definitions and resolve every reference.
         Define,
     };
 
     //--------------------------------------------------------------------------
-    //! \brief Run both passes over the words already read.
-    //! \param[out] definitions where to put what was understood.
-    //! \return true when nothing was found wrong.
+    //! \brief Run both passes over the tokens already read.
+    //! \param[out] definitions where to store parsed results.
+    //! \return true when no errors were found.
     //--------------------------------------------------------------------------
     bool run(ScriptDefinitions& definitions);
 
     //--------------------------------------------------------------------------
-    //! \brief Walk the whole stream once, section by section.
+    //! \brief Walk the token stream once, section by section.
     //! \param[in] pass what this walk is for.
     //--------------------------------------------------------------------------
     void runPass(Pass pass);
@@ -135,13 +133,13 @@ private:
     void parseAgent();
     void parseLayers();
     void parseLayer();
-    void parseUnits();
-    void parseUnit();
+    void parseBuildings();
+    void parseBuilding();
     void parseZones();
     void parseZone();
     void parseRules();
     void parseRuleLayer();
-    void parseRuleUnit();
+    void parseRuleBuilding();
     void parseRuleZone();
     IRuleCommand* parseCommand(Token const& token);
 
@@ -149,56 +147,52 @@ private:
     void parseCapacitiesArray(Resources& resources);
     void parseStringArray(std::vector<std::string>& out);
     void parseRuleLayerArray(std::vector<RuleLayer*>& rules);
-    void parseRuleUnitArray(std::vector<RuleUnit*>& rules);
+    void parseRuleBuildingArray(std::vector<RuleBuilding*>& rules);
     void parseRuleZoneArray(std::vector<RuleZone*>& rules);
 
     //--------------------------------------------------------------------------
-    //! \brief Take the next word, complaining when there is none.
+    //! \brief Take the next word and report an error when the input is empty.
     //!
-    //! Every production reads through this, which is what makes a script cut
-    //! short come to a stop instead of looping for ever on an empty word.
+    //! Every production reads through this, so a truncated script stops instead
+    //! of looping on empty tokens.
     //!
-    //! \param[in] what to name in the error, such as "the name of a resource".
-    //! \return the word, or an invalid one when the input ran out, in which
-    //! case an error has been recorded.
+    //! \param[in] what name for the error, such as "the name of a resource".
+    //! \return the word, or an invalid token when the input ran out.
     //--------------------------------------------------------------------------
     Token const& expectToken(char const* what);
 
     //--------------------------------------------------------------------------
-    //! \brief Take the next word and check it is the one expected.
-    //! \param[in] word the word that has to come next, such as "between".
-    //! \return false when it was something else, having recorded an error.
+    //! \brief Take the next word and check it matches the expected word.
+    //! \param[in] word the expected word, such as "between".
+    //! \return false when it differs; an error was recorded.
     //--------------------------------------------------------------------------
     bool expectWord(char const* word);
 
     //--------------------------------------------------------------------------
-    //! \brief Skip up to and past the next \c end, so that the parse can carry
-    //! on after a construct it could not understand.
+    //! \brief Skip to and past the next \c end after a failed construct parse.
     //--------------------------------------------------------------------------
     void skipToEnd();
 
     //--------------------------------------------------------------------------
-    //! \brief Skip up to the next section keyword, for when even the end of the
-    //! construct cannot be trusted.
+    //! \brief Skip to the next section keyword when even \c end cannot be
+    //! trusted.
     //--------------------------------------------------------------------------
     void skipToNextSection();
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] text a word.
-    //! \return true when it opens a section, such as "units" or "rules".
+    //! \param[in] text a word.
+    //! \return true when it opens a section, such as "buildings" or "rules".
     //--------------------------------------------------------------------------
     [[nodiscard]] static bool isSectionKeyword(std::string const& text);
 
     //--------------------------------------------------------------------------
-    //! \brief Skip up to and past the next \c ], for when a bracketed list
-    //! could not be understood.
+    //! \brief Skip to and past the next \c ] after a failed bracketed list.
     //--------------------------------------------------------------------------
     void skipToCloseBracket();
 
     // -------------------------------------------------------------------------
-    // Checked conversions of a word already taken. A word that is not a number
-    // becomes an error naming it, rather than the zero atoi used to hand back.
-    // Colours are read as 0xRRGGBB, and a boolean as "true" or "false".
+    // Convert a token already read. A non-number becomes an error, not zero
+    // from atoi. Colours use 0xRRGGBB. Booleans use "true" or "false".
     // -------------------------------------------------------------------------
     uint32_t toUint(Token const& token);
     float toFloat(Token const& token);
@@ -207,7 +201,7 @@ private:
 
     // -------------------------------------------------------------------------
     // Take the next word and convert it. The parameter names what is expected,
-    // such as "a percentage", and only appears in the error message.
+    // such as "a percentage", and appears only in the error message.
     // -------------------------------------------------------------------------
     uint32_t nextUint(char const* what);
     float nextFloat(char const* what);
@@ -215,35 +209,31 @@ private:
     bool nextBool(char const* what);
 
     //--------------------------------------------------------------------------
-    //! \brief Read the period of a rule, either as a number of ticks or as a
-    //! duration of game time: "rate 7", "rate 30 minutes", "rate 2 hours",
-    //! "rate 1 day". The unit word is optional and ticks are assumed without
-    //! it, which is what every script written before this said. It must sit on
-    //! the same line as the number, because "hour" is also a command.
-    //! \param[out] rate: the number of ticks, meaningful only when rateMinutes
-    //! comes back as zero.
-    //! \param[out] rateMinutes: the duration in minutes of game time, zero when
-    //! the script counted ticks.
+    //! \brief Read a rule period as ticks or game time: "rate 7", "rate 30
+    //! minutes", "rate 2 hours", "rate 1 day". The unit word is optional; ticks
+    //! are assumed without it. The unit must sit on the same line as the number,
+    //! because "hour" is also a command.
+    //! \param[out] rate tick count, used only when rateMinutes is zero.
+    //! \param[out] rateMinutes duration in minutes of game time, zero when the
+    //! script used ticks.
     //--------------------------------------------------------------------------
     void parseRate(uint32_t& rate, uint32_t& rateMinutes);
 
     //--------------------------------------------------------------------------
-    //! \brief Record something wrong, at the place a word was written.
-    //! \param[in] token the offending word, whose line and column are used.
-    //! \param[in] message what is wrong with it.
+    //! \brief Record an error at the token position.
+    //! \param[in] token the bad word, for line and column.
+    //! \param[in] message what is wrong.
     //--------------------------------------------------------------------------
     void error(Token const& token, std::string const& message);
 
     //--------------------------------------------------------------------------
-    //! \brief \return true once MAX_ERRORS have piled up and going on is
-    //! pointless.
+    //! \return true after MAX_ERRORS errors; further parsing is useless.
     //--------------------------------------------------------------------------
     bool tooManyErrors() const;
 
     //--------------------------------------------------------------------------
-    //! \brief \return true during the second pass, which is the one that builds
-    //! anything. Read by the productions, which declare on the first pass and
-    //! resolve on the second.
+    //! \return true during the second pass, which builds definitions.
+    //! Productions declare on the first pass and resolve on the second.
     //--------------------------------------------------------------------------
     bool defining() const
     {
@@ -252,21 +242,20 @@ private:
 
 private:
 
-    //! \brief Past this many errors the parse gives up: beyond a certain point
-    //! the errors are consequences of the first ones and only bury them.
+    //! \brief Stop parsing after this many errors. Later errors usually repeat
+    //! the first ones.
     static constexpr size_t MAX_ERRORS = 25u;
 
-    //! \brief The words of the script, walked twice.
+    //! \brief Tokens from the script, read twice.
     Lexer m_lexer;
 
-    //! \brief What the current walk is for.
+    //! \brief Current pass purpose.
     Pass m_pass = Pass::Declare;
 
-    //! \brief Where what is understood goes. Not owned, and only valid for the
-    //! duration of a parse.
+    //! \brief Output catalogue. Not owned; valid only during parse().
     ScriptDefinitions* m_definitions = nullptr;
 
-    //! \brief What was found wrong, in the order it was found.
+    //! \brief Errors found, in order.
     std::vector<ParseError> m_errors;
 };
 

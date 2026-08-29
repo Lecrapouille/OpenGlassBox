@@ -8,7 +8,7 @@
 
 #include "OpenGlassBox/City.hpp"
 #include "OpenGlassBox/Layer.hpp"
-#include "OpenGlassBox/Unit.hpp"
+#include "OpenGlassBox/Building.hpp"
 
 namespace ogb {
 namespace game {
@@ -64,9 +64,9 @@ void RuleTrace::onRuleExecuted(IRule::Trace const& trace)
         event.city = context.city->getName();
     }
 
-    if (context.unit != nullptr)
+    if (context.building != nullptr)
     {
-        event.entity = "Unit " + context.unit->getTypeName().str();
+        event.entity = "Building " + context.building->getTypeName().str();
     }
     else if (context.layer != nullptr)
     {

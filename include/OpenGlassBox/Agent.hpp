@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------------
 
 //! \file Agent.hpp
-//! \brief Travellers driving on the road network to carry resources from one
+//! \brief Travellers on the road network. They carry resources from one
 //! building to another.
 
 #ifndef OPEN_GLASSBOX_AGENT_HPP
@@ -19,42 +19,40 @@
 namespace ogb
 {
 
-class Unit;
+class Building;
 
 //==============================================================================
-//! \brief One trip: a load of resources leaving a building, looking for another
-//! one that accepts it.
+//! \brief A traveller carrying a load from one building to another that
+//! accepts it.
 //!
-//! Agents are created by unit rules, one per \c agent command that fires, and
-//! they are the visible traffic of the city. They run no rules of their own: a
-//! city may have a thousand of them alive at once, and giving each one a
-//! ruleset would cost more than the rest of the simulation put together.
+//! Building rules create Agents. One Agent is created per \c agent command that
+//! fires. Agents are the visible traffic of the city. They run no rules of
+//! their own. A city may have thousands of Agents alive at once. Giving each
+//! one a ruleset would cost more than the rest of the simulation.
 //!
-//! What an Agent knows is what it carries, the name it is looking for, and an
-//! itinerary. It does not know which building it will end at: the router
-//! returns the cheapest one answering to that name and having room, and the
-//! answer may change while the Agent drives, which is why the itinerary is
-//! recomputed from time to time. Finding nothing at all is not an error, and an
-//! Agent that has looked for RoutingConfig::agentGiveUpTicks hands its load
-//! back to the building that sent it out. That is the wandering the demo shows:
-//! it means the city is short of somewhere to deliver, not that the router is
-//! broken.
+//! An Agent knows what it carries, the name it looks for, and an itinerary.
+//! It does not know which building it will reach. The router returns the
+//! cheapest building with that name and free room. The answer may change while
+//! the Agent drives. That is why the itinerary is recomputed from time to time.
+//! Finding nothing is not an error. After RoutingConfig::agentGiveUpTicks ticks
+//! with no destination, the Agent returns its load to the building that sent
+//! it. In the demo this looks like wandering. It means the city lacks a
+//! delivery target, not that the router is broken.
 //!
-//! An Agent lives on a Segment at an offset, not on a Node, and it counts
-//! towards the traffic of that Segment, which is what makes the road slower for
-//! everybody else. It disappears the moment it unloads, so there is no
-//! population sitting inside a building: what a building has is the traffic
-//! coming and going.
+//! An Agent lives on a Segment at an offset, not on a Node. It counts towards
+//! the traffic of that Segment. That makes the road slower for everyone else.
+//! It disappears when it unloads. There is no population inside a building. A
+//! building only has traffic coming and going.
 //!
 //! Example:
 //! \code
-//! // What a unit rule does, in effect: send one worker out with one person.
+//! // What a building rule does: send one worker out with one person.
 //! Resources load;
 //! load.addResource("People", 1u);
 //! city.addAgent(workerType, home, load, "Work");
 //!
-//! // The City drives them and takes away the ones that are done, so watching a
-//! // trip means reading the list again rather than keeping a reference.
+//! // The City drives them and removes finished ones. To watch a trip, read the
+//! // list again instead of keeping a reference.
 //! city.update();
 //! for (auto const& agent : city.agents())
 //! {
@@ -63,10 +61,10 @@ class Unit;
 //! }
 //! \endcode
 //!
-//! The matching script, where \c to names what the Agent will look for and the
-//! brackets are the load it carries:
+//! Matching script. \c to is the name the Agent looks for. The brackets hold
+//! the load it carries:
 //! \code
-//! unitRule SendPeopleToWork
+//! buildingRule SendPeopleToWork
 //!     rate 45 minutes
 //!     local People remove 1
 //!     agent Worker to Work add [ People 1 ]
@@ -79,46 +77,45 @@ public:
 
     // -------------------------------------------------------------------------
     //! \brief Leave a building with a load to deliver.
-    //! \param[in] id identifier given by the City, unique among its Agents.
-    //! \param[in] type recipe of the traveller. Kept by reference and has to
+    //! \param[in] id identifier from the City. Unique among its Agents.
+    //! \param[in] type recipe of the traveller. Kept by reference. Must
     //! outlive the Agent.
-    //! \param[in] owner the building it leaves, which is also where the load
-    //! goes back if nothing accepts it. The Agent starts at its position, and
-    //! along the street when the building stands along one.
+    //! \param[in] owner the building it leaves. The load returns here if
+    //! nothing accepts it. The Agent starts at its position, or along the
+    //! street when the building stands on a Segment.
     //! \param[in] resources what it carries. Copied.
-    //! \param[in] searchTarget the name of what it is looking for, matched
-    //! against the \c targets of the buildings.
+    //! \param[in] searchTarget the name it looks for. Matched against the
+    //! \c targets of buildings.
     // -------------------------------------------------------------------------
     Agent(uint32_t id,
           AgentType const& type,
-          Unit& owner,
+          Building& owner,
           Resources const& resources,
           Name const& searchTarget);
 
     // -------------------------------------------------------------------------
-    //! \brief Take itself out of the traffic count of the Segment it was
-    //! driving on.
+    //! \brief Remove itself from the traffic count of the Segment it drives on.
     // -------------------------------------------------------------------------
     ~Agent();
 
     // -------------------------------------------------------------------------
-    //! \brief Drive for one tick: follow the itinerary, recompute it when it
-    //! has gone stale, and knock at the door when standing in front of one.
-    //! \param[in] router the router of the City. Reused rather than built
-    //! here: it keeps its scratch buffers between calls.
-    //! \param[in] config settings read for the giving up delay and the routing
-    //! intervals. The City passes its own; it is not held.
+    //! \brief Drive for one tick. Follow the itinerary. Recompute it when it
+    //! is stale. Try to unload when in front of a building.
+    //! \param[in] router the router of the City. Reused between calls. It
+    //! keeps scratch buffers.
+    //! \param[in] config settings for give-up delay and routing intervals. The
+    //! City passes its own. Not stored.
     //! \param[in] dt seconds of game time in one tick.
-    //! \return true when the Agent is done, either because it has unloaded or
-    //! because it has given up, in which case the City takes it away.
+    //! \return true when the Agent is done. It has unloaded or given up. The
+    //! City removes it then.
     // -------------------------------------------------------------------------
     bool update(IRouter& router, RoutingConfig const& config, float dt);
 
     // -------------------------------------------------------------------------
-    //! \brief \return what it carries, and what room is left.
+    //! \return what it carries and what room is left.
     //!
-    //! \note Writable: unloading moves the load into the building, and giving
-    //! up moves it back home.
+    //! \note Writable. Unloading moves the load into the building. Giving up
+    //! moves it back home.
     // -------------------------------------------------------------------------
     [[nodiscard]] Resources& getResources()
     {
@@ -132,8 +129,8 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief The name it is looking for, such as "Work" or "Shop". Matched
-    //! against the \c targets of the buildings, not against their type.
+    //! \brief The name it looks for, such as "Work" or "Shop". Matched against
+    //! the \c targets of buildings, not against their type.
     // -------------------------------------------------------------------------
     [[nodiscard]] Name const& getTarget() const
     {
@@ -141,7 +138,7 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief The segment it is driving on, or nullptr when it stands at a
+    //! \brief The Segment it drives on, or nullptr when it stands at a
     //! crossroads with nowhere to go.
     // -------------------------------------------------------------------------
     [[nodiscard]] Segment const* getSegment() const
@@ -150,8 +147,8 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \return where along getSegment() it stands, from 0 at the
-    //! origin node to 1 at the other end.
+    //! \return position along getSegment(), from 0 at the origin Node
+    //! to 1 at the other end.
     // -------------------------------------------------------------------------
     [[nodiscard]] float getOffset() const
     {
@@ -160,8 +157,8 @@ public:
 
     // -------------------------------------------------------------------------
     //! \brief Top speed of its type, in world units per second of game time.
-    //! What it actually drives is the lesser of this and the speed of the
-    //! Segment under it.
+    //! Actual speed is the lesser of this and the speed of the Segment under
+    //! it.
     // -------------------------------------------------------------------------
     [[nodiscard]] float getSpeed() const
     {
@@ -169,8 +166,8 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \return the itinerary it is following. Route::isFound() is false
-    //! while it has none, which happens when nothing accepts its load.
+    //! \return the itinerary it follows. Route::isFound() is false when
+    //! it has none. That happens when nothing accepts its load.
     // -------------------------------------------------------------------------
     [[nodiscard]] Route const& getRoute() const
     {
@@ -178,33 +175,32 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief How long the rest of the trip takes, in seconds of game time,
+    //! \brief Time left for the rest of the trip, in seconds of game time,
     //! traffic included. Zero when it has no itinerary.
     // -------------------------------------------------------------------------
     [[nodiscard]] float getRemainingCost() const;
 
     // -------------------------------------------------------------------------
-    //! \brief What the Agent would pay if it left for the cheapest acceptable
-    //! building right now, from where it stands, at the current travel times.
+    //! \brief Cost to reach the cheapest acceptable building now, from the
+    //! current position, at current travel times.
     //!
-    //! The counterpart of getRemainingCost(), and what it has to be compared
-    //! against: both are counted from getNextRoutingNode(). Ask for this rather
-    //! than calling IRouter::computeShortestPathCost() directly, because the
-    //! agent has to stand out of its own way first. The place it holds at its
-    //! destination is a claim against the other agents, and a search made
-    //! without lifting it finds that destination full and answers with a dearer
-    //! building, which reads as an agent that would gain by rerouting when it
-    //! would not.
+    //! Counterpart of getRemainingCost(). Compare against that value. Both
+    //! start from getNextRoutingNode(). Call this instead of
+    //! IRouter::computeShortestPathCost() directly. The Agent must stand out
+    //! of its own way first. Its place at the destination is a claim against
+    //! other Agents. A search without lifting it finds the destination full
+    //! and returns a costlier building. That would look like rerouting would
+    //! help when it would not.
     //!
     //! \param[in] router the router of the City.
-    //! \return the cost in seconds of game time, or ROUTING_INFINITY when
-    //! nothing reachable accepts the load.
+    //! \return cost in seconds of game time, or ROUTING_INFINITY when nothing
+    //! reachable accepts the load.
     // -------------------------------------------------------------------------
     [[nodiscard]] float computeRerouteCost(IRouter& router);
 
     // -------------------------------------------------------------------------
-    //! \brief The crossroads it last stood at, which is where it is routed
-    //! from, or nullptr when the road network under it has been demolished.
+    //! \brief The crossroads it last stood at. Routing starts from here.
+    //! nullptr when the road network under it was demolished.
     // -------------------------------------------------------------------------
     [[nodiscard]] Node* getPreviousNode() const
     {
@@ -212,22 +208,22 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \return the crossroads the router starts from: the one being
-    //! driven to, or the one last stood at. Matches getRemainingCost().
+    //! \return the crossroads the router starts from: the one it drives
+    //! to, or the one it last stood at. Matches getRemainingCost().
     // -------------------------------------------------------------------------
     [[nodiscard]] Node* getNextRoutingNode() const;
 
     // -------------------------------------------------------------------------
-    //! \brief The building that sent it out, or nullptr once that building has
-    //! been demolished. Where the load goes back when the Agent gives up.
+    //! \brief The building that sent it out, or nullptr once that building was
+    //! demolished. The load returns here when the Agent gives up.
     // -------------------------------------------------------------------------
-    [[nodiscard]] Unit* getOwner() const
+    [[nodiscard]] Building* getOwner() const
     {
         return m_owner;
     }
 
     // -------------------------------------------------------------------------
-    //! \brief Follow the City as it is moved in the world.
+    //! \brief Follow the City when it moves in the world.
     //! \param[in] direction how far the City moved.
     // -------------------------------------------------------------------------
     void translate(Vector3f const& direction)
@@ -236,15 +232,15 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief Put the Agent back exactly where a save file says it was, which
-    //! is the one case where its position is not the outcome of driving.
+    //! \brief Place the Agent exactly where a save file says it was. This is
+    //! the only case where position is not set by driving.
     //! \param[in] position where it stands, in world coordinates.
-    //! \param[in] segment the segment it was driving on, or nullptr.
-    //! \param[in] offset where along that segment, in [0..1].
+    //! \param[in] segment the Segment it drove on, or nullptr.
+    //! \param[in] offset position along that Segment, in [0..1].
     //! \param[in] last the crossroads it came from, or nullptr.
     //!
-    //! The itinerary is dropped: the next tick recomputes it on the network as
-    //! it was loaded.
+    //! The itinerary is dropped. The next tick recomputes it on the loaded
+    //! network.
     // -------------------------------------------------------------------------
     void relocate(Vector3f const& position,
                   Segment* segment,
@@ -252,64 +248,64 @@ public:
                   Node* last);
 
     // -------------------------------------------------------------------------
-    //! \brief Forget the itinerary without moving: it was computed on a network
-    //! that has since changed.
+    //! \brief Clear the itinerary without moving. The network changed since it
+    //! was computed.
     // -------------------------------------------------------------------------
     void invalidateRoute();
 
     // -------------------------------------------------------------------------
-    //! \brief Let go of a Segment that is about to be destroyed.
+    //! \brief Release a Segment that will be destroyed.
     //!
-    //! Has to be called while the Segment is still alive, because the Agent has
-    //! to take itself out of its traffic count. An Agent driving on it is
-    //! parked on the Node it came from.
+    //! Call while the Segment is still alive. The Agent must remove itself
+    //! from its traffic count. An Agent on it is parked on the Node it came
+    //! from.
     //!
-    //! \param[in] segment the segment being demolished.
+    //! \param[in] segment the Segment being demolished.
     // -------------------------------------------------------------------------
     void forget(Segment const& segment);
 
     // -------------------------------------------------------------------------
-    //! \brief Let go of a Node that is about to be destroyed. Call it after
-    //! forget() has been called for every Segment incident to that Node.
+    //! \brief Release a Node that will be destroyed. Call after forget() for
+    //! every Segment connected to that Node.
     //! \param[in] node the crossroads being demolished.
     // -------------------------------------------------------------------------
     void forget(Node const& node);
 
     // -------------------------------------------------------------------------
-    //! \brief Let go of a Unit that is about to be destroyed: the building it
-    //! came from, and the one its itinerary was aiming at. A rule that abandons
-    //! a house does that while Agents are still driving to it.
-    //! \param[in] unit the building being demolished.
+    //! \brief Release a Building that will be destroyed: the source building
+    //! and the destination on the itinerary. A rule that removes a house does
+    //! this while Agents still drive to it.
+    //! \param[in] building the building being demolished.
     // -------------------------------------------------------------------------
-    void forget(Unit const& unit);
+    void forget(Building const& building);
 
     // -------------------------------------------------------------------------
-    //! \brief Whether the Agent has nowhere left to stand: no Segment under it
-    //! and no Node with a road.
+    //! \brief Whether the Agent has nowhere to stand: no Segment under it and
+    //! no Node with a road.
     //!
-    //! Such an Agent can neither move nor deliver, and the City takes it away
-    //! rather than leave it floating over a demolished neighbourhood.
+    //! Such an Agent cannot move or deliver. The City removes it instead of
+    //! leaving it over a demolished area.
     // -------------------------------------------------------------------------
     [[nodiscard]] bool isStuck() const;
 
 private:
 
     // -------------------------------------------------------------------------
-    //! \brief Whether the Agent is on that Segment, or means to approach a
+    //! \brief Whether the Agent is on that Segment, or will approach a
     //! building along it.
-    //! \param[in] segment the segment to test.
+    //! \param[in] segment the Segment to test.
     // -------------------------------------------------------------------------
     bool uses(Segment const& segment) const;
 
     // -------------------------------------------------------------------------
     //! \brief Whether that Node is on the itinerary, or is one of the two the
-    //! Agent is driving between.
+    //! Agent drives between.
     //! \param[in] node the crossroads to test.
     // -------------------------------------------------------------------------
     bool uses(Node const& node) const;
 
     // -------------------------------------------------------------------------
-    //! \brief Knock at the door in front of the Agent and hand the load over.
+    //! \brief Try to unload at the building in front of the Agent.
     //! \return true when nothing is left to deliver.
     // -------------------------------------------------------------------------
     bool unloadResources();
@@ -321,70 +317,69 @@ private:
     void moveTowardsNextNode(float dt);
 
     // -------------------------------------------------------------------------
-    //! \brief Take the next segment of the itinerary, recomputing it when there
-    //! is none or when it has gone stale.
+    //! \brief Take the next Segment of the itinerary. Recompute when there is
+    //! none or when it is stale.
     //! \param[in] router the router of the City.
-    //! \param[in] config settings read for the routing intervals.
+    //! \param[in] config settings for routing intervals.
     // -------------------------------------------------------------------------
     void followRoute(IRouter& router, RoutingConfig const& config);
 
     // -------------------------------------------------------------------------
-    //! \brief Replace the itinerary if it is worth it: when there is none, when
-    //! it has been held long enough, or when the traffic has made it much worse
-    //! than the current shortest one.
+    //! \brief Replace the itinerary when needed: when there is none, when it
+    //! is old enough, or when traffic made it much worse than the current
+    //! shortest path.
     //!
-    //! Comparing against the shortest one costs a whole graph search, so it
-    //! only happens every RoutingConfig::pathCheckTicks ticks, and the
-    //! itinerary that search produced is kept rather than searched for twice.
+    //! Comparing to the shortest path costs a full graph search. That only
+    //! runs every RoutingConfig::pathCheckTicks ticks. The itinerary from
+    //! that search is kept instead of searching twice.
     //!
     //! \param[in] router the router of the City.
-    //! \param[in] config settings read for the routing intervals.
+    //! \param[in] config settings for routing intervals.
     // -------------------------------------------------------------------------
     void maybeRecomputeRoute(IRouter& router, RoutingConfig const& config);
 
     // -------------------------------------------------------------------------
-    //! \brief Ask the router for the cheapest building answering to
-    //! m_searchTarget, and keep the way there.
+    //! \brief Ask the router for the cheapest building matching
+    //! m_searchTarget. Keep the path there.
     //! \param[in] router the router of the City.
     // -------------------------------------------------------------------------
     void computeRoute(IRouter& router);
 
     // -------------------------------------------------------------------------
-    //! \brief The building the Agent is standing in front of and that accepts
-    //! its load, or nullptr.
+    //! \brief The building in front of the Agent that accepts its load, or
+    //! nullptr.
     // -------------------------------------------------------------------------
-    Unit* searchUnit();
+    Building* searchBuilding();
 
     // -------------------------------------------------------------------------
-    //! \brief Move onto another Segment, keeping the traffic count of both of
-    //! them straight. Pass nullptr to leave the network.
-    //! \param[in] segment the segment to drive on, or nullptr to leave the
+    //! \brief Move to another Segment. Keep traffic counts correct on both.
+    //! Pass nullptr to leave the network.
+    //! \param[in] segment the Segment to drive on, or nullptr to leave the
     //! network.
     // -------------------------------------------------------------------------
     void setCurrentSegment(Segment* segment);
 
     // -------------------------------------------------------------------------
-    //! \brief Whether the Agent stands between the two ends of a Segment, which
-    //! is where a building anchored along a street leaves it.
+    //! \brief Whether the Agent stands between the two ends of a Segment. A
+    //! building on a street leaves the network here.
     // -------------------------------------------------------------------------
     bool standingAlongSegment() const;
 
     // -------------------------------------------------------------------------
-    //! \brief Leave the Segment by the end the destination is really behind.
+    //! \brief Leave the Segment by the end where the destination really is.
     //!
-    //! Standing along a segment the Agent may drive off either way, and the
-    //! near end is not always the good one: everyone leaving a factory placed
-    //! at a fifth of the street drove to the nearest corner first, so an Agent
-    //! bound for a shop to the east was first seen heading west.
+    //! When standing along a Segment the Agent may drive either way. The near
+    //! end is not always correct. Everyone leaving a factory at one fifth of
+    //! the street drove to the nearest corner first. An Agent bound east was
+    //! first seen heading west.
     //! \param[in] router the router of the City.
     // -------------------------------------------------------------------------
     void computeRouteAlongSegment(IRouter& router);
 
     // -------------------------------------------------------------------------
-    //! \brief The end of the Segment the Agent has to reach before it can take
-    //! another one, which is the crossroads it came in by. Null when the Agent
-    //! is not standing on a Segment, or when the Node it came from is not one
-    //! of its ends.
+    //! \brief The end of the Segment the Agent must reach before taking
+    //! another. This is the crossroads it entered by. Null when the Agent is
+    //! not on a Segment, or when the Node it came from is not an end.
     // -------------------------------------------------------------------------
     [[nodiscard]] Node* getSegmentExit() const;
 
@@ -397,36 +392,34 @@ private:
     bool giveUp();
 
     // -------------------------------------------------------------------------
-    //! \brief The only way m_route is ever written.
+    //! \brief The only place m_route is written.
     //!
-    //! Going through one place is what keeps the claim on the destination
-    //! honest: it gives back the place held at the old building and takes one
-    //! at the new. An assignment that escaped it would leave a building
-    //! reserved for an Agent that is no longer coming, and a building whose
-    //! count never comes back down is invisible to every Agent for the rest of
-    //! the game.
+    //! One entry point keeps the destination claim correct. It releases the
+    //! place at the old building and takes one at the new. Direct assignment
+    //! would leave a building reserved for an Agent that no longer comes. A
+    //! count that never drops hides the building from every Agent for the rest
+    //! of the game.
     //!
-    //! \param[in] route the new itinerary, or a default-built one to have none.
+    //! \param[in] route the new itinerary, or a default-built one for none.
     // -------------------------------------------------------------------------
     void setRoute(Route&& route);
 
     // -------------------------------------------------------------------------
-    //! \brief Take a place at the destination of the current itinerary, unless
-    //! one is held already or there is no destination.
+    //! \brief Reserve a place at the destination of the current itinerary,
+    //! unless one is already held or there is no destination.
     // -------------------------------------------------------------------------
     void claimDestination();
 
     // -------------------------------------------------------------------------
-    //! \brief Give back the place held, if any. Safe to call twice.
+    //! \brief Release the held place, if any. Safe to call twice.
     // -------------------------------------------------------------------------
     void releaseDestination();
 
     // -------------------------------------------------------------------------
-    //! \brief The body of update(), which brackets it with the release and the
-    //! retaking of the claim.
+    //! \brief Body of update(). Brackets it with release and retake of the
+    //! claim.
     //! \param[in] router the router of the City.
-    //! \param[in] config settings read for the giving up delay and the routing
-    //! intervals.
+    //! \param[in] config settings for give-up delay and routing intervals.
     //! \param[in] dt seconds of game time in one tick.
     //! \return true when the Agent is done.
     // -------------------------------------------------------------------------
@@ -434,43 +427,41 @@ private:
 
 private:
 
-    //! \brief The building it left, and where the load goes back if nothing
-    //! accepts it. Null once that building has been demolished. Not owned.
-    Unit* m_owner = nullptr;
-    //! \brief The name it is looking for, from the \c to of the script.
+    //! \brief The building it left. Load returns here if nothing accepts it.
+    //! Null once demolished. Not owned.
+    Building* m_owner = nullptr;
+    //! \brief The name it looks for, from the \c to of the script.
     Name m_searchTarget;
     //! \brief What it carries.
     Resources m_resources;
-    //! \brief Where along m_currentSegment it stands, in [0..1] from
+    //! \brief Position along m_currentSegment, in [0..1] from
     //! m_currentSegment->from().
     float m_offset = 0.0f;
-    //! \brief The segment under it, which counts it as traffic. Not owned.
+    //! \brief The Segment under it. It counts as traffic on it. Not owned.
     Segment* m_currentSegment = nullptr;
-    //! \brief The crossroads it came from, and what it is routed from. Not
-    //! owned.
+    //! \brief The crossroads it came from. Routing starts here. Not owned.
     Node* m_lastNode = nullptr;
-    //! \brief The crossroads it is driving to, or null when it stands still.
-    //! Not owned.
+    //! \brief The crossroads it drives to, or null when it stands still. Not
+    //! owned.
     Node* m_nextNode = nullptr;
-    //! \brief Cached itinerary. Recomputed periodically, and as soon as the
-    //! remaining cost drifts too far from the current shortest path. Written
-    //! through route() and nowhere else.
+    //! \brief Cached itinerary. Recomputed periodically and when remaining
+    //! cost drifts too far from the shortest path. Written only through
+    //! route().
     Route m_route;
-    //! \brief The building a place is currently held at, or nullptr. The one
-    //! authority on whether a claim is outstanding: the route destination says
-    //! where the Agent is going, this says what has to be given back. Not
-    //! owned, and always cleared before the building is destroyed.
-    Unit* m_reservation = nullptr;
-    //! \brief Ticks spent on the current itinerary, against
+    //! \brief Building where a place is currently held, or nullptr. Tracks
+    //! whether a claim is active. The route destination says where the Agent
+    //! goes; this says what must be released. Not owned. Always cleared before
+    //! the building is destroyed.
+    Building* m_reservation = nullptr;
+    //! \brief Ticks on the current itinerary, compared to
     //! RoutingConfig::pathRecalcTicks.
     uint32_t m_ticksOnRoute = 0u;
-    //! \brief Ticks spent without an itinerary, wandering from one crossroads
-    //! to the next because nothing accepts what the Agent carries. Against
-    //! RoutingConfig::agentGiveUpTicks.
+    //! \brief Ticks without an itinerary, moving between crossroads because
+    //! nothing accepts the load. Compared to RoutingConfig::agentGiveUpTicks.
     uint32_t m_ticksLost = 0u;
 };
 
-//! \brief The Agents of a City, which owns them.
+//! \brief The Agents of a City. The City owns them.
 using Agents = std::vector<std::unique_ptr<Agent>>;
 
 } // namespace ogb

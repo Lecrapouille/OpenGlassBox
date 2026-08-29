@@ -40,25 +40,25 @@ static std::string dataFile(std::string const& name)
 }
 
 //------------------------------------------------------------------------------
-//! \brief A Unit of the given type, or nullptr. The first one found is enough:
+//! \brief A Building of the given type, or nullptr. The first one found is enough:
 //! the saves used here hold one of each.
-static Unit* findUnit(City& city, std::string const& type)
+static Building* findBuilding(City& city, std::string const& type)
 {
-    for (auto const& unit : city.getUnits())
+    for (auto const& building: city.getBuildings())
     {
-        if (unit->getTypeName() == type)
-            return unit.get();
+        if (building->getTypeName() == type)
+            return building.get();
     }
     return nullptr;
 }
 
 //------------------------------------------------------------------------------
-static uint32_t countUnits(City& city, std::string const& type)
+static uint32_t countBuildings(City& city, std::string const& type)
 {
     uint32_t count = 0u;
-    for (auto const& unit : city.getUnits())
+    for (auto const& building: city.getBuildings())
     {
-        if (unit->getTypeName() == type)
+        if (building->getTypeName() == type)
             ++count;
     }
     return count;
@@ -113,11 +113,11 @@ static Sightings watch(Simulation& simulation,
             onTick();
 
         uint32_t const hour = simulation.getClock().getHourOfDay();
-        Unit* const work = findUnit(city, "Work");
-        Unit* const shop = findUnit(city, "Shop");
-        Unit* const restaurant = findUnit(city, "Restaurant");
+        Building* const work = findBuilding(city, "Work");
+        Building* const shop = findBuilding(city, "Shop");
+        Building* const restaurant = findBuilding(city, "Restaurant");
 
-        seen.home = seen.home || (countUnits(city, "Home") > 0u);
+        seen.home = seen.home || (countBuildings(city, "Home") > 0u);
         if (work != nullptr)
         {
             seen.peopleAtWork = seen.peopleAtWork ||
@@ -195,9 +195,9 @@ TEST(TestsScenario, ADayInQqCity)
     Simulation simulation;
     City& city = openAtEightInTheMorning(simulation, "qq.ogc");
 
-    ASSERT_EQ(countUnits(city, "Home"), 0u);
-    ASSERT_NE(findUnit(city, "Work"), nullptr);
-    ASSERT_NE(findUnit(city, "Shop"), nullptr);
+    ASSERT_EQ(countBuildings(city, "Home"), 0u);
+    ASSERT_NE(findBuilding(city, "Work"), nullptr);
+    ASSERT_NE(findBuilding(city, "Shop"), nullptr);
 
     // The Commercial zone of that save is a single cell and already holds a
     // shop, so the canteen goes next to it by hand. What is under test here is
@@ -205,9 +205,9 @@ TEST(TestsScenario, ADayInQqCity)
     Path& road = *(city.getPaths().begin()->second);
     Segment* const segment = road.findSegment(3u);
     ASSERT_NE(segment, nullptr);
-    city.addUnit(
-        simulation.getRuleset().getUnitType("Restaurant"), road, *segment, 0.6f);
-    ASSERT_NE(findUnit(city, "Restaurant"), nullptr);
+    city.addBuilding(
+        simulation.getRuleset().getBuildingType("Restaurant"), road, *segment, 0.6f);
+    ASSERT_NE(findBuilding(city, "Restaurant"), nullptr);
 
     // Nine game hours: the zones take four to grow the first houses, and the
     // chain from a new resident to a shop with something on its shelves is a
@@ -239,18 +239,18 @@ TEST(TestsScenario, ADayInQqCity)
 
     // Houses stand along a road, not in a field, and no two share a cell.
     std::vector<Vector3f> homes;
-    for (auto const& unit : city.getUnits())
+    for (auto const& building: city.getBuildings())
     {
-        if (unit->getTypeName() != "Home")
+        if (building->getTypeName() != "Home")
             continue;
-        ASSERT_TRUE((unit->getSegment() != nullptr) || (unit->getNode() != nullptr))
+        ASSERT_TRUE((building->getSegment() != nullptr) || (building->getNode() != nullptr))
             << "a house grew with no road to reach it";
         for (Vector3f const& other : homes)
         {
-            ASSERT_GT(length(unit->getPosition() - other), 0.1f)
+            ASSERT_GT(length(building->getPosition() - other), 0.1f)
                 << "two houses on the same spot";
         }
-        homes.push_back(unit->getPosition());
+        homes.push_back(building->getPosition());
     }
 }
 
@@ -274,8 +274,8 @@ TEST(TestsScenario, ClaimsOnDestinationsNeverLeak)
         simulation.stepOneTick();
 
         uint32_t claimed = 0u;
-        for (auto const& unit : city.getUnits())
-            claimed += unit->getReservedCount();
+        for (auto const& building: city.getBuildings())
+            claimed += building->getReservedCount();
 
         uint32_t bound = 0u;
         for (auto const& agent : city.getAgents())
@@ -310,7 +310,7 @@ TEST(TestsScenario, PollutionFadesAndDesirabilityMovesInDays)
     uint32_t const desirabilityAtStart = desirability.getResource({ u, v });
     ASSERT_GT(pollutionAtStart, 0u) << "this save is meant to start polluted";
 
-    uint32_t const homesAtStart = countUnits(city, "Home");
+    uint32_t const homesAtStart = countBuildings(city, "Home");
     uint32_t homesSeen = homesAtStart;
     uint32_t pollutionPeak = pollutionAtStart;
 
@@ -319,7 +319,7 @@ TEST(TestsScenario, PollutionFadesAndDesirabilityMovesInDays)
     {
         simulation.stepOneTick();
 
-        uint32_t const homes = countUnits(city, "Home");
+        uint32_t const homes = countBuildings(city, "Home");
         ASSERT_GE(homes, homesSeen) << "a house was demolished within the hour "
                                        "it was built";
         homesSeen = homes;
@@ -360,12 +360,12 @@ TEST(TestsScenario, ADayInQq2City)
     // Everything the factory deals with is on the other side, so an Agent seen
     // west of its door left the building by the wrong end, which is what every
     // truck bound for the shop used to do before turning back at the corner.
-    Unit* const work = findUnit(city, "Work");
+    Building* const work = findBuilding(city, "Work");
     ASSERT_NE(work, nullptr);
     Segment* const street = work->getSegment();
     ASSERT_NE(street, nullptr);
     ASSERT_EQ(street->getFrom().getSegments().size(), 1u);
-    ASSERT_TRUE(street->getFrom().getUnits().empty());
+    ASSERT_TRUE(street->getFrom().getBuildings().empty());
 
     float const door = work->getSegmentOffset();
     std::string wrongSegment;
@@ -405,15 +405,15 @@ TEST(TestsScenario, ADayInQq2City)
     ASSERT_FALSE(seen.restaurantBeforeLunch)
         << "somebody was served at the restaurant before noon";
 
-    ASSERT_TRUE(seen.home || (countUnits(city, "Shop") > 0u) ||
-                (countUnits(city, "Work") > 0u))
+    ASSERT_TRUE(seen.home || (countBuildings(city, "Shop") > 0u) ||
+                (countBuildings(city, "Work") > 0u))
         << "the zone grew nothing at all";
 
     // Whatever grew, it hangs off the network.
-    for (auto const& unit : city.getUnits())
+    for (auto const& building: city.getBuildings())
     {
-        ASSERT_TRUE((unit->getSegment() != nullptr) || (unit->getNode() != nullptr))
-            << unit->getTypeName() << " grew with no road to reach it";
+        ASSERT_TRUE((building->getSegment() != nullptr) || (building->getNode() != nullptr))
+            << building->getTypeName() << " grew with no road to reach it";
     }
 
     // No Agent is left floating with nothing under it.

@@ -18,14 +18,12 @@ namespace ogb
 //==============================================================================
 //! \brief A rectangle of cells on the world grid.
 //!
-//! The grid has no bounds, so anything that walks cells has to be told which
-//! ones. A city hands out the cells it owns, and that bounds its layers, its
-//! rules and the reach of its buildings. A zone hands out the cells the player
-//! painted, and that bounds the buildings a zone may grow.
+//! The grid has no bounds. Code that walks cells needs a region.
+//! A city returns the cells it owns. This limits its Layers, Rules, and Buildings.
+//! A Zone returns the cells the player painted. This limits where Buildings may grow.
 //!
-//! Coordinates are signed. The rectangle is half open: \c u0 is inside and
-//! \c getMaxU() is the first column past it, which makes a loop read like any
-//! other.
+//! Coordinates are signed. The rectangle is half-open: \c u0 is included and
+//! \c getMaxU() is excluded. Loops use the usual \c u < getMaxU() pattern.
 //!
 //! Example:
 //! \code
@@ -37,10 +35,10 @@ namespace ogb
 //==============================================================================
 struct CellRegion
 {
-    //! \brief Column of the first cell, included.
+    //! \brief First column, included.
     int32_t u0 = 0;
 
-    //! \brief Row of the first cell, included.
+    //! \brief First row, included.
     int32_t v0 = 0;
 
     //! \brief Number of columns.
@@ -50,7 +48,7 @@ struct CellRegion
     uint32_t sizeV = 0u;
 
     //--------------------------------------------------------------------------
-    //! \brief \return the column just past the last one, excluded.
+    //! \return the first column past the rectangle, excluded.
     //--------------------------------------------------------------------------
     [[nodiscard]] int32_t getMaxU() const
     {
@@ -58,7 +56,7 @@ struct CellRegion
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \return the row just past the last one, excluded.
+    //! \return the first row past the rectangle, excluded.
     //--------------------------------------------------------------------------
     [[nodiscard]] int32_t getMaxV() const
     {
@@ -66,8 +64,8 @@ struct CellRegion
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] cell the cell to test.
-    //! \return true when that cell belongs to the rectangle.
+    //! \param[in] cell the cell to test.
+    //! \return true if the cell is inside the rectangle.
     //--------------------------------------------------------------------------
     bool contains(Cell cell) const
     {
@@ -76,14 +74,14 @@ struct CellRegion
     }
 
     //--------------------------------------------------------------------------
-    //! \brief Bring a cell inside the rectangle, along each axis separately.
+    //! \brief Move a cell inside the rectangle, axis by axis.
     //!
-    //! This is what a rule reaching past the edge of the city reads: the cell
-    //! of the rectangle nearest to the one it asked for, rather than nothing.
+    //! Used when a Rule reaches past the city edge. Returns the nearest cell
+    //! inside the rectangle, not an empty result.
     //!
-    //! \param[in] cell the cell to bring back in.
-    //! \return the cell itself when it is already inside, the nearest one
-    //! otherwise. Meaningless on an empty rectangle.
+    //! \param[in] cell the cell to clamp.
+    //! \return the cell if already inside, else the nearest cell inside.
+    //! Result is undefined for an empty rectangle.
     //--------------------------------------------------------------------------
     Cell clamp(Cell cell) const
     {
@@ -107,8 +105,7 @@ struct CellRegion
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \return how many cells the rectangle holds. Wide enough for the
-    //! product of two large sides.
+    //! \return the number of cells in the rectangle.
     //--------------------------------------------------------------------------
     [[nodiscard]] uint64_t getCellCount() const
     {
@@ -116,8 +113,8 @@ struct CellRegion
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \return true when the rectangle holds no cell at all, which is
-    //! what a zone painted outside the city amounts to.
+    //! \return true if the rectangle has no cells.
+    //! Happens when a Zone is painted outside the city.
     //--------------------------------------------------------------------------
     [[nodiscard]] bool isEmpty() const
     {

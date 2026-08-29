@@ -5,14 +5,13 @@
 //-----------------------------------------------------------------------------
 
 //! \file OpenGlassBox.hpp
-//! \brief Single entry point for the OpenGlassBox public API.
+//! \brief Main entry point for the OpenGlassBox public API.
 //!
-//! Include this header to pull in the whole engine surface, or include
-//! individual headers (e.g. \c OpenGlassBox/Simulation.hpp) for faster builds.
+//! Include this header to get the full API.
+//! Or include single headers (e.g. \c OpenGlassBox/Simulation.hpp) for faster builds.
 //!
-//! What is not here is on purpose. The lexer, the parser of the shipped
-//! language and the cell iterators are how the engine is built, not what it
-//! offers. Include them by name if you are extending the engine itself.
+//! Some headers are not included on purpose. The lexer, the script parser,
+//! and cell iterators are internal tools. Include them directly if you extend the engine.
 
 #ifndef OPEN_GLASSBOX_HPP
 #define OPEN_GLASSBOX_HPP
@@ -46,7 +45,7 @@
 
 // Buildings and agents
 #include "OpenGlassBox/Agent.hpp"
-#include "OpenGlassBox/Unit.hpp"
+#include "OpenGlassBox/Building.hpp"
 
 // Rules read from a script
 #include "OpenGlassBox/Ruleset.hpp"

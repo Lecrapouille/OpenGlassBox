@@ -6,8 +6,7 @@
 //-----------------------------------------------------------------------------
 
 //! \file Resource.hpp
-//! \brief One stock of one thing: what it is, how much of it, and how much
-//! fits.
+//! \brief One stock of one Resource: type, amount, and capacity.
 
 #ifndef OPEN_GLASSBOX_RESOURCE_HPP
 #define OPEN_GLASSBOX_RESOURCE_HPP
@@ -18,16 +17,12 @@ namespace ogb
 {
 
 //==============================================================================
-//! \brief What a Resource is made of, as a name: "Water", "People", "Goods",
-//! "Money", "Pollution".
+//! \brief What a Resource holds, as a name: "Water", "People", "Goods", etc.
 //!
-//! A name rather than an enumeration, because the list is whatever the script
-//! declares. Two resources are the same resource when their names match, which
-//! is also how a rule refers to one and how an Agent finds a building that has
-//! room for what it carries.
+//! Uses a name, not an enum. The script declares the list.
+//! Two resources match when their names match. Rules and Agents use names too.
 //!
-//! Interned, so that those matches cost an integer comparison: see Name. A
-//! literal still works wherever one is expected.
+//! Interned as a Name for fast comparison. Literals still work. See Name.
 //!
 //! Example:
 //! \code
@@ -40,20 +35,16 @@ namespace ogb
 using ResourceType = Name;
 
 //==============================================================================
-//! \brief The currency of the simulation: an amount of one thing, and the
-//! largest amount of it that fits.
+//! \brief An amount of one Resource and its capacity.
 //!
-//! Everything a city does is moving these around. A house holds People, a
-//! factory turns them into Goods, a truck carries the Goods to a shop, a cell
-//! of the Pollution layer holds what the factory gave off. What a Resource is for
-//! is entirely up to the script: the engine only ever adds, removes, transfers
-//! and compares.
+//! A city moves Resources around. A house holds People, a factory makes Goods,
+//! an Agent carries Goods to a shop, a Pollution Layer cell holds emissions.
+//! The script defines what each Resource means. The engine adds, removes,
+//! transfers, and compares.
 //!
-//! Two invariants hold at all times, and they are what makes a rule safe to
-//! write: the amount never exceeds the capacity, and it never goes below zero.
-//! Both are enforced by clamping rather than by refusing, so add() and remove()
-//! cannot fail. A rule that must not lose anything tests the room first, which
-//! is what RuleCommandAdd::validate does.
+//! Two rules always hold: amount never exceeds capacity, and never goes below zero.
+//! add() and remove() clamp instead of failing. To avoid loss, check room first.
+//! RuleCommandAdd::validate does this.
 //!
 //! Example:
 //! \code
@@ -71,46 +62,43 @@ class Resource
 public:
 
     // -------------------------------------------------------------------------
-    //! \brief An empty stock with the largest capacity allowed, which is what a
-    //! resource nothing has capped means: a Layer cell or a building that was
-    //! never given a ceiling holds as much as it is given.
-    //! \param[in] type name of the thing held.
+    //! \brief Empty stock with maximum capacity.
+    //! Used when nothing caps the amount (Layer cell, Building with no ceiling).
+    //! \param[in] type name of the Resource.
     // -------------------------------------------------------------------------
     explicit Resource(ResourceType const& type);
 
     // -------------------------------------------------------------------------
-    //! \brief Add to the stock, up to the capacity. What does not fit is lost.
-    //! \param[in] toAdd how much to add.
+    //! \brief Add to the stock, up to capacity. Excess is lost.
+    //! \param[in] toAdd amount to add.
     // -------------------------------------------------------------------------
     void add(uint32_t const toAdd);
 
     // -------------------------------------------------------------------------
-    //! \brief Take from the stock, down to zero. Taking more than is there
-    //! empties it rather than wrapping around.
-    //! \param[in] toRemove how much to take.
+    //! \brief Remove from the stock, down to zero.
+    //! Removing more than available empties the stock (no wrap-around).
+    //! \param[in] toRemove amount to remove.
     // -------------------------------------------------------------------------
     void remove(uint32_t const toRemove);
 
     // -------------------------------------------------------------------------
-    //! \brief Move as much of this stock as fits into another one.
+    //! \brief Move as much as fits into another Resource.
     //!
-    //! What the recipient cannot take stays here, which is how a delivery to an
-    //! almost full building leaves the Agent with something to carry on with.
+    //! What does not fit stays here. Used when a full Building leaves an Agent
+    //! with a remainder.
     //!
-    //! \param[in,out] target the recipient. Nothing is moved when it is a stock
-    //! of something else.
+    //! \param[in,out] target the recipient. No move if the type differs.
     // -------------------------------------------------------------------------
     void transferTo(Resource& target);
 
     // -------------------------------------------------------------------------
-    //! \brief Set the ceiling. An amount already above the new ceiling is cut
-    //! down to it.
-    //! \param[in] capacity the new ceiling.
+    //! \brief Set capacity. Amount above the new capacity is reduced.
+    //! \param[in] capacity new capacity.
     // -------------------------------------------------------------------------
     void setCapacity(uint32_t const capacity);
 
     // -------------------------------------------------------------------------
-    //! \brief \return the name of the thing held, such as "Water".
+    //! \return the Resource type name, such as "Water".
     // -------------------------------------------------------------------------
     [[nodiscard]] inline ResourceType const& getTypeName() const
     {
@@ -118,7 +106,7 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \return the largest amount that fits.
+    //! \return the maximum amount that fits.
     // -------------------------------------------------------------------------
     [[nodiscard]] inline uint32_t getCapacity() const
     {
@@ -126,7 +114,7 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \return how much is held now.
+    //! \return the current amount.
     // -------------------------------------------------------------------------
     [[nodiscard]] inline uint32_t getAmount() const
     {
@@ -134,7 +122,7 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \return true when the stock is not empty.
+    //! \return true when the stock is not empty.
     // -------------------------------------------------------------------------
     [[nodiscard]] inline bool hasAmount() const
     {
@@ -142,25 +130,23 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief Write the stock as "type: amount/capacity", which is what a
-    //! failing unit test prints.
+    //! \brief Write as "type: amount/capacity". Used in unit test output.
     // -------------------------------------------------------------------------
     friend std::ostream& operator<<(std::ostream& os, Resource const& resource);
 
 public:
 
-    //! \brief The largest capacity a stock may be given, and the one it starts
-    //! with: the largest a uint32_t holds. add() watches for the wrap around
-    //! rather than leaving room below it.
+    //! \brief Maximum allowed capacity. Also the default for a new Resource.
+    //! add() guards against uint32_t overflow.
     static const uint32_t MAX_CAPACITY;
 
 protected:
 
-    //! \brief Name of the thing held.
+    //! \brief Resource type name.
     ResourceType m_type;
-    //! \brief Largest amount that fits.
+    //! \brief Maximum amount that fits.
     uint32_t m_capacity = Resource::MAX_CAPACITY;
-    //! \brief How much is held now, never above m_capacity.
+    //! \brief Current amount. Never above m_capacity.
     uint32_t m_amount = 0u;
 };
 

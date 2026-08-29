@@ -7,7 +7,7 @@
 
 #include "OpenGlassBox/Agent.hpp"
 #include "OpenGlassBox/Config.hpp"
-#include "OpenGlassBox/Unit.hpp"
+#include "OpenGlassBox/Building.hpp"
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -17,21 +17,21 @@ namespace ogb
 {
 
 static const float MIN_WAY_LENGTH = 1e-6f;
-//! \brief How close to the offset of a Unit an Agent has to be to knock at
+//! \brief How close to the offset of a Building an Agent has to be to knock at
 //! its door.
 static const float ARRIVED_OFFSET = 0.05f;
 
 namespace
 {
-Unit* findAcceptingUnitOnSegment(Segment const& segment,
+Building* findAcceptingBuildingOnSegment(Segment const& segment,
                                  Name const& searchTarget,
                                  Resources const& resources)
 {
-    for (Unit* unit : segment.getUnits())
+    for (Building* building : segment.getBuildings())
     {
-        if (unit->accepts(searchTarget, resources))
+        if (building->accepts(searchTarget, resources))
         {
-            return unit;
+            return building;
         }
     }
     return nullptr;
@@ -68,7 +68,7 @@ bool Agent::arrivedAtDestination() const
 //------------------------------------------------------------------------------
 bool Agent::giveUp()
 {
-    if (Unit* owner = m_owner)
+    if (Building* owner = m_owner)
     {
         m_resources.transferTo(owner->getResources());
     }
@@ -180,7 +180,7 @@ void Agent::followRouteApproach()
 //------------------------------------------------------------------------------
 Agent::Agent(uint32_t id,
              AgentType const& type,
-             Unit& owner,
+             Building& owner,
              Resources const& resources,
              Name const& searchTarget)
     : Entity(id, type, owner.getPosition()),
@@ -190,7 +190,7 @@ Agent::Agent(uint32_t id,
 {
     if (owner.getSegment() != nullptr && owner.getNode() == nullptr)
     {
-        // Sit on the Segment at the Unit offset and walk to the closer
+        // Sit on the Segment at the Building offset and walk to the closer
         // intersection before looking for a route.
         m_currentSegment = owner.getSegment();
         m_currentSegment->addAgent();
@@ -208,7 +208,7 @@ Agent::~Agent()
 {
     setCurrentSegment(nullptr);
     // Covers the deliveries, the give-ups and the Agents the City takes away
-    // when they end up stranded. A City destroys its Agents before its Units,
+    // when they end up stranded. A City destroys its Agents before its Buildings,
     // so the building is still there to be told.
     releaseDestination();
 }
@@ -339,23 +339,23 @@ void Agent::forget(Node const& node)
 }
 
 //------------------------------------------------------------------------------
-void Agent::forget(Unit const& unit)
+void Agent::forget(Building const& building)
 {
-    if (m_owner == &unit)
+    if (m_owner == &building)
     {
         m_owner = nullptr;
     }
 
-    // City::removeUnit calls this while the building is still standing, which
+    // City::removeBuilding calls this while the building is still standing, which
     // is the last moment a place held there can be given back.
-    if (m_reservation == &unit)
+    if (m_reservation == &building)
     {
         releaseDestination();
     }
 
     // The itinerary named that building as its destination. Anyone reading the
     // route, the inspector for one, would be reading freed memory.
-    if (m_route.getDestination() == &unit)
+    if (m_route.getDestination() == &building)
     {
         invalidateRoute();
     }
@@ -667,7 +667,7 @@ void Agent::followRoute(IRouter& router, RoutingConfig const& config)
 //------------------------------------------------------------------------------
 bool Agent::update(IRouter& router, RoutingConfig const& config, float dt)
 {
-    // The claim is against the other Agents, not against oneself. Unit::accepts
+    // The claim is against the other Agents, not against oneself. Building::accepts
     // counts it in, so an Agent holding it through its own tick would find its
     // own destination full: it would be refused at the door it was sent to, and
     // every recomputation would send it somewhere else and back again.
@@ -707,7 +707,7 @@ bool Agent::tick(IRouter& router, RoutingConfig const& config, float dt)
 
         // Standing at the door and refused: the building filled up while the
         // Agent was driving to it. Throwing the itinerary away is what sends it
-        // somewhere else, since Dijkstra skips the Units that cannot accept
+        // somewhere else, since Dijkstra skips the buildings that cannot accept
         // what it carries. Keeping it made the Agent knock for ever.
         if (arrivedAtDestination())
         {
@@ -744,7 +744,7 @@ bool Agent::tick(IRouter& router, RoutingConfig const& config, float dt)
 // =============================================================================
 
 //------------------------------------------------------------------------------
-Unit* Agent::searchUnit()
+Building* Agent::searchBuilding()
 {
     // A door along the current segment, and the Agent has reached its offset.
     if ((m_currentSegment != nullptr) &&
@@ -753,7 +753,7 @@ Unit* Agent::searchUnit()
         float const arrived = std::fabs(m_offset - m_route.getApproachOffset());
         if (arrived <= ARRIVED_OFFSET || m_nextNode == nullptr)
         {
-            return findAcceptingUnitOnSegment(
+            return findAcceptingBuildingOnSegment(
                 *m_currentSegment, m_searchTarget, m_resources);
         }
     }
@@ -772,13 +772,13 @@ Unit* Agent::searchUnit()
     }
 
     // Otherwise the Agent stands at a crossroads: try the buildings on it.
-    std::vector<Unit*> const& units = m_lastNode->getUnits();
-    size_t i = units.size();
+    std::vector<Building*> const& buildings = m_lastNode->getBuildings();
+    size_t i = buildings.size();
     while (i--)
     {
-        if (units[i]->accepts(m_searchTarget, m_resources))
+        if (buildings[i]->accepts(m_searchTarget, m_resources))
         {
-            return units[i];
+            return buildings[i];
         }
     }
 
@@ -788,10 +788,10 @@ Unit* Agent::searchUnit()
 //------------------------------------------------------------------------------
 bool Agent::unloadResources()
 {
-    Unit* unit = searchUnit();
-    if ((unit != nullptr) && unit->accepts(m_searchTarget, m_resources))
+    Building* building = searchBuilding();
+    if ((building != nullptr) && building->accepts(m_searchTarget, m_resources))
     {
-        m_resources.transferTo(unit->getResources());
+        m_resources.transferTo(building->getResources());
     }
     return m_resources.isEmpty();
 }

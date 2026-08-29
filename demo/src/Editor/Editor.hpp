@@ -110,7 +110,7 @@ public:
 private:
 
     // ------------------------------------------------------------------------
-    //! \brief Make sure the target city, path, way type, unit type and layer name
+    //! \brief Make sure the target city, path, way type, building type and layer name
     //! still exist, and pick sensible ones when they do not. Called every frame
     //! because a script reload can replace all of them.
     // ------------------------------------------------------------------------
@@ -168,7 +168,7 @@ private:
     std::string m_city;
     std::string m_path;
     std::string m_segmentType;
-    std::string m_unitType;
+    std::string m_buildingType;
     std::string m_layer;
     std::string m_zoneType;
     //! \brief Layer the layer list was last switched to, so that arming the paint

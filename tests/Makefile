@@ -9,7 +9,7 @@ M := $(P)/.makefile
 #
 include $(P)/Makefile.common
 TARGET_NAME := $(PROJECT_NAME)-tests
-TARGET_DESCRIPTION := Unit tests for $(PROJECT_NAME)
+TARGET_DESCRIPTION := Building tests for $(PROJECT_NAME)
 COMPILATION_MODE := test
 CXX_STANDARD := --std=c++17
 include $(M)/project/Makefile

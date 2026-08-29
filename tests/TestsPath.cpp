@@ -4,13 +4,13 @@
 #define private public
 #  include "TestWorld.hpp"
 #  include "OpenGlassBox/City.hpp"
-#  include "OpenGlassBox/Unit.hpp"
+#  include "OpenGlassBox/Building.hpp"
 #undef protected
 #undef private
 
 TEST(TestsNode, Constructor)
 {
-    // Construct a dummy node (not knowing segments or units)
+    // Construct a dummy node (not knowing segments or buildings)
     Node n(42u, Vector3f(1.0f, 2.0f, 3.0f));
 
     // Check initial values (member variables).
@@ -19,7 +19,7 @@ TEST(TestsNode, Constructor)
     ASSERT_EQ(int32_t(n.m_position.y), 2);
     ASSERT_EQ(int32_t(n.m_position.z), 3);
     ASSERT_EQ(n.m_segments.size(), 0u);
-    ASSERT_EQ(n.m_units.size(), 0u);
+    ASSERT_EQ(n.m_buildings.size(), 0u);
 
     // Check initial values (getter methods).
     ASSERT_EQ(n.getId(), 42u);
@@ -27,55 +27,55 @@ TEST(TestsNode, Constructor)
     ASSERT_EQ(int32_t(n.getPosition().y), 2);
     ASSERT_EQ(int32_t(n.getPosition().z), 3);
     ASSERT_EQ(n.getSegments().size(), 0u);
-    ASSERT_EQ(n.getUnits().size(), 0u);
+    ASSERT_EQ(n.getBuildings().size(), 0u);
 }
 
-// Test adding Units on a Node
-TEST(TestsNode, AddUnit)
+// Test adding buildings on a Node
+TEST(TestsNode, AddBuilding)
 {
-    // Create two Nodes. Check no units are attached.
+    // Create two Nodes. Check no buildings are attached.
     Node n1(42u, Vector3f(1.0f, 2.0f, 3.0f));
     Node n2(43u, Vector3f(2.0f, 3.0f, 4.0f));
-    ASSERT_EQ(n1.getUnits().size(), 0u);
-    ASSERT_EQ(n2.getUnits().size(), 0u);
+    ASSERT_EQ(n1.getBuildings().size(), 0u);
+    ASSERT_EQ(n2.getBuildings().size(), 0u);
 
-    // Create an Unit "house" holding resources "people" attached to Node1.
+    // Create an Building "house" holding resources "people" attached to Node1.
     TestWorld cityWorld("Paris", 1u, 1u);
     City& city = cityWorld.city;
-    UnitType unit_type("house");
-    unit_type.color = 0xFF00FF;
-    unit_type.radius = 2u;
-    unit_type.resources.setCapacity("people", 10);
-    unit_type.resources.addResource("people", 10);
-    Unit u1(unit_type, n1, city);
+    BuildingType building_type("house");
+    building_type.color = 0xFF00FF;
+    building_type.radius = 2u;
+    building_type.resources.setCapacity("people", 10);
+    building_type.resources.addResource("people", 10);
+    Building u1(building_type, n1, city);
 
-    // Check one Unit has been added knowing Node1.
-    ASSERT_EQ(n1.getUnits().size(), 1u);
-    ASSERT_EQ(n1.m_units[0], &u1);
-    ASSERT_EQ(n1.getUnits()[0], &u1);
-    ASSERT_EQ(n1.getUnits()[0]->m_node, &n1);
-    ASSERT_STREQ(n1.getUnits()[0]->getTypeName().c_str(), "house");
+    // Check one Building has been added knowing Node1.
+    ASSERT_EQ(n1.getBuildings().size(), 1u);
+    ASSERT_EQ(n1.m_buildings[0], &u1);
+    ASSERT_EQ(n1.getBuildings()[0], &u1);
+    ASSERT_EQ(n1.getBuildings()[0]->m_node, &n1);
+    ASSERT_STREQ(n1.getBuildings()[0]->getTypeName().c_str(), "house");
 
-    // Add Unit1 to Node2. Check if the Unit has been attached.
-    n2.addUnit(u1);
-    ASSERT_EQ(n2.getUnits().size(), 1u);
-    ASSERT_EQ(n2.m_units[0], &u1);
-    ASSERT_EQ(n2.getUnits()[0], &u1);
-    ASSERT_EQ(n2.m_units[0]->m_node, &n1);
-    ASSERT_STREQ(n2.m_units[0]->getTypeName().c_str(), "house");
+    // Add building u1 to Node2. Check if the Building has been attached.
+    n2.addBuilding(u1);
+    ASSERT_EQ(n2.getBuildings().size(), 1u);
+    ASSERT_EQ(n2.m_buildings[0], &u1);
+    ASSERT_EQ(n2.getBuildings()[0], &u1);
+    ASSERT_EQ(n2.m_buildings[0]->m_node, &n1);
+    ASSERT_STREQ(n2.m_buildings[0]->getTypeName().c_str(), "house");
 
-    // Add Unit2 to Node1. Check if the Unit has been attached.
-    Unit u2(unit_type, n2, city);
-    n1.addUnit(u2);
-    ASSERT_EQ(n1.m_units.size(), 2u);
-    ASSERT_EQ(n1.m_units[0], &u1);
-    ASSERT_EQ(n1.m_units[1], &u2);
-    ASSERT_EQ(n1.getUnits()[0], &u1);
-    ASSERT_EQ(n1.getUnits()[1], &u2);
-    ASSERT_STREQ(n1.m_units[0]->getTypeName().c_str(), "house");
-    ASSERT_STREQ(n1.m_units[1]->getTypeName().c_str(), "house");
-    ASSERT_EQ(n1.m_units[0]->m_node, &n1);
-    ASSERT_EQ(n1.m_units[1]->m_node, &n2);
+    // Add building u2 to Node1. Check if the Building has been attached.
+    Building u2(building_type, n2, city);
+    n1.addBuilding(u2);
+    ASSERT_EQ(n1.m_buildings.size(), 2u);
+    ASSERT_EQ(n1.m_buildings[0], &u1);
+    ASSERT_EQ(n1.m_buildings[1], &u2);
+    ASSERT_EQ(n1.getBuildings()[0], &u1);
+    ASSERT_EQ(n1.getBuildings()[1], &u2);
+    ASSERT_STREQ(n1.m_buildings[0]->getTypeName().c_str(), "house");
+    ASSERT_STREQ(n1.m_buildings[1]->getTypeName().c_str(), "house");
+    ASSERT_EQ(n1.m_buildings[0]->m_node, &n1);
+    ASSERT_EQ(n1.m_buildings[1]->m_node, &n2);
 }
 
 TEST(TestsSegment, Constuctor)

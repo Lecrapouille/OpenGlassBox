@@ -184,15 +184,15 @@ private:
 //! rather than a shape drawn beside the road. The undo has to put the two
 //! halves back together.
 // ============================================================================
-class AddUnitCommand: public ICommand
+class AddBuildingCommand: public ICommand
 {
 public:
 
-    AddUnitCommand(std::string city, std::string path, std::string unitType,
+    AddBuildingCommand(std::string city, std::string path, std::string buildingType,
                    uint32_t segmentId, float offset);
 
     //! \brief Place the building on an existing node.
-    AddUnitCommand(std::string city, std::string path, std::string unitType,
+    AddBuildingCommand(std::string city, std::string path, std::string buildingType,
                    uint32_t nodeId);
 
     bool redo(Simulation& simulation) override;
@@ -210,11 +210,11 @@ private:
 
     std::string m_city;
     std::string m_path;
-    std::string m_unitType;
+    std::string m_buildingType;
     uint32_t m_segmentId = NO_ID;
     float m_offset = 0.5f;
     uint32_t m_nodeId = NO_ID;
-    uint32_t m_unitId = NO_ID;
+    uint32_t m_buildingId = NO_ID;
 
     //! \brief What the cut created, so that the undo can sew the segment back.
     //! The junction carries the building; the second half runs from it to the
@@ -227,12 +227,12 @@ private:
 // ============================================================================
 //! \brief Demolish a building.
 // ============================================================================
-class RemoveUnitCommand: public ICommand
+class RemoveBuildingCommand: public ICommand
 {
 public:
 
-    RemoveUnitCommand(std::string city, std::string path, uint32_t id,
-                      std::string unitType, bool byUnitId = false);
+    RemoveBuildingCommand(std::string city, std::string path, uint32_t id,
+                      std::string buildingType, bool byBuildingId = false);
 
     bool redo(Simulation& simulation) override;
     void undo(Simulation& simulation) override;
@@ -243,8 +243,8 @@ private:
     std::string m_city;
     std::string m_path;
     uint32_t m_id;
-    std::string m_unitType;
-    bool m_byUnitId = false;
+    std::string m_buildingType;
+    bool m_byBuildingId = false;
     uint32_t m_segmentId = NO_ID;
     float m_offset = 0.5f;
     Vector3f m_position;
@@ -285,7 +285,7 @@ private:
 // ============================================================================
 //! \brief Demolish a node and, if any, its incident segments.
 //!
-//! Undoing restores the node and the segments. Units and Agents that sat on
+//! Undoing restores the node and the segments. Buildings and Agents that sat on
 //! them are gone, the same way they are after a road demolition.
 // ============================================================================
 class RemoveNodeCommand: public ICommand

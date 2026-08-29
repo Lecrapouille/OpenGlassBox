@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------------
 
 //! \file Zone.hpp
-//! \brief Rectangular zones painted on the cell grid, with optional zone rules.
+//! \brief Rectangular zones on the cell grid with optional zone rules.
 
 #ifndef OPEN_GLASSBOX_ZONE_HPP
 #define OPEN_GLASSBOX_ZONE_HPP
@@ -21,34 +21,30 @@ namespace ogb
 {
 
 class City;
-class Unit;
+class Building;
 class Segment;
 
 //==============================================================================
-//! \brief A zone the player painted, which grows, upgrades and demolishes
-//! buildings on its own.
+//! \brief A zone the player paints. It grows, upgrades, and demolishes buildings.
 //!
-//! This is the piece that turns an empty grid into a city. The player paints a
-//! residential or an industrial rectangle and the simulation fills it, one
-//! building at a time, as long as its rules are satisfied: enough demand, a
-//! road within reach, a free cell.
+//! The player paints a residential or industrial rectangle. The simulation fills
+//! it one building at a time when rules pass: enough demand, a road nearby, a
+//! free cell.
 //!
-//! A Zone owns its footprint and nothing else. The buildings it grew belong to
-//! the City, which is why it counts them by walking the City instead of keeping
-//! a list: buildings come and go, and a stale pointer would outlive the thing
-//! it points at.
+//! A Zone owns its footprint only. Buildings belong to the City. The Zone counts
+//! them by scanning the City. It keeps no list because buildings change often.
 //!
 //! Example:
 //! \code
 //! // A residential zone of ten by ten cells, and what it has grown so far.
 //! Zone& zone = city.addZone(rules.getZoneType("Residential"),
 //!                           CellRegion{ 0, 0, 10u, 10u });
-//! std::cout << zone.countUnits("Home") << " homes in "
+//! std::cout << zone.countBuildings("Home") << " homes in "
 //!           << zone.getTypeName() << '\n';
 //! \endcode
 //!
-//! The matching script. The rule below grows a house at a time, beside a road,
-//! until the zone holds ten of them:
+//! Matching script. The rule grows one house at a time near a road until the
+//! zone has ten:
 //! \code
 //! rules
 //!     zoneRule GrowHomes
@@ -68,13 +64,12 @@ class Zone
 public:
 
     // -------------------------------------------------------------------------
-    //! \brief \param[in] id identifier, unique inside the City.
-    //! \param[in] type recipe of the zone: its name, its colour and the rules
-    //! to run. Kept by reference and has to outlive the Zone.
-    //! \param[in] footprint the cells the player painted, on the grid of the
-    //! World. Copied.
-    //! \param[in] city the city the zone belongs to and grows buildings in.
-    //! Kept by reference.
+    //! \brief Create a zone from a type, footprint, and city.
+    //! \param[in] id Unique identifier inside the City.
+    //! \param[in] type Zone recipe: name, colour, and rules. Must outlive the Zone.
+    //! \param[in] footprint Cells the player painted on the World grid. Copied.
+    //! \param[in] city City that owns the zone and holds its buildings. Must outlive
+    //! the Zone.
     // -------------------------------------------------------------------------
     Zone(uint32_t id,
          ZoneType const& type,
@@ -84,14 +79,13 @@ public:
     ~Zone() = default;
 
     // -------------------------------------------------------------------------
-    //! \brief Count one tick and run the rules of the type whose rate falls on
-    //! it. Called once per tick by the City.
+    //! \brief Add one tick and run rules whose rate matches. The City calls this
+    //! each tick.
     // -------------------------------------------------------------------------
     void executeRules();
 
     // -------------------------------------------------------------------------
-    //! \brief \return the identifier, unique inside the City. What a save file
-    //! writes down and what an undo refers to.
+    //! \return Unique identifier inside the City. Used by save files and undo.
     // -------------------------------------------------------------------------
     [[nodiscard]] uint32_t getId() const
     {
@@ -99,7 +93,7 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \return the name of its type, such as "Residential".
+    //! \return Type name, such as "Residential".
     // -------------------------------------------------------------------------
     [[nodiscard]] Name const& getTypeName() const
     {
@@ -107,8 +101,7 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \return the colour of its type, as 0xRRGGBB, which the demo
-    //! shades the painted rectangle with.
+    //! \return Type colour as 0xRRGGBB. The demo uses it to shade the rectangle.
     // -------------------------------------------------------------------------
     [[nodiscard]] uint32_t getColor() const
     {
@@ -116,7 +109,7 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \return the cells the zone covers.
+    //! \return Cells the zone covers.
     // -------------------------------------------------------------------------
     [[nodiscard]] CellRegion const& getRegion() const
     {
@@ -124,8 +117,8 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \return how many ticks the zone has lived. A rule with a rate of
-    //! two hundred fires when this is a multiple of two hundred.
+    //! \return Tick count. A rule with rate 200 runs when this is a multiple
+    //! of 200.
     // -------------------------------------------------------------------------
     [[nodiscard]] uint32_t getTicks() const
     {
@@ -133,8 +126,8 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \return the rules the zone runs, from its type. Read by the demo
-    //! to show what a zone is trying to do.
+    //! \return Rules from the zone type. The demo reads them to show zone
+    //! behaviour.
     // -------------------------------------------------------------------------
     [[nodiscard]] std::vector<RuleZone*> const& getRules() const
     {
@@ -142,32 +135,29 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief How many buildings of one kind the zone holds. What a
-    //! \c count rule compares against.
+    //! \brief Count buildings of one kind in the zone. A \c count rule uses this
+    //! value.
     //!
-    //! The Zone keeps no list of its buildings: they come and go, and walking
-    //! the City costs less than keeping pointers that would dangle.
+    //! The Zone keeps no building list. It scans the City instead.
     //!
-    //! \param[in] unitType name of the kind to count, such as "Home".
-    //! \return how many buildings of that kind stand on a cell of the
-    //! footprint.
+    //! \param[in] buildingType Building kind to count, such as "Home".
+    //! \return Count of that kind on footprint cells.
     // -------------------------------------------------------------------------
-    uint32_t countUnits(Name const& unitType) const;
+    uint32_t countBuildings(Name const& buildingType) const;
 
     // -------------------------------------------------------------------------
-    //! \brief The buildings the zone holds, which is what a rule demolishing or
-    //! upgrading one picks from.
-    //! \param[in] unitType name of the kind to look for, or empty for every
-    //! kind.
-    //! \return pointers to the buildings standing on a cell of the footprint.
-    //! Not owned: the City owns them, and the list goes stale as soon as one is
-    //! built or demolished.
+    //! \brief List buildings in the zone. Demolish and upgrade rules pick from this
+    //! list.
+    //! \param[in] buildingType Building kind to find, or empty for all kinds.
+    //! \return Pointers to buildings on footprint cells. The City owns them. The list
+    //! is invalid after any build or demolish.
     // -------------------------------------------------------------------------
-    [[nodiscard]] std::vector<Unit*> getUnitsInside(Name const& unitType = {}) const;
+    [[nodiscard]] std::vector<Building*> getBuildingsInside(Name const& buildingType = {}) const;
 
     // -------------------------------------------------------------------------
-    //! \brief \param[in] cell the cell to test, on the grid of the World.
-    //! \return true when the cell belongs to the zone.
+    //! \brief Test if a cell is inside the zone.
+    //! \param[in] cell Cell on the World grid.
+    //! \return true if the cell is in the zone.
     // -------------------------------------------------------------------------
     bool contains(Cell cell) const
     {
@@ -175,16 +165,16 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \param[in] cell the cell to locate.
-    //! \return the world position of its centre, which is where a building
-    //! grown on it is put.
+    //! \brief World position of a cell centre.
+    //! \param[in] cell Cell to locate.
+    //! \return World position of the cell centre. New buildings spawn here.
     // -------------------------------------------------------------------------
     [[nodiscard]] Vector3f getCellCentre(Cell cell) const;
 
     // -------------------------------------------------------------------------
-    //! \brief \return the city the zone grows buildings in.
+    //! \return City where the zone grows buildings.
     //!
-    //! \note Writable: growing a building is exactly what a zone does.
+    //! \note Writable. Zones create buildings through this reference.
     // -------------------------------------------------------------------------
     [[nodiscard]] City& getCity() const
     {
@@ -192,65 +182,55 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief The road nearest a place, which is what a building has to be
-    //! served by.
+    //! \brief Find the nearest road to a position. Buildings need a nearby road.
     //!
-    //! Used by the \c at \c nearestSegment form of a creation rule: the building is
-    //! put where the road is, not where the cell is, and the road is then cut
-    //! in two so that the building gets an address.
+    //! Used by \c at \c nearestSegment creation rules. The building spawns on the
+    //! road. The road splits so the building gets an address.
     //!
-    //! \param[in] position the place to look around, in world coordinates.
-    //! \param[out] offset where the projection lands along the segment, from 0
-    //! at its first end to 1 at the other. Untouched when nothing is found.
-    //! \param[in] maxDistance how far the road may be, in world units. A place
-    //! further than that from any road is not served by one, and no building is
-    //! grown there. Negative means no limit.
-    //! \return the segment, or nullptr when there is no road within reach.
+    //! \param[in] position Search origin in world coordinates.
+    //! \param[out] offset Position along the segment, from 0 to 1. Unchanged if
+    //! nothing is found.
+    //! \param[in] maxDistance Maximum search distance in world units. Negative means
+    //! no limit.
+    //! \return The nearest segment, or nullptr if none is in range.
     // -------------------------------------------------------------------------
     [[nodiscard]] Segment* findNearestSegment(Vector3f const& position,
                         float& offset,
                         float maxDistance = -1.0f) const;
 
     // -------------------------------------------------------------------------
-    //! \brief A cell of the footprint holding no building at all, whatever its
-    //! kind: two buildings never share a cell.
-    //! \return the cell, or nothing at all when the zone is full.
+    //! \brief Find an empty footprint cell. Each cell holds at most one building.
+    //! \return The cell, or nothing if the zone is full.
     // -------------------------------------------------------------------------
     [[nodiscard]] std::optional<Cell> findFreeCell() const;
 
     // -------------------------------------------------------------------------
-    //! \brief A free cell of the footprint that a road runs through or fronts,
-    //! so a building put there is connected to the network.
+    //! \brief Find a free footprint cell near a road.
     //!
-    //! The search walks the roads rather than the cells: a large city holds a
-    //! few thousand segments against a few hundred thousand cells, and a
-    //! building belongs beside the road serving it anyway.
+    //! The search walks road segments, not all cells. This is faster in large cities.
     //!
-    //! \return the cell, or nothing at all when no free cell of the zone is
-    //! served by a road, which is what keeps an unpaved zone empty.
+    //! \return The cell, or nothing if no free cell has road access. Unpaved zones
+    //! stay empty.
     // -------------------------------------------------------------------------
     [[nodiscard]] std::optional<Cell> findFreeCellNearRoad() const;
 
 private:
 
-    //! \brief Identifier, unique inside the City.
+    //! \brief Unique identifier inside the City.
     uint32_t m_id;
-    //! \brief Recipe of the zone, shared with every zone of that kind.
+    //! \brief Zone type recipe, shared by zones of the same kind.
     ZoneType const& m_type;
-    //! \brief The cells the player painted.
+    //! \brief Cells the player painted.
     CellRegion m_footprint;
-    //! \brief The city the zone grows buildings in. Not owned: the City owns
-    //! the Zone.
+    //! \brief City where the zone grows buildings. The City owns the Zone.
     City& m_city;
-    //! \brief Everything a rule needs while it runs. Held here rather than
-    //! built on each call.
+    //! \brief Rule context. Reused each tick instead of rebuilt.
     RuleContext m_context;
-    //! \brief How many ticks the zone has lived, which is what the rate of a
-    //! rule is counted against.
+    //! \brief Tick count. Rule rates compare against this value.
     uint32_t m_ticks = 0u;
 };
 
-//! \brief The zones of a City, which owns them.
+//! \brief Zone list owned by a City.
 using Zones = std::vector<std::unique_ptr<Zone>>;
 
 } // namespace ogb

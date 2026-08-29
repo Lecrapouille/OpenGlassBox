@@ -216,7 +216,7 @@ TEST(TestsCommand, RuleCommandAgent)
     EXPECT_CALL(target, remove(_,_)).Times(0);
     EXPECT_CALL(target, get(_)).Times(0);
     EXPECT_CALL(target, getCapacity(_)).Times(0);
-    // An empty context carries no Unit to spawn the Agent from.
+    // An empty context carries no Building to spawn the Agent from.
     ASSERT_EQ(cmd.validate(context), false);
 
     Resources locals, globals;
@@ -225,9 +225,9 @@ TEST(TestsCommand, RuleCommandAgent)
     Path& p1 = city.addPath(keep<PathType>("Road"));
     Node& n1 = p1.addNode(Vector3f(0.0f, 0.0f, 3.0f));
     Node& n2 = p1.addNode(Vector3f(2.0f, 0.0f, 3.0f));
-    Unit unit(keep<UnitType>("unit"), n1, city);
+    Building building(keep<BuildingType>("house"), n1, city);
     context.city = &city;
-    context.unit = &unit;
+    context.building = &building;
     context.locals = &locals;
     context.globals = &globals;
     context.cell.u = context.cell.v = 0u;

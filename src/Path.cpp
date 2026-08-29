@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------------
 
 #include "OpenGlassBox/Path.hpp"
-#include "OpenGlassBox/Unit.hpp"
+#include "OpenGlassBox/Building.hpp"
 #include <algorithm>
 #include <cmath>
 
@@ -24,16 +24,16 @@ Node::Node(uint32_t id, Vector3f const& position)
 }
 
 // -----------------------------------------------------------------------------
-void Node::addUnit(Unit& unit)
+void Node::addBuilding(Building& building)
 {
-    m_units.push_back(&unit);
+    m_buildings.push_back(&building);
 }
 
 // -----------------------------------------------------------------------------
-void Node::removeUnit(Unit& unit)
+void Node::removeBuilding(Building& building)
 {
-    m_units.erase(std::remove(m_units.begin(), m_units.end(), &unit),
-                  m_units.end());
+    m_buildings.erase(std::remove(m_buildings.begin(), m_buildings.end(), &building),
+                  m_buildings.end());
 }
 
 // -----------------------------------------------------------------------------
@@ -110,16 +110,16 @@ Vector3f Segment::getPositionAt(float offset) const
 }
 
 // -----------------------------------------------------------------------------
-void Segment::addUnit(Unit& unit)
+void Segment::addBuilding(Building& building)
 {
-    m_units.push_back(&unit);
+    m_buildings.push_back(&building);
 }
 
 // -----------------------------------------------------------------------------
-void Segment::removeUnit(Unit& unit)
+void Segment::removeBuilding(Building& building)
 {
-    m_units.erase(std::remove(m_units.begin(), m_units.end(), &unit),
-                  m_units.end());
+    m_buildings.erase(std::remove(m_buildings.begin(), m_buildings.end(), &building),
+                  m_buildings.end());
 }
 
 // -----------------------------------------------------------------------------

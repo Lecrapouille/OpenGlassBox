@@ -6,8 +6,7 @@
 //-----------------------------------------------------------------------------
 
 //! \file RuleValue.hpp
-//! \brief What a rule command reads and writes: a local, a global or a layer
-//! quantity.
+//! \brief What a Rule command reads and writes: local, global or Layer value.
 
 #ifndef OPEN_GLASSBOX_RULE_VALUE_HPP
 #define OPEN_GLASSBOX_RULE_VALUE_HPP
@@ -21,11 +20,12 @@ class Layer;
 class City;
 
 //==============================================================================
-//! \brief The treasury of the Simulation: one stock shared by every City.
+//! \brief Simulation treasury: one stock shared by every City.
 //!
-//! What a script writes \c global. Money is the obvious one: a factory pays
-//! into it and a shop is only allowed to sell while there is something in it,
-//! which is how a whole country can run out of cash.
+//! The script writes \c global.
+//! Money is the usual example.
+//! A factory pays into it. A shop sells only while it has Money.
+//! A whole country can run out of cash.
 //!
 //! Example:
 //! \code
@@ -38,40 +38,40 @@ class RuleValueGlobal: public IRuleValue
 public:
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] resource which stock of the treasury is meant. Only
-    //! its name is used; the amount and the capacity are those of the treasury.
+    //! \param[in] resource which treasury stock to use.
+    //! Only the name is used. Amount and capacity come from the treasury.
     //--------------------------------------------------------------------------
     explicit RuleValueGlobal(Resource const& resource) : m_resource(resource) {}
 
-    //! \brief \return how much of it the treasury holds.
+    //! \return how much the treasury holds.
     uint32_t get(RuleContext& context) override;
 
-    //! \brief \return how much of it the treasury may hold.
+    //! \return maximum amount the treasury can hold.
     [[nodiscard]] uint32_t getCapacity(RuleContext& context) override;
 
-    //! \brief Pay into the treasury, up to its capacity.
+    //! \brief Add to the treasury, up to capacity.
     void add(RuleContext& context, uint32_t toAdd) override;
 
-    //! \brief Take from the treasury, down to nothing.
+    //! \brief Remove from the treasury, down to zero.
     void remove(RuleContext& context, uint32_t toRemove) override;
 
-    //! \brief \return the name of the stock, for the rule log of the demo.
+    //! \return stock name for the demo rule log.
     [[nodiscard]] Name const& getTypeName() const override;
 
 private:
 
-    //! \brief Names the stock. Not the stock itself: that one belongs to the
-    //! Simulation and is reached through the context.
+    //! \brief Names the stock. The stock lives in the Simulation.
+    //! Reached through the context.
     Resource m_resource;
 };
 
 //==============================================================================
-//! \brief What the entity running the rule holds: the resources of a building,
-//! or of the cell of a Layer.
+//! \brief Resources of the entity running the Rule.
+//! A Building or a Layer cell.
 //!
-//! What a script writes \c local. This is where nearly everything happens: a
-//! house holds People, a factory turns them into Goods, and both are local
-//! values of the building running the rule.
+//! The script writes \c local.
+//! A house holds People. A factory makes Goods.
+//! Both are local values of the Building running the Rule.
 //!
 //! Example:
 //! \code
@@ -85,41 +85,41 @@ class RuleValueLocal: public IRuleValue
 public:
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] resource which stock of the entity is meant. Only its
-    //! name is used.
+    //! \param[in] resource which entity stock to use.
+    //! Only the name is used.
     //--------------------------------------------------------------------------
     explicit RuleValueLocal(Resource const& resource) : m_resource(resource) {}
 
-    //! \brief \return how much of it the entity holds. Zero when it holds none.
+    //! \return how much the entity holds. Zero if none.
     uint32_t get(RuleContext& context) override;
 
-    //! \brief \return how much of it the entity may hold.
+    //! \return maximum amount the entity can hold.
     [[nodiscard]] uint32_t getCapacity(RuleContext& context) override;
 
-    //! \brief Add to the entity, up to its capacity.
+    //! \brief Add to the entity, up to capacity.
     void add(RuleContext& context, uint32_t toAdd) override;
 
-    //! \brief Take from the entity, down to nothing.
+    //! \brief Remove from the entity, down to zero.
     void remove(RuleContext& context, uint32_t toRemove) override;
 
-    //! \brief \return the name of the stock, for the rule log of the demo.
+    //! \return stock name for the demo rule log.
     [[nodiscard]] Name const& getTypeName() const override;
 
 private:
 
-    //! \brief Names the stock. The stock itself belongs to the building or to
-    //! the Layer cell and is reached through the context.
+    //! \brief Names the stock. The stock belongs to the Building or Layer cell.
+    //! Reached through the context.
     Resource m_resource;
 };
 
 //==============================================================================
-//! \brief One cell of a heatmap of the City, and its neighbours within the
-//! reach of the building running the rule.
+//! \brief One City cell in a heatmap, and neighbours in the Building reach.
 //!
-//! What a script writes \c layer. Unlike the two others this one is spatial: a
-//! factory with \c layerRadius \c 3 pollutes a diamond of cells around itself,
-//! and the amount asked for is spread over them. This is what ties the rules to
-//! the ground.
+//! The script writes \c layer.
+//! This value is spatial.
+//! A factory with \c layerRadius \c 3 affects a diamond of cells around it.
+//! The amount is spread over those cells.
+//! This ties Rules to the ground.
 //!
 //! Example:
 //! \code
@@ -132,49 +132,49 @@ class RuleValueLayer: public IRuleValue
 public:
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] layerId name of the Layer, as the script declared it.
-    //! It is looked up in the City the rule runs in, so a script may name a
-    //! Layer that a given City does not have.
+    //! \param[in] layerId Layer name from the script.
+    //! Looked up in the City where the Rule runs.
+    //! The script may name a Layer this City does not have.
     //--------------------------------------------------------------------------
     explicit RuleValueLayer(Name const& layerId) : m_layerId(layerId) {}
 
-    //! \brief \return what the cells within reach hold, added up.
+    //! \return sum over cells in reach.
     uint32_t get(RuleContext& context) override;
 
-    //! \brief \return what the cells within reach may hold, added up.
+    //! \return maximum sum over cells in reach.
     [[nodiscard]] uint32_t getCapacity(RuleContext& context) override;
 
-    //! \brief Spread that amount over the cells within reach.
+    //! \brief Spread the amount over cells in reach.
     void add(RuleContext& context, uint32_t toAdd) override;
 
-    //! \brief Take that amount from the cells within reach.
+    //! \brief Remove the amount from cells in reach.
     void remove(RuleContext& context, uint32_t toRemove) override;
 
-    //! \brief \return the name of the Layer, for the rule log of the demo.
+    //! \return Layer name for the demo rule log.
     [[nodiscard]] Name const& getTypeName() const override;
 
 private:
 
     //--------------------------------------------------------------------------
-    //! \brief The layer this value reads, looked up by name once per City.
+    //! \brief Find the Layer by name, cached per City.
     //!
-    //! A layer rule runs on every cell of the region, so a lookup by name would
-    //! be paid hundreds of thousands of times per tick in a large city.
+    //! A Layer Rule runs on every cell in the region.
+    //! A name lookup each time would cost too much in a large City.
     //!
-    //! \param[in] context the context of the rule, holding the City.
-    //! \return the Layer. Throws when the City has no Layer of that name.
+    //! \param[in] context Rule context with the City.
+    //! \return the Layer. Throws if the City has no Layer with that name.
     //--------------------------------------------------------------------------
     Layer& layer(RuleContext& context);
 
 private:
 
-    //! \brief Name of the Layer, as the script wrote it.
+    //! \brief Layer name from the script.
     Name m_layerId;
-    //! \brief Which City the cached lookup was made against. A rule outlives a
-    //! City, being owned by the ruleset, so the cache has to be invalidated
-    //! when another city runs it.
+    //! \brief City used for the cached lookup.
+    //! A Rule outlives a City. The Ruleset owns the Rule.
+    //! The cache must reset when another City runs it.
     City const* m_city = nullptr;
-    //! \brief The cached layer, valid as long as m_city is the city running.
+    //! \brief Cached Layer. Valid while m_city is the running City.
     Layer* m_layer = nullptr;
 };
 

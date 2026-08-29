@@ -98,10 +98,10 @@ TEST(TestsScript, Constructor)
         ASSERT_STREQ(m2.rules[0]->getName().c_str(), "CreateGrass");
     }
 
-    // -- Unit types
+    // -- Building types
     {
-        ASSERT_GE(defs.getUnitTypes().size(), 2u);
-        UnitType const& u1 = script.getUnitType("Home");
+        ASSERT_GE(defs.getBuildingTypes().size(), 2u);
+        BuildingType const& u1 = script.getBuildingType("Home");
         ASSERT_EQ(u1.color, 0xFF00FFu);
         ASSERT_EQ(u1.radius, 1u);
         ASSERT_GE(u1.rules.size(), 1u);
@@ -114,7 +114,7 @@ TEST(TestsScript, Constructor)
         ASSERT_EQ(u1.resources.getCapacity("People"), 8u);
         ASSERT_EQ(u1.resources.getAmount("People"), 8u);
 
-        UnitType const& u2 = script.getUnitType("Work");
+        BuildingType const& u2 = script.getBuildingType("Work");
         ASSERT_EQ(u2.color, 0x00AAFFu);
         ASSERT_EQ(u2.radius, 3u);
         ASSERT_GE(u2.rules.size(), 2u);
@@ -126,7 +126,7 @@ TEST(TestsScript, Constructor)
         // A restaurant answers to its own name only. Answering to Shop as well
         // is how the freight and the shoppers ended up at the canteen and the
         // shops were never opened.
-        UnitType const& u3 = script.getUnitType("Restaurant");
+        BuildingType const& u3 = script.getBuildingType("Restaurant");
         ASSERT_EQ(u3.targets.size(), 1u);
         ASSERT_STREQ(u3.targets[0].c_str(), "Restaurant");
     }
@@ -147,24 +147,24 @@ TEST(TestsScript, Constructor)
         ASSERT_EQ(rm1.m_commands.size(), 2u);
     }
 
-    // -- Unit Rules
+    // -- Building Rules
     {
-        ASSERT_GE(defs.getRuleUnits().size(), 3u);
-        RuleUnit const& ru1 = script.getRuleUnit("SendPeopleToWork");
+        ASSERT_GE(defs.getRuleBuildings().size(), 3u);
+        RuleBuilding const& ru1 = script.getRuleBuilding("SendPeopleToWork");
         ASSERT_STREQ(ru1.m_type.c_str(), "SendPeopleToWork");
         ASSERT_EQ(ru1.getPeriodTicks(20u), 45u * 20u);
 
-        RuleUnit const& ru2 = script.getRuleUnit("SendPeopleToHome");
+        RuleBuilding const& ru2 = script.getRuleBuilding("SendPeopleToHome");
         ASSERT_STREQ(ru2.m_type.c_str(), "SendPeopleToHome");
         ASSERT_EQ(ru2.getPeriodTicks(20u), 20u * 20u);
 
-        RuleUnit const& ru3 = script.getRuleUnit("UsePeopleToWater");
+        RuleBuilding const& ru3 = script.getRuleBuilding("UsePeopleToWater");
         ASSERT_STREQ(ru3.m_type.c_str(), "UsePeopleToWater");
         ASSERT_EQ(ru3.getPeriodTicks(20u), 60u * 20u);
 
         // The goods have to reach the shops on their own wheels, otherwise
         // nothing is ever for sale.
-        RuleUnit const& ship = script.getRuleUnit("ShipGoods");
+        RuleBuilding const& ship = script.getRuleBuilding("ShipGoods");
         ASSERT_EQ(ship.getPeriodTicks(20u), 45u * 20u);
     }
 
@@ -384,7 +384,7 @@ TEST(TestsScript, HourAndZone)
             "capacity 20 beta 4\nend\n"
             "agents\n  agent Worker color 0xFFFFFF speed 10\nend\n"
             "rules\n"
-            "  unitRule Morning\n"
+            "  buildingRule Morning\n"
             "    rate 1\n"
             "    hour between 8 18\n"
             "    local People remove 1\n"
@@ -399,10 +399,10 @@ TEST(TestsScript, HourAndZone)
             "    upgrade Home to Shop\n"
             "  end\n"
             "end\n"
-            "units\n"
-            "  unit Home color 0xFF00FF layerRadius 1 rules [ Morning ] "
+            "buildings\n"
+            "  building Home color 0xFF00FF layerRadius 1 rules [ Morning ] "
             "targets [ Home ] caps [ People 4 ] resources [ People 1 ]\n"
-            "  unit Shop color 0xFFAA00 layerRadius 1 rules [ ] "
+            "  building Shop color 0xFFAA00 layerRadius 1 rules [ ] "
             "targets [ Shop ] caps [ People 4 ] resources [ ]\n"
             "end\n"
             "layers\n  layer People color 0xFFFF00 capacity 10 rules [ ]\nend\n"
@@ -415,7 +415,7 @@ TEST(TestsScript, HourAndZone)
     ASSERT_EQ(script.getSegmentType("Dirt").capacity, 20.0f);
     ASSERT_EQ(script.getSegmentType("Dirt").beta, 4.0f);
 
-    RuleUnit const& morning = script.getRuleUnit("Morning");
+    RuleBuilding const& morning = script.getRuleBuilding("Morning");
     ASSERT_EQ(morning.m_commands.size(), 2u);
     ASSERT_EQ(morning.m_commands[0]->getDescription(),
               std::string("Hour between 8 and 18"));
@@ -445,21 +445,21 @@ TEST(TestsScript, RatesInGameTime)
         script.loadString(
             "resources\n  resource People\nend\n"
             "rules\n"
-            "  unitRule EveryTick\n    rate 7\n"
+            "  buildingRule EveryTick\n    rate 7\n"
             "    local People remove 1\n  end\n"
-            "  unitRule Spelled\n    rate 7 ticks\n"
+            "  buildingRule Spelled\n    rate 7 ticks\n"
             "    local People remove 1\n  end\n"
-            "  unitRule HalfHour\n    rate 30 minutes\n"
+            "  buildingRule HalfHour\n    rate 30 minutes\n"
             "    local People remove 1\n  end\n"
-            "  unitRule OneMinute\n    rate 1 minute\n"
+            "  buildingRule OneMinute\n    rate 1 minute\n"
             "    local People remove 1\n  end\n"
             "  layerRule TwoHours\n    rate 2 hours\n"
             "    layer People add 1\n  end\n"
             "  zoneRule Daily\n    rate 1 day\n"
             "    count Home less 3\n  end\n"
             "end\n"
-            "units\n"
-            "  unit Home color 0xFF00FF layerRadius 1 rules [ ] "
+            "buildings\n"
+            "  building Home color 0xFF00FF layerRadius 1 rules [ ] "
             "targets [ Home ] caps [ People 4 ] resources [ ]\n"
             "end\n"
             "layers\n  layer People color 0xFFFF00 capacity 10 rules [ ]\nend\n"),
@@ -467,16 +467,16 @@ TEST(TestsScript, RatesInGameTime)
         << script.formatErrors();
 
     // Counted in ticks: unchanged, whatever the length of a minute.
-    ASSERT_EQ(script.getRuleUnit("EveryTick").getRateMinutes(), 0u);
-    ASSERT_EQ(script.getRuleUnit("EveryTick").getPeriodTicks(20u), 7u);
-    ASSERT_EQ(script.getRuleUnit("EveryTick").getPeriodTicks(30u), 7u);
-    ASSERT_EQ(script.getRuleUnit("Spelled").getPeriodTicks(20u), 7u);
+    ASSERT_EQ(script.getRuleBuilding("EveryTick").getRateMinutes(), 0u);
+    ASSERT_EQ(script.getRuleBuilding("EveryTick").getPeriodTicks(20u), 7u);
+    ASSERT_EQ(script.getRuleBuilding("EveryTick").getPeriodTicks(30u), 7u);
+    ASSERT_EQ(script.getRuleBuilding("Spelled").getPeriodTicks(20u), 7u);
 
     // Counted in game time: follows the length of a minute.
-    ASSERT_EQ(script.getRuleUnit("HalfHour").getRateMinutes(), 30u);
-    ASSERT_EQ(script.getRuleUnit("HalfHour").getPeriodTicks(20u), 600u);
-    ASSERT_EQ(script.getRuleUnit("HalfHour").getPeriodTicks(30u), 900u);
-    ASSERT_EQ(script.getRuleUnit("OneMinute").getPeriodTicks(20u), 20u);
+    ASSERT_EQ(script.getRuleBuilding("HalfHour").getRateMinutes(), 30u);
+    ASSERT_EQ(script.getRuleBuilding("HalfHour").getPeriodTicks(20u), 600u);
+    ASSERT_EQ(script.getRuleBuilding("HalfHour").getPeriodTicks(30u), 900u);
+    ASSERT_EQ(script.getRuleBuilding("OneMinute").getPeriodTicks(20u), 20u);
     ASSERT_EQ(script.getRuleLayer("TwoHours").getPeriodTicks(20u), 2400u);
     ASSERT_EQ(script.getRuleZone("Daily").getPeriodTicks(20u), 28800u);
 }
@@ -491,7 +491,7 @@ TEST(TestsScript, RateOfZeroIsRefused)
 
     ASSERT_EQ(script.loadString("resources\n  resource People\nend\n"
                                  "rules\n"
-                                 "  unitRule Never\n    rate 0\n"
+                                 "  buildingRule Never\n    rate 0\n"
                                  "    local People remove 1\n  end\n"
                                  "end\n"),
               false);

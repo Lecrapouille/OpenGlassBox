@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------------
 
 //! \file CellsInRadius.hpp
-//! \brief Walk the grid cells within reach of a building.
+//! \brief Walk grid cells within reach of a building.
 
 #ifndef OPEN_GLASSBOX_CELLSINRADIUS_HPP
 #define OPEN_GLASSBOX_CELLSINRADIUS_HPP
@@ -19,29 +19,27 @@ namespace ogb
 {
 
 //==============================================================================
-//! \brief Hands out the grid cells within a given reach of a given cell,
-//! clipped to the region of the City.
+//! \brief Return grid cells within a given reach of a cell, clipped to the city
+//! region.
 //!
-//! This is what \c layerRadius means for a building: how far around itself its
-//! rules read and write the Layers. The shape is a diamond rather than a disc,
-//! cells being kept when the sum of the two distances is within the radius,
-//! which is the taxicab distance. A radius of one gives the cell itself and its
-//! four neighbours: { (0,0), (-1,0), (1,0), (0,-1), (0,1) }.
+//! This is what \c layerRadius means for a building: how far its rules read
+//! and write layers. The shape is a diamond (taxicab distance): a cell is kept
+//! when the sum of the two axis distances is within the radius. A radius of one
+//! gives the centre and four neighbours: { (0,0), (-1,0), (1,0), (0,-1),
+//! (0,1) }.
 //!
-//! The offsets of a given radius are computed once and cached for the whole
-//! program, keyed by radius, because a large city asks this question for every
-//! building at every tick. Only the clipping and the translation to the centre
-//! are paid per call.
+//! Offsets for each radius are computed once and cached for the whole program.
+//! A large city asks this for every building on every tick. Only clipping and
+//! translation to the centre run per call.
 //!
-//! Walking can start at a random offset rather than at the first one, which is
-//! what a rule adding a single unit of something to a limited number of cells
-//! needs: starting at the first cell every time would always feed the same
+//! The walk can start at a random offset instead of the first one. A rule that
+//! adds one building's effect to a few cells needs this, or it would always hit the same
 //! corner of the neighbourhood.
 //!
 //! Example:
 //! \code
 //! CellsInRadius around;
-//! around.init(unit.getLayerRadius(), unit.getCell().u, unit.getCell().v,
+//! around.init(building.getLayerRadius(), building.getCell().u, building.getCell().v,
 //!             region.u0, region.getMaxU(), region.v0, region.getMaxV(),
 //!             false);
 //!
@@ -52,9 +50,9 @@ namespace ogb
 //! }
 //! \endcode
 //!
-//! The matching script, where \c layerRadius is the reach walked here:
+//! Matching script:
 //! \code
-//! unit Work color 0x00AAFF layerRadius 3 rules [ ProduceGoods ]
+//! building Work color 0x00AAFF layerRadius 3 rules [ ProduceGoods ]
 //! \endcode
 //==============================================================================
 class CellsInRadius
@@ -62,29 +60,29 @@ class CellsInRadius
 public:
 
     //--------------------------------------------------------------------------
-    //! \brief Offsets to the centre, packed two to an integer by compress().
+    //! \brief Offsets from the centre, two packed into one integer by
+    //! compress().
     //--------------------------------------------------------------------------
     using RelativeCoordinates = std::vector<int32_t>;
 
     //--------------------------------------------------------------------------
-    //! \brief Leaves everything uninitialised: call init() before next().
+    //! \brief Leaves everything unset. Call init() before next().
     //--------------------------------------------------------------------------
     CellsInRadius() = default;
 
     //--------------------------------------------------------------------------
     //! \brief Start a walk around a cell.
     //!
-    //! \param[in] radius reach, in cells, as a taxicab distance. Zero walks the
-    //! centre alone. Must not exceed MAX_RADIUS.
+    //! \param[in] radius reach in cells, as taxicab distance. Zero walks only
+    //! the centre. Must not exceed MAX_RADIUS.
     //! \param[in] centerU column of the centre.
     //! \param[in] centerV row of the centre.
-    //! \param[in] minU first column allowed, included.
-    //! \param[in] maxU first column past the ones allowed, excluded.
-    //! \param[in] minV first row allowed, included.
-    //! \param[in] maxV first row past the ones allowed, excluded.
-    //! \param[in] random true to begin at a random cell of the diamond instead
-    //! of the first one. Every cell is still handed out exactly once: the walk
-    //! wraps around.
+    //! \param[in] minU first allowed column, included.
+    //! \param[in] maxU first column past the allowed range, excluded.
+    //! \param[in] minV first allowed row, included.
+    //! \param[in] maxV first row past the allowed range, excluded.
+    //! \param[in] random true to start at a random cell in the diamond. Every
+    //! cell is still returned exactly once; the walk wraps around.
     //--------------------------------------------------------------------------
     void init(uint32_t radius,
               int32_t centerU,
@@ -96,30 +94,28 @@ public:
               bool random);
 
     //--------------------------------------------------------------------------
-    //! \brief Hand out the next cell of the walk, skipping the ones clipped
-    //! away by the bounds given to init().
-    //! \param[out] u column of the cell. Zero when there is nothing left.
-    //! \param[out] v row of the cell. Zero when there is nothing left.
-    //! \return true when a cell was handed out, false once the whole diamond
-    //! has been walked.
+    //! \brief Return the next cell, skipping cells outside the bounds from
+    //! init().
+    //! \param[out] u column. Zero when nothing remains.
+    //! \param[out] v row. Zero when nothing remains.
+    //! \return true when a cell was returned, false when the diamond is done.
     //--------------------------------------------------------------------------
     bool next(int32_t& u, int32_t& v);
 
 private:
 
     //--------------------------------------------------------------------------
-    //! \brief Fill in the offsets of a diamond of that radius. Called once per
-    //! radius, the answer being cached by relativeCoordinates().
-    //! \param[in] radius reach, as a taxicab distance.
+    //! \brief Fill offsets for a diamond of that radius. Called once per
+    //! radius; the result is cached by relativeCoordinates().
+    //! \param[in] radius reach as taxicab distance.
     //! \param[out] coord the offsets, packed by compress().
     //--------------------------------------------------------------------------
     void createRelativeCoordinates(int32_t radius, RelativeCoordinates& coord);
 
     //--------------------------------------------------------------------------
-    //! \brief The cache of offsets, keyed by radius, shared by the whole
-    //! program. A radius is asked for again at every tick, by every building.
+    //! \brief Shared cache of offsets by radius.
     //! \param[in] radius reach to look up.
-    //! \return the offsets of that radius, empty on the first call.
+    //! \return offsets for that radius, empty on first call.
     //--------------------------------------------------------------------------
     static RelativeCoordinates& relativeCoordinates(uint32_t radius)
     {
@@ -128,10 +124,9 @@ private:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief Pack two small signed numbers into one, so that the cache is a
-    //! flat vector of integers rather than a vector of pairs.
-    //! \param[in] u, v offsets to the centre, each within +/- MAX_RADIUS.
-    //! \return the two of them shifted into one integer.
+    //! \brief Pack two small signed offsets into one integer.
+    //! \param[in] u, v offsets from the centre, each within +/- MAX_RADIUS.
+    //! \return the packed pair.
     //--------------------------------------------------------------------------
     static int32_t compress(int32_t u, int32_t v);
 
@@ -144,25 +139,25 @@ private:
 
 private:
 
-    //! \brief Largest reach that fits in the packing of compress().
+    //! \brief Largest radius that fits in compress() packing.
     static constexpr int32_t MAX_RADIUS = 255;
-    //! \brief Offsets of the current radius, owned by the cache.
+    //! \brief Offsets for the current radius, owned by the cache.
     RelativeCoordinates* m_relativeCoord = nullptr;
-    //! \brief Where in the offsets the walk begins, drawn at random or zero.
+    //! \brief Start index in the offsets, random or zero.
     uint32_t m_startingIndex;
-    //! \brief How many offsets have been handed out or skipped so far.
+    //! \brief How many offsets were returned or skipped so far.
     uint32_t m_offset;
     //! \brief Column of the centre.
     int32_t m_centerU;
     //! \brief Row of the centre.
     int32_t m_centerV;
-    //! \brief First column allowed, included.
+    //! \brief First allowed column, included.
     int32_t m_minU;
-    //! \brief First column past the ones allowed, excluded.
+    //! \brief First column past the allowed range, excluded.
     int32_t m_maxU;
-    //! \brief First row allowed, included.
+    //! \brief First allowed row, included.
     int32_t m_minV;
-    //! \brief First row past the ones allowed, excluded.
+    //! \brief First row past the allowed range, excluded.
     int32_t m_maxV;
 };
 

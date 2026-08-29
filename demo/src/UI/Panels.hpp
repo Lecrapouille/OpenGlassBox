@@ -59,11 +59,11 @@ struct OpeningStatus
 // ----------------------------------------------------------------------------
 //! \brief Read the timetable a building gets from the \c hour \c between
 //! conditions of its rules.
-//! \param[in] unit the building to read the rules of.
+//! \param[in] building the building to read the rules of.
 //! \param[in] hourOfDay the hour to answer for, in [0..23].
 //! \return what to display, if anything. See OpeningStatus.
 // ----------------------------------------------------------------------------
-OpeningStatus openingStatus(Unit const& unit, uint32_t hourOfDay);
+OpeningStatus openingStatus(Building const& building, uint32_t hourOfDay);
 
 // ****************************************************************************
 //! \brief One-click heatmap picker: click a layer name to show it as the main
@@ -100,7 +100,7 @@ public:
 
 private:
 
-    void drawUnit(Simulation& simulation,
+    void drawBuilding(Simulation& simulation,
                   game::DebugState& state,
                   game::RuleTrace const& trace) const;
     void drawAgent(Simulation& simulation, game::DebugState const& state) const;

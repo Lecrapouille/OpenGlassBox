@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------------
 
 //! \file OpeningHours.hpp
-//! \brief The hours of the day a set of rules is awake.
+//! \brief Hours of the day when a set of Rules is active.
 
 #ifndef OPEN_GLASSBOX_OPENING_HOURS_HPP
 #define OPEN_GLASSBOX_OPENING_HOURS_HPP
@@ -18,24 +18,19 @@ namespace ogb
 class IRule;
 
 //==============================================================================
-//! \brief When a building has something to do, read from the \c hour \c between
-//! conditions of its rules.
+//! \brief When a Building is open, derived from \c hour \c between Rule conditions.
 //!
-//! A rule with no such condition may fire at any hour of the day, and a
-//! building whose rules are all like that never closes. As soon as one rule
-//! keeps office hours, the building is shut outside of them: a shop that sells
-//! nothing at three in the morning is not a broken shop, and saying so in the
-//! inspector saves the reader the trip through the ruleset.
+//! A Rule with no hour condition may run at any hour.
+//! If all Rules have no hour condition, the Building is always open.
+//! If any Rule has hour conditions, the Building is closed outside those hours.
 //!
-//! The hours are held as a bitmask of the twenty-four hours of a day rather
-//! than as a range, because the windows of two rules need not touch: a house
-//! that sends workers out from 8 to 10 and shoppers from 14 to 18 has nobody
-//! going anywhere at noon.
+//! Hours are stored as a 24-bit mask, not a single range.
+//! Two Rules may have gaps between them (e.g. 8-10 and 14-18, closed at noon).
 //!
 //! Example:
 //! \code
 //! ogb::OpeningHours hours;
-//! for (ogb::RuleUnit const* rule: unit.rules())
+//! for (ogb::RuleBuilding const* rule: building.rules())
 //!     hours.add(*rule);
 //!
 //! uint32_t const now = clock.hourOfDay();
@@ -45,15 +40,15 @@ class IRule;
 //!     std::cout << "closed until " << hours.nextOpening(now) << "h\n";
 //! \endcode
 //!
-//! The matching script, where the two rules are what draws the timetable:
+//! The matching script. The two Rules define the timetable:
 //! \code
-//! unitRule SendPeopleToWork
+//! buildingRule SendPeopleToWork
 //!     rate 45 minutes
 //!     hour between 8 10
 //!     agent Worker to Work add [ People 1 ]
 //! end
 //!
-//! unitRule ShopForGoods
+//! buildingRule ShopForGoods
 //!     rate 3 hours
 //!     hour between 14 18
 //!     agent Shopper to Shop add [ People 1 ]
@@ -64,66 +59,63 @@ class OpeningHours
 {
 public:
 
-    //! \brief Hours in a day, and therefore bits used by the mask.
+    //! \brief Hours in one day. Also the number of bits in the mask.
     static constexpr uint32_t HOURS_PER_DAY = 24u;
 
-    //! \brief Returned by nextOpening() when no hour of the day opens.
+    //! \brief Value returned by getNextOpeningHour() when no hour is open.
     static constexpr uint32_t NEVER = HOURS_PER_DAY;
 
     //--------------------------------------------------------------------------
-    //! \brief Take the calendar conditions of one rule into account.
+    //! \brief Add hour conditions from one Rule.
     //!
-    //! A rule holding no \c hour \c between condition may run at any hour, and
-    //! one such rule is enough to keep the building open around the clock. A
-    //! rule holding several of them is awake when all of them agree, which is
-    //! how a window is narrowed down.
+    //! A Rule with no \c hour \c between may run at any hour. One such Rule
+    //! keeps the Building open 24 hours.
+    //! Several hour conditions on one Rule must all match (narrower window).
     //!
-    //! \param[in] rule the rule to read the conditions of. Its commands are
-    //! only read, and nothing is kept: call this again after the ruleset has
-    //! been reparsed.
+    //! \param[in] rule the Rule to read. Its commands are read only.
+    //! Call again after the ruleset is reparsed.
     //--------------------------------------------------------------------------
     void add(IRule const& rule);
 
     //--------------------------------------------------------------------------
-    //! \brief Whether one of the rules seen so far may run at that hour.
-    //! \param[in] hourOfDay hour of the day, in [0..23]. Larger values wrap.
-    //! \return true when at least one rule is awake then, and true as well when
-    //! no rule has been added at all: what has no timetable is never shut.
+    //! \brief Check if any added Rule may run at this hour.
+    //! \param[in] hourOfDay hour in [0..23]. Values above 23 wrap.
+    //! \return true if at least one Rule is active. Also true if no Rule was added.
     //--------------------------------------------------------------------------
     [[nodiscard]] bool isOpen(uint32_t hourOfDay) const;
 
     //--------------------------------------------------------------------------
-    //! \brief Whether any timetable was found at all.
-    //! \return false when every rule seen so far may run at any hour, in which
-    //! case isOpen() is true everywhere and there is nothing to display.
+    //! \brief Check if any hour restriction was found.
+    //! \return false if every Rule may run at any hour.
+    //! Then isOpen() is always true and there is nothing to display.
     //--------------------------------------------------------------------------
     [[nodiscard]] bool isRestricted() const;
 
     //--------------------------------------------------------------------------
-    //! \brief The next hour of the day the doors open.
-    //! \param[in] hourOfDay hour to start looking from, in [0..23].
-    //! \return \c hourOfDay itself when it is already open, the first open hour
-    //! of the coming day otherwise, or NEVER when no hour of the day opens.
+    //! \brief Find the next open hour.
+    //! \param[in] hourOfDay start hour in [0..23].
+    //! \return \c hourOfDay if already open, else the next open hour today,
+    //! or NEVER if no hour is ever open.
     //--------------------------------------------------------------------------
     [[nodiscard]] uint32_t getNextOpeningHour(uint32_t hourOfDay) const;
 
     //--------------------------------------------------------------------------
-    //! \brief The last hour of the day still open before the doors shut.
-    //! \param[in] hourOfDay hour to start looking from, in [0..23].
-    //! \return the last open hour of the current stretch, or NEVER when
-    //! \c hourOfDay is closed or when nothing ever closes.
+    //! \brief Find the last open hour before closing.
+    //! \param[in] hourOfDay start hour in [0..23].
+    //! \return last open hour in the current stretch, or NEVER if closed or
+    //! always open.
     //--------------------------------------------------------------------------
     [[nodiscard]] uint32_t getClosingHour(uint32_t hourOfDay) const;
 
 private:
 
-    //! \brief Bit h set when a rule with a timetable is awake at hour h.
+    //! \brief Bit h is set if a Rule with hours is active at hour h.
     uint32_t m_hours = 0u;
 
-    //! \brief A rule with no timetable was seen: it may run at any hour.
+    //! \brief True if a Rule with no hour condition was added.
     bool m_anyHour = false;
 
-    //! \brief A rule was seen at all. An empty set is open, not shut.
+    //! \brief True if at least one Rule was added. Empty means always open.
     bool m_empty = true;
 };
 

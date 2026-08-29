@@ -31,8 +31,8 @@ The GlassBox approach describes a city simulation as data rather than as a tree 
 
 - **Zones** are zones whose rules spawn, upgrade, and demolish buildings.
 - **Layers** are 2D grid fields with values, such as water, pollution,  desirability ...
-- **Units** are buildings that hold bounded stocks of resources.
-- **Agents** carry resources from one unit to another.
+- **Buildings** are buildings that hold bounded stocks of resources.
+- **Agents** carry resources from one building to another.
 - **Resources** are money, goods, happiness ...
 - **Paths** are networks on which agents travel.
 

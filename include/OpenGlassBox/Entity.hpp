@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------------
 
 //! \file Entity.hpp
-//! \brief Identity and placement shared by the things a City puts on its grid.
+//! \brief Shared identity and position for objects a City places on its grid.
 
 #ifndef OPEN_GLASSBOX_ENTITY_HPP
 #define OPEN_GLASSBOX_ENTITY_HPP
@@ -17,30 +17,25 @@ namespace ogb
 {
 
 //==============================================================================
-//! \brief What a City puts on its grid: a number to be called by, a recipe read
-//! from the script, and somewhere to stand.
+//! \brief Base for objects a City places on its grid: id, script type, and position.
 //!
-//! Unit and Agent both answer the same four questions, and used to answer them
-//! with their own copy of the same four members. Everything that reads a city
-//! without caring what it is looking at, the renderer and the inspector of the
-//! demo first of all, only ever asks these.
+//! Building and Agent share the same four fields. Code that reads a city without
+//! knowing the object type (renderer, inspector) uses only these fields.
 //!
-//! \tparam TYPE the script-defined recipe of the entity: UnitType for a
-//! building, AgentType for a traveller. It has to carry a \c name and a
-//! \c color, which every EntityType does, and it is held by reference: one
-//! recipe is shared by every entity of that kind, so it has to outlive them and
-//! must not be moved. ScriptDefinitions is what guarantees that.
+//! \tparam TYPE the script-defined type: BuildingType for a building, AgentType for
+//! an Agent. It must have \c name and \c color. It is stored by reference: one
+//! type is shared by all entities of that kind. It must outlive them and must
+//! not be moved. ScriptDefinitions guarantees this.
 //!
-//! Node and Segment deliberately stay out of this: a Node has no type and a
-//! Segment has no single position, so the base would have to lie about one of
-//! them.
+//! Node and Segment are not Entity: a Node has no type, and a Segment has no
+//! single position.
 //!
 //! Example:
 //! \code
-//! // Reading a city without knowing what is in it.
-//! for (auto const& unit: city.getUnits())
-//!     std::cout << unit->getTypeName() << " #" << unit->getId()
-//!               << " at " << unit->getPosition() << '\n';
+//! // Read a city without knowing the object type.
+//! for (auto const& building: city.getBuildings())
+//!     std::cout << building->getTypeName() << " #" << building->getId()
+//!               << " at " << building->getPosition() << '\n';
 //! for (auto const& agent: city.getAgents())
 //!     std::cout << agent->getTypeName() << " #" << agent->getId()
 //!               << " at " << agent->getPosition() << '\n';
@@ -52,9 +47,8 @@ class Entity
 public:
 
     //--------------------------------------------------------------------------
-    //! \brief \return the identifier given by the City, unique among the
-    //! entities of that kind inside it. This is what a save file writes down
-    //! and what the two ends of an undo refer to, so it survives a reload.
+    //! \return the id given by the City. Unique among entities of this
+    //! kind in that city. Saved to disk and used by undo. Survives a reload.
     //--------------------------------------------------------------------------
     [[nodiscard]] uint32_t getId() const
     {
@@ -62,12 +56,11 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \return the name of the recipe the script gave, such as "Home" or
-    //! "Truck". Several entities share it: this is a kind, not an identity.
+    //! \return the script type name, such as "Home" or "Truck".
+    //! Several entities share one name. This is a kind, not a unique id.
     //!
-    //! Interned, so asking whether a building is a Home costs an integer
-    //! comparison rather than a walk over the characters. It still reads and
-    //! prints as a string. See Name.
+    //! Interned as a Name: comparison is fast. It still reads and prints as a
+    //! string. See Name.
     //--------------------------------------------------------------------------
     [[nodiscard]] Name const& getTypeName() const
     {
@@ -75,7 +68,7 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \return the colour the script chose for that kind, as 0xRRGGBB.
+    //! \return the colour from the script for this type, as 0xRRGGBB.
     //--------------------------------------------------------------------------
     [[nodiscard]] uint32_t getColor() const
     {
@@ -83,8 +76,8 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \return where it stands, in world coordinates. A building stands
-    //! still unless the city is moved; an agent moves every tick.
+    //! \return the position in world coordinates.
+    //! A Building stays still. An Agent moves every tick.
     //--------------------------------------------------------------------------
     [[nodiscard]] Vector3f const& getPosition() const
     {
@@ -94,24 +87,23 @@ public:
 protected:
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] id identifier given by the City.
-    //! \param[in] type recipe of the entity. Kept by reference: it has to
+    //! \param[in] id identifier given by the City.
+    //! \param[in] type entity type from the script. Stored by reference. Must
     //! outlive the entity.
-    //! \param[in] position where it stands, in world coordinates.
+    //! \param[in] position position in world coordinates.
     //--------------------------------------------------------------------------
     Entity(uint32_t id, TYPE const& type, Vector3f const& position)
         : m_id(id), m_type(type), m_position(position)
     {
     }
 
-    //! \brief Identifier inside the City. Not const: a save gives back the
-    //! numbers it wrote.
+    //! \brief Id inside the City. Not const: a save restores the saved id.
     uint32_t m_id;
 
-    //! \brief The recipe, shared with every entity of the same kind.
+    //! \brief The type, shared by every entity of the same kind.
     TYPE const& m_type;
 
-    //! \brief Where it stands, in world coordinates.
+    //! \brief Position in world coordinates.
     Vector3f m_position;
 };
 

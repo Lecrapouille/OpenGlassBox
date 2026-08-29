@@ -6,7 +6,7 @@ Gameplay itself is defined in `.ogs` scripts; see the [script language reference
 
 - **Zones** are zones whose rules spawn, upgrade, and demolish buildings.
 - **Layers** are 2D fields over the grid, such as water, pollution, and desirability.
-- **Units** are buildings that hold bounded stocks of resources.
+- **Buildings** are buildings that hold bounded stocks of resources.
 - **Agents** carry resources from one unit to another.
 - **Resources** are named stocks such as money, goods, or people.
 - **Paths** are networks made of nodes and segments on which agents travel.
@@ -25,7 +25,7 @@ classDiagram
         +getTrafficMetrics() TrafficMetrics
     }
     class Ruleset {
-        +getUnitType(id) UnitType
+        +getBuildingType(id) BuildingType
         +getLayerType(id) LayerType
     }
     class World {
@@ -34,7 +34,7 @@ classDiagram
         +worldToCell(position) Cell
     }
     class City {
-        +addUnit(type, node) Unit
+        +addBuilding(type, node) Building
         +addPath(type) Path
         +addZone(type, region) Zone
         +getRegion() CellRegion
@@ -50,7 +50,7 @@ classDiagram
     class Segment {
         +getTravelTime() float
     }
-    class Unit {
+    class Building {
         +executeRules()
         +getResources() Resources
     }
@@ -67,17 +67,17 @@ classDiagram
     World *-- City
     World *-- Layer
     City *-- Path
-    City *-- Unit
+    City *-- Building
     City *-- Agent
     City *-- Zone
     City *-- IRouter
     Path *-- Node
     Path *-- Segment
     Segment --> Node
-    Unit *-- Resources
+    Building *-- Resources
     Agent *-- Resources
-    Agent --> Unit
-    Unit --> Node
+    Agent --> Building
+    Building --> Node
 ```
 
 Four places are meant to be replaced, and they are kept out of the diagram above so it stays about the game rather than about the seams. Each is an interface with what the engine ships behind it:
@@ -110,7 +110,7 @@ classDiagram
     IRouter <|-- Dijkstra
     IScriptParser <|-- SimpleScriptParser
     IRule <|-- RuleLayer
-    IRule <|-- RuleUnit
+    IRule <|-- RuleBuilding
     IRule <|-- RuleZone
 ```
 
@@ -118,9 +118,9 @@ classDiagram
 
 ## The two halves: recipes and things
 
-Nothing in the engine is hard-coded, and that split runs through the whole design. A ruleset declares **recipes**: a kind of house, a kind of road, a kind of traveller: and a running city holds **things** built from them. `Types.hpp` holds the recipes (`UnitType`, `SegmentType`, `AgentType`, `LayerType`, `ZoneType`, `PathType`); `Unit`, `Segment`, `Agent`, `Layer`, `Zone`, and `Path` are the things.
+Nothing in the engine is hard-coded, and that split runs through the whole design. A ruleset declares **recipes**: a kind of house, a kind of road, a kind of traveller: and a running city holds **things** built from them. `Types.hpp` holds the recipes (`BuildingType`, `SegmentType`, `AgentType`, `LayerType`, `ZoneType`, `PathType`); `Building`, `Segment`, `Agent`, `Layer`, `Zone`, and `Path` are the things.
 
-A thing keeps a `const&` to its recipe rather than a copy of it. A thousand houses share one `UnitType`, so a house costs what it actually holds and nothing more. The price of that is a lifetime rule which is worth remembering, because breaking it is the one way to make the engine misbehave in a way that is hard to debug: **the ruleset has to outlive every city loaded from it**. `Simulation` declares its `Ruleset` before its `World` for exactly that reason, so that destruction, which runs in reverse, takes the cities away first.
+A thing keeps a `const&` to its recipe rather than a copy of it. A thousand houses share one `BuildingType`, so a house costs what it actually holds and nothing more. The price of that is a lifetime rule which is worth remembering, because breaking it is the one way to make the engine misbehave in a way that is hard to debug: **the ruleset has to outlive every city loaded from it**. `Simulation` declares its `Ruleset` before its `World` for exactly that reason, so that destruction, which runs in reverse, takes the cities away first.
 
 ### The containers: Simulation, World, City
 
@@ -146,15 +146,15 @@ A `Segment` knows its length, how many agents are on it, and from those two how 
 
 Both containers are `std::deque` rather than `std::vector`, and that is deliberate: everything refers to a crossroads or a street **by address**, so adding one must not move the others.
 
-## The actors: Unit, Agent, Zone
+## The actors: Building, Agent, Zone
 
-`Unit` is a building. It holds resources, it runs its rules once every so many ticks, and those rules send agents out. A `Unit` is **not** a graph node: a distinction worth dwelling on, because it is the one place this port departs most from the original. A building has its own position and, separately, an *anchor* on the network: a `Node`, or a `Segment` at an offset. Anchoring along a street is what keeps the graph small; a street of forty houses used to become forty crossroads and forty-one segments, and the router paid for all of them at every tick.
+`Building` is a building. It holds resources, it runs its rules once every so many ticks, and those rules send agents out. A `Building` is **not** a graph node: a distinction worth dwelling on, because it is the one place this port departs most from the original. A building has its own position and, separately, an *anchor* on the network: a `Node`, or a `Segment` at an offset. Anchoring along a street is what keeps the graph small; a street of forty houses used to become forty crossroads and forty-one segments, and the router paid for all of them at every tick.
 
 `Agent` is one trip: a load of resources leaving a building and looking for another that will take it. Agents run no rules: a city may have a thousand alive at once: and they do not know where they are going. The router finds the cheapest building that answers to the name they are looking for *and has room*, and the answer changes as the traffic does. Room counts the agents already on their way there, so that a shop with one free shelf is claimed by one agent and not by the twenty that were dispatched on the same tick. An agent that finds nothing wanders, and after `agentGiveUpTicks` it hands its load back to the building that sent it out. Wandering means the city is short of somewhere to deliver, not that the router is broken.
 
 `Zone` is a zone the player painted, and the piece that turns an empty grid into a city. It owns its footprint and nothing else: the buildings it grew belong to the `City`, which is why it counts them by walking the city rather than keeping a list of pointers that would outlive what they point at.
 
-`Unit` and `Agent` share a base, `Entity<TYPE>`, holding the four things both have: an identifier, a recipe, a colour, and a position. `Node` and `Segment` deliberately do not inherit from it: they have no colour of their own and no identity outside the `Path` numbering them.
+`Building` and `Agent` share a base, `Entity<TYPE>`, holding the four things both have: an identifier, a recipe, a colour, and a position. `Node` and `Segment` deliberately do not inherit from it: they have no colour of their own and no identity outside the `Path` numbering them.
 
 ## The environment: Layer
 
@@ -168,7 +168,7 @@ The grid is unbounded in the four directions, so cell coordinates are signed, an
 
 This is the scripting language at runtime, and it is smaller than you would expect.
 
-- `IRule` is a name, a period, and a list of commands. `RuleUnit`, `RuleLayer` and `RuleZone` add what each kind needs: a fallback for a building, a random sample of the cells for a layer, nothing for a zone.
+- `IRule` is a name, a period, and a list of commands. `RuleBuilding`, `RuleLayer` and `RuleZone` add what each kind needs: a fallback for a building, a random sample of the cells for a layer, nothing for a zone.
 - `IRuleCommand` is one line of a rule. Every command is asked **twice**: `validate()`, then `execute()`. A rule asks all of its commands first and applies them only if every one agreed, which is what makes a rule atomic: "take a person out of the house and put them in a car" either does both or does neither, so nobody is ever lost between the two.
 - `IRuleValue` is somewhere a command reads a number from and writes one back to: `local`, `global`, or `layer`. Having them behind one interface is what lets a single `add` command serve all three: the command knows *how much*, the value knows *where*.
 - `RuleContext` is everything a rule may look at while it runs: the city, the building or the cell, the clock, the resources. Rules hold no state of their own: they are shared by every entity that lists them: so all of the "where" has to be handed to them. The context is held by the entity and reused from tick to tick, since a layer rule fires over thousands of cells.

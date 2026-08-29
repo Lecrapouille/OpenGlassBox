@@ -5,7 +5,7 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
-#include "OpenGlassBox/Unit.hpp"
+#include "OpenGlassBox/Building.hpp"
 #include "OpenGlassBox/City.hpp"
 #include "OpenGlassBox/World.hpp"
 #include <algorithm>
@@ -14,9 +14,9 @@
 namespace ogb
 {
 
-void Unit::bind(City& city)
+void Building::bind(City& city)
 {
-    m_context.unit = this;
+    m_context.building = this;
     m_context.city = &city;
     m_context.globals = &(city.getGlobals());
     m_context.locals = &m_resources;
@@ -26,17 +26,17 @@ void Unit::bind(City& city)
 }
 
 // -----------------------------------------------------------------------------
-Unit::Unit(UnitType const& type, Node& node, City& city)
+Building::Building(BuildingType const& type, Node& node, City& city)
     : Entity(0u, type, node.getPosition()),
       m_node(&node),
       m_resources(type.resources)
 {
-    m_node->addUnit(*this);
+    m_node->addBuilding(*this);
     bind(city);
 }
 
 // -----------------------------------------------------------------------------
-Unit::Unit(UnitType const& type, Segment& segment, float offset, City& city)
+Building::Building(BuildingType const& type, Segment& segment, float offset, City& city)
     : Entity(0u, type, {}),
       m_segment(&segment),
       m_offset(offset),
@@ -48,19 +48,19 @@ Unit::Unit(UnitType const& type, Segment& segment, float offset, City& city)
         m_offset = 1.0f;
 
     m_position = m_segment->getPositionAt(m_offset);
-    m_segment->addUnit(*this);
+    m_segment->addBuilding(*this);
     bind(city);
 }
 
 // -----------------------------------------------------------------------------
-Unit::Unit(UnitType const& type, Vector3f const& position, City& city)
+Building::Building(BuildingType const& type, Vector3f const& position, City& city)
     : Entity(0u, type, position), m_resources(type.resources)
 {
     bind(city);
 }
 
 // -----------------------------------------------------------------------------
-void Unit::spreadRuleStart()
+void Building::spreadRuleStart()
 {
     if (m_context.city == nullptr)
         return;
@@ -80,28 +80,28 @@ void Unit::spreadRuleStart()
 }
 
 // -----------------------------------------------------------------------------
-Unit::~Unit()
+Building::~Building()
 {
     detach();
 }
 
 // -----------------------------------------------------------------------------
-void Unit::detach()
+void Building::detach()
 {
     if (m_node != nullptr)
     {
-        m_node->removeUnit(*this);
+        m_node->removeBuilding(*this);
         m_node = nullptr;
     }
     if (m_segment != nullptr)
     {
-        m_segment->removeUnit(*this);
+        m_segment->removeBuilding(*this);
         m_segment = nullptr;
     }
 }
 
 // -----------------------------------------------------------------------------
-bool Unit::hasSegments() const
+bool Building::hasSegments() const
 {
     if (m_node != nullptr)
         return m_node->hasSegments();
@@ -109,7 +109,7 @@ bool Unit::hasSegments() const
 }
 
 // -----------------------------------------------------------------------------
-Node* Unit::getAccessNode() const
+Node* Building::getAccessNode() const
 {
     if (m_node != nullptr)
         return m_node;
@@ -119,7 +119,7 @@ Node* Unit::getAccessNode() const
 }
 
 // -----------------------------------------------------------------------------
-Path* Unit::getPath() const
+Path* Building::getPath() const
 {
     if (m_node != nullptr)
         return m_node->getPath();
@@ -129,10 +129,10 @@ Path* Unit::getPath() const
 }
 
 // -----------------------------------------------------------------------------
-void Unit::translate(Vector3f const& direction)
+void Building::translate(Vector3f const& direction)
 {
-    // A Unit sitting on a Node or a Segment follows it: the City translates the
-    // Path, which moves the Nodes, and the Unit reads the new position. One
+    // A Building sitting on a Node or a Segment follows it: the City translates the
+    // Path, which moves the Nodes, and the Building reads the new position. One
     // that was given a footprint of its own keeps it and shifts with the City.
     if (m_placed)
         m_position += direction;
@@ -147,7 +147,7 @@ void Unit::translate(Vector3f const& direction)
 }
 
 // -----------------------------------------------------------------------------
-void Unit::setPosition(Vector3f const& position)
+void Building::setPosition(Vector3f const& position)
 {
     m_position = position;
     m_placed = true;
@@ -155,13 +155,13 @@ void Unit::setPosition(Vector3f const& position)
 }
 
 // -----------------------------------------------------------------------------
-void Unit::moveOntoSegment(Segment& segment, float offset)
+void Building::moveOntoSegment(Segment& segment, float offset)
 {
     detach();
 
     m_segment = &segment;
     m_offset = std::min(1.0f, std::max(0.0f, offset));
-    m_segment->addUnit(*this);
+    m_segment->addBuilding(*this);
 
     if (!m_placed)
     {
@@ -171,14 +171,14 @@ void Unit::moveOntoSegment(Segment& segment, float offset)
 }
 
 // -----------------------------------------------------------------------------
-void Unit::updateCell()
+void Building::updateCell()
 {
     if (m_context.city != nullptr)
         m_context.cell = m_context.city->worldToCell(m_position);
 }
 
 // -----------------------------------------------------------------------------
-void Unit::executeRules()
+void Building::executeRules()
 {
     m_ticks += 1u;
     if (m_context.city != nullptr)
@@ -198,10 +198,10 @@ void Unit::executeRules()
 }
 
 // -----------------------------------------------------------------------------
-OpeningHours Unit::getOpeningHours() const
+OpeningHours Building::getOpeningHours() const
 {
     OpeningHours hours;
-    for (RuleUnit const* rule : m_type.rules)
+    for (RuleBuilding const* rule : m_type.rules)
     {
         if (rule != nullptr)
             hours.add(*rule);
@@ -210,7 +210,7 @@ OpeningHours Unit::getOpeningHours() const
 }
 
 // -----------------------------------------------------------------------------
-bool Unit::accepts(Name const& searchTarget,
+bool Building::accepts(Name const& searchTarget,
                    Resources const& resourcesToTryToAdd)
 {
     // Asked of every building the router walks past, so the name test comes

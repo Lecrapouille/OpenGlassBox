@@ -26,22 +26,22 @@ agents
 end
 
 rules
-	unitRule Send
+	buildingRule Send
 		rate 4
 		local People remove 1
 		agent Worker to End add [ People 1 ]
 	end
 
-	unitRule Absorb
+	buildingRule Absorb
 		rate 1
 		local People greater 0
 		local People remove 1
 	end
 end
 
-units
-	unit Start color 0x00FF00 layerRadius 1 rules [ Send ] targets [ Start ] caps [ People 200 ] resources [ People 80 ]
-	unit End color 0xFF0000 layerRadius 1 rules [ Absorb ] targets [ End ] caps [ People 200 ] resources [ ]
+buildings
+	building Start color 0x00FF00 layerRadius 1 rules [ Send ] targets [ Start ] caps [ People 200 ] resources [ People 80 ]
+	building End color 0xFF0000 layerRadius 1 rules [ Absorb ] targets [ End ] caps [ People 200 ] resources [ ]
 end
 
 layers

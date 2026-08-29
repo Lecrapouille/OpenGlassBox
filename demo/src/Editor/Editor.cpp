@@ -170,7 +170,7 @@ void Editor::reset()
     m_city.clear();
     m_path.clear();
     m_segmentType.clear();
-    m_unitType.clear();
+    m_buildingType.clear();
     m_layer.clear();
     m_shownLayer.clear();
     m_zoneType.clear();
@@ -233,9 +233,9 @@ void Editor::refreshTargets(Simulation& simulation)
     {
         m_segmentType = firstKey(simulation.getRuleset().getSegmentTypes());
     }
-    if (simulation.getRuleset().getUnitTypes().find(m_unitType) == simulation.getRuleset().getUnitTypes().end())
+    if (simulation.getRuleset().getBuildingTypes().find(m_buildingType) == simulation.getRuleset().getBuildingTypes().end())
     {
-        m_unitType = firstKey(simulation.getRuleset().getUnitTypes());
+        m_buildingType = firstKey(simulation.getRuleset().getBuildingTypes());
     }
     if (simulation.getRuleset().getZoneTypes().find(m_zoneType) == simulation.getRuleset().getZoneTypes().end())
     {
@@ -278,7 +278,7 @@ std::string Editor::hint() const
     case EditTool::Road:
         return "drag to lay a " + m_segmentType;
     case EditTool::Building:
-        return "click a road to build a " + m_unitType;
+        return "click a road to build a " + m_buildingType;
     case EditTool::Paint:
         return "click or drag to paint " + m_layer;
     case EditTool::Zone:
@@ -412,7 +412,7 @@ void Editor::drawToolbar(Simulation& simulation, game::DebugState& state)
             ImGui::SetTooltip("Color roads by congestion (free to jammed).");
         break;
     case EditTool::Building:
-        nameCombo("##unittype", 160.0f, simulation.getRuleset().getUnitTypes(), m_unitType);
+        nameCombo("##buildingtype", 160.0f, simulation.getRuleset().getBuildingTypes(), m_buildingType);
         break;
     case EditTool::Zone:
         drawZoneOptions(simulation);
@@ -530,8 +530,8 @@ void Editor::handleBuilding(Simulation& simulation, ui::CityViewer& viewer)
     if ((node != nullptr) && (node->getPath() != nullptr))
     {
         m_stack.push(simulation,
-                     std::make_unique<AddUnitCommand>(
-                         m_city, node->getPath()->getTypeName().str(), m_unitType, node->getId()));
+                     std::make_unique<AddBuildingCommand>(
+                         m_city, node->getPath()->getTypeName().str(), m_buildingType, node->getId()));
         return;
     }
 
@@ -549,8 +549,8 @@ void Editor::handleBuilding(Simulation& simulation, ui::CityViewer& viewer)
         return;
 
     m_stack.push(simulation,
-                 std::make_unique<AddUnitCommand>(m_city, path->getTypeName().str(),
-                                                  m_unitType, segment->getId(), offset));
+                 std::make_unique<AddBuildingCommand>(m_city, path->getTypeName().str(),
+                                                  m_buildingType, segment->getId(), offset));
 }
 
 // ----------------------------------------------------------------------------
@@ -648,32 +648,32 @@ void Editor::handleBulldozer(Simulation& simulation, ui::CityViewer& viewer)
 
     // Buildings first: they sit on the road and would otherwise be impossible
     // to hit without also hitting the segment under them.
-    Unit* unit = viewer.pickUnit(*city, world, TOOL_PICK_PIXELS);
-    if (unit != nullptr)
+    Building* building = viewer.pickBuilding(*city, world, TOOL_PICK_PIXELS);
+    if (building != nullptr)
     {
-        Path* path = unit->getPath();
+        Path* path = building->getPath();
         if (path != nullptr)
         {
-            if (unit->getNode() != nullptr)
+            if (building->getNode() != nullptr)
             {
                 m_stack.push(simulation,
-                             std::make_unique<RemoveUnitCommand>(
-                                 m_city, path->getTypeName().str(), unit->getNode()->getId(),
-                                 unit->getTypeName().str()));
+                             std::make_unique<RemoveBuildingCommand>(
+                                 m_city, path->getTypeName().str(), building->getNode()->getId(),
+                                 building->getTypeName().str()));
             }
             else
             {
                 m_stack.push(simulation,
-                             std::make_unique<RemoveUnitCommand>(
-                                 m_city, path->getTypeName().str(), unit->getId(),
-                                 unit->getTypeName().str(), true));
+                             std::make_unique<RemoveBuildingCommand>(
+                                 m_city, path->getTypeName().str(), building->getId(),
+                                 building->getTypeName().str(), true));
             }
         }
         else
         {
             m_stack.push(simulation,
-                         std::make_unique<RemoveUnitCommand>(
-                             m_city, "", unit->getId(), unit->getTypeName().str(), true));
+                         std::make_unique<RemoveBuildingCommand>(
+                             m_city, "", building->getId(), building->getTypeName().str(), true));
         }
         return;
     }
@@ -834,10 +834,10 @@ void Editor::drawPreview(Simulation& simulation, game::DebugState& state,
 
         if (m_tool == EditTool::Bulldozer)
         {
-            Unit* unit = viewer.pickUnit(*city, world, TOOL_PICK_PIXELS);
-            if (unit != nullptr)
+            Building* building = viewer.pickBuilding(*city, world, TOOL_PICK_PIXELS);
+            if (building != nullptr)
             {
-                drawList->AddCircle(viewer.worldToScreen(unit->getPosition()),
+                drawList->AddCircle(viewer.worldToScreen(building->getPosition()),
                                     12.0f, theme::FAILURE, 0, 2.5f);
                 break;
             }

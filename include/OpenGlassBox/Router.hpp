@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------------
 
 //! \file Router.hpp
-//! \brief Routing over the road graph on travel time rather than on distance.
+//! \brief Find routes on the road graph using travel time, not distance.
 
 #ifndef OPEN_GLASSBOX_ROUTER_HPP
 #define OPEN_GLASSBOX_ROUTER_HPP
@@ -16,35 +16,32 @@
 namespace ogb
 {
 
-class Unit;
+class Building;
 
 //==============================================================================
-//! \brief The answer to "where do I take this, and how do I get there".
+//! \brief Result of a route search: where to go and how to get there.
 //!
-//! The destination is not asked for, it is found: the router walks the network
-//! outwards until it meets a building that answers to the name looked for and
-//! has room for the load. Which one that is depends on the traffic at the time
-//! of the search, so two agents leaving the same door a minute apart may well
-//! be sent to different shops.
+//! The router finds the destination. It searches the network for a building
+//! that matches the name and has space for the load. Traffic can change the
+//! answer, so two agents from the same place may go to different buildings.
 //!
-//! A building may stand along a segment rather than on a crossroads, in which
-//! case the last leg of the trip is a fraction of that segment. The approach
-//! segment and the approach offset are how the agent knows to stop halfway down
-//! the street.
+//! A building may sit on a road segment, not only at a crossroads. In that
+//! case the last part of the trip is part of a segment. The approach segment
+//! and offset tell the agent where to stop on the street.
 //==============================================================================
 class Route
 {
 public:
 
     //--------------------------------------------------------------------------
-    //! \brief Record what the search found. Called by a router.
-    //! \param[in] destination the building the load is for.
-    //! \param[in] approachSegment the segment it stands along, or nullptr when
-    //! it stands on a crossroads.
-    //! \param[in] approachOffset where along that segment it stands, in [0..1].
-    //! \param[in] cost travel time of the whole trip, in seconds of game time.
+    //! \brief Store what the search found. Called by a router.
+    //! \param[in] destination the building for the load.
+    //! \param[in] approachSegment the segment it sits on, or nullptr at a
+    //! crossroads.
+    //! \param[in] approachOffset position on that segment, in [0..1].
+    //! \param[in] cost total travel time in seconds of game time.
     //--------------------------------------------------------------------------
-    void setTarget(Unit* destination,
+    void setTarget(Building* destination,
                    Segment* approachSegment,
                    float approachOffset,
                    float cost)
@@ -57,8 +54,8 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief Record the crossroads to drive through, in order. Called by a
-    //! router once it has walked its search tree back to the start.
+    //! \brief Store the crossroads to pass through, in order. Called by a
+    //! router after it walks back from the search tree to the start.
     //! \param[in] first, last the crossroads, from the next one to the last.
     //--------------------------------------------------------------------------
     template <class Iterator>
@@ -69,9 +66,8 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief Forget the building the load was for, the building having been
-    //! demolished. The itinerary itself is left alone: the agent drives on and
-    //! looks again.
+    //! \brief Clear the destination after the building was removed. The route
+    //! stays: the agent keeps driving and searches again.
     //--------------------------------------------------------------------------
     void clearDestination()
     {
@@ -79,8 +75,8 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \return whether anything was found at all. False is an ordinary
-    //! answer: it means the city has nowhere to put what the agent carries.
+    //! \return true when a route was found. False means the city has no
+    //! place for the load.
     //--------------------------------------------------------------------------
     [[nodiscard]] bool isFound() const
     {
@@ -88,17 +84,17 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \return the building the load is for, or nullptr when none was
-    //! found or when it was demolished mid-trip.
+    //! \return the building for the load, or nullptr when none was
+    //! found or when it was removed during the trip.
     //--------------------------------------------------------------------------
-    [[nodiscard]] Unit* getDestination() const
+    [[nodiscard]] Building* getDestination() const
     {
         return m_destination;
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \return the segment the destination stands along, or nullptr when
-    //! it stands on a crossroads.
+    //! \return the segment the destination sits on, or nullptr when it
+    //! sits at a crossroads.
     //--------------------------------------------------------------------------
     [[nodiscard]] Segment* getApproachSegment() const
     {
@@ -106,8 +102,7 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \return where along the approach segment the destination stands,
-    //! in [0..1].
+    //! \return position on the approach segment, in [0..1].
     //--------------------------------------------------------------------------
     [[nodiscard]] float getApproachOffset() const
     {
@@ -115,8 +110,8 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \return the travel time of the whole trip, in seconds of game
-    //! time, under the traffic as it was when the search ran.
+    //! \return total travel time in seconds of game time, using traffic
+    //! at search time.
     //--------------------------------------------------------------------------
     [[nodiscard]] float getCost() const
     {
@@ -124,9 +119,8 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \return whether crossroads remain to be driven through. False
-    //! means the agent is on the last leg, which is either the door itself or
-    //! the stretch of the approach segment leading to it.
+    //! \return true when crossroads remain. False means the agent is on
+    //! the last leg: the door or the approach segment.
     //--------------------------------------------------------------------------
     [[nodiscard]] bool hasWaypointsLeft() const
     {
@@ -134,7 +128,7 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \return the next crossroads to drive to. Undefined when
+    //! \return the next crossroads to drive to. Do not call when
     //! hasWaypointsLeft() is false.
     //--------------------------------------------------------------------------
     [[nodiscard]] Node* getNextWaypoint() const
@@ -143,7 +137,7 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief Mark the next crossroads as driven through.
+    //! \brief Mark the next crossroads as passed.
     //--------------------------------------------------------------------------
     void takeWaypoint()
     {
@@ -151,8 +145,7 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \return an iterator on the first crossroads still to come, for
-    //! walking what is left of the trip.
+    //! \return an iterator on the first crossroads still ahead.
     //--------------------------------------------------------------------------
     std::vector<Node*>::const_iterator begin() const
     {
@@ -160,7 +153,7 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \return the end of what is left of the trip.
+    //! \return the end of the remaining route.
     //--------------------------------------------------------------------------
     std::vector<Node*>::const_iterator end() const
     {
@@ -168,7 +161,7 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \return how many crossroads are still to come.
+    //! \return how many crossroads remain.
     //--------------------------------------------------------------------------
     [[nodiscard]] size_t getWaypointCount() const
     {
@@ -177,41 +170,38 @@ public:
 
 private:
 
-    //! \brief The crossroads of the trip, in the order they are driven through.
-    //! The ones already behind the agent are still in there.
+    //! \brief Crossroads of the trip, in drive order. Passed ones stay in the
+    //! list.
     //!
-    //! Empty when the agent already stands at the last one, which happens when
-    //! the destination is on the node it is routed from, or on a segment
-    //! touching it.
+    //! Empty when the agent already stands at the last one. This happens when
+    //! the destination is on the start node or on a segment next to it.
     std::vector<Node*> m_nodes;
 
-    //! \brief How many leading entries of m_nodes have been driven through.
-    //! An index rather than removing the front entry: an agent walks its
-    //! itinerary one crossroads per tick, and shifting the whole vector down
-    //! each time makes a long trip quadratic.
+    //! \brief How many leading entries of m_nodes were passed. An index is
+    //! used instead of erasing from the front, because removing the front each
+    //! tick makes a long trip slow.
     size_t m_visited = 0u;
 
-    //! \brief The segment the destination stands along, or nullptr when it
-    //! stands on a crossroads.
+    //! \brief Segment the destination sits on, or nullptr at a crossroads.
     Segment* m_approachSegment = nullptr;
 
-    //! \brief Where along m_approachSegment the destination stands, in [0..1].
+    //! \brief Position on m_approachSegment, in [0..1].
     float m_approachOffset = 0.0f;
 
-    //! \brief The building the load is for, or nullptr when none was found.
-    Unit* m_destination = nullptr;
+    //! \brief Building for the load, or nullptr when none was found.
+    Building* m_destination = nullptr;
 
-    //! \brief Travel time of the whole trip, in seconds of game time, under the
-    //! traffic as it was when the search ran.
+    //! \brief Total travel time in seconds of game time, using traffic at
+    //! search time.
     float m_cost = 0.0f;
 
-    //! \brief Whether anything was found at all.
+    //! \brief True when a route was found.
     bool m_found = false;
 };
 
 //==============================================================================
-//! \brief How agents find somewhere to deliver. An interface, so a traffic
-//! assignment solver can be dropped in without City or Agent noticing.
+//! \brief Interface for finding delivery routes. Lets you swap the routing
+//! algorithm without changing City or Agent.
 //==============================================================================
 class IRouter
 {
@@ -220,29 +210,24 @@ public:
     virtual ~IRouter() = default;
 
     //--------------------------------------------------------------------------
-    //! \brief Find the cheapest building that accepts that load.
+    //! \brief Find the cheapest building that accepts the load.
     //! \param[in] fromNode the crossroads to start from.
-    //! \param[in] searchTarget the name looked for, matched against the
-    //! \c targets of the buildings.
-    //! \param[in] resources the load, tested against the room left in the
-    //! candidates. Not modified.
-    //! \return the itinerary. Route::isFound() is false when nothing accepts
-    //! it.
+    //! \param[in] searchTarget the name to match against building targets.
+    //! \param[in] resources the load, checked against free space. Not modified.
+    //! \return the route. Route::isFound() is false when nothing accepts it.
     //--------------------------------------------------------------------------
     [[nodiscard]] virtual Route findRoute(Node& fromNode,
                                           Name const& searchTarget,
                                           Resources const& resources) = 0;
 
     //--------------------------------------------------------------------------
-    //! \brief The travel time of the trip findRoute() would return, without
-    //! keeping the itinerary. This is what tells an agent that the road it is
-    //! on has become worse than the alternative.
+    //! \brief Return the travel time of findRoute() without storing the route.
+    //! An agent uses this to see if the current road is worse than another.
     //! \param[in] fromNode the crossroads to start from.
-    //! \param[in] searchTarget the name looked for.
-    //! \param[in] resources the load, tested against the room left in the
-    //! candidates. Not modified.
-    //! \return the travel time in seconds of game time, or ROUTING_INFINITY
-    //! when nothing accepts the load.
+    //! \param[in] searchTarget the name to match.
+    //! \param[in] resources the load, checked against free space. Not modified.
+    //! \return travel time in seconds of game time, or ROUTING_INFINITY when
+    //! nothing accepts the load.
     //--------------------------------------------------------------------------
     [[nodiscard]] virtual float
     computeShortestPathCost(Node& fromNode,
@@ -250,22 +235,21 @@ public:
                             Resources const& resources) = 0;
 
     //--------------------------------------------------------------------------
-    //! \brief The next crossroads to drive to, without keeping an itinerary.
+    //! \brief Return the next crossroads without storing a full route.
     //! \param[in] fromNode the crossroads to start from.
-    //! \param[in,out] searchTarget the name looked for. Unchanged by the
-    //! default router.
+    //! \param[in,out] searchTarget the name to match. Unchanged by the default
+    //! router.
     //! \param[in,out] resources the load. Unchanged by the default router.
-    //! \return the next node of the trip, \p fromNode itself when the
-    //! destination is right there, or a random neighbour when nothing was
-    //! found: an agent with nowhere to go wanders rather than stops.
+    //! \return the next node, \p fromNode when the destination is there, or a
+    //! random neighbour when nothing was found.
     //--------------------------------------------------------------------------
     virtual Node*
     findNextNode(Node& fromNode, Name& searchTarget, Resources& resources) = 0;
 
     //--------------------------------------------------------------------------
-    //! \brief Seed the generator behind the wandering, so a run can be
-    //! reproduced. Does nothing on a router that never guesses.
-    //! \param[in] seed the value to seed the generator with.
+    //! \brief Set the random seed for wandering. Does nothing on a router that
+    //! never picks at random.
+    //! \param[in] seed the seed value.
     //--------------------------------------------------------------------------
     virtual void setRandomSeed(unsigned seed)
     {

@@ -212,7 +212,7 @@ bool typeExists(Ruleset const& script, std::string const& name)
     }
     try
     {
-        script.getUnitType(name);
+        script.getBuildingType(name);
         return true;
     }
     catch (...)
@@ -269,8 +269,8 @@ std::vector<std::string> placedTypes(Simulation const& simulation)
             for (auto const& segment : pathIt.second->getSegments())
                 add(segment->getTypeName());
         }
-        for (auto const& unit : city.getUnits())
-            add(unit->getTypeName());
+        for (auto const& building: city.getBuildings())
+            add(building->getTypeName());
         for (auto const& zone : city.getZones())
             add(zone->getTypeName());
         for (auto const& agent : city.getAgents())
@@ -1107,16 +1107,16 @@ void GlassBoxApp::onDrawStatusBar()
                 (unsigned long long)m_simulation->getClock().getTicks(),
                 m_simulation->getTimeScale());
 
-    size_t units = 0u;
+    size_t buildings = 0u;
     size_t agents = 0u;
     for (auto const& it : m_simulation->getCities())
     {
-        units += it.second->getUnits().size();
+        buildings += it.second->getBuildings().size();
         agents += it.second->getAgents().size();
     }
 
     ImGui::SameLine(0.0f, 20.0f);
-    ImGui::Text("%zu unit(s), %zu agent(s)", units, agents);
+    ImGui::Text("%zu building(s), %zu agent(s)", buildings, agents);
 
     if (m_reload_notice_timer > 0.0f)
     {

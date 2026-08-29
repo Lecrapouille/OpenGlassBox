@@ -51,7 +51,7 @@ struct LayerSettings
 };
 
 // ****************************************************************************
-//! \brief What the Inspector shows. Units and Nodes are stable addresses, an
+//! \brief What the Inspector shows. Buildings and Nodes are stable addresses, an
 //! Agent is referenced by its identifier because it is destroyed as soon as it
 //! delivered its resources.
 // ****************************************************************************
@@ -60,7 +60,7 @@ struct Selection
     enum class Kind
     {
         None,
-        Unit,
+        Building,
         Node,
         Agent,
         Segment,
@@ -71,7 +71,7 @@ struct Selection
     Kind kind = Kind::None;
     //! \brief Name of the City the selected entity belongs to.
     std::string city;
-    Unit* unit = nullptr;
+    Building* building = nullptr;
     Node* node = nullptr;
     Segment* segment = nullptr;
     Zone* zone = nullptr;
@@ -104,14 +104,14 @@ struct DebugState
 
     bool showGrid = true;
     bool showPaths = true;
-    bool showUnits = true;
+    bool showBuildings = true;
     bool showAgents = true;
     bool showNodes = true;
     bool showLabels = true;
     bool showZones = true;
     //! \brief Color and thicken the Segments by their flow over capacity ratio.
     bool showTraffic = true;
-    //! \brief Draw the layerRadius disc of the selected Unit.
+    //! \brief Draw the layerRadius disc of the selected Building.
     bool showSelectionRadius = true;
 
     Selection selection;

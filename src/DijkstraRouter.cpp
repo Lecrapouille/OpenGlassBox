@@ -8,7 +8,7 @@
 #include "OpenGlassBox/Config.hpp"
 #include "OpenGlassBox/DijkstraRouter.hpp"
 
-#include "OpenGlassBox/Unit.hpp"
+#include "OpenGlassBox/Building.hpp"
 #include "OpenGlassBox/Vector.hpp"
 
 #include <algorithm>
@@ -20,31 +20,31 @@ namespace ogb
 namespace
 {
 //! \brief First building on a crossroads that accepts the load, or nullptr.
-Unit* acceptingUnitOnNode(Node* current,
+Building* acceptingBuildingOnNode(Node* current,
                           Name const& searchTarget,
                           Resources const& resources)
 {
-    std::vector<Unit*> const& units = current->getUnits();
-    size_t i = units.size();
+    std::vector<Building*> const& buildings = current->getBuildings();
+    size_t i = buildings.size();
     while (i--)
     {
-        if (units[i]->accepts(searchTarget, resources))
-            return units[i];
+        if (buildings[i]->accepts(searchTarget, resources))
+            return buildings[i];
     }
     return nullptr;
 }
 
 //! \brief First building along a segment that accepts the load, or nullptr.
-Unit* acceptingUnitOnSegment(Segment* segment,
+Building* acceptingBuildingOnSegment(Segment* segment,
                          Name const& searchTarget,
                          Resources const& resources)
 {
-    std::vector<Unit*> const& units = segment->getUnits();
-    size_t i = units.size();
+    std::vector<Building*> const& buildings = segment->getBuildings();
+    size_t i = buildings.size();
     while (i--)
     {
-        if (units[i]->accepts(searchTarget, resources))
-            return units[i];
+        if (buildings[i]->accepts(searchTarget, resources))
+            return buildings[i];
     }
     return nullptr;
 }
@@ -106,7 +106,7 @@ void Dijkstra::beginSearch(size_t const nodeCount)
 //------------------------------------------------------------------------------
 Route Dijkstra::reconstruct(Node const& fromNode,
                             Node* goalNode,
-                            Unit* destination,
+                            Building* destination,
                             Segment* approachSegment,
                             float approachOffset,
                             float cost)
@@ -184,29 +184,29 @@ Route Dijkstra::findRoute(Node& fromNode,
 
         // A building on the crossroads itself ends the search: nothing further
         // out can be cheaper, since every segment costs something.
-        if (Unit* unit =
-                acceptingUnitOnNode(currentNode, searchTarget, resources))
+        if (Building* building =
+                acceptingBuildingOnNode(currentNode, searchTarget, resources))
         {
-            return reconstruct(fromNode, currentNode, unit, nullptr, 0.0f, g);
+            return reconstruct(fromNode, currentNode, building, nullptr, 0.0f, g);
         }
 
         // A building standing along one of the streets is only a candidate: a
         // crossroads one hop further may hold a cheaper one.
         for (auto* segment : currentNode->getSegments())
         {
-            Unit* unit = acceptingUnitOnSegment(segment, searchTarget, resources);
-            if (unit == nullptr)
+            Building* building = acceptingBuildingOnSegment(segment, searchTarget, resources);
+            if (building == nullptr)
                 continue;
 
             float const extra =
                 segment->getTravelTime() * ((&segment->getFrom() == currentNode)
-                                         ? unit->getSegmentOffset()
-                                         : (1.0f - unit->getSegmentOffset()));
+                                         ? building->getSegmentOffset()
+                                         : (1.0f - building->getSegmentOffset()));
             float const cost = g + extra;
             if (cost < bestCost)
             {
                 best = reconstruct(
-                    fromNode, currentNode, unit, segment, unit->getSegmentOffset(), cost);
+                    fromNode, currentNode, building, segment, building->getSegmentOffset(), cost);
                 bestCost = cost;
             }
         }

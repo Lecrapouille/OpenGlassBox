@@ -34,7 +34,7 @@ TEST(TestsCitySave, LoadShippedParis)
     City& city = *simulation.getCities().begin()->second;
     ASSERT_STREQ(city.getName().c_str(), "Paris");
     ASSERT_FALSE(city.getPaths().empty());
-    ASSERT_GE(city.getUnits().size(), 5u);
+    ASSERT_GE(city.getBuildings().size(), 5u);
     ASSERT_FALSE(city.getZones().empty());
 }
 
@@ -94,7 +94,7 @@ TEST(TestsCitySave, LoadShippedBraessAndGrids)
 //! capacities belong to the ruleset. Loading used to assign the whole bin, so
 //! every building came back with a capacity of zero and refused every Agent and
 //! every rule that adds anything.
-TEST(TestsCitySave, LoadedUnitsKeepTheCapacitiesOfTheirType)
+TEST(TestsCitySave, LoadedBuildingsKeepTheCapacitiesOfTheirType)
 {
     Simulation simulation;
     ASSERT_TRUE(simulation.loadScriptFile(testCityRuleset()));
@@ -104,14 +104,14 @@ TEST(TestsCitySave, LoadedUnitsKeepTheCapacitiesOfTheirType)
 
     City& city = *simulation.getCities().begin()->second;
     uint32_t checked = 0u;
-    for (auto& unit : city.getUnits())
+    for (auto& building: city.getBuildings())
     {
-        UnitType const& type = simulation.getRuleset().getUnitType(unit->getTypeName().str());
+        BuildingType const& type = simulation.getRuleset().getBuildingType(building->getTypeName().str());
         for (Resource const& capped : type.resources.getAll())
         {
-            ASSERT_EQ(unit->getResources().getCapacity(capped.getTypeName()),
+            ASSERT_EQ(building->getResources().getCapacity(capped.getTypeName()),
                       capped.getCapacity())
-                << unit->getTypeName() << " lost the capacity of " << capped.getTypeName();
+                << building->getTypeName() << " lost the capacity of " << capped.getTypeName();
             ++checked;
         }
     }

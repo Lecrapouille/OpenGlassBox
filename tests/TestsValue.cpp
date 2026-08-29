@@ -14,7 +14,7 @@ TEST(TestsValue, TestsValue)
     TestWorld cityWorld("Paris", 8u, 8u);
     City& city = cityWorld.city;
     Node n(42u, Vector3f(1.0f, 2.0f, 3.0f));
-    Unit unit(keep<UnitType>("unit"), n, city);
+    Building building(keep<BuildingType>("house"), n, city);
     Resources locals, globals;
     RuleContext context;
 
@@ -23,7 +23,7 @@ TEST(TestsValue, TestsValue)
     globals.addResource("money", 5u);
     globals.setCapacity("money", 50u);
     context.city = &city;
-    context.unit = &unit;
+    context.building = &building;
     context.locals = &locals;
     context.globals = &globals;
     context.cell.u = context.cell.v = 4u;

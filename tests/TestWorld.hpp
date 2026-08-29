@@ -23,12 +23,12 @@ using namespace ogb;
 //! \brief Build a script-defined type and keep it alive until the test binary
 //! exits.
 //!
-//! Units, Agents, Segments, Paths, Zones and Layers hold their type by reference: one
+//! Buildings, Agents, Segments, Paths, Zones and Layers hold their type by reference: one
 //! recipe is shared by every entity of that kind, and in a running simulation
 //! ScriptDefinitions owns it and outlives every City. A test writing
-//! \c city.addUnit(UnitType("Home"), node) hands over a temporary that dies at
+//! \c city.addBuilding(BuildingType("Home"), node) hands over a temporary that dies at
 //! the end of the statement, and the building is left reading freed memory. It
-//! worked for years by luck, until a change of layout in Unit made one such
+//! worked for years by luck, until a change of layout in Building made one such
 //! test read a name that was no longer there.
 //!
 //! \param[in] args forwarded to the constructor of TYPE.

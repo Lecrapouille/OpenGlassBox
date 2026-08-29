@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------------
 
 //! \file Rule.hpp
-//! \brief Rule base classes and layer, unit and zone rule implementations.
+//! \brief Base Rule classes. Rules for Layer, Building and Zone.
 
 #ifndef OPEN_GLASSBOX_RULE_HPP
 #define OPEN_GLASSBOX_RULE_HPP
@@ -22,68 +22,63 @@ namespace ogb
 {
 
 class City;
-class Unit;
+class Building;
 class Layer;
 class Zone;
 class Resources;
 
 //==============================================================================
-//! \brief Everything a rule is allowed to look at while it runs: where it is
-//! running, on whose behalf, and what it may read and write.
+//! \brief What a Rule can see and change while it runs.
 //!
-//! A rule holds no state of its own and is shared by every entity of its kind,
-//! so all of the "where" has to be handed to it. Which pointers are set says
-//! what kind of rule is running: a rule of a building fills in \c unit, a rule
-//! of a layer fills in \c layer, a rule of a zone fills in \c zone. \c city is
-//! always set.
+//! A Rule has no state. The engine passes all context each run.
+//! Set \c building for a Building Rule, \c layer for a Layer Rule, \c zone for a Zone Rule.
+//! \c city is always set.
 //!
-//! The context is held by the entity running the rule and reused from tick to
-//! tick, since a rule of a layer fires over thousands of cells and building one
-//! per cell would cost more than the rule itself.
+//! The entity keeps one context and reuses it each tick.
+//! A Layer Rule runs on many cells. One context per cell costs too much.
 //==============================================================================
 struct RuleContext
 {
-    //! \brief The city the rule is running on behalf of. Never null while a
-    //! rule is running.
+    //! \brief The City this Rule runs for. Never null during a run.
     City* city = nullptr;
-    //! \brief The building the rule belongs to, or null when it does not belong
-    //! to one.
-    Unit* unit = nullptr;
-    //! \brief The layer the rule belongs to, or null. Only used to tell the
-    //! debugger which entity a trace came from: the commands reach the layer
-    //! through the city.
+    //! \brief The Building this Rule belongs to, or null if none.
+    Building* building = nullptr;
+    //! \brief The Layer this Rule belongs to, or null.
+    //! Used so the debugger knows where a trace came from.
+    //! Commands reach the Layer through the City.
     Layer* layer = nullptr;
-    //! \brief The zone the rule belongs to, or null.
+    //! \brief The Zone this Rule belongs to, or null.
     Zone* zone = nullptr;
-    //! \brief The calendar. Never null while a rule is running, since
-    //! \c hour \c between has nothing to read otherwise, and a rule asking for
-    //! the time without one simply never fires.
+    //! \brief The calendar. Never null during a run.
+    //! Commands like \c hour \c between need it.
+    //! A Rule without a clock never runs when it asks for time.
     SimulationClock const* clock = nullptr;
-    //! \brief What \c local reads and writes: the resources of the building or
-    //! of the cell the rule is running on.
+    //! \brief What \c local reads and writes.
+    //! Resources of the Building or of the cell the Rule runs on.
     Resources* locals = nullptr;
-    //! \brief What \c global reads and writes: the resources of the city as a
-    //! whole, such as money.
+    //! \brief What \c global reads and writes.
+    //! City-wide resources, such as Money.
     Resources* globals = nullptr;
-    //! \brief The cell the rule acts on. Its coordinates are signed because
-    //! the grid is unbounded in the four directions.
+    //! \brief The cell the Rule acts on.
+    //! Coordinates are signed. The grid has no fixed bounds.
     Cell cell;
-    //! \brief How far around that cell a command reaching into a layer may
-    //! reach, as a taxicab distance. Comes from the footprint of the building.
+    //! \brief How far a Layer command may reach from \c cell.
+    //! Taxicab distance. Comes from the Building footprint.
     uint32_t radius = 0u;
 };
 
 //==============================================================================
-//! \brief One line inside a rule, as the script wrote it.
+//! \brief One line in a Rule, as written in the script.
 //!
-//! Everything a rule does is a command: testing a resource, testing the hour,
-//! adding to a layer, sending an agent out, putting a building up. A command is
-//! asked twice, and the split is what makes a rule all-or-nothing: first
-//! whether it could run, then to actually run.
+//! A Rule is made of commands: test a resource, test the hour,
+//! add to a Layer, send an Agent, spawn a Building, and more.
+//! Each command runs in two steps:
+//! first check if it can run, then run it.
+//! That makes a Rule all-or-nothing.
 //!
-//! Commands are created by the parser, owned by the ruleset, and shared by
-//! every entity running the rule. They therefore hold no state of their own:
-//! what they need comes from the RuleContext.
+//! The parser creates commands. The Ruleset owns them.
+//! Every entity shares the same commands.
+//! Commands have no state. They read from RuleContext.
 //==============================================================================
 class IRuleCommand
 {
@@ -92,40 +87,40 @@ public:
     virtual ~IRuleCommand() = default;
 
     //--------------------------------------------------------------------------
-    //! \brief Could this command run right now?
+    //! \brief Can this command run now?
     //!
-    //! Asked for every command of the rule before any of them is applied, so a
-    //! command must not change anything here.
+    //! The engine asks every command before any runs.
+    //! Do not change anything here.
     //!
-    //! \param[in,out] context where the rule is running.
-    //! \return false to stop the whole rule, which then fires nothing at all.
+    //! \param[in,out] context where the Rule runs.
+    //! \return false stops the whole Rule. Nothing runs.
     //--------------------------------------------------------------------------
     virtual bool validate(RuleContext& context) = 0;
 
     //--------------------------------------------------------------------------
-    //! \brief Do it. Only called once every command of the rule has agreed, so
-    //! it may assume its preconditions hold.
-    //! \param[in,out] context where the rule is running.
+    //! \brief Run the command.
+    //! Called only after every command passed validate.
+    //! \param[in,out] context where the Rule runs.
     //--------------------------------------------------------------------------
     virtual void execute(RuleContext& context) = 0;
 
     //--------------------------------------------------------------------------
-    //! \brief \return the command in words, close to what the script wrote, for
-    //! the rule log and the inspector of the demo. Built on demand rather than
-    //! stored, so it is not free.
+    //! \return the command as text, close to the script.
+    //! Used by the rule log and the demo inspector.
+    //! Built on demand. Not stored.
     //--------------------------------------------------------------------------
     [[nodiscard]] virtual std::string getDescription() const = 0;
 };
 
 //==============================================================================
-//! \brief Somewhere a command may read a number from and write one back to.
+//! \brief Where a command reads or writes a number.
 //!
-//! A script writes \c local \c People, \c global \c Money or \c layer \c Water,
-//! and each of those becomes one of these. Having them behind one interface is
-//! what lets a single command such as \c add serve all three: the command knows
-//! how much, the value knows where.
+//! The script writes \c local \c People, \c global \c Money, or \c layer \c Water.
+//! Each becomes an IRuleValue.
+//! One interface lets one command, such as \c add, work for all three.
+//! The command knows the amount. The value knows the place.
 //!
-//! See RuleValue.hpp for the three implementations.
+//! See RuleValue.hpp for the three types.
 //==============================================================================
 class IRuleValue
 {
@@ -134,67 +129,67 @@ public:
     virtual ~IRuleValue() = default;
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in,out] context where the rule is running.
-    //! \return how much there is right now. For a layer read over a footprint,
-    //! the sum over the cells covered.
+    //! \param[in,out] context where the Rule runs.
+    //! \return the current amount.
+    //! For a Layer over a footprint, the sum over covered cells.
     //--------------------------------------------------------------------------
     virtual uint32_t get(RuleContext& context) = 0;
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in,out] context where the rule is running.
-    //! \return how much there could be at most, which is what a test against a
-    //! proportion needs. For a layer, the cap of a cell times the number of
-    //! cells covered.
+    //! \param[in,out] context where the Rule runs.
+    //! \return the maximum amount.
+    //! Used for proportion tests.
+    //! For a Layer, cell cap times number of covered cells.
     //--------------------------------------------------------------------------
     [[nodiscard]] virtual uint32_t getCapacity(RuleContext& context) = 0;
 
     //--------------------------------------------------------------------------
-    //! \brief Add, up to the capacity. What overflows is dropped.
-    //! \param[in,out] context where the rule is running.
+    //! \brief Add up to capacity. Extra amount is dropped.
+    //! \param[in,out] context where the Rule runs.
     //! \param[in] toAdd how much to add.
     //--------------------------------------------------------------------------
     virtual void add(RuleContext& context, uint32_t toAdd) = 0;
 
     //--------------------------------------------------------------------------
-    //! \brief Take away, down to zero. What is missing is not taken.
-    //! \param[in,out] context where the rule is running.
-    //! \param[in] toRemove how much to take.
+    //! \brief Remove down to zero. Missing amount is not taken.
+    //! \param[in,out] context where the Rule runs.
+    //! \param[in] toRemove how much to remove.
     //--------------------------------------------------------------------------
     virtual void remove(RuleContext& context, uint32_t toRemove) = 0;
 
     //--------------------------------------------------------------------------
-    //! \brief \return the name of the kind of resource, such as "People".
+    //! \return the resource name, such as "People".
     //--------------------------------------------------------------------------
     [[nodiscard]] virtual Name const& getTypeName() const = 0;
 };
 
 //==============================================================================
-//! \brief A rule: a name, how often it fires, and the commands it is made of.
+//! \brief A Rule: a name, how often it runs, and its commands.
 //!
-//! This is the whole of the scripting language at runtime. An entity runs its
-//! rules once every so many ticks; a rule asks each of its commands whether it
-//! could run, and only if every one of them agrees does it apply them all. A
-//! rule therefore never half fires, which is what lets a script say "take a
-//! person out of the house and put them in a car" without ever losing one.
+//! This is the scripting language at runtime.
+//! Each entity runs its Rules every N ticks.
+//! The engine asks each command if it can run.
+//! If all agree, it runs them all.
+//! A Rule never runs halfway.
+//! Example: "remove 1 People and add 1 to a car" does both or neither.
 //!
-//! Rules are owned by the ruleset and shared by every entity of the kind that
-//! lists them: a thousand houses run the same RuleUnit. That is why they hold
-//! no state and are handed a RuleContext instead.
+//! The Ruleset owns Rules. Every entity of one kind shares them.
+//! Rules have no state. They use RuleContext instead.
 //!
 //! Example:
 //! \code
-//! // Rules are declared by the script rather than by hand, but running one is
-//! // no more than this.
+//! // Rules come from the script, not from hand-written code.
+//! // Running one looks like this:
 //! RuleContext context;
 //! context.city = &city;
-//! context.unit = &home;
+//! context.building = &home;
 //! context.clock = &simulation.getClock();
 //! context.locals = &home.getResources();
 //! context.globals = &city.getGlobals();
 //!
-//! for (RuleUnit* rule : home.getRules())
+//! for (RuleBuilding* rule : home.getRules())
 //! {
-//!     // A script may name a rule that does not exist, hence the test.
+//!     // The script may name a Rule that does not exist.
 //!     if ((rule != nullptr) &&
 //!         (home.getTicks() % rule->getPeriodTicks(ticksPerMinute) == 0u))
 //!     {
@@ -203,9 +198,9 @@ public:
 //! }
 //! \endcode
 //!
-//! The matching script, where every line of the body is one command:
+//! Matching script. Each body line is one command:
 //! \code
-//! unitRule SendPeopleToWork
+//! buildingRule SendPeopleToWork
 //!     rate 45 minutes
 //!     hour between 8 18
 //!     local People greater 0
@@ -219,40 +214,39 @@ class IRule
 public:
 
     //--------------------------------------------------------------------------
-    //! \brief What Trace::blockingCommand holds when the rule fired: nothing
-    //! blocked it.
+    //! \brief Value for Trace::blockingCommand when the Rule ran.
+    //! Nothing blocked it.
     //--------------------------------------------------------------------------
     static constexpr size_t NO_BLOCKING_COMMAND = size_t(-1);
 
     //--------------------------------------------------------------------------
-    //! \brief What happened during a single attempt to run a rule, which is
-    //! what the rule log of the demo is made of.
+    //! \brief What happened during one attempt to run a Rule.
+    //! The demo rule log uses this.
     //--------------------------------------------------------------------------
     struct Trace
     {
-        //! \brief The rule that was attempted. Never null.
+        //! \brief The Rule that was attempted. Never null.
         IRule const* rule = nullptr;
-        //! \brief Where it was attempted. Valid for the duration of the
-        //! notification only: it is the working context of a live entity, and
-        //! it will have moved on by the next tick.
+        //! \brief Where it was attempted.
+        //! Valid only during the notification.
+        //! It points at a live entity context. It moves on by the next tick.
         RuleContext const* context = nullptr;
-        //! \brief True when every command agreed and all of them were applied.
+        //! \brief True when every command passed and all ran.
         bool success = false;
-        //! \brief Which command refused, as an index into getCommands(), or
-        //! NO_BLOCKING_COMMAND when the rule fired. This is the answer to "why
-        //! does this rule, which looks right, never do anything?"
+        //! \brief Index of the command that failed, in getCommands().
+        //! NO_BLOCKING_COMMAND when the Rule ran.
+        //! Answers: "why does this Rule never do anything?"
         size_t blockingCommand = NO_BLOCKING_COMMAND;
     };
 
     //--------------------------------------------------------------------------
-    //! \brief Observer of every attempt to run a rule, anywhere. Meant for the
-    //! debugger of the demo, which turns the traces into a filterable log.
+    //! \brief Watches every attempt to run a Rule.
+    //! Used by the demo debugger. It turns traces into a filterable log.
     //!
-    //! One observer at a time, and a global one: rules are shared by every
-    //! city, so a pointer per rule would cost memory for something that is off
-    //! most of the time. While none is installed, nothing is built and no
-    //! virtual call is made, so the cost of the feature when unused is one null
-    //! pointer test per attempt.
+    //! Only one listener at a time, shared globally.
+    //! Rules are shared by every City.
+    //! A pointer per Rule would waste memory when the feature is off.
+    //! When no listener is set, the cost is one null pointer test per attempt.
     //--------------------------------------------------------------------------
     class Listener
     {
@@ -261,16 +255,16 @@ public:
         virtual ~Listener() = default;
 
         //----------------------------------------------------------------------
-        //! \brief A rule was attempted.
-        //! \param[in] trace what happened. Do not keep the pointers it holds.
+        //! \brief A Rule was attempted.
+        //! \param[in] trace what happened. Do not keep the pointers inside.
         //----------------------------------------------------------------------
         virtual void onRuleExecuted(Trace const& trace) = 0;
     };
 
     //--------------------------------------------------------------------------
-    //! \brief Install the observer of rule attempts.
-    //! \param[in] listener the observer, or nullptr to detach. Not owned, and
-    //! has to outlive the simulation.
+    //! \brief Set the Rule attempt listener.
+    //! \param[in] listener the listener, or nullptr to remove it.
+    //! Not owned. Must outlive the Simulation.
     //--------------------------------------------------------------------------
     static void setListener(Listener* listener)
     {
@@ -278,8 +272,7 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \return the observer in place, or nullptr when nobody is
-    //! watching.
+    //! \return the current listener, or nullptr if none.
     //--------------------------------------------------------------------------
     [[nodiscard]] static Listener* getListener()
     {
@@ -287,13 +280,12 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] name name of the rule, as the script wrote it.
-    //! \param[in] rate how many ticks between two runs, or zero when the script
-    //! gave a duration instead.
-    //! \param[in] rateMinutes how many game minutes between two runs, or zero
-    //! when the script counted ticks. See getPeriodTicks().
-    //! \param[in] commands the body of the rule, copied. The commands
-    //! themselves are not owned: the ruleset owns them.
+    //! \param[in] name Rule name from the script.
+    //! \param[in] rate ticks between runs, or zero if the script used a duration.
+    //! \param[in] rateMinutes game minutes between runs, or zero if the script
+    //! counted ticks. See getPeriodTicks().
+    //! \param[in] commands Rule body, copied.
+    //! The commands are not owned here. The Ruleset owns them.
     //--------------------------------------------------------------------------
     IRule(Name const& name,
           uint32_t rate,
@@ -309,21 +301,18 @@ public:
     virtual ~IRule() = default;
 
     //--------------------------------------------------------------------------
-    //! \brief Attempt the rule: ask every command, and apply them all only if
-    //! every one of them agreed.
+    //! \brief Try to run the Rule.
+    //! Ask every command. Run all only if every one passes.
     //!
-    //! That is what makes a rule atomic. A rule saying "take a person out of
-    //! the house and put them in a car" either does both or does neither, so
-    //! nobody is ever lost between the two.
+    //! This makes a Rule atomic.
+    //! "Remove 1 People and put them in a car" does both or neither.
     //!
-    //! \note The commands are walked from the last to the first, both when
-    //! asking and when applying. It makes no difference to a rule whose
-    //! commands are independent, which is what a ruleset normally writes, but a
-    //! rule whose commands touch the same resource sees them in the reverse of
-    //! the order the script wrote.
+    //! \note Commands run from last to first, in validate and execute.
+    //! Independent commands are not affected.
+    //! Commands that touch the same resource run in reverse script order.
     //!
-    //! \param[in,out] context where to run it.
-    //! \return true when the rule fired.
+    //! \param[in,out] context where to run.
+    //! \return true when the Rule ran.
     //--------------------------------------------------------------------------
     virtual bool execute(RuleContext& context)
     {
@@ -348,16 +337,16 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief Fill in the body of a rule that was declared empty.
+    //! \brief Fill in a Rule that was declared empty.
     //!
-    //! The parser declares every rule by name before it reads any of their
-    //! bodies, so that a layer may list a rule written further down the file,
-    //! or a rule may fall back on one declared after it. A rule is therefore
-    //! born empty and filled in on the second pass.
+    //! The parser declares every Rule by name before it reads bodies.
+    //! A Layer can list a Rule written later in the file.
+    //! A Rule can use a fallback declared after it.
+    //! Rules start empty and are filled on the second pass.
     //!
-    //! \param[in] rate how many ticks between two runs.
-    //! \param[in] rateMinutes how many game minutes between two runs.
-    //! \param[in] commands the body of the rule.
+    //! \param[in] rate ticks between runs.
+    //! \param[in] rateMinutes game minutes between runs.
+    //! \param[in] commands Rule body.
     //--------------------------------------------------------------------------
     void reset(uint32_t rate,
                uint32_t rateMinutes,
@@ -369,8 +358,8 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \return the name of the rule, as the script wrote it. What the
-    //! inspector shows and what a fallback refers to.
+    //! \return the Rule name from the script.
+    //! Shown in the inspector. Used by fallbacks.
     //--------------------------------------------------------------------------
     [[nodiscard]] std::string const& getName() const
     {
@@ -378,8 +367,8 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \return the period as the script wrote it, in ticks. Meaningless
-    //! when the script gave a duration instead: ask getPeriodTicks().
+    //! \return the period in ticks, as written in the script.
+    //! Not used when the script gave a duration. Use getPeriodTicks().
     //--------------------------------------------------------------------------
     [[nodiscard]] uint32_t getRate() const
     {
@@ -387,8 +376,8 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \return the period as the script wrote it, in game minutes, or
-    //! zero when the script counted ticks.
+    //! \return the period in game minutes, as written in the script.
+    //! Zero when the script counted ticks.
     //--------------------------------------------------------------------------
     [[nodiscard]] uint32_t getRateMinutes() const
     {
@@ -396,17 +385,16 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief How many ticks between two runs of the rule.
+    //! \brief Ticks between two runs of the Rule.
     //!
-    //! A script may write \c rate \c 7, which counts ticks, or
-    //! \c rate \c 30 \c minutes, which counts game time and is the form a
-    //! reader can reason about. The second is turned into ticks here rather
-    //! than while parsing, so that changing TimeConfig::ticksPerMinute
-    //! rescales the whole ruleset instead of leaving it behind.
+    //! The script may write \c rate \c 7 (ticks)
+    //! or \c rate \c 30 \c minutes (game time).
+    //! Minutes are converted to ticks here, not at parse time.
+    //! Changing TimeConfig::ticksPerMinute rescales the whole Ruleset.
     //!
-    //! \param[in] ticksPerMinute how many ticks make a game minute, from the
-    //! settings. Zero is read as one.
-    //! \return the period, never zero: a rule fires at least every tick.
+    //! \param[in] ticksPerMinute ticks per game minute, from settings.
+    //! Zero is treated as one.
+    //! \return the period. Never zero. A Rule runs at least every tick.
     //--------------------------------------------------------------------------
     [[nodiscard]] uint32_t getPeriodTicks(uint32_t ticksPerMinute) const
     {
@@ -418,9 +406,9 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \return the body of the rule, in the order the script wrote it.
-    //! Not owned: the ruleset owns the commands. Indexed by
-    //! Trace::blockingCommand.
+    //! \return the Rule body in script order.
+    //! Not owned. The Ruleset owns the commands.
+    //! Indexed by Trace::blockingCommand.
     //--------------------------------------------------------------------------
     [[nodiscard]] std::vector<IRuleCommand*> const& getCommands() const
     {
@@ -430,12 +418,11 @@ public:
 protected:
 
     //--------------------------------------------------------------------------
-    //! \brief Tell the observer how an attempt went. A null pointer test when
-    //! nobody is watching, which is the usual case.
-    //! \param[in] context where the rule was attempted.
-    //! \param[in] success whether it fired.
-    //! \param[in] blockingCommand which command refused, or
-    //! NO_BLOCKING_COMMAND.
+    //! \brief Tell the listener how the attempt went.
+    //! One null pointer test when no listener is set.
+    //! \param[in] context where the Rule was attempted.
+    //! \param[in] success whether the Rule ran.
+    //! \param[in] blockingCommand failed command index, or NO_BLOCKING_COMMAND.
     //--------------------------------------------------------------------------
     void notify(RuleContext const& context,
                 bool success,
@@ -450,30 +437,28 @@ protected:
 
 private:
 
-    //! \brief The one observer of rule attempts, shared by every rule of every
-    //! city. Not owned.
+    //! \brief The one Rule attempt listener, shared by every Rule in every City.
+    //! Not owned.
     static Listener* s_listener;
-    //! \brief Name of the rule, as the script wrote it.
+    //! \brief Rule name from the script.
     std::string m_type;
-    //! \brief Period in ticks, when the script counted ticks.
+    //! \brief Period in ticks when the script counted ticks.
     uint32_t m_rate = 1u;
-    //! \brief Period in game minutes, when the script gave a duration.
+    //! \brief Period in game minutes when the script used a duration.
     uint32_t m_rateMinutes = 0u;
-    //! \brief The body of the rule. Not owned: the ruleset owns the commands.
+    //! \brief Rule body. Not owned. The Ruleset owns the commands.
     std::vector<IRuleCommand*> m_commands;
 };
 
 //==============================================================================
-//! \brief A rule belonging to a layer, run over the cells of a city.
+//! \brief A Rule for a Layer. It runs over City cells.
 //!
-//! What makes a forest spread, pollution creep, or land value follow its
-//! neighbours. Such a rule fires once per cell, which is a great many times per
-//! tick, and that is what \c randomTiles is for: it lets the layer visit only a
-//! share of its cells on each run and still reach the same behaviour on
-//! average, at a fraction of the cost.
+//! Examples: forest spread, pollution creep, land value from neighbours.
+//! It runs once per cell, many times per tick.
+//! \c randomTiles lets the Layer visit only part of its cells each run.
+//! Over time the behaviour matches visiting all cells, at lower cost.
 //!
-//! Example script, where the share is asked for on the command that reads the
-//! layer:
+//! Example script. The share is set on the command that reads the Layer:
 //! \code
 //! layerRule CreateGrass
 //!     rate 20 minutes
@@ -487,8 +472,7 @@ class RuleLayer: public IRule
 public:
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] type the rule as the script declared it. Read here and
-    //! not kept.
+    //! \param[in] type Rule as declared in the script. Read here, not kept.
     //--------------------------------------------------------------------------
     explicit RuleLayer(RuleLayerType const& type)
         : IRule(type.name, type.rate, type.rateMinutes, type.commands),
@@ -498,8 +482,8 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief Fill in a rule that was declared empty on the second parser pass.
-    //! \param[in] type the rule as the script declared it.
+    //! \brief Fill in a Rule declared empty on the second parser pass.
+    //! \param[in] type Rule as declared in the script.
     //--------------------------------------------------------------------------
     void configureFrom(RuleLayerType const& type)
     {
@@ -509,8 +493,8 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \return true when the rule visits a random share of the cells
-    //! rather than every one of them.
+    //! \return true when the Rule visits a random share of cells,
+    //! not every cell.
     //--------------------------------------------------------------------------
     [[nodiscard]] bool isRandom() const
     {
@@ -518,11 +502,10 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief Take the share of a number the rule asked for, which is how many
-    //! cells out of a total the layer will visit.
+    //! \brief Return the share of \p value the Rule asked for.
+    //! Used to pick how many cells the Layer visits.
     //! \param[in] value the total.
-    //! \return that share of it, rounded down. The share never exceeds a
-    //! hundred percent.
+    //! \return that share, rounded down. Never above 100 percent.
     //--------------------------------------------------------------------------
     template <class T>
     T takePercent(T value) const
@@ -532,23 +515,23 @@ public:
 
 private:
 
-    //! \brief Whether to visit a random share of the cells rather than all.
+    //! \brief Visit a random share of cells instead of all cells.
     bool m_randomTiles;
-    //! \brief Which share, in percent, clamped to a hundred.
+    //! \brief Share in percent, clamped to 100.
     uint32_t m_randomTilesPercent;
 };
 
 //==============================================================================
-//! \brief A rule belonging to a building, run once every so many ticks.
+//! \brief A Rule for a Building. It runs every N ticks on the Building.
 //!
-//! What makes a house send people to work, a factory turn goods out, a shop
-//! take deliveries. The one thing it adds to a plain rule is a fallback: a rule
-//! that did not fire may name another to try instead, which is how a script
-//! says "go to work, or else stay at home and be bored".
+//! Examples: a house sends People to work, a factory makes Goods, a shop takes
+//! deliveries.
+//! It adds a fallback: if this Rule does not run, try another Rule.
+//! Example: "go to work, or stay home".
 //!
-//! Example script, where StayAtHome is a rule declared elsewhere:
+//! Example script. StayAtHome is declared elsewhere:
 //! \code
-//! unitRule SendPeopleToWork
+//! buildingRule SendPeopleToWork
 //!     rate 45 minutes
 //!     hour between 8 18
 //!     local People greater 0
@@ -558,48 +541,48 @@ private:
 //! end
 //! \endcode
 //==============================================================================
-class RuleUnit: public IRule
+class RuleBuilding: public IRule
 {
 public:
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] type the rule as the script declared it. Read here and
-    //! not kept, except for the fallback, which is kept by address.
+    //! \param[in] type Rule as declared in the script.
+    //! Read here, not kept, except the fallback pointer.
     //--------------------------------------------------------------------------
-    explicit RuleUnit(RuleUnitType const& type)
+    explicit RuleBuilding(RuleBuildingType const& type)
         : IRule(type.name, type.rate, type.rateMinutes, type.commands),
           m_onFail(type.onFail)
     {
     }
 
     //--------------------------------------------------------------------------
-    //! \brief Fill in a rule that was declared empty on the second parser pass.
-    //! \param[in] type the rule as the script declared it.
+    //! \brief Fill in a Rule declared empty on the second parser pass.
+    //! \param[in] type Rule as declared in the script.
     //--------------------------------------------------------------------------
-    void configureFrom(RuleUnitType const& type)
+    void configureFrom(RuleBuildingType const& type)
     {
         IRule::reset(type.rate, type.rateMinutes, type.commands);
         m_onFail = type.onFail;
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \return the rule tried instead when this one does not fire, or
-    //! nullptr when there is none. Not owned: the ruleset owns it.
+    //! \return the fallback Rule when this one does not run, or nullptr.
+    //! Not owned. The Ruleset owns it.
     //--------------------------------------------------------------------------
-    [[nodiscard]] RuleUnit* getOnFail() const
+    [[nodiscard]] RuleBuilding* getOnFail() const
     {
         return m_onFail;
     }
 
     //--------------------------------------------------------------------------
-    //! \brief Attempt the rule and, failing that, its fallback.
+    //! \brief Try to run the Rule, then its fallback if needed.
     //!
-    //! \note A chain of fallbacks is followed as far as it goes, and a script
-    //! that makes two rules fall back on each other loops for ever. The parser
-    //! does not check for that.
+    //! \note Fallback chains run until one Rule succeeds.
+    //! Two Rules that fallback on each other loop forever.
+    //! The parser does not check for that.
     //!
-    //! \param[in,out] context where to run it.
-    //! \return true when this rule or one of its fallbacks fired.
+    //! \param[in,out] context where to run.
+    //! \return true when this Rule or a fallback ran.
     //--------------------------------------------------------------------------
     bool execute(RuleContext& context) override
     {
@@ -618,18 +601,16 @@ public:
 
 private:
 
-    //! \brief The rule tried instead when this one does not fire, or nullptr.
-    //! Not owned.
-    RuleUnit* m_onFail;
+    //! \brief Fallback Rule when this one does not run, or nullptr. Not owned.
+    RuleBuilding* m_onFail;
 };
 
 //==============================================================================
-//! \brief A rule belonging to a zone, which puts buildings up and pulls them
-//! down inside its footprint.
+//! \brief A Rule for a Zone. It spawns and destroys Buildings in the Zone.
 //!
-//! What turns a painted rectangle into a neighbourhood. Unlike the rules of a
-//! building, these run once for the whole zone rather than once per cell, and
-//! their commands count and create rather than read and write resources.
+//! It turns a painted rectangle into a neighbourhood.
+//! Unlike Building Rules, these run once for the whole Zone, not per cell.
+//! Their commands count and create Buildings instead of reading resources.
 //!
 //! Example script:
 //! \code
@@ -645,8 +626,7 @@ class RuleZone: public IRule
 public:
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] type the rule as the script declared it. Read here and
-    //! not kept.
+    //! \param[in] type Rule as declared in the script. Read here, not kept.
     //--------------------------------------------------------------------------
     explicit RuleZone(RuleZoneType const& type)
         : IRule(type.name, type.rate, type.rateMinutes, type.commands)
@@ -654,8 +634,8 @@ public:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief Fill in a rule that was declared empty on the second parser pass.
-    //! \param[in] type the rule as the script declared it.
+    //! \brief Fill in a Rule declared empty on the second parser pass.
+    //! \param[in] type Rule as declared in the script.
     //--------------------------------------------------------------------------
     void configureFrom(RuleZoneType const& type)
     {
