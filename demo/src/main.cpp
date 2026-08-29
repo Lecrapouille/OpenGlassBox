@@ -19,8 +19,8 @@ static void usage(char const* program)
         "  file                    optional .ogs ruleset or .ogc city save.\n"
         "                          Resolved as given if the path exists,\n"
         "                          otherwise under the build-time data path\n"
-        "                          in Simulations/. Defaults to test_city.ogs\n"
-        "                          then its sibling test_city.ogc.\n"
+        "                          in Simulations/. Defaults to sandbox.ogs\n"
+        "                          then its sibling sandbox.ogc.\n"
         "\n"
         "  -h, --help              show this message\n";
 }

@@ -1,6 +1,6 @@
 # TestCity recipe: Layers (Water, Grass, Pollution, Desirability),
 # Units RCI (Home / Work / Shop / Restaurant), Agents as commuters and freight,
-# ZoneRules for growth. Pair with test_city.ogc.
+# ZoneRules for growth. Pair with sandbox.ogc.
 #
 # Periods are written as game time. A bare number would count simulation ticks,
 # twenty of which make one game minute, which says nothing to a reader.

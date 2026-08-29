@@ -163,7 +163,7 @@ static Sightings watch(Simulation& simulation,
 static City& openAtEightInTheMorning(Simulation& simulation,
                                      std::string const& save)
 {
-    EXPECT_TRUE(simulation.loadScriptFile(dataFile("test_city.ogs")))
+    EXPECT_TRUE(simulation.loadScriptFile(dataFile("sandbox.ogs")))
         << simulation.getRuleset().formatErrors();
 
     CitySaveHeader header;
@@ -172,7 +172,7 @@ static City& openAtEightInTheMorning(Simulation& simulation,
     // The saves carry the fingerprint of the ruleset. Changing the rules means
     // refreshing it, and a stale one is exactly what this catches.
     EXPECT_TRUE(
-        CitySave::matchesRuleset(header, dataFile("test_city.ogs"), error))
+        CitySave::matchesRuleset(header, dataFile("sandbox.ogs"), error))
         << error;
     EXPECT_TRUE(CitySave::read(dataFile(save), simulation, error)) << error;
     installDijkstraRouters(simulation);
@@ -436,7 +436,7 @@ TEST(TestsScenario, ADayInQq2City)
 TEST(TestsScenario, AnHourOnTheChicagoNetwork)
 {
     Simulation simulation;
-    ASSERT_TRUE(simulation.loadScriptFile(dataFile("chicago.ogs")))
+    ASSERT_TRUE(simulation.loadScriptFile(dataFile("sandbox.ogs")))
         << simulation.getRuleset().formatErrors();
 
     std::string error;

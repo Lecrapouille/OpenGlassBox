@@ -9,12 +9,12 @@
 
 static std::string testCityRuleset()
 {
-    return testDataPath("test_city.ogs");
+    return testDataPath("sandbox.ogs");
 }
 
 static std::string testCitySave()
 {
-    return testDataPath("test_city.ogc");
+    return testDataPath("sandbox.ogc");
 }
 
 TEST(TestsCitySave, LoadShippedParis)
@@ -25,7 +25,7 @@ TEST(TestsCitySave, LoadShippedParis)
     CitySaveHeader header;
     std::string error;
     ASSERT_TRUE(CitySave::peekHeader(testCitySave(), header, error)) << error;
-    ASSERT_EQ(header.ruleset, "test_city.ogs");
+    ASSERT_EQ(header.ruleset, "sandbox.ogs");
     ASSERT_TRUE(CitySave::matchesRuleset(header, testCityRuleset(), error))
         << error;
     ASSERT_TRUE(CitySave::read(testCitySave(), simulation, error)) << error;
@@ -47,7 +47,7 @@ TEST(TestsCitySave, MissingTypeIsRefused)
     {
         std::ofstream out(path);
         out << "save\n"
-            << "\truleset test_city.ogs\n"
+            << "\truleset sandbox.ogs\n"
             << "\thash deadbeef\n"
             << "\ttypes [ Asphalt ]\n"
             << "end\n"
@@ -121,7 +121,7 @@ TEST(TestsCitySave, LoadedBuildingsKeepTheCapacitiesOfTheirType)
 TEST(TestsCitySave, HashMismatch)
 {
     CitySaveHeader header;
-    header.ruleset = "test_city.ogs";
+    header.ruleset = "sandbox.ogs";
     header.hash = "not-the-real-hash";
     std::string error;
     ASSERT_FALSE(CitySave::matchesRuleset(header, testCityRuleset(), error));
@@ -143,7 +143,7 @@ TEST(TestsCitySave, SavesUsingRulesetFindsTheOnesNamingIt)
         CitySaveHeader header;
         std::string error;
         ASSERT_TRUE(CitySave::peekHeader(save, header, error)) << error;
-        ASSERT_EQ(header.ruleset, "test_city.ogs") << save;
+        ASSERT_EQ(header.ruleset, "sandbox.ogs") << save;
     }
 
     // braess.ogc names braess.ogs, so it is not one of them.
@@ -158,7 +158,7 @@ TEST(TestsCitySave, RestampMakesAStaleSaveLoadableAgain)
     {
         std::ofstream out(path);
         out << "save\n"
-            << "\truleset test_city.ogs\n"
+            << "\truleset sandbox.ogs\n"
             << "\thash not-the-real-hash\n"
             << "\ttypes [ ]\n"
             << "end\n"

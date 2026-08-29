@@ -21,7 +21,7 @@ Two file formats exist:
 - **`.ogs`**: the ruleset: resources, types, and rules.
 - **`.ogc`**: a city save: geometry and live state, tied to the ruleset it was created with.
 
-The [bundled simulations](../demo/data/Simulations/README.md) include ready-made examples; start with `test_city.ogs`.
+The [bundled simulations](../demo/data/Simulations/README.md) include ready-made examples; start with `sandbox.ogs`.
 
 ## `.ogs` language reference
 
@@ -154,7 +154,7 @@ Durations are converted to ticks when rules run. Changing `TimeConfig::ticksPerM
 
 ```text
 save
-    ruleset test_city.ogs
+    ruleset sandbox.ogs
     hash <sha256 of the .ogs bytes>
     types [ Road Dirt Home Work Shop Residential ]
 end
