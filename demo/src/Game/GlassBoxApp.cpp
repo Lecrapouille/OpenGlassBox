@@ -271,7 +271,7 @@ std::vector<std::string> placedTypes(Simulation const& simulation)
             for (auto const& segment : pathIt.second->getSegments())
                 add(segment->getTypeName());
         }
-        for (auto const& building: city.getBuildings())
+        for (auto const& building : city.getBuildings())
             add(building->getTypeName());
         for (auto const& zone : city.getZones())
             add(zone->getTypeName());
@@ -386,12 +386,13 @@ void GlassBoxApp::resetView()
     m_trace.clear();
     m_editor.reset();
 
-    // Six layers drawn on top of each other is a mush in which none can be read,
-    // so a fresh simulation shows the first one and lists the others in the
-    // Layers tool, one click away.
+    // Six layers drawn on top of each other is a mush in which none can be
+    // read, so a fresh simulation shows the first one and lists the others in
+    // the Layers tool, one click away.
     if (m_simulation && !m_simulation->getCities().empty())
     {
-        auto const& layers = m_simulation->getCities().begin()->second->getLayers();
+        auto const& layers =
+            m_simulation->getCities().begin()->second->getLayers();
         if (m_state.primaryLayer.empty() && !layers.empty())
             m_state.primaryLayer = layers.begin()->second->getTypeName().str();
 
@@ -424,8 +425,7 @@ bool GlassBoxApp::loadRuleset(std::string const& filename, bool loadSiblingSave)
         return false;
     }
 
-    auto simulation =
-        std::make_unique<Simulation>(defaultConfig());
+    auto simulation = std::make_unique<Simulation>(defaultConfig());
     wireSimulation(*simulation);
     try
     {
@@ -433,7 +433,8 @@ bool GlassBoxApp::loadRuleset(std::string const& filename, bool loadSiblingSave)
         {
             m_script_error = "Failed parsing '" + path + "'";
             if (!simulation->getRuleset().formatErrors().empty())
-                m_script_error += "\n" + simulation->getRuleset().formatErrors();
+                m_script_error +=
+                    "\n" + simulation->getRuleset().formatErrors();
             return false;
         }
     }
@@ -587,8 +588,7 @@ bool GlassBoxApp::loadCity(std::string const& filename)
         return false;
     }
 
-    auto simulation =
-        std::make_unique<Simulation>(defaultConfig());
+    auto simulation = std::make_unique<Simulation>(defaultConfig());
     wireSimulation(*simulation);
     try
     {
@@ -662,8 +662,7 @@ bool GlassBoxApp::applyScript()
     if (!m_simulation || m_ruleset_path.empty())
         return false;
 
-    auto next =
-        std::make_unique<Simulation>(defaultConfig());
+    auto next = std::make_unique<Simulation>(defaultConfig());
     wireSimulation(*next);
     if (!next->loadScriptString(m_script_text, m_ruleset_path))
     {
@@ -976,9 +975,9 @@ void GlassBoxApp::onDrawPanels()
     if (!io.WantTextInput && !io.KeyCtrl)
     {
         static editor::EditTool const SHORTCUTS[] = {
-            editor::EditTool::Select,   editor::EditTool::Road,
-            editor::EditTool::Node,     editor::EditTool::Zone,
-            editor::EditTool::Building, editor::EditTool::Paint,
+            editor::EditTool::Select,    editor::EditTool::Road,
+            editor::EditTool::Node,      editor::EditTool::Zone,
+            editor::EditTool::Building,  editor::EditTool::Paint,
             editor::EditTool::Bulldozer,
         };
         for (int i = 0; i < IM_ARRAYSIZE(SHORTCUTS); ++i)
@@ -996,16 +995,16 @@ void GlassBoxApp::onDrawPanels()
         // longer carries the controls itself.
         switch (m_editor.takePanelRequest())
         {
-        case editor::PanelRequest::Layers:
-            m_show_layers = true;
-            m_focus_panel = "Layers";
-            break;
-        case editor::PanelRequest::Inspector:
-            m_show_inspector = true;
-            m_focus_panel = "Inspector";
-            break;
-        case editor::PanelRequest::None:
-            break;
+            case editor::PanelRequest::Layers:
+                m_show_layers = true;
+                m_focus_panel = "Layers";
+                break;
+            case editor::PanelRequest::Inspector:
+                m_show_inspector = true;
+                m_focus_panel = "Inspector";
+                break;
+            case editor::PanelRequest::None:
+                break;
         }
 
         if (m_show_layers)
@@ -1188,7 +1187,7 @@ void GlassBoxApp::onDrawStatusBar()
 
     ImGui::SameLine(0.0f, 20.0f);
     SimulationClock const& clock = m_simulation->getClock();
-    ImGui::Text("Jour %u  %02u:%02u  tick %llu x%.2f",
+    ImGui::Text("Day %u  %02u:%02u  tick %llu x%.2f",
                 clock.getDay(),
                 clock.getHourOfDay(),
                 clock.getMinuteOfHour(),
