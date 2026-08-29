@@ -39,6 +39,14 @@ static constexpr uint32_t DEFAULT_CITY_SIZE = 16u;
 namespace
 {
 
+ogb::Config defaultConfig()
+{
+    ogb::Config config;
+    config.grid.defaultCitySizeU = DEFAULT_CITY_SIZE;
+    config.grid.defaultCitySizeV = DEFAULT_CITY_SIZE;
+    return config;
+}
+
 bool fileExists(std::string const& path)
 {
     struct stat info;
@@ -184,7 +192,7 @@ bool writeAll(std::string const& path, std::string const& text)
     return bool(file);
 }
 
-bool typeExists(Script const& script, std::string const& name)
+bool typeExists(Ruleset const& script, std::string const& name)
 {
     try
     {
@@ -196,7 +204,7 @@ bool typeExists(Script const& script, std::string const& name)
     }
     try
     {
-        script.getWayType(name);
+        script.getSegmentType(name);
         return true;
     }
     catch (...)
@@ -212,7 +220,7 @@ bool typeExists(Script const& script, std::string const& name)
     }
     try
     {
-        script.getAreaType(name);
+        script.getZoneType(name);
         return true;
     }
     catch (...)
@@ -228,7 +236,7 @@ bool typeExists(Script const& script, std::string const& name)
     }
     try
     {
-        script.getMapType(name);
+        script.getLayerType(name);
         return true;
     }
     catch (...)
@@ -240,33 +248,33 @@ bool typeExists(Script const& script, std::string const& name)
 std::vector<std::string> placedTypes(Simulation const& simulation)
 {
     std::vector<std::string> names;
-    auto const add = [&](std::string const& name)
+    auto const add = [&](Name const& name)
     {
         if (name.empty())
             return;
         for (std::string const& existing : names)
         {
-            if (existing == name)
+            if (existing == name.str())
                 return;
         }
-        names.push_back(name);
+        names.push_back(name.str());
     };
 
-    for (auto const& cityIt : simulation.cities())
+    for (auto const& cityIt : simulation.getCities())
     {
         City const& city = *cityIt.second;
-        for (auto const& pathIt : city.paths())
+        for (auto const& pathIt : city.getPaths())
         {
-            add(pathIt.second->type());
-            for (auto const& way : pathIt.second->ways())
-                add(way->type());
+            add(pathIt.second->getTypeName());
+            for (auto const& segment : pathIt.second->getSegments())
+                add(segment->getTypeName());
         }
-        for (auto const& unit : city.units())
-            add(unit->type());
-        for (auto const& area : city.areas())
-            add(area->type());
-        for (auto const& agent : city.agents())
-            add(agent->type());
+        for (auto const& unit : city.getUnits())
+            add(unit->getTypeName());
+        for (auto const& zone : city.getZones())
+            add(zone->getTypeName());
+        for (auto const& agent : city.getAgents())
+            add(agent->getTypeName());
     }
     return names;
 }
@@ -325,7 +333,7 @@ void GlassBoxApp::buildDefaultLayout(ImGuiID dockspace)
     ImGui::DockBuilderSplitNode(
         right, ImGuiDir_Down, 0.50f, &rightBottom, &rightTop);
 
-    ImGui::DockBuilderDockWindow("Map", center);
+    ImGui::DockBuilderDockWindow("Layer", center);
     ImGui::DockBuilderDockWindow("Simulation clock", left);
     ImGui::DockBuilderDockWindow("Inspector", rightTop);
     ImGui::DockBuilderDockWindow("Traffic", rightBottom);
@@ -338,7 +346,7 @@ void GlassBoxApp::buildDefaultLayout(ImGuiID dockspace)
 // ----------------------------------------------------------------------------
 void GlassBoxApp::RouterListener::onCityAdded(City& city)
 {
-    installDijkstraRouter(city, city.config());
+    installDijkstraRouter(city, city.getConfig());
 }
 
 // ----------------------------------------------------------------------------
@@ -353,12 +361,12 @@ void GlassBoxApp::createEmptyCity(Simulation& simulation,
 {
     City& city = simulation.addCity(
         name, Vector3f(0.0f, 0.0f, 0.0f), DEFAULT_CITY_SIZE, DEFAULT_CITY_SIZE);
-    for (auto const& it : simulation.script().mapTypes())
-        city.addMap(*it.second);
+    for (auto const& it : simulation.getRuleset().getLayerTypes())
+        city.addLayer(*it.second);
 
     // The city starts with no road, but it has to start with the graphs the
     // ruleset declares: an empty Path is what the road tool lays segments into.
-    for (auto const& it : simulation.script().pathTypes())
+    for (auto const& it : simulation.getRuleset().getPathTypes())
         city.addPath(*it.second);
 }
 
@@ -370,17 +378,17 @@ void GlassBoxApp::resetView()
     m_trace.clear();
     m_editor.reset();
 
-    // Six maps drawn on top of each other is a mush in which none can be read,
+    // Six layers drawn on top of each other is a mush in which none can be read,
     // so a fresh simulation shows the first one and lists the others in the
-    // Maps tool, one click away.
-    if (m_simulation && !m_simulation->cities().empty())
+    // Layers tool, one click away.
+    if (m_simulation && !m_simulation->getCities().empty())
     {
-        auto const& maps = m_simulation->cities().begin()->second->maps();
-        if (m_state.primaryLayer.empty() && !maps.empty())
-            m_state.primaryLayer = maps.begin()->second->type();
+        auto const& layers = m_simulation->getCities().begin()->second->getLayers();
+        if (m_state.primaryLayer.empty() && !layers.empty())
+            m_state.primaryLayer = layers.begin()->second->getTypeName().str();
 
         m_state.soloLayer.clear();
-        for (auto const& it : maps)
+        for (auto const& it : layers)
         {
             m_state.layer(it.first).visible =
                 (it.first == m_state.primaryLayer);
@@ -409,15 +417,15 @@ bool GlassBoxApp::loadRuleset(std::string const& filename, bool loadSiblingSave)
     }
 
     auto simulation =
-        std::make_unique<Simulation>(DEFAULT_CITY_SIZE, DEFAULT_CITY_SIZE);
+        std::make_unique<Simulation>(defaultConfig());
     wireSimulation(*simulation);
     try
     {
-        if (!simulation->script().parseFile(path))
+        if (!simulation->loadScriptFile(path))
         {
             m_script_error = "Failed parsing '" + path + "'";
-            if (!simulation->script().formatErrors().empty())
-                m_script_error += "\n" + simulation->script().formatErrors();
+            if (!simulation->getRuleset().formatErrors().empty())
+                m_script_error += "\n" + simulation->getRuleset().formatErrors();
             return false;
         }
     }
@@ -535,11 +543,11 @@ bool GlassBoxApp::loadCity(std::string const& filename)
     }
 
     auto simulation =
-        std::make_unique<Simulation>(DEFAULT_CITY_SIZE, DEFAULT_CITY_SIZE);
+        std::make_unique<Simulation>(defaultConfig());
     wireSimulation(*simulation);
     try
     {
-        if (!simulation->script().parseFile(ruleset))
+        if (!simulation->loadScriptFile(ruleset))
         {
             m_script_error = "Failed parsing '" + ruleset + "'";
             return false;
@@ -608,18 +616,18 @@ bool GlassBoxApp::applyScript()
         return false;
 
     auto next =
-        std::make_unique<Simulation>(DEFAULT_CITY_SIZE, DEFAULT_CITY_SIZE);
+        std::make_unique<Simulation>(defaultConfig());
     wireSimulation(*next);
-    if (!next->script().parseString(m_script_text, m_ruleset_path))
+    if (!next->loadScriptString(m_script_text, m_ruleset_path))
     {
-        m_script_error = "Apply failed:\n" + next->script().formatErrors();
+        m_script_error = "Apply failed:\n" + next->getRuleset().formatErrors();
         return false;
     }
 
     std::vector<std::string> missing;
     for (std::string const& type : placedTypes(*m_simulation))
     {
-        if (!typeExists(next->script(), type))
+        if (!typeExists(next->getRuleset(), type))
             missing.push_back(type);
     }
     if (!missing.empty())
@@ -640,7 +648,7 @@ bool GlassBoxApp::applyScript()
     std::string const tmp =
         siblingWithExtension(m_ruleset_path, ".ogc.apply.tmp");
     std::string error;
-    bool const hadCity = !m_simulation->cities().empty();
+    bool const hadCity = !m_simulation->getCities().empty();
     if (hadCity && !CitySave::write(tmp, *m_simulation, m_ruleset_path, error))
     {
         m_script_error = error;
@@ -744,20 +752,20 @@ void GlassBoxApp::advanceSimulation(float dt)
     if (!m_simulation)
         return;
 
-    uint64_t const before = m_simulation->totalTicks();
+    uint64_t const before = m_simulation->getClock().getTicks();
 
     uint32_t steps = m_time.takePendingSteps();
     while (steps-- > 0u)
     {
-        m_trace.setTick(m_simulation->totalTicks());
+        m_trace.setTick(m_simulation->getClock().getTicks());
         m_simulation->stepOneTick();
         m_charts.sample(*m_simulation);
     }
 
-    m_trace.setTick(m_simulation->totalTicks());
+    m_trace.setTick(m_simulation->getClock().getTicks());
     m_simulation->update(dt);
 
-    m_ticks_last_frame = m_simulation->totalTicks() - before;
+    m_ticks_last_frame = m_simulation->getClock().getTicks() - before;
     if (m_ticks_last_frame != 0u)
         m_charts.sample(*m_simulation);
 }
@@ -841,7 +849,7 @@ void GlassBoxApp::onDrawMenuBar()
             { editor::EditTool::Road, "Roads", "2" },
             { editor::EditTool::Zone, "Zones", "3" },
             { editor::EditTool::Building, "Buildings", "4" },
-            { editor::EditTool::Paint, "Maps", "5" },
+            { editor::EditTool::Paint, "Layers", "5" },
             { editor::EditTool::Bulldozer, "Demolish", "6" },
         };
         for (auto const& entry : TOOLS)
@@ -866,7 +874,7 @@ void GlassBoxApp::onDrawMenuBar()
         ImGui::MenuItem("Traffic", nullptr, &m_show_traffic);
         ImGui::MenuItem("History", nullptr, &m_show_history);
         ImGui::Separator();
-        if (ImGui::MenuItem("Recenter the map", "Home"))
+        if (ImGui::MenuItem("Recenter the layer", "Home"))
             m_viewer.requestFrameAll();
         ImGui::EndMenu();
     }
@@ -899,7 +907,7 @@ void GlassBoxApp::onDrawPanels()
     if (ImGui::IsKeyPressed(ImGuiKey_Space, false) && !io.WantTextInput &&
         m_simulation)
     {
-        m_simulation->setPaused(!m_simulation->paused());
+        m_simulation->setPaused(!m_simulation->isPaused());
     }
 
     if (!io.WantTextInput && !io.KeyCtrl)
@@ -1057,7 +1065,7 @@ void GlassBoxApp::drawAboutPopup()
         ImGui::BulletText("wheel: zoom");
         ImGui::BulletText("space: pause");
         ImGui::BulletText(
-            "1-6: inspect, roads, zones, buildings, maps, demolish");
+            "1-6: inspect, roads, zones, buildings, layers, demolish");
         ImGui::BulletText("Ctrl+Z / Ctrl+Y: undo / redo");
         ImGui::Separator();
 
@@ -1084,27 +1092,27 @@ void GlassBoxApp::onDrawStatusBar()
         return;
     }
 
-    ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(m_simulation->paused()
+    ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(m_simulation->isPaused()
                                                           ? theme::FAILURE
                                                           : theme::SUCCESS),
                        "%s",
-                       m_simulation->paused() ? "paused" : "running");
+                       m_simulation->isPaused() ? "paused" : "running");
 
     ImGui::SameLine(0.0f, 20.0f);
-    SimulationClock const& clock = m_simulation->clock();
+    SimulationClock const& clock = m_simulation->getClock();
     ImGui::Text("Jour %u  %02u:%02u  tick %llu x%.2f",
-                clock.day(),
-                clock.hourOfDay(),
-                clock.minuteOfHour(),
-                (unsigned long long)m_simulation->totalTicks(),
-                m_simulation->timeScale());
+                clock.getDay(),
+                clock.getHourOfDay(),
+                clock.getMinuteOfHour(),
+                (unsigned long long)m_simulation->getClock().getTicks(),
+                m_simulation->getTimeScale());
 
     size_t units = 0u;
     size_t agents = 0u;
-    for (auto const& it : m_simulation->cities())
+    for (auto const& it : m_simulation->getCities())
     {
-        units += it.second->units().size();
-        agents += it.second->agents().size();
+        units += it.second->getUnits().size();
+        agents += it.second->getAgents().size();
     }
 
     ImGui::SameLine(0.0f, 20.0f);

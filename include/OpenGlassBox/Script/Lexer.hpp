@@ -112,7 +112,7 @@ public:
     //! \brief \return the name of what was split, which the errors are reported
     //! against.
     //--------------------------------------------------------------------------
-    std::string const& name() const
+    [[nodiscard]] std::string const& getName() const
     {
         return m_name;
     }
@@ -124,12 +124,12 @@ public:
     //! \return the line without its newline, or an empty string when there is
     //! no such line.
     //--------------------------------------------------------------------------
-    std::string sourceLine(uint32_t line) const;
+    [[nodiscard]] std::string getSourceLine(uint32_t line) const;
 
     //--------------------------------------------------------------------------
     //! \brief \return how many words the script holds.
     //--------------------------------------------------------------------------
-    size_t size() const
+    [[nodiscard]] size_t getTokenCount() const
     {
         return m_tokens.size();
     }

@@ -1,6 +1,6 @@
-# TestCity recipe: Maps (Water, Grass, Pollution, Desirability),
+# TestCity recipe: Layers (Water, Grass, Pollution, Desirability),
 # Units RCI (Home / Work / Shop / Restaurant), Agents as commuters and freight,
-# AreaRules for growth. Pair with test_city.ogc.
+# ZoneRules for growth. Pair with test_city.ogc.
 #
 # Periods are written as game time. A bare number would count simulation ticks,
 # twenty of which make one game minute, which says nothing to a reader.
@@ -34,37 +34,37 @@ agents
 end
 
 rules
-	mapRule CreateGrass
+	layerRule CreateGrass
 		rate 20 minutes
-		map Water remove 10 randomTilesPercent 90
-		map Grass add 1
+		layer Water remove 10 randomTilesPercent 90
+		layer Grass add 1
 	end
 
 	# Pollution fades faster than it spreads on its own: what fouls a
 	# neighbourhood is the factories, not the passing of time.
-	mapRule SpreadPollution
+	layerRule SpreadPollution
 		rate 30 minutes
-		map Pollution add 1
+		layer Pollution add 1
 	end
 
-	mapRule CleanPollution
+	layerRule CleanPollution
 		rate 15 minutes
-		map Pollution remove 1
+		layer Pollution remove 1
 	end
 
 	# Desirability is the slow variable of the city. It used to move every ten
 	# ticks, half a game minute, so a district was built and abandoned within
 	# the hour. It now takes days to turn a good address into a bad one.
-	mapRule DropDesirability
+	layerRule DropDesirability
 		rate 2 hours
-		map Pollution greater 20
-		map Desirability remove 2
+		layer Pollution greater 20
+		layer Desirability remove 2
 	end
 
-	mapRule RaiseDesirability
+	layerRule RaiseDesirability
 		rate 2 hours
-		map Pollution less 5
-		map Desirability add 1
+		layer Pollution less 5
+		layer Desirability add 1
 	end
 
 	# What shares a household between the factories and the shops is the period
@@ -95,7 +95,7 @@ rules
 		hour between 8 18
 		local People greater 0
 		local Goods add 1
-		map Pollution add 1
+		layer Pollution add 1
 		global Money add 1
 	end
 
@@ -128,7 +128,7 @@ rules
 	unitRule UsePeopleToWater
 		rate 1 hour
 		local People greater 1
-		map Water add 30
+		layer Water add 30
 	end
 
 	unitRule ShopForGoods
@@ -174,59 +174,59 @@ rules
 
 	unitRule CollectTrash
 		rate 1 hour
-		map Trash remove 2
+		layer Trash remove 2
 	end
 
-	areaRule GrowHomes
+	zoneRule GrowHomes
 		rate 4 hours
 		count Home less 10
-		spawn Home at nearestWay
+		spawn Home at nearestSegment
 	end
 
-	areaRule GrowShops
+	zoneRule GrowShops
 		rate 6 hours
 		count Shop less 3
-		spawn Shop at nearestWay
+		spawn Shop at nearestSegment
 	end
 
-	areaRule GrowRestaurants
+	zoneRule GrowRestaurants
 		rate 12 hours
 		count Restaurant less 2
-		spawn Restaurant at nearestWay
+		spawn Restaurant at nearestSegment
 	end
 
-	areaRule GrowWorks
+	zoneRule GrowWorks
 		rate 8 hours
 		count Work less 3
-		spawn Work at nearestWay
+		spawn Work at nearestSegment
 	end
 
-	areaRule AbandonHomes
+	zoneRule AbandonHomes
 		rate 1 day
-		map Desirability less 2
+		layer Desirability less 2
 		count Home greater 2
 		destroy Home
 	end
 end
 
 units
-	unit Home color 0xFF00FF mapRadius 1 rules [ SendPeopleToWork ShopForGoods ] targets [ Home ] caps [ People 8 Happiness 10 ] resources [ People 8 ]
-	unit Work color 0x00AAFF mapRadius 3 rules [ SendPeopleToHome ProduceGoods ShipGoods ShipFood GoEating UsePeopleToWater ] targets [ Work ] caps [ People 12 Goods 20 ] resources [ ]
-	unit Shop color 0xFFAA00 mapRadius 2 rules [ SellGoods ReceiveShopper CollectTrash ] targets [ Shop ] caps [ People 6 Goods 30 Happiness 20 ] resources [ ]
-	unit Restaurant color 0xFF6644 mapRadius 1 rules [ ServeLunch SendDinersBack ] targets [ Restaurant ] caps [ People 8 Goods 20 Happiness 20 ] resources [ ]
+	unit Home color 0xFF00FF layerRadius 1 rules [ SendPeopleToWork ShopForGoods ] targets [ Home ] caps [ People 8 Happiness 10 ] resources [ People 8 ]
+	unit Work color 0x00AAFF layerRadius 3 rules [ SendPeopleToHome ProduceGoods ShipGoods ShipFood GoEating UsePeopleToWater ] targets [ Work ] caps [ People 12 Goods 20 ] resources [ ]
+	unit Shop color 0xFFAA00 layerRadius 2 rules [ SellGoods ReceiveShopper CollectTrash ] targets [ Shop ] caps [ People 6 Goods 30 Happiness 20 ] resources [ ]
+	unit Restaurant color 0xFF6644 layerRadius 1 rules [ ServeLunch SendDinersBack ] targets [ Restaurant ] caps [ People 8 Goods 20 Happiness 20 ] resources [ ]
 end
 
-maps
-	map Water color 0x0000FF capacity 100 rules [  ]
-	map Grass color 0x00FF00 capacity 10 rules [ CreateGrass ]
-	map Pollution color 0x555555 capacity 80 rules [ SpreadPollution CleanPollution ]
-	map Desirability color 0x88FF88 capacity 50 rules [ DropDesirability RaiseDesirability ]
-	map Trash color 0x886644 capacity 40 rules [  ]
-	map Power color 0xFFFF66 capacity 100 rules [  ]
+layers
+	layer Water color 0x0000FF capacity 100 rules [  ]
+	layer Grass color 0x00FF00 capacity 10 rules [ CreateGrass ]
+	layer Pollution color 0x555555 capacity 80 rules [ SpreadPollution CleanPollution ]
+	layer Desirability color 0x88FF88 capacity 50 rules [ DropDesirability RaiseDesirability ]
+	layer Trash color 0x886644 capacity 40 rules [  ]
+	layer Power color 0xFFFF66 capacity 100 rules [  ]
 end
 
-areas
-	area Residential color 0x44AA44 rules [ GrowHomes AbandonHomes ]
-	area Commercial color 0xDDAA44 rules [ GrowShops GrowRestaurants ]
-	area Industrial color 0xAA6644 rules [ GrowWorks ]
+zones
+	zone Residential color 0x44AA44 rules [ GrowHomes AbandonHomes ]
+	zone Commercial color 0xDDAA44 rules [ GrowShops GrowRestaurants ]
+	zone Industrial color 0xAA6644 rules [ GrowWorks ]
 end

@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------------
 
 //! \file CityViewer.hpp
-//! \brief Interactive map canvas: rendering, picking, zoom and pan.
+//! \brief Interactive city canvas: rendering, picking, zoom and pan.
 
 #ifndef OPEN_GLASSBOX_DEMO_CITY_VIEWER_HPP
 #define OPEN_GLASSBOX_DEMO_CITY_VIEWER_HPP
@@ -26,7 +26,7 @@ namespace ui
 {
 
 // ****************************************************************************
-//! \brief The map view: an ImGui child window whose content is drawn with an
+//! \brief The city view: an ImGui child window whose content is drawn with an
 //! ImDrawList. Everything is vectorial, so there is no bitmap font and no
 //! texture to ship, and the whole view scales with the zoom.
 // ****************************************************************************
@@ -92,8 +92,8 @@ public:
     //! from its origin node.
     //! \return the segment, or nullptr when nothing is close enough.
     // ------------------------------------------------------------------------
-    Way*
-    pickWay(City& city, ImVec2 const& world, float pixels, float& offset) const;
+    Segment*
+    pickSegment(City& city, ImVec2 const& world, float pixels, float& offset) const;
 
     // ------------------------------------------------------------------------
     //! \brief Node of the given city closest to a world position, within a
@@ -143,20 +143,20 @@ private:
     //!
     //! One when the zoom makes a cell large enough to be worth a rectangle of
     //! its own and there are few enough of them on screen; more when either
-    //! would cost too much. See Map::forEachBlockInRegion.
+    //! would cost too much. See Layer::forEachBlockInRegion.
     //!
     //! \param[in] pixels how wide one cell is on screen.
     //! \param[in] visible the cells the canvas shows.
-    //! \return a divisor of Map::CHUNK_SIZE, at least one.
+    //! \return a divisor of Layer::CHUNK_SIZE, at least one.
     // ------------------------------------------------------------------------
-    static int32_t cellsPerSquare(float const pixels, MapRegion const& visible);
+    static int32_t cellsPerSquare(float const pixels, CellRegion const& visible);
 
-    void drawMaps(World& world, game::DebugState const& state);
+    void drawLayers(Simulation& simulation, game::DebugState const& state);
     void drawPaths(City& city, game::DebugState const& state);
     void drawUnits(City& city, game::DebugState const& state);
     void drawAgents(City& city, game::DebugState const& state);
     void drawCityFrame(City const& city, game::DebugState const& state);
-    void drawAreas(City& city);
+    void drawZones(City& city);
     void drawSelectionOverlay(Simulation& simulation,
                               game::DebugState const& state,
                               editor::Editor const& editor);
@@ -179,7 +179,7 @@ private:
     updateHover(Simulation& simulation, game::DebugState& state, bool hovered);
 
     // ------------------------------------------------------------------------
-    //! \brief Tooltip listing the value of every Map on the hovered cell.
+    //! \brief Tooltip listing the value of every Layer on the hovered cell.
     // ------------------------------------------------------------------------
     void drawHoverTooltip(Simulation& simulation,
                           game::DebugState const& state,

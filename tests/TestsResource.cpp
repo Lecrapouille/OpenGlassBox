@@ -26,7 +26,7 @@ TEST(TestsResource, Constructor)
     ASSERT_EQ(oil.getAmount(), 0u);
     ASSERT_EQ(oil.hasAmount(), false);
     ASSERT_EQ(oil.getCapacity(), Resource::MAX_CAPACITY);
-    ASSERT_STREQ(oil.type().c_str(), "oil");
+    ASSERT_STREQ(oil.getTypeName().c_str(), "oil");
 }
 
 TEST(TestsResource, AddAmount)

@@ -70,10 +70,10 @@ While $x_a \ll c_a$ the penalty term is near zero and $t_a \approx t_a^0$. As $x
 
 ### What OpenGlassBox does
 
-`Way::updateTravelTime`, in `src/Path.cpp`, is the BPR function, with $\alpha$ fixed at 0.15 in the code:
+`Segment::updateTravelTime`, in `src/Path.cpp`, is the BPR function, with $\alpha$ fixed at 0.15 in the code:
 
 ```cpp
-void Way::updateTravelTime()
+void Segment::updateTravelTime()
 {
     if (m_type.capacity <= 0.0f)
     {
@@ -87,7 +87,7 @@ void Way::updateTravelTime()
 }
 ```
 
-$t_a^0$ is computed once per segment by `Way::updateMagnitude`, as the length of the road divided by the speed limit of its type. $c_a$ and $\beta$ are properties of a `WayType`, so a ruleset sets them per kind of road:
+$t_a^0$ is computed once per segment by `Segment::updateLength`, as the length of the road divided by the speed limit of its type. $c_a$ and $\beta$ are properties of a `SegmentType`, so a ruleset sets them per kind of road:
 
 ```text
 segment Dirt color 0xAAAAAA speed 30 capacity 20 beta 4
@@ -163,21 +163,21 @@ That is more faithful than the logit, and it has no closed form: it needs numeri
 
 ## What OpenGlassBox does instead
 
-In CiudadSim, $x_a$ is an aggregate quantity the solver computes. OpenGlassBox does not have to simulate a flow, because the flow is already there and this is a great simplification. Here it is the `Agent` objects physically crossing the `Way` objects one by one; `Way::addAgent` and `Way::removeAgent` merely count them.
+In CiudadSim, $x_a$ is an aggregate quantity the solver computes. OpenGlassBox does not have to simulate a flow, because the flow is already there and this is a great simplification. Here it is the `Agent` objects physically crossing the `Segment` objects one by one; `Segment::addAgent` and `Segment::removeAgent` merely count them.
 
 ### The router
 
 Classical assignment algorithms spread $d_{ij}$ over routes in one batch. OpenGlassBox does the opposite: each **agent** decides where to go, one at a time, when a rule sends it out with a load. Something has to answer that question on the road graph, and that component is the **router**.
 
-A router is the object a `City` holds to plan agent trips. It implements the `IRouter` interface (`include/OpenGlassBox/Router.hpp`): given a crossroads, a target name, and a load, it searches the network for a building that accepts them and returns a `Route` (crossroads to follow, optional last leg along a segment, travel time). Agents call it when they need a next crossroads or when they check whether their current road is still the cheapest option. Edge costs are always read from `Way::travelTime`, so the router sees the traffic picture built by the four steps below.
+A router is the object a `City` holds to plan agent trips. It implements the `IRouter` interface (`include/OpenGlassBox/Router.hpp`): given a crossroads, a target name, and a load, it searches the network for a building that accepts them and returns a `Route` (crossroads to follow, optional last leg along a segment, travel time). Agents call it when they need a next crossroads or when they check whether their current road is still the cheapest option. Edge costs are always read from `Segment::travelTime`, so the router sees the traffic picture built by the four steps below.
 
-Each city owns one router instance for the lifetime of the simulation (`City::setRouter`), so scratch buffers are allocated once rather than on every search. The shipped default is `Dijkstra` in `OpenGlassBox/DijkstraRouter.hpp`; attach it with `installDijkstraRouter` (see the [integration guide](integration.md)). You can replace it with any other `IRouter` without changing `City` or `Agent`.
+Each city owns one router instance for the lifetime of the simulation (`City::router`), so scratch buffers are allocated once rather than on every search. The shipped default is `Dijkstra` in `OpenGlassBox/DijkstraRouter.hpp`; attach it with `installDijkstraRouter` (see the [integration guide](integration.md)). You can replace it with any other `IRouter` without changing `City` or `Agent`.
 
 So there is no assignment loop, and no iteration index. What is left of the MSA structure runs once per tick, in four steps.
 
 ### Step 1: counting, which plays the part of the all-or-nothing
 
-Every `Way` holds `m_agentCount`, the number of agents currently on it, maintained by `Way::addAgent` and `Way::removeAgent` as agents enter and leave. At the end of a tick that count $n$ is the observation.
+Every `Segment` holds `m_agentCount`, the number of agents currently on it, maintained by `Segment::addAgent` and `Segment::removeAgent` as agents enter and leave. At the end of a tick that count $n$ is the observation.
 
 This is where the saving is. In CiudadSim, obtaining $y^k$ means running a full all-or-nothing over the whole network at every iteration. Here the agents have already performed that computation, individually, by walking: each of them routed on the shortest path under the weights of the moment, and the count of who ended up where *is* the result. Nothing has to be recomputed, only read.
 
@@ -187,17 +187,17 @@ The observation is blended into the running flow with a fixed weight $\alpha$:
 
 $$\displaystyle f \leftarrow (1-\alpha) f + \alpha \, n$$
 
-That is `Way::smoothFlow`, called for every segment from `City::update` through `Path::smoothFlows`, **before any agent moves**, so that all of them route on the same picture of the network during the tick. The weight is `SimulationConfig::trafficSmoothing`, 0.05 by default and adjustable in the Traffic panel of the demo.
+That is `Segment::smoothFlow`, called for every segment from `City::update` through `Path::updateTrafficSmoothing`, **before any agent moves**, so that all of them route on the same picture of the network during the tick. The weight is `TrafficConfig::smoothing`, 0.05 by default and adjustable in the Traffic panel of the demo.
 
 Without this step the whole population would swap between two parallel roads every tick: everyone sees road A empty, everyone moves to A, A is now jammed, everyone moves back to B.
 
 ### Step 3: updating the cost
 
-`Way::updateTravelTime` re-evaluates the BPR function on the new flow, giving the segment its new travel time. Segments whose flow barely moved are skipped, which spares the power on every quiet street of the city on every tick, and a city has far more quiet streets than busy ones.
+`Segment::updateTravelTime` re-evaluates the BPR function on the new flow, giving the segment its new travel time. Segments whose flow barely moved are skipped, which spares the power on every quiet street of the city on every tick, and a city has far more quiet streets than busy ones.
 
 ### Step 4: republishing the weights
 
-There is nothing to publish, and that is the point. `Way::travelTime` is the single accessor every router reads, so the next search sees the new costs without anything being notified, invalidated or rebuilt. Agents do not re-plan on the spot either: they reconsider on their own period, which step 3 of the following ticks keeps feeding.
+There is nothing to publish, and that is the point. `Segment::travelTime` is the single accessor every router reads, so the next search sees the new costs without anything being notified, invalidated or rebuilt. Agents do not re-plan on the spot either: they reconsider on their own period, which step 3 of the following ticks keeps feeding.
 
 ### Why this is not MSA
 
@@ -239,7 +239,7 @@ Two conditions make that ratio mean anything, and both are easy to break.
 
 The first is that the two sums must run over the **same agents**. An agent that is wandering has no remaining cost to contribute, so its alternative must be left out too, and one whose reroute reaches nothing has no alternative, so its remaining cost must be left out in turn. Summing over two different populations measures the difference between them rather than the distance to equilibrium.
 
-The second is that an agent must not be **measured against itself**. It holds a place at its destination, and `Unit::accepts` counts that place, so a search made on its behalf without lifting its own claim finds its destination full and answers with a dearer building. Every agent then looks as though it would gain by rerouting to somewhere it is already going, which shows up as SPTT larger than TSTT. That is why the measurement goes through `Agent::rerouteCost`, which lifts the claim, asks, and puts it back, rather than calling `IRouter::shortestPathCost` directly.
+The second is that an agent must not be **measured against itself**. It holds a place at its destination, and `Unit::accepts` counts that place, so a search made on its behalf without lifting its own claim finds its destination full and answers with a dearer building. Every agent then looks as though it would gain by rerouting to somewhere it is already going, which shows up as SPTT larger than TSTT. That is why the measurement goes through `Agent::computeRerouteCost`, which lifts the claim, asks, and puts it back, rather than calling `IRouter::computeShortestPathCost` directly.
 
 With both respected, SPTT stays below TSTT except in one genuine case: an agent whose destination filled up while it was driving, whose next best building really is farther. The panel says so rather than showing a negative gap.
 
@@ -267,9 +267,9 @@ The table below is a rule of thumb for reading the value in the Traffic panel. A
 | **15–30 %** | Clearly off | Many agents pay substantially more than today's shortest path: fresh congestion, a new road not yet used, or `pathCheckTicks` set too high. |
 | **30 %+** | Strong mismatch | Often right after a shock (closed road, rush of new agents, capacity collapse on one link). Expect visible jams and agents committed to bad routes until they re-check. |
 
-These bands are indicative, not thresholds to tune for. A city can sit at 10 % for long stretches and still look healthy; what matters is whether the gap **drifts down** after a disturbance and whether jams match what you see on the map.
+These bands are indicative, not thresholds to tune for. A city can sit at 10 % for long stretches and still look healthy; what matters is whether the gap **drifts down** after a disturbance and whether jams match what you see on screen.
 
-Being a diagnostic is what its cost has to be measured against, and the cost is a whole graph search per agent examined. Two things keep it affordable while a panel reads it on every frame. The result is memoized until the next tick, since nothing it depends on can move within one. And the agents are sampled rather than all walked, at most `SimulationConfig::relativeGapSamples` of them, taken at a regular stride so that the sample covers the whole population instead of whichever end of the list the loop starts at. The gap being a ratio of two sums scaled the same way, a regular sample estimates it without any correction.
+Being a diagnostic is what its cost has to be measured against, and the cost is a whole graph search per agent examined. Two things keep it affordable while a panel reads it on every frame. The result is memoized until the next tick, since nothing it depends on can move within one. And the agents are sampled rather than all walked, at most `TrafficConfig::relativeGapSamples` of them, taken at a regular stride so that the sample covers the whole population instead of whichever end of the list the loop starts at. The gap being a ratio of two sums scaled the same way, a regular sample estimates it without any correction.
 
 ## What we deliberately do not do
 
@@ -279,7 +279,7 @@ What a logit or a probit buys is **dispersion**: two agents with the same origin
 
 The choice is therefore between dispersion that emerges from the mechanics and dispersion computed by a model layered on top of them. The second costs a route enumeration, or Dial's two passes to avoid one, on every search, and adds a $\theta$ to calibrate, for a difference no player could point at.
 
-One cheap approximation is worth recording, being the only one that would fit the engine. Perturbing each edge cost by a factor $1 + \sigma\varepsilon$, with $\varepsilon$ drawn from a hash of the agent identifier and the way identifier, is a probit for the price of a hash: deterministic, so saves and tests stay reproducible, needing no storage, and giving each agent a stable driving personality rather than fresh noise at every search. It is not implemented because it would mean passing the agent identity into `IRouter::findRoute`, which is changing an interface for a refinement. Note also that it would raise the relative gap by construction, that gap being the measure of how far agents are from their shortest routes.
+One cheap approximation is worth recording, being the only one that would fit the engine. Perturbing each edge cost by a factor $1 + \sigma\varepsilon$, with $\varepsilon$ drawn from a hash of the agent identifier and the segment identifier, is a probit for the price of a hash: deterministic, so saves and tests stay reproducible, needing no storage, and giving each agent a stable driving personality rather than fresh noise at every search. It is not implemented because it would mean passing the agent identity into `IRouter::findRoute`, which is changing an interface for a refinement. Note also that it would raise the relative gap by construction, that gap being the measure of how far agents are from their shortest routes.
 
 ## Why there is no assignment solver
 
@@ -289,11 +289,11 @@ The obvious next step, from the shape of the four steps above, is to promote the
 
 `TrafficAssignmentSolver` would have owned the three things the current design has nowhere to put:
 
-- the **flow buffer**. Today there is one `m_flow` per `Way`, updated in place. A real MSA has to keep it separate from the observed count $y^k$ of the current window, since it needs both at once to form the average.
+- the **flow buffer**. Today there is one `m_flow` per `Segment`, updated in place. A real MSA has to keep it separate from the observed count $y^k$ of the current window, since it needs both at once to form the average.
 - the **iteration counter** $k$. It does not exist, because there is no iteration: smoothing happens once per tick, unconditionally.
 - the **step policy**, that is the choice between $\lambda_k = 1/k$ and a fixed $\eta$. Today this is not a choice but a hard-coded formula.
 
-It would have run over a window of $N$ ticks, taken the observed counts as its $y^k$, updated the average with a vanishing step, recomputed the travel times and let the router read them. The hook was available: `City::update`, in the place `Path::smoothFlows` occupies, or `World::update` for an average spanning several cities. Nothing else would have had to change, `Way::travelTime` being already the single point every router reads.
+It would have run over a window of $N$ ticks, taken the observed counts as its $y^k$, updated the average with a vanishing step, recomputed the travel times and let the router read them. The hook was available: `City::update`, in the place `Path::updateTrafficSmoothing` occupies, or `World::update` for an average spanning several cities. Nothing else would have had to change, `Segment::travelTime` being already the single point every router reads.
 
 ### Why we do not want it
 
@@ -323,10 +323,10 @@ The cost is one integer per building and one comparison per acceptance test. Wha
 
 | Coefficient | Where |
 | --- | --- |
-| $\alpha = 0.15$ of the BPR function | hard-coded in `Way::updateTravelTime`, `src/Path.cpp` |
-| $\beta$, capacity $c_a$, speed limit | `WayType` in `include/OpenGlassBox/Types.hpp`, set per segment type in the `.ogs` ruleset |
-| Smoothing weight $\alpha$ of the moving average | `SimulationConfig::trafficSmoothing`, `include/OpenGlassBox/Config.hpp` |
-| Route re-examination period and threshold | `SimulationConfig::pathCheckTicks`, `pathRecalcTicks`, `pathCostDeviation` |
-| Sample size of the relative gap | `SimulationConfig::relativeGapSamples`, zero meaning every agent |
+| $\alpha = 0.15$ of the BPR function | hard-coded in `Segment::updateTravelTime`, `src/Path.cpp` |
+| $\beta$, capacity $c_a$, speed limit | `SegmentType` in `include/OpenGlassBox/Types.hpp`, set per segment type in the `.ogs` ruleset |
+| Smoothing weight $\alpha$ of the moving average | `TrafficConfig::smoothing`, `include/OpenGlassBox/Config.hpp` |
+| Route re-examination period and threshold | `RoutingConfig::pathCheckTicks`, `pathRecalcTicks`, `pathCostDeviation` |
+| Sample size of the relative gap | `TrafficConfig::relativeGapSamples`, zero meaning every agent |
 
 Nothing here is a script keyword beyond what `segment` already accepts. See the [script language reference](script.md) and the [engine documentation](engine.md).

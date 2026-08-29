@@ -7,151 +7,159 @@
 #include "OpenGlassBox/World.hpp"
 
 #include <cmath>
+#include <stdexcept>
 
 // -----------------------------------------------------------------------------
-namespace ogb {
-
-World::World(SimulationConfig const& config)
-    : m_config(config),
-      m_clock(config.ticksPerMinute)
+namespace ogb
 {
-    // A city that opens at midnight keeps the player waiting until the rules
-    // that hold office hours wake up. Loading a save overwrites this, since it
-    // restores the tick counter it was written with.
-    m_clock.setTimeOfDay(0u, config.startHour, 0u);
+
+World::World(Config const& config, SimulationClock& clock)
+    : m_config(config), m_clock(clock)
+{
 }
 
 // -----------------------------------------------------------------------------
-Map& World::addMap(MapType const& type)
+void World::setConfig(Config const& config)
 {
-    auto const it = m_maps.find(type.name);
-    if (it != m_maps.end())
+    m_config = config;
+    m_clock.setTicksPerMinute(m_config.time.ticksPerMinute);
+}
+
+// -----------------------------------------------------------------------------
+Layer& World::addLayer(LayerType const& type)
+{
+    auto const it = m_layers.find(type.name.str());
+    if (it != m_layers.end())
         return *(it->second);
 
-    return *(m_maps[type.name] = std::make_unique<Map>(type, *this));
+    return *(m_layers[type.name.str()] = std::make_unique<Layer>(type, *this));
 }
 
 // -----------------------------------------------------------------------------
-Map& World::getMap(std::string const& name)
+Layer* World::findLayer(std::string const& name)
 {
-    return *m_maps.at(name);
+    auto const it = m_layers.find(name);
+    return (it == m_layers.end()) ? nullptr : it->second.get();
 }
 
 // -----------------------------------------------------------------------------
-Map const& World::getMap(std::string const& name) const
+City& World::addCity(std::string const& name,
+                     Vector3f const& position,
+                     uint32_t sizeU,
+                     uint32_t sizeV)
 {
-    return *m_maps.at(name);
+    City& city = *(m_cities[name] =
+                       std::make_unique<City>(name, position, sizeU, sizeV, *this));
+    m_listener->onCityAdded(city);
+    return city;
 }
 
 // -----------------------------------------------------------------------------
-Map* World::findMap(std::string const& name)
+City& World::addCity(std::string const& name, Vector3f const& position)
 {
-    auto const it = m_maps.find(name);
-    return (it == m_maps.end()) ? nullptr : it->second.get();
+    return addCity(name,
+                   position,
+                   m_config.grid.defaultCitySizeU,
+                   m_config.grid.defaultCitySizeV);
 }
 
 // -----------------------------------------------------------------------------
-City& World::addCity(std::string const& name, Vector3f const& position,
-                     uint32_t sizeU, uint32_t sizeV)
+bool World::removeCity(std::string const& name)
 {
-    return *(m_cities[name] =
-                 std::make_unique<City>(name, position, sizeU, sizeV, *this));
-}
+    auto const it = m_cities.find(name);
+    if (it == m_cities.end())
+        return false;
 
-// -----------------------------------------------------------------------------
-City& World::addCity(std::string const& name, uint32_t sizeU, uint32_t sizeV)
-{
-    return addCity(name, Vector3f(0.0f, 0.0f, 0.0f), sizeU, sizeV);
+    // Told while the city is still alive: a renderer has to drop what it drew
+    // before the buildings it refers to are destroyed.
+    m_listener->onCityRemoved(*it->second);
+    m_cities.erase(it);
+    return true;
 }
 
 // -----------------------------------------------------------------------------
 City& World::getCity(std::string const& name)
 {
-    return *m_cities.at(name);
+    auto const it = m_cities.find(name);
+    if (it == m_cities.end())
+        throw std::out_of_range("Unknown city '" + name + "'");
+    return *it->second;
 }
 
 // -----------------------------------------------------------------------------
-City const& World::getCity(std::string const& name) const
+City* World::findCity(std::string const& name)
 {
-    return *m_cities.at(name);
+    auto const it = m_cities.find(name);
+    return (it == m_cities.end()) ? nullptr : it->second.get();
 }
 
 // -----------------------------------------------------------------------------
 void World::update(float dt)
 {
-    m_clock.setTicksPerMinute(m_config.ticksPerMinute);
+    m_clock.setTicksPerMinute(m_config.time.ticksPerMinute);
     m_clock.tick();
 
-    for (auto& it: m_cities)
+    for (auto& it : m_cities)
     {
         it.second->update(dt);
     }
 
-    // Maps are shared, so their rules run once for the whole world rather than
-    // once per City.
-    for (auto& it: m_maps)
+    // Layers are shared, so their rules run once for the whole world rather
+    // than once per city.
+    for (auto& it : m_layers)
     {
         it.second->executeRules(m_cities);
     }
 }
 
 // -----------------------------------------------------------------------------
-void World::world2mapPosition(Vector3f const& worldPos, int32_t& u,
-                              int32_t& v) const
+Cell World::worldToCell(Vector3f const& position) const
 {
-    float const size = m_config.gridCellSize;
+    float const size = m_config.grid.cellSize;
 
-    u = int32_t(std::floor(worldPos.x / size));
-    v = int32_t(std::floor(worldPos.y / size));
+    return Cell{ int32_t(std::floor(position.x / size)),
+                 int32_t(std::floor(position.y / size)) };
 }
 
 // -----------------------------------------------------------------------------
-Vector3f World::mapPosition2world(int32_t u, int32_t v) const
+Vector3f World::cellToWorld(Cell cell) const
 {
-    float const size = m_config.gridCellSize;
+    float const size = m_config.grid.cellSize;
 
-    return Vector3f(float(u) * size, float(v) * size, 0.0f);
+    return Vector3f(float(cell.u) * size, float(cell.v) * size, 0.0f);
 }
 
 // -----------------------------------------------------------------------------
-City* World::cityAt(Vector3f const& world)
+City* World::findCityAt(Vector3f const& position)
 {
-    int32_t u = 0;
-    int32_t v = 0;
-    world2mapPosition(world, u, v);
-    for (auto& it: m_cities)
+    Cell const cell = worldToCell(position);
+    for (auto& it : m_cities)
     {
-        if (it.second->region().contains(u, v))
+        if (it.second->getRegion().contains(cell))
             return it.second.get();
     }
     return nullptr;
 }
 
-// -----------------------------------------------------------------------------
-City const* World::cityAt(Vector3f const& world) const
+namespace
 {
-    int32_t u = 0;
-    int32_t v = 0;
-    world2mapPosition(world, u, v);
-    for (auto const& it: m_cities)
-    {
-        if (it.second->region().contains(u, v))
-            return it.second.get();
-    }
-    return nullptr;
-}
 
-namespace {
-
-bool clipToBox(Vector3f const& a, Vector3f const& b, float x0, float y0,
-               float x1, float y1, float& tEnter, float& tLeave)
+bool clipToBox(Vector3f const& a,
+               Vector3f const& b,
+               float x0,
+               float y0,
+               float x1,
+               float y1,
+               float& tEnter,
+               float& tLeave)
 {
     float t0 = 0.0f;
     float t1 = 1.0f;
     float const dx = b.x - a.x;
     float const dy = b.y - a.y;
 
-    auto const clip = [&](float p, float q) -> bool {
+    auto const clip = [&](float p, float q) -> bool
+    {
         if (std::fabs(p) < 1e-8f)
             return q >= 0.0f;
         float const r = q / p;
@@ -172,8 +180,8 @@ bool clipToBox(Vector3f const& a, Vector3f const& b, float x0, float y0,
         return true;
     };
 
-    if (!clip(-dx, a.x - x0) || !clip(dx, x1 - a.x) ||
-        !clip(-dy, a.y - y0) || !clip(dy, y1 - a.y))
+    if (!clip(-dx, a.x - x0) || !clip(dx, x1 - a.x) || !clip(-dy, a.y - y0) ||
+        !clip(dy, y1 - a.y))
     {
         return false;
     }
@@ -185,9 +193,9 @@ bool clipToBox(Vector3f const& a, Vector3f const& b, float x0, float y0,
 
 Node& ensureNode(Path& path, Vector3f const& position)
 {
-    for (auto& node: path.nodes())
+    for (auto& node : path.getNodes())
     {
-        if (magnitude(node->position() - position) < 1.5f)
+        if (length(node->getPosition() - position) < 1.5f)
             return *node;
     }
     return path.addNode(position);
@@ -196,10 +204,13 @@ Node& ensureNode(Path& path, Vector3f const& position)
 } // namespace
 
 // -----------------------------------------------------------------------------
-bool World::addRoad(City& owner, std::string const& pathType, WayType const& wayType,
-                    Vector3f const& from, Vector3f const& to)
+bool World::addRoad(City& owner,
+                    std::string const& pathType,
+                    SegmentType const& segmentType,
+                    Vector3f const& from,
+                    Vector3f const& to)
 {
-    Listener::WayProposal const proposal{ from, to, wayType.name };
+    Listener::SegmentProposal const proposal{ from, to, segmentType.name.str() };
 
     struct Piece
     {
@@ -209,12 +220,12 @@ bool World::addRoad(City& owner, std::string const& pathType, WayType const& way
     };
     std::vector<Piece> pieces;
 
-    for (auto& it: m_cities)
+    for (auto& it : m_cities)
     {
         City& city = *it.second;
-        MapRegion const region = city.region();
-        Vector3f const p0 = mapPosition2world(region.u0, region.v0);
-        Vector3f const p1 = mapPosition2world(region.u1(), region.v1());
+        CellRegion const region = city.getRegion();
+        Vector3f const p0 = cellToWorld(Cell{ region.u0, region.v0 });
+        Vector3f const p1 = cellToWorld(Cell{ region.getMaxU(), region.getMaxV() });
         float t0 = 0.0f;
         float t1 = 1.0f;
         if (!clipToBox(from, to, p0.x, p0.y, p1.x, p1.y, t0, t1))
@@ -222,11 +233,11 @@ bool World::addRoad(City& owner, std::string const& pathType, WayType const& way
 
         Vector3f const a = from + (to - from) * t0;
         Vector3f const b = from + (to - from) * t1;
-        if (magnitude(b - a) < 1e-3f)
+        if (length(b - a) < 1e-3f)
             continue;
 
         if ((&city != &owner) &&
-            !m_listener->allowWayAcross(owner, city, proposal))
+            !m_listener->allowSegmentAcross(owner, city, proposal))
         {
             return false;
         }
@@ -240,26 +251,26 @@ bool World::addRoad(City& owner, std::string const& pathType, WayType const& way
         pieces.push_back({ &owner, from, to });
     }
 
-    for (Piece const& piece: pieces)
+    for (Piece const& piece : pieces)
     {
         Path* path = nullptr;
-        auto const found = piece.city->paths().find(pathType);
-        if (found != piece.city->paths().end())
+        auto const found = piece.city->getPaths().find(pathType);
+        if (found != piece.city->getPaths().end())
         {
             path = found->second.get();
         }
         else
         {
-            auto const ownerPath = owner.paths().find(pathType);
-            if (ownerPath == owner.paths().end())
+            auto const ownerPath = owner.getPaths().find(pathType);
+            if (ownerPath == owner.getPaths().end())
                 continue;
-            path = &piece.city->addPath(ownerPath->second->pathType());
+            path = &piece.city->addPath(ownerPath->second->getType());
         }
 
         Node& n1 = ensureNode(*path, piece.a);
         Node& n2 = ensureNode(*path, piece.b);
         if (&n1 != &n2)
-            path->addWay(wayType, n1, n2);
+            path->addSegment(segmentType, n1, n2);
     }
 
     return true;

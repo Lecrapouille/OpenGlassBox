@@ -14,7 +14,7 @@ unitRule ProduceGoods
     hour between 8 18
     local People greater 0
     local Goods add 1
-    map Pollution add 1
+    layer Pollution add 1
     global Money add 1
 end
 ```
@@ -58,7 +58,7 @@ where $k_{req}$ is the raw material needed per worker. The player sees immediate
 
 **Not implemented.**
 
-Once output varies, a fixed sale price stops making sense. The price of a resource in an area would follow the imbalance between demand and available stock:
+Once output varies, a fixed sale price stops making sense. The price of a resource in a zone would follow the imbalance between demand and available stock:
 
 $$\displaystyle p = p_0 \cdot \left(\frac{D}{S + \epsilon}\right)^{\gamma}$$
 
@@ -67,7 +67,7 @@ $$\displaystyle p = p_0 \cdot \left(\frac{D}{S + \epsilon}\right)^{\gamma}$$
 - $\gamma$ is an elasticity exponent, typically between 0.5 and 1: the larger it is, the more violently the price reacts to an imbalance;
 - $\epsilon$ is a small constant keeping the division finite when $S = 0$.
 
-A `Map` layer is the natural home for $D$ and $S$, since both are questions about a place rather than about a building, and the neighbourhood sum a layer already performs is exactly the aggregation needed.
+A `Layer` is the natural home for $D$ and $S$, since both are questions about a place rather than about a building, and the neighbourhood sum a layer already performs is exactly the aggregation needed.
 
 ## Choosing a destination
 
@@ -79,7 +79,7 @@ Room used to be a plain boolean on the stock. That made twenty agents dispatched
 
 ### What was done: reserving the place
 
-A `Unit` now counts the agents heading towards it, and `accepts` measures the room against the stock **plus** that count. An agent claims its place when it is routed and gives it back when it delivers, when it gives up, when it is destroyed, or when it merely recomputes its itinerary and picks somewhere else. `Agent::setRoute` is the single point all of that goes through, which is what makes the claim impossible to leak: a building whose count never came back down would be invisible to every agent for the rest of the game, and that would be worse than the crowding it prevents. A test asserts the invariant over a whole city, that the claims outstanding equal the agents that have somewhere to go.
+A `Unit` now counts the agents heading towards it, and `accepts` measures the room against the stock **plus** that count. An agent claims its place when it is routed and gives it back when it delivers, when it gives up, when it is destroyed, or when it merely recomputes its itinerary and picks somewhere else. `Agent::route` is the single point all of that goes through, which is what makes the claim impossible to leak: a building whose count never came back down would be invisible to every agent for the rest of the game, and that would be worse than the crowding it prevents. A test asserts the invariant over a whole city, that the claims outstanding equal the agents that have somewhere to go.
 
 Two details are worth knowing. The claim is against the other agents and not against oneself, so an agent lifts its own for the length of its own tick; otherwise it would find its own destination full and never be let in at the door it was sent to. And nothing of this is saved: itineraries are recomputed on loading, so the counts rebuild themselves and the `.ogc` format does not move.
 
@@ -107,7 +107,7 @@ Population and money move in steps, a rule firing at a time, and a curve of step
 
 $$\displaystyle I_t = I_{t-1} + \eta \left(I_{\text{observed}} - I_{t-1}\right)$$
 
-That lives in `demo/src/Game/TimeSeries.hpp`. It is the **same** filter `Way::smoothFlow` applies to traffic, with the same fixed step, but it is not the same thing: the traffic average is read back by the router and changes what the agents do, whereas this one is read by nobody but the plotting code.
+That lives in `demo/src/Game/TimeSeries.hpp`. It is the **same** filter `Segment::smoothFlow` applies to traffic, with the same fixed step, but it is not the same thing: the traffic average is read back by the router and changes what the agents do, whereas this one is read by nobody but the plotting code.
 
 That distinction is why it stayed out of the engine. A smoothed indicator earns its place there when something reads it and acts on it, which is the classical argument for smoothing: a tax rise empties a district, the district emptying collapses the revenue, the collapse triggers another adjustment. There is no tax and no rule that reads an indicator, so today the benefit is legibility and nothing more. The day the first consumer appears, the average moves into the engine along with it.
 
@@ -118,17 +118,17 @@ The historical parallel is still worth keeping in view. The SimCity (2013) launc
 | Component | Kind of computation | Where it belongs |
 | --- | --- | --- |
 | Shortest route per tick | Local, cheap | C++, exists: `IRouter` and `Dijkstra` |
-| Congestion smoothing | Global, persistent state | C++, exists: `Way::smoothFlow`; see [why there is no solver](traffic.md#why-there-is-no-assignment-solver) |
-| Reserving a place at the destination | Local, one counter per `Unit` | C++, exists: `Unit::reserve` and `Agent::setRoute` |
+| Congestion smoothing | Global, persistent state | C++, exists: `Segment::smoothFlow`; see [why there is no solver](traffic.md#why-there-is-no-assignment-solver) |
+| Reserving a place at the destination | Local, one counter per `Unit` | C++, exists: `Unit::reserve` and `Agent::route` |
 | Production function | Local, per `Unit` | C++, proposed: `ProductionModel` |
 | Scoring need against distance | Widens every search | Postponed, see above |
 | Smoothing of the plotted curves | Per series, in the panel | C++, exists: `game::TimeSeries`, demo only |
-| Simple growth rules: thresholds, timers | Local, no complex state | Script: `areaRule`, as at Maxis |
+| Simple growth rules: thresholds, timers | Local, no complex state | Script: `zoneRule`, as at Maxis |
 
 ## Where the coefficients would live
 
-The exponents $\alpha$, $\gamma$ and $\delta$ belong with the coefficients that already exist, not in new script keywords. `SimulationConfig` in `include/OpenGlassBox/Config.hpp` holds the ones that tune the whole simulation, next to `trafficSmoothing`; the recipe structures in `include/OpenGlassBox/Types.hpp` hold the ones that vary per kind of building, next to the `capacity` and `beta` of a `WayType`. Recipes and rates stay in the `.ogs` ruleset, where they already are.
+The exponents $\alpha$, $\gamma$ and $\delta$ belong with the coefficients that already exist, not in new script keywords. `ogb::Config` in `include/OpenGlassBox/Config.hpp` holds the ones that tune the whole simulation, next to `TrafficConfig::smoothing`; the recipe structures in `include/OpenGlassBox/Types.hpp` hold the ones that vary per kind of building, next to the `capacity` and `beta` of a `SegmentType`. Recipes and rates stay in the `.ogs` ruleset, where they already are.
 
-The step $\eta$ of the smoothing is not in that list, because the smoothing is not in the engine: it is `TimeSeries::SMOOTHING` in the demo. Should an indicator ever be read by a rule, its step moves to `SimulationConfig` at the same time as the indicator itself.
+The step $\eta$ of the smoothing is not in that list, because the smoothing is not in the engine: it is `TimeSeries::SMOOTHING` in the demo. Should an indicator ever be read by a rule, its step moves to `ogb::Config` at the same time as the indicator itself.
 
 The `.ogs` grammar does not need to grow for any of this. See the [script language reference](script.md) and the [engine documentation](engine.md).

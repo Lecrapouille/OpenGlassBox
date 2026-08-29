@@ -11,7 +11,7 @@
 #ifndef OPEN_GLASSBOX_DIJKSTRA_ROUTER_HPP
 #define OPEN_GLASSBOX_DIJKSTRA_ROUTER_HPP
 
-#include "OpenGlassBox/Simulation.hpp"
+#include "OpenGlassBox/City.hpp"
 
 #include <random>
 
@@ -25,7 +25,7 @@ namespace ogb
 //! Two things make this more than a textbook shortest path:
 //!
 //! - the cost of a segment is its travel time under the current traffic, not
-//!   its length. See Way::travelTime and the BPR function it applies: a short
+//!   its length. See Segment::travelTime and the BPR function it applies: a short
 //!   road carrying two hundred Agents costs more than a long empty one, which
 //!   is what makes a city spread its traffic instead of queueing everything
 //!   through the same street;
@@ -62,19 +62,19 @@ public:
     Dijkstra();
 
     //! \copydoc IRouter::findRoute
-    Route findRoute(Node& fromNode,
+    [[nodiscard]] Route findRoute(Node& fromNode,
                     Name const& searchTarget,
                     Resources const& resources) override;
 
-    //! \copydoc IRouter::findNextPoint
-    Node* findNextPoint(Node& fromNode,
-                        Name& searchTarget,
-                        Resources& resources) override;
+    //! \copydoc IRouter::findNextNode
+    [[nodiscard]] Node* findNextNode(Node& fromNode,
+                       Name& searchTarget,
+                       Resources& resources) override;
 
-    //! \copydoc IRouter::shortestPathCost
-    float shortestPathCost(Node& fromNode,
-                           Name const& searchTarget,
-                           Resources const& resources) override;
+    //! \copydoc IRouter::computeShortestPathCost
+    [[nodiscard]] float computeShortestPathCost(Node& fromNode,
+                                  Name const& searchTarget,
+                                  Resources const& resources) override;
 
     //! \copydoc IRouter::setRandomSeed
     void setRandomSeed(unsigned seed) override;
@@ -87,7 +87,7 @@ public:
     //! \param[in] fromNode the crossroads to leave.
     //! \return a neighbour, or nullptr when no road leads anywhere from there.
     // -------------------------------------------------------------------------
-    Node* randomNeighbor(Node& fromNode);
+    [[nodiscard]] Node* findRandomNeighbor(Node& fromNode);
 
 private:
 
@@ -127,9 +127,9 @@ private:
     //! \param[in] goalNode the last crossroads reached, or nullptr when the
     //! destination stands on \p fromNode.
     //! \param[in] destination the building the load is for.
-    //! \param[in] approachWay the segment the destination stands along, or
+    //! \param[in] approachSegment the segment the destination stands along, or
     //! nullptr when it stands on a crossroads.
-    //! \param[in] approachOffset where along \p approachWay the destination
+    //! \param[in] approachOffset where along \p approachSegment the destination
     //! stands, in [0..1].
     //! \param[in] cost travel time of the whole trip in seconds of game time.
     //! \return the itinerary handed to the Agent.
@@ -137,7 +137,7 @@ private:
     Route reconstruct(Node const& fromNode,
                       Node* goalNode,
                       Unit* destination,
-                      Way* approachWay,
+                      Segment* approachSegment,
                       float approachOffset,
                       float cost);
 
@@ -152,7 +152,7 @@ private:
     //! \brief \param[in] index rank of a crossroads, from Node::index().
     //! \return whether the current search has already reached it.
     // -------------------------------------------------------------------------
-    bool visited(uint32_t const index) const
+    [[nodiscard]] bool isVisited(uint32_t const index) const
     {
         return m_stamp[index] == m_generation;
     }
@@ -208,26 +208,16 @@ private:
 };
 
 // -------------------------------------------------------------------------
-//! \brief Give a town the default Dijkstra router.
+//! \brief Give a city the default Dijkstra router.
 //! \param[in,out] city receives ownership of the router.
-//! \param[in] config read for SimulationConfig::randomSeed.
+//! \param[in] config read for Config::randomSeed.
 // -------------------------------------------------------------------------
-inline void installDijkstraRouter(City& city, SimulationConfig const& config)
+inline void installDijkstraRouter(City& city, Config const& config)
 {
     auto router = std::make_unique<Dijkstra>();
     if (config.randomSeed != 0u)
         router->setRandomSeed(config.randomSeed);
     city.setRouter(std::move(router));
-}
-
-// -------------------------------------------------------------------------
-//! \brief Install a router on every town already held by a simulation.
-//! \param[in,out] simulation the towns to wire up.
-// -------------------------------------------------------------------------
-inline void installDijkstraRouters(Simulation& simulation)
-{
-    for (auto const& it : simulation.cities())
-        installDijkstraRouter(*it.second, simulation.config());
 }
 
 } // namespace ogb

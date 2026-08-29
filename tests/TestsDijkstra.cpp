@@ -28,9 +28,9 @@ TEST(TestsDijkstra, DirectPath)
     Node& home = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& mid = path.addNode(Vector3f(1.0f, 0.0f, 0.0f));
     Node& factory = path.addNode(Vector3f(2.0f, 0.0f, 0.0f));
-    WayType wayType("Dirt", 0xAAAAAA);
-    path.addWay(wayType, home, mid);
-    path.addWay(wayType, mid, factory);
+    SegmentType segmentType("Dirt", 0xAAAAAA);
+    path.addSegment(segmentType, home, mid);
+    path.addSegment(segmentType, mid, factory);
 
     UnitType factoryType = makeFactoryType();
     city.addUnit(factoryType, factory);
@@ -40,7 +40,7 @@ TEST(TestsDijkstra, DirectPath)
 
     Dijkstra router;
     Name target = "People";
-    Node* next = router.findNextPoint(home, target, carried);
+    Node* next = router.findNextNode(home, target, carried);
 
     ASSERT_EQ(next, &mid);
 }
@@ -54,11 +54,11 @@ TEST(TestsDijkstra, ShortestBranch)
     Node& longRoute = path.addNode(Vector3f(10.0f, 0.0f, 0.0f));
     Node& shortRoute = path.addNode(Vector3f(1.0f, 0.0f, 0.0f));
     Node& factory = path.addNode(Vector3f(2.0f, 0.0f, 0.0f));
-    WayType wayType("Dirt", 0xAAAAAA);
-    path.addWay(wayType, start, longRoute);
-    path.addWay(wayType, longRoute, factory);
-    path.addWay(wayType, start, shortRoute);
-    path.addWay(wayType, shortRoute, factory);
+    SegmentType segmentType("Dirt", 0xAAAAAA);
+    path.addSegment(segmentType, start, longRoute);
+    path.addSegment(segmentType, longRoute, factory);
+    path.addSegment(segmentType, start, shortRoute);
+    path.addSegment(segmentType, shortRoute, factory);
 
     UnitType factoryType = makeFactoryType();
     city.addUnit(factoryType, factory);
@@ -68,7 +68,7 @@ TEST(TestsDijkstra, ShortestBranch)
 
     Dijkstra router;
     Name target = "People";
-    Node* next = router.findNextPoint(start, target, carried);
+    Node* next = router.findNextNode(start, target, carried);
 
     ASSERT_EQ(next, &shortRoute);
 }
@@ -87,7 +87,7 @@ TEST(TestsDijkstra, AlreadyAtDestination)
 
     Dijkstra router;
     Name target = "People";
-    Node* next = router.findNextPoint(factory, target, carried);
+    Node* next = router.findNextNode(factory, target, carried);
 
     ASSERT_EQ(next, &factory);
 }
@@ -99,7 +99,7 @@ TEST(TestsDijkstra, RandomFallbackWhenNoDestination)
     Path& path = city.addPath(keep<PathType>("Road"));
     Node& start = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& other = path.addNode(Vector3f(1.0f, 0.0f, 0.0f));
-    path.addWay(keep<WayType>("Dirt", 0xAAAAAA), start, other);
+    path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), start, other);
 
     Resources carried;
     carried.addResource("People", 1u);
@@ -107,7 +107,7 @@ TEST(TestsDijkstra, RandomFallbackWhenNoDestination)
     Dijkstra router;
     router.setRandomSeed(42u);
     Name target = "People";
-    Node* next = router.findNextPoint(start, target, carried);
+    Node* next = router.findNextNode(start, target, carried);
 
     ASSERT_EQ(next, &other);
 }
@@ -121,7 +121,7 @@ TEST(TestsDijkstra, DisconnectedGraph)
 
     Dijkstra router;
     Name target = "People";
-    Node* next = router.findNextPoint(orphan, target, carried);
+    Node* next = router.findNextNode(orphan, target, carried);
 
     ASSERT_EQ(next, nullptr);
 }
@@ -136,9 +136,9 @@ TEST(TestsDijkstra, PathScopedRouting)
     Node& start = road.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& roadMid = road.addNode(Vector3f(1.0f, 0.0f, 0.0f));
     Node& roadFactory = road.addNode(Vector3f(2.0f, 0.0f, 0.0f));
-    WayType wayType("Dirt", 0xAAAAAA);
-    road.addWay(wayType, start, roadMid);
-    road.addWay(wayType, roadMid, roadFactory);
+    SegmentType segmentType("Dirt", 0xAAAAAA);
+    road.addSegment(segmentType, start, roadMid);
+    road.addSegment(segmentType, roadMid, roadFactory);
 
     Node& railFactory = rail.addNode(Vector3f(0.0f, 1.0f, 0.0f));
     UnitType railFactoryType = makeFactoryType();
@@ -151,7 +151,7 @@ TEST(TestsDijkstra, PathScopedRouting)
 
     Dijkstra router;
     Name target = "People";
-    Node* next = router.findNextPoint(start, target, carried);
+    Node* next = router.findNextNode(start, target, carried);
 
     ASSERT_EQ(next, &roadMid);
     ASSERT_NE(next, &railFactory);

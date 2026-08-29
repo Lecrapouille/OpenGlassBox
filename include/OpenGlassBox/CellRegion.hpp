@@ -4,39 +4,38 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
-//! \file MapRegion.hpp
-//! \brief Axis-aligned rectangle of grid cells.
+//! \file CellRegion.hpp
+//! \brief Rectangle of grid cells.
 
-#ifndef OPEN_GLASSBOX_MAP_REGION_HPP
-#define OPEN_GLASSBOX_MAP_REGION_HPP
+#ifndef OPEN_GLASSBOX_CELL_REGION_HPP
+#define OPEN_GLASSBOX_CELL_REGION_HPP
 
-#include <cstdint>
+#include "OpenGlassBox/Vector.hpp"
 
 namespace ogb
 {
 
 //==============================================================================
-//! \brief A rectangle of cells on the world grid, in grid coordinates.
+//! \brief A rectangle of cells on the world grid.
 //!
-//! The grid is unbounded in the four directions, so anything that has to walk
-//! cells has to be told which ones. A City hands out the region it administers,
-//! and that is what bounds its Maps, its rules and the reach of its buildings.
-//! An Area hands out the footprint the player painted, and that is what bounds
-//! the buildings a zone may grow.
+//! The grid has no bounds, so anything that walks cells has to be told which
+//! ones. A city hands out the cells it owns, and that bounds its layers, its
+//! rules and the reach of its buildings. A zone hands out the cells the player
+//! painted, and that bounds the buildings a zone may grow.
 //!
-//! Coordinates are signed, and the rectangle is half open: \c u0 is inside,
-//! \c u1() is the first column past it, which is what makes a loop read like
-//! any other.
+//! Coordinates are signed. The rectangle is half open: \c u0 is inside and
+//! \c getMaxU() is the first column past it, which makes a loop read like any
+//! other.
 //!
 //! Example:
 //! \code
-//! ogb::MapRegion const& region = city.region();
-//! for (int32_t v = region.v0; v < region.v1(); ++v)
-//!     for (int32_t u = region.u0; u < region.u1(); ++u)
-//!         total += map.getResource(u, v);
+//! ogb::CellRegion const& region = city.getRegion();
+//! for (int32_t v = region.v0; v < region.getMaxV(); ++v)
+//!     for (int32_t u = region.u0; u < region.getMaxU(); ++u)
+//!         total += layer.getResource({ u, v });
 //! \endcode
 //==============================================================================
-struct MapRegion
+struct CellRegion
 {
     //! \brief Column of the first cell, included.
     int32_t u0 = 0;
@@ -53,7 +52,7 @@ struct MapRegion
     //--------------------------------------------------------------------------
     //! \brief \return the column just past the last one, excluded.
     //--------------------------------------------------------------------------
-    int32_t u1() const
+    [[nodiscard]] int32_t getMaxU() const
     {
         return u0 + int32_t(sizeU);
     }
@@ -61,54 +60,57 @@ struct MapRegion
     //--------------------------------------------------------------------------
     //! \brief \return the row just past the last one, excluded.
     //--------------------------------------------------------------------------
-    int32_t v1() const
+    [[nodiscard]] int32_t getMaxV() const
     {
         return v0 + int32_t(sizeV);
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] u, v the cell to test.
+    //! \brief \param[in] cell the cell to test.
     //! \return true when that cell belongs to the rectangle.
     //--------------------------------------------------------------------------
-    bool contains(int32_t u, int32_t v) const
+    bool contains(Cell cell) const
     {
-        return (u >= u0) && (u < u1()) && (v >= v0) && (v < v1());
+        return (cell.u >= u0) && (cell.u < getMaxU()) && (cell.v >= v0) &&
+               (cell.v < getMaxV());
     }
 
     //--------------------------------------------------------------------------
-    //! \brief Move a cell inside the rectangle, along each axis separately.
+    //! \brief Bring a cell inside the rectangle, along each axis separately.
     //!
-    //! What a rule reaching past the edge of the city reads: the cell of the
-    //! rectangle nearest to the one it asked for, rather than nothing at all.
+    //! This is what a rule reaching past the edge of the city reads: the cell
+    //! of the rectangle nearest to the one it asked for, rather than nothing.
     //!
-    //! \param[in,out] u, v the cell to bring back in. Left as is when it is
-    //! already inside. Meaningless on an empty rectangle.
+    //! \param[in] cell the cell to bring back in.
+    //! \return the cell itself when it is already inside, the nearest one
+    //! otherwise. Meaningless on an empty rectangle.
     //--------------------------------------------------------------------------
-    void clamp(int32_t& u, int32_t& v) const
+    Cell clamp(Cell cell) const
     {
-        if (u < u0)
+        if (cell.u < u0)
         {
-            u = u0;
+            cell.u = u0;
         }
-        else if (u >= u1())
+        else if (cell.u >= getMaxU())
         {
-            u = u1() - 1;
+            cell.u = getMaxU() - 1;
         }
-        if (v < v0)
+        if (cell.v < v0)
         {
-            v = v0;
+            cell.v = v0;
         }
-        else if (v >= v1())
+        else if (cell.v >= getMaxV())
         {
-            v = v1() - 1;
+            cell.v = getMaxV() - 1;
         }
+        return cell;
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \return the number of cells. Wide enough to hold the product of
-    //! two large sides without wrapping around.
+    //! \brief \return how many cells the rectangle holds. Wide enough for the
+    //! product of two large sides.
     //--------------------------------------------------------------------------
-    uint64_t area() const
+    [[nodiscard]] uint64_t getCellCount() const
     {
         return uint64_t(sizeU) * uint64_t(sizeV);
     }
@@ -117,7 +119,7 @@ struct MapRegion
     //! \brief \return true when the rectangle holds no cell at all, which is
     //! what a zone painted outside the city amounts to.
     //--------------------------------------------------------------------------
-    bool empty() const
+    [[nodiscard]] bool isEmpty() const
     {
         return (sizeU == 0u) || (sizeV == 0u);
     }

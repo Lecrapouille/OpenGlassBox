@@ -33,7 +33,7 @@ namespace game {
 //!
 //!     I <- I + eta * (observed - I)
 //!
-//! the same filter Way::smoothFlow applies to traffic. It is a reading aid and
+//! the same filter Segment::smoothFlow applies to traffic. It is a reading aid and
 //! nothing else: the simulation never sees it, and no rule reads it. Population
 //! and money move in steps as a rule fires, and a curve of steps is hard to
 //! read a trend off.

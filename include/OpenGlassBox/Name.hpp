@@ -21,8 +21,8 @@ namespace ogb
 //==============================================================================
 //! \brief A name of the ruleset, held as a number rather than as characters.
 //!
-//! Everything a script names -- resources, types of building, what an Agent is
-//! looking for -- is a short string drawn from a list the ruleset fixes once
+//! Everything a script names (resources, types of building, what an Agent is
+//! looking for) is a short string drawn from a list the ruleset fixes once
 //! and never adds to afterwards. Yet those strings are compared in the hottest
 //! loops there are: the router asks every building it walks past whether it
 //! accepts what an Agent carries, and that question is a handful of string
@@ -94,7 +94,7 @@ public:
     //! \brief Read as a string wherever one is expected, so that a Name can be
     //! printed, concatenated or written to a save without ceremony.
     //--------------------------------------------------------------------------
-    operator std::string const&() const
+    explicit operator std::string const&() const
     {
         return str();
     }
@@ -103,7 +103,7 @@ public:
     //! \brief \return the rank in the table, which is what makes a Name usable
     //! as an index. Zero is the empty name.
     //--------------------------------------------------------------------------
-    uint32_t id() const
+    [[nodiscard]] uint32_t getId() const
     {
         return m_id;
     }
@@ -170,6 +170,18 @@ bool operator!=(Name const& name, char const* text);
 //! \copydoc operator==(Name const&, char const*)
 bool operator!=(char const* text, Name const& name);
 
+//! \copydoc operator==(Name const&, char const*)
+bool operator==(Name const& name, std::string const& text);
+
+//! \copydoc operator==(Name const&, char const*)
+bool operator==(std::string const& text, Name const& name);
+
+//! \copydoc operator==(Name const&, char const*)
+bool operator!=(Name const& name, std::string const& text);
+
+//! \copydoc operator==(Name const&, char const*)
+bool operator!=(std::string const& text, Name const& name);
+
 //! \brief Order a name against a plain string by their texts. What lets a Name
 //! look up a container keyed by \c std::string with a transparent comparator,
 //! as ScriptDefinitions does.
@@ -188,7 +200,7 @@ struct hash<ogb::Name>
 {
     size_t operator()(ogb::Name const& name) const noexcept
     {
-        return std::hash<uint32_t>()(name.id());
+        return std::hash<uint32_t>()(name.getId());
     }
 };
 } // namespace std

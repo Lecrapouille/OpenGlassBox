@@ -67,7 +67,7 @@ struct CitySaveHeader
 //!     return complain(error);
 //!
 //! Simulation simulation;
-//! simulation.script().parseFile(header.ruleset);
+//! simulation.getRuleset().parseFile(header.ruleset);
 //! if (!CitySave::read("saves/paris.ogc", simulation, error))
 //!     return complain(error);
 //! \endcode
@@ -114,7 +114,7 @@ public:
     //! against?
     //!
     //! A mismatch is a flat refusal rather than a warning: the geometry would
-    //! be rebuilt out of the wrong types, giving a town that looks right and
+    //! be rebuilt out of the wrong types, giving a city that looks right and
     //! behaves like something else.
     //!
     //! \param[in] header what the save claims, from peekHeader().
@@ -132,7 +132,7 @@ public:
     //! Everything is written: the roads, the buildings and what they hold, the
     //! agents and where they are along their itinerary, the layers, and the
     //! clock. The traffic averages of the streets go out too, so that a loaded
-    //! town does not start with every road looking empty.
+    //! city does not start with every road looking empty.
     //!
     //! \param[in] path the file to write. Overwritten if it exists.
     //! \param[in] simulation the game to write out.

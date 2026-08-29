@@ -37,7 +37,7 @@ class CityViewer;
 
 // ****************************************************************************
 //! \brief Whether a building has something to do at a given hour of the day,
-//! in the words the inspector and the tooltips of the map both use.
+//! in the words the inspector and the tooltips of the city view both use.
 //!
 //! A shop that sells nothing at three in the morning is not a broken shop, and
 //! the only way to tell the two apart used to be to read the ruleset.
@@ -66,16 +66,16 @@ struct OpeningStatus
 OpeningStatus openingStatus(Unit const& unit, uint32_t hourOfDay);
 
 // ****************************************************************************
-//! \brief One-click heatmap picker: click a map name to show it as the main
-//! layer. Lives next to the Maps tool of the toolbar, since choosing which map
-//! to look at and choosing which map to paint is the same decision.
+//! \brief One-click heatmap picker: click a layer name to show it as the main
+//! layer. Lives next to the Layers tool of the toolbar, since choosing which layer
+//! to look at and choosing which layer to paint is the same decision.
 // ****************************************************************************
 class LayersPanel
 {
 public:
 
     // ------------------------------------------------------------------------
-    //! \brief One map per row, the controls of every row aligned in columns.
+    //! \brief One layer per row, the controls of every row aligned in columns.
     //! \param[in] width: width in pixels of the column of rows.
     // ------------------------------------------------------------------------
     void
@@ -105,9 +105,9 @@ private:
                   game::RuleTrace const& trace) const;
     void drawAgent(Simulation& simulation, game::DebugState const& state) const;
     void drawNode(game::DebugState& state) const;
-    void drawWay(game::DebugState& state) const;
+    void drawSegment(game::DebugState& state) const;
     void drawCell(Simulation& simulation, game::DebugState& state) const;
-    void drawArea(Simulation& simulation, game::DebugState& state) const;
+    void drawZone(Simulation& simulation, game::DebugState& state) const;
     void drawRuleset(Simulation& simulation) const;
 
 private:
@@ -213,7 +213,7 @@ private:
 
 private:
 
-    //! \brief Histories by group ("Maps", "Agents", "Globals", "Traffic") then
+    //! \brief Histories by group ("Layers", "Agents", "Globals", "Traffic") then
     //! by quantity name.
     std::map<std::string, std::map<std::string, game::TimeSeries>> m_series;
     //! \brief Interval in ticks between two samples, to keep long runs cheap.
@@ -229,7 +229,7 @@ private:
 
 // ****************************************************************************
 //! \brief The in-game clock and how fast it advances: stepping while paused,
-//! time scale and tick rate. Play and Pause live on the map toolbar, next to
+//! time scale and tick rate. Play and Pause live on the city toolbar, next to
 //! the tools they interact with.
 // ****************************************************************************
 class TimeControlPanel
@@ -258,7 +258,7 @@ private:
 };
 
 // ****************************************************************************
-//! \brief Ranks the most saturated Ways and reports whether the network is
+//! \brief Ranks the most saturated Segments and reports whether the network is
 //! settling down.
 // ****************************************************************************
 class TrafficPanel
@@ -268,7 +268,7 @@ public:
     void draw(Simulation& simulation, game::DebugState& state);
 
     // ------------------------------------------------------------------------
-    //! \brief Total travel time of the network, the sum over the Ways of the
+    //! \brief Total travel time of the network, the sum over the Segments of the
     //! flow times the travel time. This is the quantity the Wardrop equilibrium
     //! minimizes, so watching it settle tells whether the routing converged.
     // ------------------------------------------------------------------------

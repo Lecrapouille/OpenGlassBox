@@ -15,7 +15,7 @@
 
 #include "main.hpp"
 
-#include "OpenGlassBox/DijkstraRouter.hpp"
+#include "OpenGlassBox/InstallRouter.hpp"
 #include "OpenGlassBox/Simulation.hpp"
 #include "Save/CitySave.hpp"
 
@@ -44,9 +44,9 @@ static std::string dataFile(std::string const& name)
 //! the saves used here hold one of each.
 static Unit* findUnit(City& city, std::string const& type)
 {
-    for (auto const& unit : city.units())
+    for (auto const& unit : city.getUnits())
     {
-        if (unit->type() == type)
+        if (unit->getTypeName() == type)
             return unit.get();
     }
     return nullptr;
@@ -56,9 +56,9 @@ static Unit* findUnit(City& city, std::string const& type)
 static uint32_t countUnits(City& city, std::string const& type)
 {
     uint32_t count = 0u;
-    for (auto const& unit : city.units())
+    for (auto const& unit : city.getUnits())
     {
-        if (unit->type() == type)
+        if (unit->getTypeName() == type)
             ++count;
     }
     return count;
@@ -68,9 +68,9 @@ static uint32_t countUnits(City& city, std::string const& type)
 static bool
 hasAgent(City& city, std::string const& type, std::string const& target)
 {
-    for (auto const& agent : city.agents())
+    for (auto const& agent : city.getAgents())
     {
-        if ((agent->type() == type) && (agent->searchTarget() == target))
+        if ((agent->getTypeName() == type) && (agent->getTarget() == target))
             return true;
     }
     return false;
@@ -112,7 +112,7 @@ static Sightings watch(Simulation& simulation,
         if (onTick != nullptr)
             onTick();
 
-        uint32_t const hour = simulation.clock().hourOfDay();
+        uint32_t const hour = simulation.getClock().getHourOfDay();
         Unit* const work = findUnit(city, "Work");
         Unit* const shop = findUnit(city, "Shop");
         Unit* const restaurant = findUnit(city, "Restaurant");
@@ -121,16 +121,16 @@ static Sightings watch(Simulation& simulation,
         if (work != nullptr)
         {
             seen.peopleAtWork = seen.peopleAtWork ||
-                                (work->resources().getAmount("People") > 0u);
+                                (work->getResources().getAmount("People") > 0u);
             seen.goodsAtWork =
-                seen.goodsAtWork || (work->resources().getAmount("Goods") > 0u);
+                seen.goodsAtWork || (work->getResources().getAmount("Goods") > 0u);
         }
         if (shop != nullptr)
         {
             seen.goodsAtShop =
-                seen.goodsAtShop || (shop->resources().getAmount("Goods") > 0u);
+                seen.goodsAtShop || (shop->getResources().getAmount("Goods") > 0u);
             seen.peopleAtShop = seen.peopleAtShop ||
-                                (shop->resources().getAmount("People") > 0u);
+                                (shop->getResources().getAmount("People") > 0u);
         }
         seen.shopper = seen.shopper || hasAgent(city, "Shopper", "Shop");
         if (hasAgent(city, "Diner", "Restaurant"))
@@ -142,7 +142,7 @@ static Sightings watch(Simulation& simulation,
         if (restaurant != nullptr)
         {
             bool const busy =
-                (restaurant->resources().getAmount("People") > 0u);
+                (restaurant->getResources().getAmount("People") > 0u);
             seen.peopleAtRestaurant = seen.peopleAtRestaurant || busy;
             seen.restaurantBeforeLunch =
                 seen.restaurantBeforeLunch || (busy && (hour < 12u));
@@ -163,8 +163,8 @@ static Sightings watch(Simulation& simulation,
 static City& openAtEightInTheMorning(Simulation& simulation,
                                      std::string const& save)
 {
-    EXPECT_TRUE(simulation.script().parseFile(dataFile("test_city.ogs")))
-        << simulation.script().formatErrors();
+    EXPECT_TRUE(simulation.loadScriptFile(dataFile("test_city.ogs")))
+        << simulation.getRuleset().formatErrors();
 
     CitySaveHeader header;
     std::string error;
@@ -177,15 +177,14 @@ static City& openAtEightInTheMorning(Simulation& simulation,
     EXPECT_TRUE(CitySave::read(dataFile(save), simulation, error)) << error;
     installDijkstraRouters(simulation);
 
-    simulation.clock().setTimeOfDay(0u, 8u, 0u);
-    simulation.setTotalTicks(simulation.clock().ticks());
+    simulation.setTimeOfDay(0u, 8u, 0u);
 
     // A load that failed leaves no City behind, and every check below would
     // read freed memory instead of naming what went wrong.
-    if (simulation.cities().empty())
+    if (simulation.getCities().empty())
         throw std::runtime_error("'" + save + "' loaded no city");
 
-    return *(simulation.cities().begin()->second);
+    return *(simulation.getCities().begin()->second);
 }
 
 //------------------------------------------------------------------------------
@@ -193,7 +192,7 @@ static City& openAtEightInTheMorning(Simulation& simulation,
 //! save: the whole chain from an empty plot to a shop with something to sell.
 TEST(TestsScenario, ADayInQqCity)
 {
-    Simulation simulation{ 32u, 32u };
+    Simulation simulation;
     City& city = openAtEightInTheMorning(simulation, "qq.ogc");
 
     ASSERT_EQ(countUnits(city, "Home"), 0u);
@@ -203,11 +202,11 @@ TEST(TestsScenario, ADayInQqCity)
     // The Commercial zone of that save is a single cell and already holds a
     // shop, so the canteen goes next to it by hand. What is under test here is
     // the lunch rules, not where a zone puts a building.
-    Path& road = *(city.paths().begin()->second);
-    Way* const way = road.way(3u);
-    ASSERT_NE(way, nullptr);
+    Path& road = *(city.getPaths().begin()->second);
+    Segment* const segment = road.findSegment(3u);
+    ASSERT_NE(segment, nullptr);
     city.addUnit(
-        simulation.script().getUnitType("Restaurant"), road, *way, 0.6f);
+        simulation.getRuleset().getUnitType("Restaurant"), road, *segment, 0.6f);
     ASSERT_NE(findUnit(city, "Restaurant"), nullptr);
 
     // Nine game hours: the zones take four to grow the first houses, and the
@@ -236,22 +235,22 @@ TEST(TestsScenario, ADayInQqCity)
         << "somebody was served at the restaurant before noon";
 
     // Selling is what pays for the city.
-    ASSERT_GT(city.globals().getAmount("Money"), 0u);
+    ASSERT_GT(city.getGlobals().getAmount("Money"), 0u);
 
     // Houses stand along a road, not in a field, and no two share a cell.
     std::vector<Vector3f> homes;
-    for (auto const& unit : city.units())
+    for (auto const& unit : city.getUnits())
     {
-        if (unit->type() != "Home")
+        if (unit->getTypeName() != "Home")
             continue;
-        ASSERT_TRUE((unit->way() != nullptr) || (unit->node() != nullptr))
+        ASSERT_TRUE((unit->getSegment() != nullptr) || (unit->getNode() != nullptr))
             << "a house grew with no road to reach it";
         for (Vector3f const& other : homes)
         {
-            ASSERT_GT(magnitude(unit->position() - other), 0.1f)
+            ASSERT_GT(length(unit->getPosition() - other), 0.1f)
                 << "two houses on the same spot";
         }
-        homes.push_back(unit->position());
+        homes.push_back(unit->getPosition());
     }
 }
 
@@ -262,10 +261,10 @@ TEST(TestsScenario, ADayInQqCity)
 //! the rest of the game, which would be worse than the crowding the claims
 //! prevent. The invariant is exact: over a whole city, the claims outstanding
 //! are the Agents that have somewhere to go. A drift means an itinerary was
-//! written somewhere other than Agent::setRoute.
+//! written somewhere other than Agent::route.
 TEST(TestsScenario, ClaimsOnDestinationsNeverLeak)
 {
-    Simulation simulation{ 32u, 32u };
+    Simulation simulation;
     City& city = openAtEightInTheMorning(simulation, "qq.ogc");
 
     // Long enough for houses to grow, commutes to run, buildings to be
@@ -275,13 +274,13 @@ TEST(TestsScenario, ClaimsOnDestinationsNeverLeak)
         simulation.stepOneTick();
 
         uint32_t claimed = 0u;
-        for (auto const& unit : city.units())
-            claimed += unit->inbound();
+        for (auto const& unit : city.getUnits())
+            claimed += unit->getReservedCount();
 
         uint32_t bound = 0u;
-        for (auto const& agent : city.agents())
+        for (auto const& agent : city.getAgents())
         {
-            if (agent->route().destination != nullptr)
+            if (agent->getRoute().getDestination() != nullptr)
                 ++bound;
         }
 
@@ -298,17 +297,17 @@ TEST(TestsScenario, ClaimsOnDestinationsNeverLeak)
 //! pinned desirability to zero for the rest of the run.
 TEST(TestsScenario, PollutionFadesAndDesirabilityMovesInDays)
 {
-    Simulation simulation{ 32u, 32u };
+    Simulation simulation;
     City& city = openAtEightInTheMorning(simulation, "qq.ogc");
 
-    Map const& pollution = city.getMap("Pollution");
-    Map const& desirability = city.getMap("Desirability");
+    Layer const& pollution = city.getLayer("Pollution");
+    Layer const& desirability = city.getLayer("Desirability");
 
     // A cell in the corner, away from the factory and its footprint.
     int32_t const u = 0;
     int32_t const v = 0;
-    uint32_t const pollutionAtStart = pollution.getResource(u, v);
-    uint32_t const desirabilityAtStart = desirability.getResource(u, v);
+    uint32_t const pollutionAtStart = pollution.getResource({ u, v });
+    uint32_t const desirabilityAtStart = desirability.getResource({ u, v });
     ASSERT_GT(pollutionAtStart, 0u) << "this save is meant to start polluted";
 
     uint32_t const homesAtStart = countUnits(city, "Home");
@@ -324,11 +323,11 @@ TEST(TestsScenario, PollutionFadesAndDesirabilityMovesInDays)
         ASSERT_GE(homes, homesSeen) << "a house was demolished within the hour "
                                        "it was built";
         homesSeen = homes;
-        pollutionPeak = std::max(pollutionPeak, pollution.getResource(u, v));
+        pollutionPeak = std::max(pollutionPeak, pollution.getResource({ u, v }));
     }
 
     // Two hourly rules at most, each moving it by two.
-    uint32_t const afterAnHour = desirability.getResource(u, v);
+    uint32_t const afterAnHour = desirability.getResource({ u, v });
     uint32_t const moved = (afterAnHour > desirabilityAtStart)
                                ? (afterAnHour - desirabilityAtStart)
                                : (desirabilityAtStart - afterAnHour);
@@ -339,12 +338,12 @@ TEST(TestsScenario, PollutionFadesAndDesirabilityMovesInDays)
     for (uint32_t i = 0u; i < 5u * 60u * 20u; ++i)
     {
         simulation.stepOneTick();
-        pollutionPeak = std::max(pollutionPeak, pollution.getResource(u, v));
+        pollutionPeak = std::max(pollutionPeak, pollution.getResource({ u, v }));
     }
 
-    ASSERT_LT(pollution.getResource(u, v), pollutionAtStart)
+    ASSERT_LT(pollution.getResource({ u, v }), pollutionAtStart)
         << "pollution never fades";
-    ASSERT_LT(pollutionPeak, pollution.getCapacity())
+    ASSERT_LT(pollutionPeak, pollution.getCellCapacity())
         << "pollution saturated its cap again";
 }
 
@@ -353,7 +352,7 @@ TEST(TestsScenario, PollutionFadesAndDesirabilityMovesInDays)
 //! start, and nothing may crash for want of a second one.
 TEST(TestsScenario, ADayInQq2City)
 {
-    Simulation simulation{ 32u, 32u };
+    Simulation simulation;
     City& city = openAtEightInTheMorning(simulation, "qq2.ogc");
 
     // The factory of that save stands at a fifth of the first street, and the
@@ -363,37 +362,37 @@ TEST(TestsScenario, ADayInQq2City)
     // truck bound for the shop used to do before turning back at the corner.
     Unit* const work = findUnit(city, "Work");
     ASSERT_NE(work, nullptr);
-    Way* const street = work->way();
+    Segment* const street = work->getSegment();
     ASSERT_NE(street, nullptr);
-    ASSERT_EQ(street->from().ways().size(), 1u);
-    ASSERT_TRUE(street->from().units().empty());
+    ASSERT_EQ(street->getFrom().getSegments().size(), 1u);
+    ASSERT_TRUE(street->getFrom().getUnits().empty());
 
-    float const door = work->wayOffset();
-    std::string wrongWay;
+    float const door = work->getSegmentOffset();
+    std::string wrongSegment;
     Sightings const seen =
         watch(simulation,
               city,
               6u * 60u * 20u,
               [&]()
               {
-                  for (auto const& agent : city.agents())
+                  for (auto const& agent : city.getAgents())
                   {
-                      if (!wrongWay.empty())
+                      if (!wrongSegment.empty())
                           return;
-                      if ((agent->currentWay() != street) ||
-                          (agent->offset() >= door - 0.01f))
+                      if ((agent->getSegment() != street) ||
+                          (agent->getOffset() >= door - 0.01f))
                       {
                           continue;
                       }
-                      wrongWay = agent->type().str() + " looking for " +
-                                 agent->searchTarget().str() +
-                                 (agent->route().found ? " with a route"
+                      wrongSegment = agent->getTypeName().str() + " looking for " +
+                                 agent->getTarget().str() +
+                                 (agent->getRoute().isFound() ? " with a route"
                                                        : " with none");
                   }
               });
 
-    ASSERT_TRUE(wrongWay.empty())
-        << wrongWay
+    ASSERT_TRUE(wrongSegment.empty())
+        << wrongSegment
         << " drove to the dead end behind the factory instead of "
            "towards its destination";
 
@@ -411,17 +410,17 @@ TEST(TestsScenario, ADayInQq2City)
         << "the zone grew nothing at all";
 
     // Whatever grew, it hangs off the network.
-    for (auto const& unit : city.units())
+    for (auto const& unit : city.getUnits())
     {
-        ASSERT_TRUE((unit->way() != nullptr) || (unit->node() != nullptr))
-            << unit->type() << " grew with no road to reach it";
+        ASSERT_TRUE((unit->getSegment() != nullptr) || (unit->getNode() != nullptr))
+            << unit->getTypeName() << " grew with no road to reach it";
     }
 
     // No Agent is left floating with nothing under it.
-    for (auto const& agent : city.agents())
+    for (auto const& agent : city.getAgents())
     {
-        ASSERT_TRUE((agent->currentWay() != nullptr) ||
-                    (agent->lastNode() != nullptr));
+        ASSERT_TRUE((agent->getSegment() != nullptr) ||
+                    (agent->getPreviousNode() != nullptr));
     }
 }
 
@@ -436,39 +435,38 @@ TEST(TestsScenario, ADayInQq2City)
 //! arrive, and nowhere else.
 TEST(TestsScenario, AnHourOnTheChicagoNetwork)
 {
-    Simulation simulation{ 512u, 512u };
-    ASSERT_TRUE(simulation.script().parseFile(dataFile("chicago.ogs")))
-        << simulation.script().formatErrors();
+    Simulation simulation;
+    ASSERT_TRUE(simulation.loadScriptFile(dataFile("chicago.ogs")))
+        << simulation.getRuleset().formatErrors();
 
     std::string error;
     ASSERT_TRUE(CitySave::read(dataFile("chicago.ogc"), simulation, error))
         << error;
     installDijkstraRouters(simulation);
 
-    ASSERT_FALSE(simulation.cities().empty());
-    City& city = *(simulation.cities().begin()->second);
+    ASSERT_FALSE(simulation.getCities().empty());
+    City& city = *(simulation.getCities().begin()->second);
 
-    Path const& road = *(city.paths().begin()->second);
-    ASSERT_GT(road.nodeCount(), 100u) << "not the large network this is about";
+    Path const& road = *(city.getPaths().begin()->second);
+    ASSERT_GT(road.getNodeCount(), 100u) << "not the large network this is about";
 
-    simulation.clock().setTimeOfDay(0u, 8u, 0u);
-    simulation.setTotalTicks(simulation.clock().ticks());
+    simulation.setTimeOfDay(0u, 8u, 0u);
     for (uint32_t tick = 0u; tick < 60u * 20u; ++tick)
     {
-        simulation.update(simulation.config().tickDuration());
+        simulation.update(simulation.getConfig().time.tickDuration());
     }
 
     // The indices stay dense and in step with the list they number, which is
     // the invariant the router indexes by.
     uint32_t expected = 0u;
-    for (auto const& node : road.nodes())
+    for (auto const& node : road.getNodes())
     {
-        ASSERT_EQ(node->index(), expected++);
+        ASSERT_EQ(node->getIndex(), expected++);
     }
 
-    for (auto const& agent : city.agents())
+    for (auto const& agent : city.getAgents())
     {
-        ASSERT_TRUE((agent->currentWay() != nullptr) ||
-                    (agent->lastNode() != nullptr));
+        ASSERT_TRUE((agent->getSegment() != nullptr) ||
+                    (agent->getPreviousNode() != nullptr));
     }
 }

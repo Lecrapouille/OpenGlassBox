@@ -10,10 +10,10 @@
 #undef private
 
 //! \brief Small cells so that the node at (3, 4) lands on the grid cell (1, 2).
-static SimulationConfig smallCells()
+static Config smallCells()
 {
-    SimulationConfig config;
-    config.gridCellSize = 2.0f;
+    Config config;
+    config.grid.cellSize = 2.0f;
     return config;
 }
 
@@ -24,7 +24,7 @@ static SimulationConfig smallCells()
 //! phase comes from the seed, so a run stays reproducible.
 TEST(TestsUnit, RulesOfTwoUnitsDoNotFallOnTheSameTick)
 {
-    SimulationConfig config;
+    Config config;
     config.randomSeed = 1234u;
 
     TestWorld cityWorld("Paris", 8u, 8u, Vector3f(0.0f, 0.0f, 0.0f), config);
@@ -37,10 +37,10 @@ TEST(TestsUnit, RulesOfTwoUnitsDoNotFallOnTheSameTick)
     for (uint32_t i = 0u; i < 6u; ++i)
     {
         Unit const& unit = city.addUnit(type, Vector3f(float(i), 0.0f, 0.0f));
-        phases.push_back(unit.ticks());
+        phases.push_back(unit.getTicks());
         // One game hour at most, so that a rule counted in days cannot fire
         // the moment the building goes up.
-        ASSERT_LT(unit.ticks(), 60u * config.ticksPerMinute);
+        ASSERT_LT(unit.getTicks(), 60u * config.time.ticksPerMinute);
     }
 
     // Not all the same. Two out of six may collide; six identical values would
@@ -56,7 +56,7 @@ TEST(TestsUnit, RulesOfTwoUnitsDoNotFallOnTheSameTick)
     {
         Unit const& unit =
             twin.city.addUnit(type, Vector3f(float(i), 0.0f, 0.0f));
-        ASSERT_EQ(unit.ticks(), phases[i]);
+        ASSERT_EQ(unit.getTicks(), phases[i]);
     }
 
     // Another seed, another set.
@@ -67,7 +67,7 @@ TEST(TestsUnit, RulesOfTwoUnitsDoNotFallOnTheSameTick)
     {
         Unit const& unit =
             other.city.addUnit(type, Vector3f(float(i), 0.0f, 0.0f));
-        same += uint32_t(unit.ticks() == phases[i]);
+        same += uint32_t(unit.getTicks() == phases[i]);
     }
     ASSERT_LT(same, phases.size());
 }
@@ -92,34 +92,34 @@ TEST(TestsUnit, Constructor)
     ASSERT_EQ(u.m_type.color, 42u);
     ASSERT_EQ(u.m_type.radius, 2u);
     ASSERT_EQ(u.m_type.resources.m_bin.size(), 1u);
-    ASSERT_STREQ(u.m_type.resources.m_bin[0].type().c_str(), "car");
+    ASSERT_STREQ(u.m_type.resources.m_bin[0].getTypeName().c_str(), "car");
     ASSERT_EQ(u.m_type.resources.m_bin[0].m_amount, 5u);
     ASSERT_EQ(u.m_type.rules.size(), 0u);
     ASSERT_EQ(u.m_type.targets.size(), 1u);
     ASSERT_STREQ(u.m_type.targets[0].c_str(), "foo");
     ASSERT_EQ(u.m_node, &node);
     ASSERT_EQ(u.m_resources.m_bin.size(), 1u);
-    ASSERT_STREQ(u.m_resources.m_bin[0].type().c_str(), "car");
+    ASSERT_STREQ(u.m_resources.m_bin[0].getTypeName().c_str(), "car");
     ASSERT_EQ(u.m_resources.m_bin[0].m_amount, 5u);
     ASSERT_EQ(u.m_context.city, &city);
     ASSERT_EQ(u.m_context.unit, &u);
     ASSERT_EQ(u.m_context.locals, &u.m_resources);
-    ASSERT_EQ(u.m_context.globals, &city.globals());
-    ASSERT_EQ(u.m_context.u, 1); // node.position.x / city.gridCellSize()
-    ASSERT_EQ(u.m_context.v, 2); // node.position.y / city.gridCellSize()
+    ASSERT_EQ(u.m_context.globals, &city.getGlobals());
+    ASSERT_EQ(u.m_context.cell.u, 1); // node.position.x / city.getCellSize()
+    ASSERT_EQ(u.m_context.cell.v, 2); // node.position.y / city.getCellSize()
     ASSERT_EQ(u.m_context.radius, 2u);
     ASSERT_EQ(u.m_ticks, 0u);
 
     // Check initial values (getter methods).
-    ASSERT_STREQ(u.type().c_str(), "unit");
-    ASSERT_EQ(u.color(), 42u);
-    ASSERT_EQ(u.node(), &node);
-    ASSERT_EQ(int32_t(u.position().x), int32_t(node.position().x));
-    ASSERT_EQ(int32_t(u.position().y), int32_t(node.position().y));
-    ASSERT_EQ(int32_t(u.position().z), int32_t(node.position().z));
+    ASSERT_STREQ(u.getTypeName().c_str(), "unit");
+    ASSERT_EQ(u.getColor(), 42u);
+    ASSERT_EQ(u.getNode(), &node);
+    ASSERT_EQ(int32_t(u.getPosition().x), int32_t(node.getPosition().x));
+    ASSERT_EQ(int32_t(u.getPosition().y), int32_t(node.getPosition().y));
+    ASSERT_EQ(int32_t(u.getPosition().z), int32_t(node.getPosition().z));
     ASSERT_EQ(u.m_type.resources.getAmount("car"), 5u);
     ASSERT_EQ(u.m_resources.m_bin.size(), 1u);
-    ASSERT_EQ(u.resources().getAmount("car"), 5u);
+    ASSERT_EQ(u.getResources().getAmount("car"), 5u);
 }
 
 // -----------------------------------------------------------------------------
@@ -174,8 +174,8 @@ TEST(TestsUnit, OpeningHoursComeFromTheRulesOfTheBuilding)
     homeType.rules.push_back(&shopping);
     Unit home(homeType, node, city);
 
-    OpeningHours const hours = home.openingHours();
-    ASSERT_TRUE(hours.bounded());
+    OpeningHours const hours = home.getOpeningHours();
+    ASSERT_TRUE(hours.isRestricted());
 
     // The two windows add up, and what lies between them is closed: the house
     // has nobody going anywhere at noon.
@@ -189,15 +189,15 @@ TEST(TestsUnit, OpeningHoursComeFromTheRulesOfTheBuilding)
     ASSERT_FALSE(hours.isOpen(18u));
     ASSERT_FALSE(hours.isOpen(0u));
 
-    ASSERT_EQ(hours.nextOpening(7u), 8u);
-    ASSERT_EQ(hours.nextOpening(9u), 9u);
-    ASSERT_EQ(hours.nextOpening(10u), 14u);
+    ASSERT_EQ(hours.getNextOpeningHour(7u), 8u);
+    ASSERT_EQ(hours.getNextOpeningHour(9u), 9u);
+    ASSERT_EQ(hours.getNextOpeningHour(10u), 14u);
     // Past the last window the answer is on the next day.
-    ASSERT_EQ(hours.nextOpening(20u), 8u);
+    ASSERT_EQ(hours.getNextOpeningHour(20u), 8u);
 
-    ASSERT_EQ(hours.closingAfter(8u), 9u);
-    ASSERT_EQ(hours.closingAfter(14u), 17u);
-    ASSERT_EQ(hours.closingAfter(12u), OpeningHours::NEVER);
+    ASSERT_EQ(hours.getClosingHour(8u), 9u);
+    ASSERT_EQ(hours.getClosingHour(14u), 17u);
+    ASSERT_EQ(hours.getClosingHour(12u), OpeningHours::NEVER);
 }
 
 // -----------------------------------------------------------------------------
@@ -211,8 +211,8 @@ TEST(TestsUnit, ABuildingWithoutATimetableNeverCloses)
 
     UnitType bareType("Road");
     Unit bare(bareType, node, city);
-    ASSERT_FALSE(bare.openingHours().bounded());
-    ASSERT_TRUE(bare.openingHours().isOpen(3u));
+    ASSERT_FALSE(bare.getOpeningHours().isRestricted());
+    ASSERT_TRUE(bare.getOpeningHours().isOpen(3u));
 
     // A shop that sells at any hour, and sends its customers home at any hour,
     // keeps no office hours even though one of its rules does.
@@ -229,8 +229,8 @@ TEST(TestsUnit, ABuildingWithoutATimetableNeverCloses)
     shopType.rules.push_back(&selling);
     Unit shop(shopType, node, city);
 
-    ASSERT_FALSE(shop.openingHours().bounded());
-    ASSERT_TRUE(shop.openingHours().isOpen(3u));
+    ASSERT_FALSE(shop.getOpeningHours().isRestricted());
+    ASSERT_TRUE(shop.getOpeningHours().isOpen(3u));
 }
 
 // -----------------------------------------------------------------------------
@@ -253,8 +253,8 @@ TEST(TestsUnit, TwoWindowsOnOneRuleAreAnIntersection)
     type.rules.push_back(&rule);
     Unit unit(type, node, city);
 
-    OpeningHours const hours = unit.openingHours();
-    ASSERT_TRUE(hours.bounded());
+    OpeningHours const hours = unit.getOpeningHours();
+    ASSERT_TRUE(hours.isRestricted());
     ASSERT_FALSE(hours.isOpen(9u));
     ASSERT_TRUE(hours.isOpen(12u));
     ASSERT_TRUE(hours.isOpen(13u));
@@ -279,13 +279,13 @@ TEST(TestsUnit, ATimetableCanRunThroughMidnight)
     type.rules.push_back(&rule);
     Unit unit(type, node, city);
 
-    OpeningHours const hours = unit.openingHours();
+    OpeningHours const hours = unit.getOpeningHours();
     ASSERT_TRUE(hours.isOpen(23u));
     ASSERT_TRUE(hours.isOpen(0u));
     ASSERT_TRUE(hours.isOpen(5u));
     ASSERT_FALSE(hours.isOpen(6u));
     ASSERT_FALSE(hours.isOpen(21u));
-    ASSERT_EQ(hours.nextOpening(21u), 22u);
+    ASSERT_EQ(hours.getNextOpeningHour(21u), 22u);
 }
 
 // -----------------------------------------------------------------------------
@@ -297,7 +297,7 @@ public:
     ~MockIRuleCommand() = default;
     MOCK_METHOD(bool, validate, (RuleContext&), (override));
     MOCK_METHOD(void, execute, (RuleContext&), (override));
-    MOCK_METHOD(std::string, type, (), (override));
+    MOCK_METHOD(std::string, getDescription, (), (const, override));
 };
 
 class MockRuleUnit: public RuleUnit

@@ -91,7 +91,7 @@ private:
                        std::string const& rulesetPath,
                        std::string& error);
 
-    //! \brief Install the demo router listener before any town is founded.
+    //! \brief Install the demo router listener before any city is founded.
     void wireSimulation(Simulation& simulation);
 
 private:

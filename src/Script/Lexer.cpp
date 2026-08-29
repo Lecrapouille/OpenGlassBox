@@ -165,7 +165,7 @@ void Lexer::rewind()
 }
 
 // -----------------------------------------------------------------------------
-std::string Lexer::sourceLine(uint32_t line) const
+std::string Lexer::getSourceLine(uint32_t line) const
 {
     if ((line == 0u) || (line > m_lines.size()))
         return {};

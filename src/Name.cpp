@@ -62,7 +62,7 @@ uint32_t intern(std::string const& text)
     if (it != symbols.ids.end())
         return it->second;
 
-    uint32_t const id = uint32_t(symbols.texts.size());
+    auto const id = uint32_t(symbols.texts.size());
     symbols.texts.push_back(text);
     symbols.ids.emplace(text, id);
 
@@ -120,6 +120,30 @@ bool operator!=(Name const& name, char const* text)
 
 //------------------------------------------------------------------------------
 bool operator!=(char const* text, Name const& name)
+{
+    return !(name == text);
+}
+
+//------------------------------------------------------------------------------
+bool operator==(Name const& name, std::string const& text)
+{
+    return name.str() == text;
+}
+
+//------------------------------------------------------------------------------
+bool operator==(std::string const& text, Name const& name)
+{
+    return name.str() == text;
+}
+
+//------------------------------------------------------------------------------
+bool operator!=(Name const& name, std::string const& text)
+{
+    return !(name == text);
+}
+
+//------------------------------------------------------------------------------
+bool operator!=(std::string const& text, Name const& name)
 {
     return !(name == text);
 }

@@ -5,11 +5,11 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
-//! \file MapCoordinatesInsideRadius.hpp
+//! \file CellsInRadius.hpp
 //! \brief Walk the grid cells within reach of a building.
 
-#ifndef OPEN_GLASSBOX_MAPCOORDINATESINSIDERADIUS_HPP
-#define OPEN_GLASSBOX_MAPCOORDINATESINSIDERADIUS_HPP
+#ifndef OPEN_GLASSBOX_CELLSINRADIUS_HPP
+#define OPEN_GLASSBOX_CELLSINRADIUS_HPP
 
 #include <cstdint>
 #include <map>
@@ -22,8 +22,8 @@ namespace ogb
 //! \brief Hands out the grid cells within a given reach of a given cell,
 //! clipped to the region of the City.
 //!
-//! This is what \c mapRadius means for a building: how far around itself its
-//! rules read and write the Maps. The shape is a diamond rather than a disc,
+//! This is what \c layerRadius means for a building: how far around itself its
+//! rules read and write the Layers. The shape is a diamond rather than a disc,
 //! cells being kept when the sum of the two distances is within the radius,
 //! which is the taxicab distance. A radius of one gives the cell itself and its
 //! four neighbours: { (0,0), (-1,0), (1,0), (0,-1), (0,1) }.
@@ -40,23 +40,24 @@ namespace ogb
 //!
 //! Example:
 //! \code
-//! MapCoordinatesInsideRadius around;
-//! around.init(unit.mapRadius(), unit.mapU(), unit.mapV(),
-//!             region.u0, region.u1(), region.v0, region.v1(), false);
+//! CellsInRadius around;
+//! around.init(unit.getLayerRadius(), unit.getCell().u, unit.getCell().v,
+//!             region.u0, region.getMaxU(), region.v0, region.getMaxV(),
+//!             false);
 //!
 //! int32_t u, v;
 //! while (around.next(u, v))
 //! {
-//!     map.addResource(u, v, 1u);
+//!     layer.addResource({u, v}, 1u);
 //! }
 //! \endcode
 //!
-//! The matching script, where \c mapRadius is the reach walked here:
+//! The matching script, where \c layerRadius is the reach walked here:
 //! \code
-//! unit Work color 0x00AAFF mapRadius 3 rules [ ProduceGoods ]
+//! unit Work color 0x00AAFF layerRadius 3 rules [ ProduceGoods ]
 //! \endcode
 //==============================================================================
-class MapCoordinatesInsideRadius
+class CellsInRadius
 {
 public:
 
@@ -68,7 +69,7 @@ public:
     //--------------------------------------------------------------------------
     //! \brief Leaves everything uninitialised: call init() before next().
     //--------------------------------------------------------------------------
-    MapCoordinatesInsideRadius() = default;
+    CellsInRadius() = default;
 
     //--------------------------------------------------------------------------
     //! \brief Start a walk around a cell.

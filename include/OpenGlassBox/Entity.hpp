@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------------
 
 //! \file Entity.hpp
-//! \brief Identity and placement shared by the things a City puts on its map.
+//! \brief Identity and placement shared by the things a City puts on its grid.
 
 #ifndef OPEN_GLASSBOX_ENTITY_HPP
 #define OPEN_GLASSBOX_ENTITY_HPP
@@ -17,7 +17,7 @@ namespace ogb
 {
 
 //==============================================================================
-//! \brief What a City puts on its map: a number to be called by, a recipe read
+//! \brief What a City puts on its grid: a number to be called by, a recipe read
 //! from the script, and somewhere to stand.
 //!
 //! Unit and Agent both answer the same four questions, and used to answer them
@@ -31,18 +31,19 @@ namespace ogb
 //! recipe is shared by every entity of that kind, so it has to outlive them and
 //! must not be moved. ScriptDefinitions is what guarantees that.
 //!
-//! Node and Way deliberately stay out of this: a Node has no type and a Way has
-//! no single position, so the base would have to lie about one of them.
+//! Node and Segment deliberately stay out of this: a Node has no type and a
+//! Segment has no single position, so the base would have to lie about one of
+//! them.
 //!
 //! Example:
 //! \code
 //! // Reading a city without knowing what is in it.
-//! for (auto const& unit: city.units())
-//!     std::cout << unit->type() << " #" << unit->id()
-//!               << " at " << unit->position() << '\n';
-//! for (auto const& agent: city.agents())
-//!     std::cout << agent->type() << " #" << agent->id()
-//!               << " at " << agent->position() << '\n';
+//! for (auto const& unit: city.getUnits())
+//!     std::cout << unit->getTypeName() << " #" << unit->getId()
+//!               << " at " << unit->getPosition() << '\n';
+//! for (auto const& agent: city.getAgents())
+//!     std::cout << agent->getTypeName() << " #" << agent->getId()
+//!               << " at " << agent->getPosition() << '\n';
 //! \endcode
 //==============================================================================
 template <class TYPE>
@@ -51,41 +52,41 @@ class Entity
 public:
 
     //--------------------------------------------------------------------------
-    //! \brief Identifier given by the City, unique among the entities of that
-    //! kind inside it. This is what a save file writes down and what the two
-    //! ends of an undo refer to, so it survives a reload.
+    //! \brief \return the identifier given by the City, unique among the
+    //! entities of that kind inside it. This is what a save file writes down
+    //! and what the two ends of an undo refer to, so it survives a reload.
     //--------------------------------------------------------------------------
-    uint32_t id() const
+    [[nodiscard]] uint32_t getId() const
     {
         return m_id;
     }
 
     //--------------------------------------------------------------------------
-    //! \brief Name of the recipe the script gave, such as "Home" or "Truck".
-    //! Several entities share it: this is a kind, not an identity.
+    //! \brief \return the name of the recipe the script gave, such as "Home" or
+    //! "Truck". Several entities share it: this is a kind, not an identity.
     //!
-    //! Interned, so that asking whether a building is a Home costs an integer
+    //! Interned, so asking whether a building is a Home costs an integer
     //! comparison rather than a walk over the characters. It still reads and
     //! prints as a string. See Name.
     //--------------------------------------------------------------------------
-    Name const& type() const
+    [[nodiscard]] Name const& getTypeName() const
     {
         return m_type.name;
     }
 
     //--------------------------------------------------------------------------
-    //! \brief Colour the script chose for that kind, as 0xRRGGBB.
+    //! \brief \return the colour the script chose for that kind, as 0xRRGGBB.
     //--------------------------------------------------------------------------
-    uint32_t color() const
+    [[nodiscard]] uint32_t getColor() const
     {
         return m_type.color;
     }
 
     //--------------------------------------------------------------------------
-    //! \brief Where it stands, in world coordinates. A building stands still
-    //! unless the City is moved; an Agent moves every tick.
+    //! \brief \return where it stands, in world coordinates. A building stands
+    //! still unless the city is moved; an agent moves every tick.
     //--------------------------------------------------------------------------
-    Vector3f const& position() const
+    [[nodiscard]] Vector3f const& getPosition() const
     {
         return m_position;
     }
@@ -93,8 +94,7 @@ public:
 protected:
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] id identifier given by the City. A Unit is born with
-    //! zero and is numbered by City::addUnit through setId().
+    //! \brief \param[in] id identifier given by the City.
     //! \param[in] type recipe of the entity. Kept by reference: it has to
     //! outlive the entity.
     //! \param[in] position where it stands, in world coordinates.
@@ -104,8 +104,8 @@ protected:
     {
     }
 
-    //! \brief Identifier inside the City. Not const: City::addUnit numbers a
-    //! building after building it, and a save gives back the numbers it wrote.
+    //! \brief Identifier inside the City. Not const: a save gives back the
+    //! numbers it wrote.
     uint32_t m_id;
 
     //! \brief The recipe, shared with every entity of the same kind.

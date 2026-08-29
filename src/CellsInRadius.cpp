@@ -5,7 +5,7 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
-#include "OpenGlassBox/MapCoordinatesInsideRadius.hpp"
+#include "OpenGlassBox/CellsInRadius.hpp"
 #include <random>
 
 //------------------------------------------------------------------------------
@@ -20,21 +20,21 @@ static std::random_device rd;
 static std::mt19937 generator(rd());
 
 //------------------------------------------------------------------------------
-int32_t MapCoordinatesInsideRadius::compress(int32_t u, int32_t v)
+int32_t CellsInRadius::compress(int32_t u, int32_t v)
 {
-    return ((u + MapCoordinatesInsideRadius::MAX_RADIUS) << 16) |
-            (v + MapCoordinatesInsideRadius::MAX_RADIUS);
+    return ((u + CellsInRadius::MAX_RADIUS) << 16) |
+            (v + CellsInRadius::MAX_RADIUS);
 }
 
 //------------------------------------------------------------------------------
-void MapCoordinatesInsideRadius::uncompress(int32_t val, int32_t& u, int32_t& v)
+void CellsInRadius::uncompress(int32_t val, int32_t& u, int32_t& v)
 {
-    u = ((val >> 16) & 0xFFFF) - MapCoordinatesInsideRadius::MAX_RADIUS;
-    v = (val & 0xFFFF) - MapCoordinatesInsideRadius::MAX_RADIUS;
+    u = ((val >> 16) & 0xFFFF) - CellsInRadius::MAX_RADIUS;
+    v = (val & 0xFFFF) - CellsInRadius::MAX_RADIUS;
 }
 
 //------------------------------------------------------------------------------
-void MapCoordinatesInsideRadius::init(uint32_t radius,
+void CellsInRadius::init(uint32_t radius,
                                       int32_t centerU, int32_t centerV,
                                       int32_t minU, int32_t maxU,
                                       int32_t minV, int32_t maxV,
@@ -69,7 +69,7 @@ void MapCoordinatesInsideRadius::init(uint32_t radius,
 }
 
 //------------------------------------------------------------------------------
-void MapCoordinatesInsideRadius::createRelativeCoordinates(int32_t radius, RelativeCoordinates &res)
+void CellsInRadius::createRelativeCoordinates(int32_t radius, RelativeCoordinates &res)
 {
     res.clear();
     for (int32_t u = -radius; u <= radius; ++u)
@@ -85,7 +85,7 @@ void MapCoordinatesInsideRadius::createRelativeCoordinates(int32_t radius, Relat
 }
 
 //------------------------------------------------------------------------------
-bool MapCoordinatesInsideRadius::next(int32_t& u, int32_t& v)
+bool CellsInRadius::next(int32_t& u, int32_t& v)
 {
     RelativeCoordinates& coord = *m_relativeCoord;
     size_t const size = coord.size();

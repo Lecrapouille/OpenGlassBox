@@ -1,6 +1,6 @@
 save
 	ruleset test_city.ogs
-	hash e5bba970acdfa150fa3646a8b6c873c92dee46e9bba1f286b416a42c2aaa995f
+	hash 1e4d63929d2bf96ed42abec8da8d3aeb604918f946799021acf39e14da2c0907
 	types [ Road Dirt Work Shop Residential Commercial ]
 end
 
@@ -15,17 +15,17 @@ path Road
 	node 5 1 5
 	node 6 6 5
 	node 7 11 5
-	way 0 Dirt 0 1 flow 0
-	way 1 Dirt 1 2 flow 0
-	way 3 Dirt 5 6 flow 0
-	way 4 Dirt 6 7 flow 0
-	way 5 Dirt 1 6 flow 0
+	segment 0 Dirt 0 1 flow 0
+	segment 1 Dirt 1 2 flow 0
+	segment 3 Dirt 5 6 flow 0
+	segment 4 Dirt 6 7 flow 0
+	segment 5 Dirt 1 6 flow 0
 end
-unit Work on way 1 0.800000 resources [ ]
-unit Shop on way 3 0.200000 resources [ ]
-area Residential 0 2 12 2
-area Commercial 2 5 1 1
-map Desirability
+unit Work on segment 1 0.800000 resources [ ]
+unit Shop on segment 3 0.200000 resources [ ]
+zone Residential 0 2 12 2
+zone Commercial 2 5 1 1
+layer Desirability
 	cell 0 0 1
 	cell 1 0 1
 	cell 2 0 1
@@ -171,7 +171,7 @@ map Desirability
 	cell 10 11 1
 	cell 11 11 1
 end
-map Pollution
+layer Pollution
 	cell 0 0 47
 	cell 1 0 47
 	cell 2 0 47
@@ -317,11 +317,11 @@ map Pollution
 	cell 10 11 47
 	cell 11 11 47
 end
-map Grass
+layer Grass
 end
-map Power
+layer Power
 end
-map Trash
+layer Trash
 end
-map Water
+layer Water
 end

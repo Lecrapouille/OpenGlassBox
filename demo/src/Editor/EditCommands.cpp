@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------------
 
 #include "Editor/EditCommands.hpp"
-#include "OpenGlassBox/Area.hpp"
+#include "OpenGlassBox/Zone.hpp"
 #include "OpenGlassBox/Simulation.hpp"
 
 #include <algorithm>
@@ -22,12 +22,12 @@ namespace editor {
 static Path* findPath(Simulation& simulation, std::string const& cityName,
                       std::string const& pathName)
 {
-    auto const& cities = simulation.cities();
+    auto const& cities = simulation.getCities();
     auto it = cities.find(cityName);
     if (it == cities.end())
         return nullptr;
 
-    auto& paths = it->second->paths();
+    auto& paths = it->second->getPaths();
     auto pathIt = paths.find(pathName);
     if (pathIt == paths.end())
         return nullptr;
@@ -38,7 +38,7 @@ static Path* findPath(Simulation& simulation, std::string const& cityName,
 // ----------------------------------------------------------------------------
 static City* findCity(Simulation& simulation, std::string const& cityName)
 {
-    auto const& cities = simulation.cities();
+    auto const& cities = simulation.getCities();
     auto it = cities.find(cityName);
     return (it == cities.end()) ? nullptr : it->second.get();
 }
@@ -53,9 +53,9 @@ static Node* snapToNode(Path& path, Vector3f const& position, float radius)
     Node* best = nullptr;
     float bestDistance = radius;
 
-    for (auto const& node: path.nodes())
+    for (auto const& node: path.getNodes())
     {
-        float const distance = magnitude(node->position() - position);
+        float const distance = length(node->getPosition() - position);
         if (distance <= bestDistance)
         {
             bestDistance = distance;
@@ -70,7 +70,7 @@ static Node* snapToNode(Path& path, Vector3f const& position, float radius)
 Node* NodeRef::resolve(Simulation& simulation) const
 {
     Path* p = findPath(simulation, city, path);
-    return (p == nullptr) ? nullptr : p->node(id);
+    return (p == nullptr) ? nullptr : p->findNode(id);
 }
 
 // =============================================================================
@@ -155,19 +155,19 @@ void CommandStack::takeHistory(std::deque<CommandPtr>& out)
 // =============================================================================
 
 // ----------------------------------------------------------------------------
-AddWayCommand::AddWayCommand(std::string city, std::string path,
-                             std::string wayType, Vector3f from, Vector3f to,
+AddSegmentCommand::AddSegmentCommand(std::string city, std::string path,
+                             std::string segmentType, Vector3f from, Vector3f to,
                              float snapRadius)
     : m_city(std::move(city)),
       m_path(std::move(path)),
-      m_wayType(std::move(wayType)),
+      m_segmentType(std::move(segmentType)),
       m_from(from),
       m_to(to),
       m_snapRadius(snapRadius)
 {}
 
 // ----------------------------------------------------------------------------
-bool AddWayCommand::redo(Simulation& simulation)
+bool AddSegmentCommand::redo(Simulation& simulation)
 {
     Path* path = findPath(simulation, m_city, m_path);
     if (path == nullptr)
@@ -179,7 +179,7 @@ bool AddWayCommand::redo(Simulation& simulation)
             return false;
         try
         {
-            path = &city->addPath(simulation.script().getPathType(m_path));
+            path = &city->addPath(simulation.getRuleset().getPathType(m_path));
         }
         catch (...)
         {
@@ -187,10 +187,10 @@ bool AddWayCommand::redo(Simulation& simulation)
         }
     }
 
-    WayType const* type = nullptr;
+    SegmentType const* type = nullptr;
     try
     {
-        type = &simulation.script().getWayType(m_wayType);
+        type = &simulation.getRuleset().getSegmentType(m_segmentType);
     }
     catch (...)
     {
@@ -199,7 +199,7 @@ bool AddWayCommand::redo(Simulation& simulation)
 
     // A zero length segment has no direction and an infinite curvature; the
     // router would divide by its length.
-    if (magnitude(m_to - m_from) < 1e-3f)
+    if (length(m_to - m_from) < 1e-3f)
         return false;
 
     // On the first run the engine picks the identifiers; the redos hand back
@@ -215,7 +215,7 @@ bool AddWayCommand::redo(Simulation& simulation)
     {
         from = &reuseOrCreate(m_fromId, m_from);
     }
-    m_fromId = from->id();
+    m_fromId = from->getId();
 
     Node* to = snapToNode(*path, m_to, m_snapRadius);
     m_createdTo = (to == nullptr);
@@ -223,35 +223,35 @@ bool AddWayCommand::redo(Simulation& simulation)
     {
         to = &reuseOrCreate(m_toId, m_to);
     }
-    m_toId = to->id();
+    m_toId = to->getId();
 
     if (from == to)
         return false;
 
     // Refuse a duplicate: the graph is simple, and a second segment between the
     // same two nodes would only split the traffic in a way nothing accounts for.
-    if (from->getWayToNode(*to) != nullptr)
+    if (from->findSegmentTo(*to) != nullptr)
         return false;
 
-    m_wayId = ((m_wayId == NO_ID) ? path->addWay(*type, *from, *to)
-                                  : path->addWay(m_wayId, *type, *from, *to))
-                  .id();
+    m_segmentId = ((m_segmentId == NO_ID) ? path->addSegment(*type, *from, *to)
+                                  : path->addSegment(m_segmentId, *type, *from, *to))
+                  .getId();
 
     return true;
 }
 
 // ----------------------------------------------------------------------------
-void AddWayCommand::undo(Simulation& simulation)
+void AddSegmentCommand::undo(Simulation& simulation)
 {
     City* city = findCity(simulation, m_city);
     Path* path = findPath(simulation, m_city, m_path);
     if ((city == nullptr) || (path == nullptr))
         return;
 
-    Way* way = path->way(m_wayId);
-    if (way != nullptr)
+    Segment* segment = path->findSegment(m_segmentId);
+    if (segment != nullptr)
     {
-        city->removeWay(*path, *way);
+        city->removeSegment(*path, *segment);
     }
 
     // Only take back the end points this command brought into existence, and
@@ -260,8 +260,8 @@ void AddWayCommand::undo(Simulation& simulation)
         if (!created)
             return;
 
-        Node* node = path->node(id);
-        if ((node != nullptr) && !node->hasWays() && node->units().empty())
+        Node* node = path->findNode(id);
+        if ((node != nullptr) && !node->hasSegments() && node->getUnits().empty())
         {
             city->removeNode(*path, *node);
         }
@@ -271,18 +271,18 @@ void AddWayCommand::undo(Simulation& simulation)
 }
 
 // ----------------------------------------------------------------------------
-std::string AddWayCommand::label() const
+std::string AddSegmentCommand::label() const
 {
-    return "lay " + m_wayType;
+    return "lay " + m_segmentType;
 }
 
 // ----------------------------------------------------------------------------
-void AddWayCommand::onWorldRebuilt()
+void AddSegmentCommand::onWorldRebuilt()
 {
     // The nodes and the segment were created by this command, so their
     // identifiers belong to a world that is gone. Reusing them would silently
     // address whatever the rebuild put at those numbers.
-    m_wayId = NO_ID;
+    m_segmentId = NO_ID;
     m_fromId = NO_ID;
     m_toId = NO_ID;
     m_createdFrom = false;
@@ -295,12 +295,12 @@ void AddWayCommand::onWorldRebuilt()
 
 // ----------------------------------------------------------------------------
 AddUnitCommand::AddUnitCommand(std::string city, std::string path,
-                               std::string unitType, uint32_t wayId,
+                               std::string unitType, uint32_t segmentId,
                                float offset)
     : m_city(std::move(city)),
       m_path(std::move(path)),
       m_unitType(std::move(unitType)),
-      m_wayId(wayId),
+      m_segmentId(segmentId),
       m_offset(offset)
 {}
 
@@ -324,7 +324,7 @@ bool AddUnitCommand::redo(Simulation& simulation)
     UnitType const* type = nullptr;
     try
     {
-        type = &simulation.script().getUnitType(m_unitType);
+        type = &simulation.getRuleset().getUnitType(m_unitType);
     }
     catch (...)
     {
@@ -333,43 +333,43 @@ bool AddUnitCommand::redo(Simulation& simulation)
 
     Unit* unit = nullptr;
 
-    if (m_wayId == NO_ID)
+    if (m_segmentId == NO_ID)
     {
-        Node* node = path->node(m_nodeId);
+        Node* node = path->findNode(m_nodeId);
         if (node == nullptr)
             return false;
         unit = &city->addUnit(*type, *node);
     }
     else
     {
-        Way* way = path->way(m_wayId);
-        if (way == nullptr)
+        Segment* segment = path->findSegment(m_segmentId);
+        if (segment == nullptr)
             return false;
 
         // Cutting the segment turns the spot into a junction, which is what
         // makes the building an address: agents stop at nodes.
-        m_wayType = way->type();
-        uint32_t const fromId = way->from().id();
-        uint32_t const toId = way->to().id();
+        m_segmentType = segment->getTypeName().str();
+        uint32_t const fromId = segment->getFrom().getId();
+        uint32_t const toId = segment->getTo().getId();
 
-        Node& junction = city->splitWay(*path, *way, m_offset);
+        Node& junction = city->splitSegment(*path, *segment, m_offset);
 
         m_junctionId = NO_ID;
         m_secondHalfId = NO_ID;
-        if ((junction.id() != fromId) && (junction.id() != toId))
+        if ((junction.getId() != fromId) && (junction.getId() != toId))
         {
-            m_junctionId = junction.id();
-            for (Way const* incident: junction.ways())
+            m_junctionId = junction.getId();
+            for (Segment const* incident: junction.getSegments())
             {
-                if (incident->id() != m_wayId)
-                    m_secondHalfId = incident->id();
+                if (incident->getId() != m_segmentId)
+                    m_secondHalfId = incident->getId();
             }
         }
 
         unit = &city->addUnit(*type, junction);
     }
 
-    m_unitId = unit->id();
+    m_unitId = unit->getId();
     return true;
 }
 
@@ -380,9 +380,9 @@ void AddUnitCommand::undo(Simulation& simulation)
     if (city == nullptr)
         return;
 
-    for (auto& it: city->units())
+    for (auto& it: city->getUnits())
     {
-        if (it->id() == m_unitId)
+        if (it->getId() == m_unitId)
         {
             city->removeUnit(*it);
             break;
@@ -403,35 +403,35 @@ void AddUnitCommand::mergeBack(Simulation& simulation)
     if ((city == nullptr) || (path == nullptr))
         return;
 
-    Node* junction = path->node(m_junctionId);
-    Way* first = path->way(m_wayId);
-    Way* second = path->way(m_secondHalfId);
+    Node* junction = path->findNode(m_junctionId);
+    Segment* first = path->findSegment(m_segmentId);
+    Segment* second = path->findSegment(m_secondHalfId);
     if ((junction == nullptr) || (first == nullptr) || (second == nullptr))
         return;
 
     // Sewing the halves back is only harmless while nothing else came to lean
     // on them: another building, or a road drawn from the junction.
-    if (!junction->units().empty() || (junction->ways().size() != 2u))
+    if (!junction->getUnits().empty() || (junction->getSegments().size() != 2u))
         return;
-    if (!first->units().empty() || !second->units().empty())
+    if (!first->getUnits().empty() || !second->getUnits().empty())
         return;
 
-    WayType const* type = nullptr;
+    SegmentType const* type = nullptr;
     try
     {
-        type = &simulation.script().getWayType(m_wayType);
+        type = &simulation.getRuleset().getSegmentType(m_segmentType);
     }
     catch (...)
     {
         return;
     }
 
-    Node const& a = (&first->from() == junction) ? first->to() : first->from();
-    Node const& b = (&second->from() == junction) ? second->to() : second->from();
-    uint32_t const fromId = a.id();
-    uint32_t const toId = b.id();
-    Vector3f const fromPosition = a.position();
-    Vector3f const toPosition = b.position();
+    Node const& a = (&first->getFrom() == junction) ? first->getTo() : first->getFrom();
+    Node const& b = (&second->getFrom() == junction) ? second->getTo() : second->getFrom();
+    uint32_t const fromId = a.getId();
+    uint32_t const toId = b.getId();
+    Vector3f const fromPosition = a.getPosition();
+    Vector3f const toPosition = b.getPosition();
 
     // The two halves go with the junction, and either end may be left an
     // orphan and swept away, so both are named back into existence before the
@@ -439,7 +439,7 @@ void AddUnitCommand::mergeBack(Simulation& simulation)
     city->removeNode(*path, *junction);
     Node& from = path->addNode(fromId, fromPosition);
     Node& to = path->addNode(toId, toPosition);
-    path->addWay(m_wayId, *type, from, to);
+    path->addSegment(m_segmentId, *type, from, to);
 
     m_junctionId = NO_ID;
     m_secondHalfId = NO_ID;
@@ -484,9 +484,9 @@ bool RemoveUnitCommand::redo(Simulation& simulation)
     Unit* target = nullptr;
     if (m_byUnitId)
     {
-        for (auto& it: city->units())
+        for (auto& it: city->getUnits())
         {
-            if (it->id() == m_id)
+            if (it->getId() == m_id)
             {
                 target = it.get();
                 break;
@@ -498,12 +498,12 @@ bool RemoveUnitCommand::redo(Simulation& simulation)
         Path* path = findPath(simulation, m_city, m_path);
         if (path == nullptr)
             return false;
-        Node* node = path->node(m_id);
+        Node* node = path->findNode(m_id);
         if (node == nullptr)
             return false;
-        for (auto* unit: node->units())
+        for (auto* unit: node->getUnits())
         {
-            if (unit->type() == m_unitType)
+            if (unit->getTypeName() == m_unitType)
             {
                 target = unit;
                 break;
@@ -514,19 +514,19 @@ bool RemoveUnitCommand::redo(Simulation& simulation)
     if (target == nullptr)
         return false;
 
-    m_onNode = (target->node() != nullptr);
-    m_position = target->position();
-    if (target->way() != nullptr)
+    m_onNode = (target->getNode() != nullptr);
+    m_position = target->getPosition();
+    if (target->getSegment() != nullptr)
     {
-        m_wayId = target->way()->id();
-        m_offset = target->wayOffset();
-        Path* path = target->path();
+        m_segmentId = target->getSegment()->getId();
+        m_offset = target->getSegmentOffset();
+        Path* path = target->getPath();
         if (path != nullptr)
-            m_path = path->type();
+            m_path = path->getTypeName().str();
     }
-    else if (target->node() != nullptr)
+    else if (target->getNode() != nullptr)
     {
-        m_id = target->node()->id();
+        m_id = target->getNode()->getId();
         m_onNode = true;
     }
 
@@ -543,26 +543,26 @@ void RemoveUnitCommand::undo(Simulation& simulation)
 
     try
     {
-        UnitType const& type = simulation.script().getUnitType(m_unitType);
+        UnitType const& type = simulation.getRuleset().getUnitType(m_unitType);
         if (m_onNode)
         {
             Path* path = findPath(simulation, m_city, m_path);
             if (path == nullptr)
                 return;
-            Node* node = path->node(m_id);
+            Node* node = path->findNode(m_id);
             if (node == nullptr)
                 return;
             city->addUnit(type, *node);
         }
-        else if (m_wayId != NO_ID)
+        else if (m_segmentId != NO_ID)
         {
             Path* path = findPath(simulation, m_city, m_path);
             if (path == nullptr)
                 return;
-            Way* way = path->way(m_wayId);
-            if (way == nullptr)
+            Segment* segment = path->findSegment(m_segmentId);
+            if (segment == nullptr)
                 return;
-            city->addUnit(type, *path, *way, m_offset);
+            city->addUnit(type, *path, *segment, m_offset);
         }
         else
         {
@@ -584,49 +584,49 @@ std::string RemoveUnitCommand::label() const
 // =============================================================================
 
 // ----------------------------------------------------------------------------
-RemoveWayCommand::RemoveWayCommand(std::string city, std::string path,
-                                   uint32_t wayId)
+RemoveSegmentCommand::RemoveSegmentCommand(std::string city, std::string path,
+                                   uint32_t segmentId)
     : m_city(std::move(city)),
       m_path(std::move(path)),
-      m_wayId(wayId)
+      m_segmentId(segmentId)
 {}
 
 // ----------------------------------------------------------------------------
-bool RemoveWayCommand::redo(Simulation& simulation)
+bool RemoveSegmentCommand::redo(Simulation& simulation)
 {
     City* city = findCity(simulation, m_city);
     Path* path = findPath(simulation, m_city, m_path);
     if ((city == nullptr) || (path == nullptr))
         return false;
 
-    Way* way = path->way(m_wayId);
-    if (way == nullptr)
+    Segment* segment = path->findSegment(m_segmentId);
+    if (segment == nullptr)
         return false;
 
     // Copy what it takes to build the segment again before it is freed.
-    m_wayType = way->type();
-    m_fromId = way->from().id();
-    m_toId = way->to().id();
-    m_fromPosition = way->position1();
-    m_toPosition = way->position2();
+    m_segmentType = segment->getTypeName().str();
+    m_fromId = segment->getFrom().getId();
+    m_toId = segment->getTo().getId();
+    m_fromPosition = segment->getFromPosition();
+    m_toPosition = segment->getToPosition();
     m_captured = true;
 
-    city->removeWay(*path, *way);
+    city->removeSegment(*path, *segment);
 
     return true;
 }
 
 // ----------------------------------------------------------------------------
-void RemoveWayCommand::undo(Simulation& simulation)
+void RemoveSegmentCommand::undo(Simulation& simulation)
 {
     Path* path = findPath(simulation, m_city, m_path);
     if ((path == nullptr) || !m_captured)
         return;
 
-    WayType const* type = nullptr;
+    SegmentType const* type = nullptr;
     try
     {
-        type = &simulation.script().getWayType(m_wayType);
+        type = &simulation.getRuleset().getSegmentType(m_segmentType);
     }
     catch (...)
     {
@@ -637,13 +637,13 @@ void RemoveWayCommand::undo(Simulation& simulation)
     // down the stack may since have taken them away.
     Node& from = path->addNode(m_fromId, m_fromPosition);
     Node& to = path->addNode(m_toId, m_toPosition);
-    path->addWay(m_wayId, *type, from, to);
+    path->addSegment(m_segmentId, *type, from, to);
 }
 
 // ----------------------------------------------------------------------------
-std::string RemoveWayCommand::label() const
+std::string RemoveSegmentCommand::label() const
 {
-    return m_captured ? ("bulldoze " + m_wayType) : std::string("bulldoze road");
+    return m_captured ? ("bulldoze " + m_segmentType) : std::string("bulldoze road");
 }
 
 // =============================================================================
@@ -666,22 +666,22 @@ bool RemoveNodeCommand::redo(Simulation& simulation)
     if ((city == nullptr) || (path == nullptr))
         return false;
 
-    Node* node = path->node(m_nodeId);
+    Node* node = path->findNode(m_nodeId);
     if (node == nullptr)
         return false;
 
-    m_position = node->position();
-    m_ways.clear();
-    for (Way* way: node->ways())
+    m_position = node->getPosition();
+    m_segments.clear();
+    for (Segment* segment: node->getSegments())
     {
-        WaySnapshot snapshot;
-        snapshot.id = way->id();
-        snapshot.type = way->type();
-        snapshot.fromId = way->from().id();
-        snapshot.toId = way->to().id();
-        snapshot.fromPosition = way->position1();
-        snapshot.toPosition = way->position2();
-        m_ways.push_back(std::move(snapshot));
+        SegmentSnapshot snapshot;
+        snapshot.id = segment->getId();
+        snapshot.type = segment->getTypeName().str();
+        snapshot.fromId = segment->getFrom().getId();
+        snapshot.toId = segment->getTo().getId();
+        snapshot.fromPosition = segment->getFromPosition();
+        snapshot.toPosition = segment->getToPosition();
+        m_segments.push_back(std::move(snapshot));
     }
     m_captured = true;
     city->removeNode(*path, *node);
@@ -696,12 +696,12 @@ void RemoveNodeCommand::undo(Simulation& simulation)
         return;
 
     path->addNode(m_nodeId, m_position);
-    for (WaySnapshot const& snapshot: m_ways)
+    for (SegmentSnapshot const& snapshot: m_segments)
     {
-        WayType const* type = nullptr;
+        SegmentType const* type = nullptr;
         try
         {
-            type = &simulation.script().getWayType(snapshot.type);
+            type = &simulation.getRuleset().getSegmentType(snapshot.type);
         }
         catch (...)
         {
@@ -710,7 +710,7 @@ void RemoveNodeCommand::undo(Simulation& simulation)
 
         Node& from = path->addNode(snapshot.fromId, snapshot.fromPosition);
         Node& to = path->addNode(snapshot.toId, snapshot.toPosition);
-        path->addWay(snapshot.id, *type, from, to);
+        path->addSegment(snapshot.id, *type, from, to);
     }
 }
 
@@ -725,12 +725,12 @@ std::string RemoveNodeCommand::label() const
 // =============================================================================
 
 // ----------------------------------------------------------------------------
-PaintResourceCommand::PaintResourceCommand(std::string city, std::string map,
+PaintResourceCommand::PaintResourceCommand(std::string city, std::string layer,
                                            int32_t u0, int32_t v0,
                                            int32_t u1, int32_t v1,
                                            uint32_t amount)
     : m_city(std::move(city)),
-      m_map(std::move(map)),
+      m_layer(std::move(layer)),
       m_u0(std::min(u0, u1)),
       m_v0(std::min(v0, v1)),
       m_u1(std::max(u0, u1)),
@@ -753,19 +753,19 @@ bool PaintResourceCommand::redo(Simulation& simulation)
     if (city == nullptr)
         return false;
 
-    auto it = city->maps().find(m_map);
-    if (it == city->maps().end())
+    auto it = city->getLayers().find(m_layer);
+    if (it == city->getLayers().end())
         return false;
 
-    Map& map = *it->second;
+    Layer& layer = *it->second;
 
-    // Painting is bounded by what the city administers, not by the map, which
+    // Painting is bounded by what the city administers, not by the layer, which
     // now spans the whole world.
-    MapRegion const region = city->region();
+    CellRegion const region = city->getRegion();
     int32_t const u0 = std::max(m_u0, region.u0);
     int32_t const v0 = std::max(m_v0, region.v0);
-    int32_t const u1 = std::min(m_u1, region.u1() - 1);
-    int32_t const v1 = std::min(m_v1, region.v1() - 1);
+    int32_t const u1 = std::min(m_u1, region.getMaxU() - 1);
+    int32_t const v1 = std::min(m_v1, region.getMaxV() - 1);
     if ((u0 > u1) || (v0 > v1))
         return false;
 
@@ -779,9 +779,9 @@ bool PaintResourceCommand::redo(Simulation& simulation)
         {
             if (capture)
             {
-                m_previous.push_back(map.getResource(u, v));
+                m_previous.push_back(layer.getResource({ u, v }));
             }
-            map.setResource(u, v, m_amount);
+            layer.setResource({ u, v }, m_amount);
         }
     }
 
@@ -795,24 +795,24 @@ void PaintResourceCommand::undo(Simulation& simulation)
     if (city == nullptr)
         return;
 
-    auto it = city->maps().find(m_map);
-    if (it == city->maps().end())
+    auto it = city->getLayers().find(m_layer);
+    if (it == city->getLayers().end())
         return;
 
-    Map& map = *it->second;
+    Layer& layer = *it->second;
 
-    MapRegion const region = city->region();
+    CellRegion const region = city->getRegion();
     int32_t const u0 = std::max(m_u0, region.u0);
     int32_t const v0 = std::max(m_v0, region.v0);
-    int32_t const u1 = std::min(m_u1, region.u1() - 1);
-    int32_t const v1 = std::min(m_v1, region.v1() - 1);
+    int32_t const u1 = std::min(m_u1, region.getMaxU() - 1);
+    int32_t const v1 = std::min(m_v1, region.getMaxV() - 1);
 
     size_t i = 0u;
     for (int32_t v = v0; (v <= v1) && (i < m_previous.size()); ++v)
     {
         for (int32_t u = u0; (u <= u1) && (i < m_previous.size()); ++u)
         {
-            map.setResource(u, v, m_previous[i++]);
+            layer.setResource({ u, v }, m_previous[i++]);
         }
     }
 }
@@ -821,7 +821,7 @@ void PaintResourceCommand::undo(Simulation& simulation)
 std::string PaintResourceCommand::label() const
 {
     char buffer[64];
-    std::snprintf(buffer, sizeof(buffer), "paint %s to %u", m_map.c_str(),
+    std::snprintf(buffer, sizeof(buffer), "paint %s to %u", m_layer.c_str(),
                   m_amount);
     return buffer;
 }
@@ -832,14 +832,14 @@ std::string PaintResourceCommand::label() const
 
 namespace {
 
-bool regionsOverlap(MapRegion const& a, MapRegion const& b)
+bool regionsOverlap(CellRegion const& a, CellRegion const& b)
 {
-    return (a.u0 < b.u1()) && (b.u0 < a.u1()) && (a.v0 < b.v1()) && (b.v0 < a.v1());
+    return (a.u0 < b.getMaxU()) && (b.u0 < a.getMaxU()) && (a.v0 < b.getMaxV()) && (b.v0 < a.getMaxV());
 }
 
-MapRegion makeRegion(int32_t u0, int32_t v0, int32_t u1, int32_t v1)
+CellRegion makeRegion(int32_t u0, int32_t v0, int32_t u1, int32_t v1)
 {
-    MapRegion region;
+    CellRegion region;
     region.u0 = u0;
     region.v0 = v0;
     region.sizeU = uint32_t(u1 - u0);
@@ -852,9 +852,9 @@ MapRegion makeRegion(int32_t u0, int32_t v0, int32_t u1, int32_t v1)
 //! rectangles: the band above, the band below, then the left and right sides of
 //! what remains in between.
 // ----------------------------------------------------------------------------
-std::vector<MapRegion> subtract(MapRegion const& from, MapRegion const& cut)
+std::vector<CellRegion> subtract(CellRegion const& from, CellRegion const& cut)
 {
-    std::vector<MapRegion> pieces;
+    std::vector<CellRegion> pieces;
     if (!regionsOverlap(from, cut))
     {
         pieces.push_back(from);
@@ -862,133 +862,133 @@ std::vector<MapRegion> subtract(MapRegion const& from, MapRegion const& cut)
     }
 
     int32_t const v0 = std::max(from.v0, cut.v0);
-    int32_t const v1 = std::min(from.v1(), cut.v1());
+    int32_t const v1 = std::min(from.getMaxV(), cut.getMaxV());
 
     if (from.v0 < v0)
-        pieces.push_back(makeRegion(from.u0, from.v0, from.u1(), v0));
-    if (v1 < from.v1())
-        pieces.push_back(makeRegion(from.u0, v1, from.u1(), from.v1()));
+        pieces.push_back(makeRegion(from.u0, from.v0, from.getMaxU(), v0));
+    if (v1 < from.getMaxV())
+        pieces.push_back(makeRegion(from.u0, v1, from.getMaxU(), from.getMaxV()));
     if (from.u0 < cut.u0)
-        pieces.push_back(makeRegion(from.u0, v0, std::min(from.u1(), cut.u0), v1));
-    if (cut.u1() < from.u1())
-        pieces.push_back(makeRegion(std::max(from.u0, cut.u1()), v0, from.u1(), v1));
+        pieces.push_back(makeRegion(from.u0, v0, std::min(from.getMaxU(), cut.u0), v1));
+    if (cut.getMaxU() < from.getMaxU())
+        pieces.push_back(makeRegion(std::max(from.u0, cut.getMaxU()), v0, from.getMaxU(), v1));
 
     return pieces;
 }
 
 } // namespace
 
-AddAreaCommand::AddAreaCommand(std::string city, std::string areaType,
+AddZoneCommand::AddZoneCommand(std::string city, std::string zoneType,
                                int32_t u0, int32_t v0, int32_t u1, int32_t v1)
     : m_city(std::move(city)),
-      m_areaType(std::move(areaType)),
+      m_zoneType(std::move(zoneType)),
       m_u0(std::min(u0, u1)),
       m_v0(std::min(v0, v1)),
       m_u1(std::max(u0, u1)),
       m_v1(std::max(v0, v1))
 {}
 
-bool AddAreaCommand::redo(Simulation& simulation)
+bool AddZoneCommand::redo(Simulation& simulation)
 {
     City* city = findCity(simulation, m_city);
     if (city == nullptr)
         return false;
 
-    AreaType const* type = nullptr;
+    ZoneType const* type = nullptr;
     try
     {
-        type = &simulation.script().getAreaType(m_areaType);
+        type = &simulation.getRuleset().getZoneType(m_zoneType);
     }
     catch (...)
     {
         return false;
     }
 
-    MapRegion const region = makeRegion(m_u0, m_v0, m_u1 + 1, m_v1 + 1);
-    if (region.empty())
+    CellRegion const region = makeRegion(m_u0, m_v0, m_u1 + 1, m_v1 + 1);
+    if (region.isEmpty())
         return false;
 
     // The first run records what it re-zoned; a redo runs after an undo put the
-    // original Areas back, so the cutting itself has to happen every time.
+    // original Zones back, so the cutting itself has to happen every time.
     bool const capture = m_removed.empty();
-    std::vector<SavedArea> overlapped;
+    std::vector<SavedZone> overlapped;
 
-    size_t i = city->areas().size();
+    size_t i = city->getZones().size();
     while (i--)
     {
-        Area& area = *city->areas()[i];
-        if (!regionsOverlap(area.footprint(), region))
+        Zone& zone = *city->getZones()[i];
+        if (!regionsOverlap(zone.getRegion(), region))
             continue;
 
-        SavedArea saved;
-        saved.type = area.type();
-        saved.u0 = area.footprint().u0;
-        saved.v0 = area.footprint().v0;
-        saved.sizeU = area.footprint().sizeU;
-        saved.sizeV = area.footprint().sizeV;
+        SavedZone saved;
+        saved.type = zone.getTypeName().str();
+        saved.u0 = zone.getRegion().u0;
+        saved.v0 = zone.getRegion().v0;
+        saved.sizeU = zone.getRegion().sizeU;
+        saved.sizeV = zone.getRegion().sizeV;
         overlapped.push_back(saved);
         if (capture)
             m_removed.push_back(std::move(saved));
-        city->removeArea(area);
+        city->removeZone(zone);
     }
 
     m_leftovers.clear();
-    for (SavedArea const& saved: overlapped)
+    for (SavedZone const& saved: overlapped)
     {
-        AreaType const* savedType = nullptr;
+        ZoneType const* savedType = nullptr;
         try
         {
-            savedType = &simulation.script().getAreaType(saved.type);
+            savedType = &simulation.getRuleset().getZoneType(saved.type);
         }
         catch (...)
         {
             continue;
         }
 
-        MapRegion const footprint = makeRegion(
+        CellRegion const footprint = makeRegion(
             saved.u0, saved.v0, saved.u0 + int32_t(saved.sizeU),
             saved.v0 + int32_t(saved.sizeV));
-        for (MapRegion const& piece: subtract(footprint, region))
+        for (CellRegion const& piece: subtract(footprint, region))
         {
-            if (piece.empty())
+            if (piece.isEmpty())
                 continue;
-            m_leftovers.push_back(city->addArea(*savedType, piece).id());
+            m_leftovers.push_back(city->addZone(*savedType, piece).getId());
         }
     }
 
-    Area& area = city->addArea(*type, region);
-    m_areaId = area.id();
+    Zone& zone = city->addZone(*type, region);
+    m_zoneId = zone.getId();
     return true;
 }
 
-void AddAreaCommand::undo(Simulation& simulation)
+void AddZoneCommand::undo(Simulation& simulation)
 {
     City* city = findCity(simulation, m_city);
     if (city == nullptr)
         return;
 
     auto const dropById = [city](uint32_t id) {
-        for (auto& it: city->areas())
+        for (auto& it: city->getZones())
         {
-            if (it->id() == id)
+            if (it->getId() == id)
             {
-                city->removeArea(*it);
+                city->removeZone(*it);
                 return;
             }
         }
     };
 
-    dropById(m_areaId);
+    dropById(m_zoneId);
     for (uint32_t id: m_leftovers)
         dropById(id);
     m_leftovers.clear();
 
-    for (SavedArea const& saved: m_removed)
+    for (SavedZone const& saved: m_removed)
     {
         try
         {
-            AreaType const& type = simulation.script().getAreaType(saved.type);
-            city->addArea(type, makeRegion(saved.u0, saved.v0,
+            ZoneType const& type = simulation.getRuleset().getZoneType(saved.type);
+            city->addZone(type, makeRegion(saved.u0, saved.v0,
                                            saved.u0 + int32_t(saved.sizeU),
                                            saved.v0 + int32_t(saved.sizeV)));
         }
@@ -997,9 +997,9 @@ void AddAreaCommand::undo(Simulation& simulation)
     }
 }
 
-std::string AddAreaCommand::label() const
+std::string AddZoneCommand::label() const
 {
-    return "zone " + m_areaType;
+    return "zone " + m_zoneType;
 }
 } // namespace editor
 } // namespace ogb

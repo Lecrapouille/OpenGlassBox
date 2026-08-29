@@ -17,13 +17,13 @@ Agent* Selection::resolveAgent(Simulation& simulation) const
     if (kind != Kind::Agent)
         return nullptr;
 
-    auto const it = simulation.cities().find(city);
-    if (it == simulation.cities().end())
+    auto const it = simulation.getCities().find(city);
+    if (it == simulation.getCities().end())
         return nullptr;
 
-    for (auto& agent: it->second->agents())
+    for (auto& agent: it->second->getAgents())
     {
-        if (agent->id() == agentId)
+        if (agent->getId() == agentId)
             return agent.get();
     }
 

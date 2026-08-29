@@ -12,7 +12,7 @@ namespace ogb
 
 //------------------------------------------------------------------------------
 //! \brief The half open window [from, to) as a bitmask of the hours of a day,
-//! wrapping around midnight the way SimulationClock::hourBetween does.
+//! wrapping around midnight the way SimulationClock::isHourBetween() does.
 //------------------------------------------------------------------------------
 static uint32_t windowMask(uint32_t from, uint32_t to)
 {
@@ -40,13 +40,13 @@ void OpeningHours::add(IRule const& rule)
     // rules add up. A rule asking for no hour at all is awake all day.
     uint32_t mask = ~0u;
     bool timed = false;
-    for (IRuleCommand const* command: rule.commands())
+    for (IRuleCommand const* command: rule.getCommands())
     {
         auto const* hour = dynamic_cast<RuleCommandHour const*>(command);
         if (hour == nullptr)
             continue;
 
-        mask &= windowMask(hour->from(), hour->to());
+        mask &= windowMask(hour->getFrom(), hour->getTo());
         timed = true;
     }
 
@@ -69,13 +69,13 @@ bool OpeningHours::isOpen(uint32_t hourOfDay) const
 }
 
 //------------------------------------------------------------------------------
-bool OpeningHours::bounded() const
+bool OpeningHours::isRestricted() const
 {
     return !m_empty && !m_anyHour;
 }
 
 //------------------------------------------------------------------------------
-uint32_t OpeningHours::nextOpening(uint32_t hourOfDay) const
+uint32_t OpeningHours::getNextOpeningHour(uint32_t hourOfDay) const
 {
     if (isOpen(hourOfDay))
         return hourOfDay % HOURS_PER_DAY;
@@ -91,9 +91,9 @@ uint32_t OpeningHours::nextOpening(uint32_t hourOfDay) const
 }
 
 //------------------------------------------------------------------------------
-uint32_t OpeningHours::closingAfter(uint32_t hourOfDay) const
+uint32_t OpeningHours::getClosingHour(uint32_t hourOfDay) const
 {
-    if (!bounded() || !isOpen(hourOfDay))
+    if (!isRestricted() || !isOpen(hourOfDay))
         return NEVER;
 
     uint32_t last = hourOfDay % HOURS_PER_DAY;

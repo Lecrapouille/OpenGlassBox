@@ -37,12 +37,12 @@ uint32_t TimeControlPanel::takePendingSteps()
 // ----------------------------------------------------------------------------
 void TimeControlPanel::drawTimeOfDay(Simulation& simulation)
 {
-    SimulationClock& clock = simulation.clock();
+    SimulationClock const& clock = simulation.getClock();
 
     if (!m_editing_time)
     {
-        m_hour = int(clock.hourOfDay());
-        m_minute = int(clock.minuteOfHour());
+        m_hour = int(clock.getHourOfDay());
+        m_minute = int(clock.getMinuteOfHour());
     }
 
     ImGui::SetNextItemWidth(60.0f);
@@ -56,8 +56,8 @@ void TimeControlPanel::drawTimeOfDay(Simulation& simulation)
     ImGui::SameLine();
     if (ImGui::Button("Set time"))
     {
-        clock.setTimeOfDay(clock.day(), uint32_t(m_hour), uint32_t(m_minute));
-        simulation.setTotalTicks(clock.ticks());
+        simulation.setTimeOfDay(
+            clock.getDay(), uint32_t(m_hour), uint32_t(m_minute));
         m_editing_time = false;
     }
     if (ImGui::IsItemHovered())
@@ -77,23 +77,24 @@ void TimeControlPanel::draw(Simulation& simulation)
         return;
     }
 
-    SimulationClock const& clock = simulation.clock();
-    ImGui::Text("%02u:%02u", clock.hourOfDay(), clock.minuteOfHour());
+    SimulationClock const& clock = simulation.getClock();
+    ImGui::Text("%02u:%02u", clock.getHourOfDay(), clock.getMinuteOfHour());
     ImGui::SameLine();
     ImGui::TextDisabled("Jour %u  tick %llu",
-                        clock.day(),
-                        (unsigned long long)simulation.totalTicks());
+                        clock.getDay(),
+                        (unsigned long long)simulation.getClock().getTicks());
 
     drawTimeOfDay(simulation);
 
-    bool const paused = simulation.paused();
+    bool const paused = simulation.isPaused();
     ImGui::PushStyleColor(ImGuiCol_Text,
                           ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
-    ImGui::TextWrapped("%s. Play and Pause sit at the top of the map toolbar.",
+    ImGui::TextWrapped("%s. Play and Pause sit at the top of the layer toolbar.",
                        paused ? "Paused" : "Running");
     ImGui::PopStyleColor();
 
-    uint32_t const perMinute = std::max(1u, simulation.config().ticksPerMinute);
+    uint32_t const perMinute =
+        std::max(1u, simulation.getConfig().time.ticksPerMinute);
 
     ImGui::BeginDisabled(!paused);
     if (ImGui::Button("Step"))
@@ -127,7 +128,7 @@ void TimeControlPanel::draw(Simulation& simulation)
 
     ImGui::SeparatorText("Speed");
 
-    float const scale = simulation.timeScale();
+    float const scale = simulation.getTimeScale();
     float const right =
         ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
     for (size_t i = 0u; i < IM_ARRAYSIZE(SPEEDS); ++i)
@@ -181,12 +182,15 @@ void TimeControlPanel::draw(Simulation& simulation)
 
     ImGui::SeparatorText("Tick rate");
 
-    float ticksPerSecond = simulation.config().ticksPerSecond;
+    Simulation::Config config = simulation.getConfig();
+
+    float ticksPerSecond = config.time.ticksPerSecond;
     ImGui::SetNextItemWidth(-140.0f);
     if (ImGui::SliderFloat(
             "ticks per second", &ticksPerSecond, 1.0f, 120.0f, "%.0f"))
     {
-        simulation.config().ticksPerSecond = ticksPerSecond;
+        config.time.ticksPerSecond = ticksPerSecond;
+        simulation.setConfig(config);
     }
     if (ImGui::IsItemHovered())
     {
@@ -195,11 +199,12 @@ void TimeControlPanel::draw(Simulation& simulation)
             "is how many ticks a second of wall clock time is worth.");
     }
 
-    int maxTicks = int(simulation.config().maxTicksPerUpdate);
+    int maxTicks = int(config.time.maxTicksPerUpdate);
     ImGui::SetNextItemWidth(-140.0f);
     if (ImGui::SliderInt("max catch-up", &maxTicks, 1, 200))
     {
-        simulation.config().maxTicksPerUpdate = uint32_t(maxTicks);
+        config.time.maxTicksPerUpdate = uint32_t(maxTicks);
+        simulation.setConfig(config);
     }
     if (ImGui::IsItemHovered())
     {

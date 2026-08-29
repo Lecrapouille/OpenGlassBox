@@ -40,7 +40,7 @@ TEST(TestsAgent, Constructor)
     ASSERT_EQ(int32_t(a.m_position.y), 2);
     ASSERT_EQ(int32_t(a.m_position.z), 3);
     ASSERT_EQ(a.m_offset, 0.0f);
-    ASSERT_EQ(a.m_currentWay, nullptr);
+    ASSERT_EQ(a.m_currentSegment, nullptr);
     ASSERT_EQ(a.m_lastNode, &n);
     ASSERT_EQ(a.m_lastNode, u.m_node);
     ASSERT_EQ(a.m_nextNode, nullptr);
@@ -55,8 +55,8 @@ TEST(TestsAgent, Move)
     Path& p = city.addPath(type1);
     Node& n1 = p.addNode(Vector3f(1.0f, 2.0f, 3.0f));
     Node& n2 = p.addNode(Vector3f(3.0f, 2.0f, 3.0f));
-    WayType type2("Dirt", 0xAAAAAA);
-    Way& s1 = p.addWay(type2, n1, n2);
+    SegmentType type2("Dirt", 0xAAAAAA);
+    Segment& s1 = p.addSegment(type2, n1, n2);
 
     Resources r;
     UnitType homeType("Home");
@@ -76,27 +76,27 @@ TEST(TestsAgent, Move)
     carried.addResource("People", 1u);
     Agent a(43u, worker, u, carried, "People");
 
-    float const dt = 1.0f / config::DEFAULT_TICKS_PER_SECOND;
+    float const dt = 1.0f / defaults::TICKS_PER_SECOND;
 
     ASSERT_EQ(a.m_position.x, 1.0f);
     ASSERT_EQ(a.m_position.y, 2.0f);
     ASSERT_EQ(a.m_position.z, 3.0f);
     ASSERT_EQ(a.m_offset, 0.0f);
-    ASSERT_EQ(a.m_currentWay, nullptr);
+    ASSERT_EQ(a.m_currentSegment, nullptr);
     ASSERT_EQ(a.m_lastNode, &n1);
     ASSERT_EQ(a.m_nextNode, nullptr);
 
-    ASSERT_EQ(a.update(city.router(), dt), false);
-    ASSERT_EQ(a.m_currentWay, &s1);
+    ASSERT_EQ(a.update(city.getRouter(), city.getConfig().routing, dt), false);
+    ASSERT_EQ(a.m_currentSegment, &s1);
     ASSERT_EQ(a.m_lastNode, &n1);
     ASSERT_EQ(a.m_nextNode, &n2);
 
-    ASSERT_EQ(a.update(city.router(), dt), false);
+    ASSERT_EQ(a.update(city.getRouter(), city.getConfig().routing, dt), false);
     ASSERT_GT(a.m_position.x, 1.0f);
     ASSERT_EQ(a.m_position.y, 2.0f);
     ASSERT_EQ(a.m_position.z, 3.0f);
     ASSERT_GT(a.m_offset, 0.0f);
-    ASSERT_EQ(a.m_currentWay, &s1);
+    ASSERT_EQ(a.m_currentSegment, &s1);
     ASSERT_EQ(a.m_lastNode, &n1);
     ASSERT_EQ(a.m_nextNode, &n2);
 }
@@ -106,7 +106,7 @@ TEST(TestsAgent, Move)
 //! a teleport: an offset that was written instead of being walked.
 static float maxStepPerTick(Agent const& agent, float dt)
 {
-    return agent.speed() * dt * 1.01f + 1e-3f;
+    return agent.getSpeed() * dt * 1.01f + 1e-3f;
 }
 
 //------------------------------------------------------------------------------
@@ -118,9 +118,9 @@ driveUntilDelivered(Agent& agent, City& city, float dt, uint32_t maxTicks)
     float const step = maxStepPerTick(agent, dt);
     for (uint32_t tick = 1u; tick <= maxTicks; ++tick)
     {
-        Vector3f const before = agent.position();
-        bool const delivered = agent.update(city.router(), dt);
-        float const moved = magnitude(agent.position() - before);
+        Vector3f const before = agent.getPosition();
+        bool const delivered = agent.update(city.getRouter(), city.getConfig().routing, dt);
+        float const moved = length(agent.getPosition() - before);
         EXPECT_LE(moved, step) << "teleported at tick " << tick;
         if (delivered)
             return tick;
@@ -129,7 +129,7 @@ driveUntilDelivered(Agent& agent, City& city, float dt, uint32_t maxTicks)
 }
 
 //------------------------------------------------------------------------------
-//! \brief Every building of the demo sits along a Way rather than on a Node, so
+//! \brief Every building of the demo sits along a Segment rather than on a Node, so
 //! an Agent starts and ends its journey in the middle of a segment. It used to
 //! be snapped to the end of that segment, which showed up as a teleport to the
 //! previous intersection, and as an endless loop when the building refused it.
@@ -140,37 +140,37 @@ TEST(TestsAgent, LeavesAndReachesABuildingWithoutJumping)
     Path& path = city.addPath(keep<PathType>("Road"));
     Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& n2 = path.addNode(Vector3f(60.0f, 0.0f, 0.0f));
-    Way& way = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
+    Segment& segment = path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n1, n2);
 
     UnitType homeType("Home");
     homeType.targets.emplace_back("Home");
-    Unit& home = city.addUnit(homeType, path, way, 0.8f);
-    ASSERT_FLOAT_EQ(home.position().x, 48.0f);
+    Unit& home = city.addUnit(homeType, path, segment, 0.8f);
+    ASSERT_FLOAT_EQ(home.getPosition().x, 48.0f);
 
     UnitType workType("Work");
     workType.targets.emplace_back("Work");
     workType.resources.setCapacity("People", 4u);
-    Unit& work = city.addUnit(workType, path, way, 0.2f);
-    ASSERT_FLOAT_EQ(work.position().x, 12.0f);
+    Unit& work = city.addUnit(workType, path, segment, 0.2f);
+    ASSERT_FLOAT_EQ(work.getPosition().x, 12.0f);
 
     AgentType worker("Worker", 10.0f, 3u, 42u);
     Resources carried;
     carried.addResource("People", 1u);
     Agent agent(1u, worker, home, carried, "Work");
-    ASSERT_FLOAT_EQ(agent.position().x, 48.0f);
+    ASSERT_FLOAT_EQ(agent.getPosition().x, 48.0f);
 
-    float const dt = 1.0f / config::DEFAULT_TICKS_PER_SECOND;
+    float const dt = 1.0f / defaults::TICKS_PER_SECOND;
     ASSERT_GT(driveUntilDelivered(agent, city, dt, 4000u), 0u);
 
     // It walked to the door rather than to the intersection.
-    ASSERT_NEAR(static_cast<double>(agent.position().x), 12.0, 1.0);
-    ASSERT_EQ(work.resources().getAmount("People"), 1u);
+    ASSERT_NEAR(static_cast<double>(agent.getPosition().x), 12.0, 1.0);
+    ASSERT_EQ(work.getResources().getAmount("People"), 1u);
 }
 
 //------------------------------------------------------------------------------
-//! \brief Same journey, but the destination is on another Way: the Agent has to
+//! \brief Same journey, but the destination is on another Segment: the Agent has to
 //! reach the intersection first, one tick at a time.
-TEST(TestsAgent, DrivesToTheIntersectionBeforeTakingAnotherWay)
+TEST(TestsAgent, DrivesToTheIntersectionBeforeTakingAnotherSegment)
 {
     TestWorld cityWorld("Paris", 32u, 32u);
     City& city = cityWorld.city;
@@ -178,28 +178,28 @@ TEST(TestsAgent, DrivesToTheIntersectionBeforeTakingAnotherWay)
     Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& n2 = path.addNode(Vector3f(60.0f, 0.0f, 0.0f));
     Node& n3 = path.addNode(Vector3f(120.0f, 0.0f, 0.0f));
-    Way& way1 = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
-    Way& way2 = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n2, n3);
+    Segment& segment1 = path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n1, n2);
+    Segment& segment2 = path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n2, n3);
 
     UnitType homeType("Home");
     homeType.targets.emplace_back("Home");
-    Unit& home = city.addUnit(homeType, path, way1, 0.6f);
+    Unit& home = city.addUnit(homeType, path, segment1, 0.6f);
 
     UnitType workType("Work");
     workType.targets.emplace_back("Work");
     workType.resources.setCapacity("People", 4u);
-    Unit& work = city.addUnit(workType, path, way2, 0.4f);
-    ASSERT_FLOAT_EQ(work.position().x, 84.0f);
+    Unit& work = city.addUnit(workType, path, segment2, 0.4f);
+    ASSERT_FLOAT_EQ(work.getPosition().x, 84.0f);
 
     AgentType worker("Worker", 10.0f, 3u, 42u);
     Resources carried;
     carried.addResource("People", 1u);
     Agent agent(1u, worker, home, carried, "Work");
 
-    float const dt = 1.0f / config::DEFAULT_TICKS_PER_SECOND;
+    float const dt = 1.0f / defaults::TICKS_PER_SECOND;
     ASSERT_GT(driveUntilDelivered(agent, city, dt, 4000u), 0u);
-    ASSERT_NEAR(static_cast<double>(agent.position().x), 84.0, 1.0);
-    ASSERT_EQ(work.resources().getAmount("People"), 1u);
+    ASSERT_NEAR(static_cast<double>(agent.getPosition().x), 84.0, 1.0);
+    ASSERT_EQ(work.getResources().getAmount("People"), 1u);
 }
 
 //------------------------------------------------------------------------------
@@ -207,7 +207,7 @@ TEST(TestsAgent, DrivesToTheIntersectionBeforeTakingAnotherWay)
 //! the end the destination is really behind. Leaving by the nearest one meant
 //! an Agent bound for a shop to the east was first seen driving west, only to
 //! turn back at the corner.
-TEST(TestsAgent, LeavesTheWayByTheEndTheDestinationIsBehind)
+TEST(TestsAgent, LeavesTheSegmentByTheEndTheDestinationIsBehind)
 {
     TestWorld cityWorld("Paris", 32u, 32u);
     City& city = cityWorld.city;
@@ -215,15 +215,15 @@ TEST(TestsAgent, LeavesTheWayByTheEndTheDestinationIsBehind)
     Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& n2 = path.addNode(Vector3f(60.0f, 0.0f, 0.0f));
     Node& n3 = path.addNode(Vector3f(120.0f, 0.0f, 0.0f));
-    Way& way1 = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
-    path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n2, n3);
+    Segment& segment1 = path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n1, n2);
+    path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n2, n3);
 
     // The factory stands at a fifth of the first street, so n1 is its near end
     // and the shop is on the other side of n2.
     UnitType workType("Work");
     workType.targets.emplace_back("Work");
-    Unit& work = city.addUnit(workType, path, way1, 0.2f);
-    ASSERT_FLOAT_EQ(work.position().x, 12.0f);
+    Unit& work = city.addUnit(workType, path, segment1, 0.2f);
+    ASSERT_FLOAT_EQ(work.getPosition().x, 12.0f);
 
     UnitType shopType("Shop");
     shopType.targets.emplace_back("Shop");
@@ -235,24 +235,24 @@ TEST(TestsAgent, LeavesTheWayByTheEndTheDestinationIsBehind)
     carried.addResource("Goods", 1u);
     Agent agent(1u, truck, work, carried, "Shop");
 
-    float const dt = 1.0f / config::DEFAULT_TICKS_PER_SECOND;
-    float const departure = agent.position().x;
+    float const dt = 1.0f / defaults::TICKS_PER_SECOND;
+    float const departure = agent.getPosition().x;
 
-    ASSERT_FALSE(agent.update(city.router(), dt));
+    ASSERT_FALSE(agent.update(city.getRouter(), city.getConfig().routing, dt));
     ASSERT_EQ(agent.m_nextNode, &n2) << "drove away from the shop";
 
     float const step = maxStepPerTick(agent, dt);
     bool delivered = false;
     for (uint32_t tick = 0u; (tick < 4000u) && !delivered; ++tick)
     {
-        Vector3f const before = agent.position();
-        delivered = agent.update(city.router(), dt);
-        ASSERT_LE(magnitude(agent.position() - before), step);
-        ASSERT_GE(agent.position().x, departure - 0.5f) << "turned back";
+        Vector3f const before = agent.getPosition();
+        delivered = agent.update(city.getRouter(), city.getConfig().routing, dt);
+        ASSERT_LE(length(agent.getPosition() - before), step);
+        ASSERT_GE(agent.getPosition().x, departure - 0.5f) << "turned back";
     }
 
     ASSERT_TRUE(delivered);
-    ASSERT_EQ(shop.resources().getAmount("Goods"), 1u);
+    ASSERT_EQ(shop.getResources().getAmount("Goods"), 1u);
 }
 
 //------------------------------------------------------------------------------
@@ -266,11 +266,11 @@ TEST(TestsAgent, DoesNotDeliverFromTheMiddleOfTheStreet)
     Path& path = city.addPath(keep<PathType>("Road"));
     Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& n2 = path.addNode(Vector3f(60.0f, 0.0f, 0.0f));
-    Way& way = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
+    Segment& segment = path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n1, n2);
 
     UnitType workType("Work");
     workType.targets.emplace_back("Work");
-    Unit& work = city.addUnit(workType, path, way, 0.2f);
+    Unit& work = city.addUnit(workType, path, segment, 0.2f);
 
     UnitType homeType("Home");
     homeType.targets.emplace_back("Home");
@@ -282,13 +282,13 @@ TEST(TestsAgent, DoesNotDeliverFromTheMiddleOfTheStreet)
     carried.addResource("People", 1u);
     Agent agent(1u, people, work, carried, "Home");
 
-    float const dt = 1.0f / config::DEFAULT_TICKS_PER_SECOND;
-    ASSERT_FALSE(agent.update(city.router(), dt)) << "delivered from afar";
-    ASSERT_EQ(home.resources().getAmount("People"), 0u);
+    float const dt = 1.0f / defaults::TICKS_PER_SECOND;
+    ASSERT_FALSE(agent.update(city.getRouter(), city.getConfig().routing, dt)) << "delivered from afar";
+    ASSERT_EQ(home.getResources().getAmount("People"), 0u);
 
     ASSERT_GT(driveUntilDelivered(agent, city, dt, 4000u), 0u);
-    ASSERT_NEAR(static_cast<double>(agent.position().x), 0.0, 1.0);
-    ASSERT_EQ(home.resources().getAmount("People"), 1u);
+    ASSERT_NEAR(static_cast<double>(agent.getPosition().x), 0.0, 1.0);
+    ASSERT_EQ(home.getResources().getAmount("People"), 1u);
 }
 
 //------------------------------------------------------------------------------
@@ -303,84 +303,84 @@ TEST(TestsAgent, DeliversToTheBuildingThatStillHasRoom)
     Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& n2 = path.addNode(Vector3f(60.0f, 0.0f, 0.0f));
     Node& n3 = path.addNode(Vector3f(120.0f, 0.0f, 0.0f));
-    Way& way1 = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
-    Way& way2 = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n2, n3);
+    Segment& segment1 = path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n1, n2);
+    Segment& segment2 = path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n2, n3);
 
     UnitType workType("Work");
     workType.targets.emplace_back("Work");
-    Unit& work = city.addUnit(workType, path, way2, 0.9f);
+    Unit& work = city.addUnit(workType, path, segment2, 0.9f);
 
     // The nearest home is full, the far one is not.
     UnitType homeType("Home");
     homeType.targets.emplace_back("Home");
     homeType.resources.setCapacity("People", 1u);
     homeType.resources.addResource("People", 1u);
-    Unit& full = city.addUnit(homeType, path, way2, 0.4f);
-    ASSERT_EQ(full.resources().getAmount("People"), 1u);
+    Unit& full = city.addUnit(homeType, path, segment2, 0.4f);
+    ASSERT_EQ(full.getResources().getAmount("People"), 1u);
 
     UnitType freeType("Home");
     freeType.targets.emplace_back("Home");
     freeType.resources.setCapacity("People", 4u);
-    Unit& free = city.addUnit(freeType, path, way1, 0.2f);
+    Unit& free = city.addUnit(freeType, path, segment1, 0.2f);
 
     AgentType people("People", 10.0f, 3u, 42u);
     Resources carried;
     carried.addResource("People", 1u);
     Agent agent(1u, people, work, carried, "Home");
 
-    float const dt = 1.0f / config::DEFAULT_TICKS_PER_SECOND;
+    float const dt = 1.0f / defaults::TICKS_PER_SECOND;
     ASSERT_GT(driveUntilDelivered(agent, city, dt, 4000u), 0u);
 
-    ASSERT_EQ(free.resources().getAmount("People"), 1u);
-    ASSERT_EQ(full.resources().getAmount("People"), 1u);
+    ASSERT_EQ(free.getResources().getAmount("People"), 1u);
+    ASSERT_EQ(full.getResources().getAmount("People"), 1u);
 }
 
 //------------------------------------------------------------------------------
 //! \brief The house fills up while the Agent is on its way. It must not shuttle
 //! between the intersection and the door: either it finds another one, or it
 //! gives its load back to the building that sent it out and leaves.
-TEST(TestsAgent, DoesNotLoopWhenTheDestinationFillsUpOnTheWay)
+TEST(TestsAgent, DoesNotLoopWhenTheDestinationFillsUpOnTheSegment)
 {
-    SimulationConfig config;
-    config.agentGiveUpTicks = 200u;
+    Config config;
+    config.routing.agentGiveUpTicks = 200u;
     TestWorld cityWorld("Paris", 32u, 32u, Vector3f(0.0f, 0.0f, 0.0f), config);
     City& city = cityWorld.city;
     Path& path = city.addPath(keep<PathType>("Road"));
     Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& n2 = path.addNode(Vector3f(60.0f, 0.0f, 0.0f));
-    Way& way = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
+    Segment& segment = path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n1, n2);
 
     UnitType workType("Work");
     workType.targets.emplace_back("Work");
     workType.resources.setCapacity("People", 4u);
-    Unit& work = city.addUnit(workType, path, way, 0.8f);
+    Unit& work = city.addUnit(workType, path, segment, 0.8f);
 
     UnitType homeType("Home");
     homeType.targets.emplace_back("Home");
     homeType.resources.setCapacity("People", 1u);
-    Unit& home = city.addUnit(homeType, path, way, 0.2f);
+    Unit& home = city.addUnit(homeType, path, segment, 0.2f);
 
     AgentType people("People", 10.0f, 3u, 42u);
     Resources carried;
     carried.addResource("People", 1u);
     Agent agent(1u, people, work, carried, "Home");
     // Somebody else moves in before the Agent arrives.
-    home.resources().addResource("People", 1u);
+    home.getResources().addResource("People", 1u);
 
-    float const dt = 1.0f / city.config().ticksPerSecond;
+    float const dt = 1.0f / city.getConfig().time.ticksPerSecond;
     float const step = maxStepPerTick(agent, dt);
     bool removed = false;
     for (uint32_t tick = 0u; (tick < 2000u) && !removed; ++tick)
     {
-        Vector3f const before = agent.position();
-        removed = agent.update(city.router(), city.config(), dt);
-        ASSERT_LE(magnitude(agent.position() - before), step);
+        Vector3f const before = agent.getPosition();
+        removed = agent.update(city.getRouter(), city.getConfig().routing, dt);
+        ASSERT_LE(length(agent.getPosition() - before), step);
     }
 
     ASSERT_TRUE(removed);
     // The load went back where it came from rather than vanish.
-    ASSERT_EQ(work.resources().getAmount("People"), 1u);
-    ASSERT_EQ(home.resources().getAmount("People"), 1u);
+    ASSERT_EQ(work.getResources().getAmount("People"), 1u);
+    ASSERT_EQ(home.getResources().getAmount("People"), 1u);
 }
 
 //------------------------------------------------------------------------------
@@ -393,30 +393,30 @@ TEST(TestsAgent, ForgetsADestroyedDestination)
     Path& path = city.addPath(keep<PathType>("Road"));
     Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& n2 = path.addNode(Vector3f(60.0f, 0.0f, 0.0f));
-    Way& way = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
+    Segment& segment = path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n1, n2);
 
     UnitType workType("Work");
     workType.targets.emplace_back("Work");
-    Unit& work = city.addUnit(workType, path, way, 0.9f);
+    Unit& work = city.addUnit(workType, path, segment, 0.9f);
 
     UnitType homeType("Home");
     homeType.targets.emplace_back("Home");
     homeType.resources.setCapacity("People", 4u);
-    Unit& home = city.addUnit(homeType, path, way, 0.1f);
+    Unit& home = city.addUnit(homeType, path, segment, 0.1f);
 
     static AgentType const people("People", 10.0f, 3u, 42u);
     Resources carried;
     carried.addResource("People", 1u);
     Agent const& agent = city.addAgent(people, work, carried, "Home");
 
-    float const dt = 1.0f / config::DEFAULT_TICKS_PER_SECOND;
+    float const dt = 1.0f / defaults::TICKS_PER_SECOND;
     for (uint32_t tick = 0u; tick < 20u; ++tick)
         city.update(dt);
-    ASSERT_EQ(agent.route().destination, &home);
+    ASSERT_EQ(agent.getRoute().getDestination(), &home);
 
     city.removeUnit(home);
-    ASSERT_EQ(agent.route().destination, nullptr);
-    ASSERT_EQ(agent.owner(), &work);
+    ASSERT_EQ(agent.getRoute().getDestination(), nullptr);
+    ASSERT_EQ(agent.getOwner(), &work);
     ASSERT_NO_THROW(city.update(dt));
 }
 
@@ -431,50 +431,50 @@ TEST(TestsAgent, ClaimsAndGivesBackAPlaceAtItsDestination)
     Path& path = city.addPath(keep<PathType>("Road"));
     Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& n2 = path.addNode(Vector3f(60.0f, 0.0f, 0.0f));
-    Way& way = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
+    Segment& segment = path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n1, n2);
 
     UnitType workType("Work");
     workType.targets.emplace_back("Work");
-    Unit& work = city.addUnit(workType, path, way, 0.9f);
+    Unit& work = city.addUnit(workType, path, segment, 0.9f);
 
     UnitType homeType("Home");
     homeType.targets.emplace_back("Home");
     homeType.resources.setCapacity("People", 4u);
-    Unit& home = city.addUnit(homeType, path, way, 0.1f);
+    Unit& home = city.addUnit(homeType, path, segment, 0.1f);
 
     AgentType people("People", 10.0f, 3u, 42u);
     Resources carried;
     carried.addResource("People", 1u);
-    float const dt = 1.0f / config::DEFAULT_TICKS_PER_SECOND;
+    float const dt = 1.0f / defaults::TICKS_PER_SECOND;
 
     {
         Agent agent(1u, people, work, carried, "Home");
-        ASSERT_EQ(home.inbound(), 0u) << "claimed before being routed";
+        ASSERT_EQ(home.getReservedCount(), 0u) << "claimed before being routed";
 
-        ASSERT_FALSE(agent.update(city.router(), dt));
-        ASSERT_EQ(agent.route().destination, &home);
-        ASSERT_EQ(home.inbound(), 1u) << "routed without claiming";
+        ASSERT_FALSE(agent.update(city.getRouter(), city.getConfig().routing, dt));
+        ASSERT_EQ(agent.getRoute().getDestination(), &home);
+        ASSERT_EQ(home.getReservedCount(), 1u) << "routed without claiming";
         ASSERT_EQ(agent.m_reservation, &home);
 
         // Losing the itinerary hands the place straight back, rather than
         // holding it for the two game hours it takes to give up.
         agent.invalidateRoute();
-        ASSERT_EQ(home.inbound(), 0u) << "kept the place while wandering";
+        ASSERT_EQ(home.getReservedCount(), 0u) << "kept the place while wandering";
 
         // Routed again, and this time driven to the door.
         ASSERT_GT(driveUntilDelivered(agent, city, dt, 4000u), 0u);
-        ASSERT_EQ(home.resources().getAmount("People"), 1u);
-        ASSERT_EQ(home.inbound(), 0u) << "kept the place after delivering";
+        ASSERT_EQ(home.getResources().getAmount("People"), 1u);
+        ASSERT_EQ(home.getReservedCount(), 0u) << "kept the place after delivering";
     }
 
     // And once more, destroyed halfway through: the destructor is the last
     // line of defence, and the one that covers an Agent the City takes away.
     {
         Agent agent(2u, people, work, carried, "Home");
-        ASSERT_FALSE(agent.update(city.router(), dt));
-        ASSERT_EQ(home.inbound(), 1u);
+        ASSERT_FALSE(agent.update(city.getRouter(), city.getConfig().routing, dt));
+        ASSERT_EQ(home.getReservedCount(), 1u);
     }
-    ASSERT_EQ(home.inbound(), 0u) << "the place died with the Agent";
+    ASSERT_EQ(home.getReservedCount(), 0u) << "the place died with the Agent";
 }
 
 //------------------------------------------------------------------------------
@@ -482,24 +482,24 @@ TEST(TestsAgent, ClaimsAndGivesBackAPlaceAtItsDestination)
 //! claim behind either.
 TEST(TestsAgent, GivingUpGivesThePlaceBack)
 {
-    SimulationConfig config;
-    config.agentGiveUpTicks = 100u;
+    Config config;
+    config.routing.agentGiveUpTicks = 100u;
     TestWorld cityWorld("Paris", 32u, 32u, Vector3f(0.0f, 0.0f, 0.0f), config);
     City& city = cityWorld.city;
     Path& path = city.addPath(keep<PathType>("Road"));
     Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& n2 = path.addNode(Vector3f(60.0f, 0.0f, 0.0f));
-    Way& way = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
+    Segment& segment = path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n1, n2);
 
     UnitType workType("Work");
     workType.targets.emplace_back("Work");
     workType.resources.setCapacity("People", 4u);
-    Unit& work = city.addUnit(workType, path, way, 0.8f);
+    Unit& work = city.addUnit(workType, path, segment, 0.8f);
 
     UnitType homeType("Home");
     homeType.targets.emplace_back("Home");
     homeType.resources.setCapacity("People", 1u);
-    Unit& home = city.addUnit(homeType, path, way, 0.2f);
+    Unit& home = city.addUnit(homeType, path, segment, 0.2f);
 
     AgentType people("People", 10.0f, 3u, 42u);
     Resources carried;
@@ -508,17 +508,17 @@ TEST(TestsAgent, GivingUpGivesThePlaceBack)
 
     // Somebody moves in while the Agent is driving, so it arrives to a full
     // house and eventually hands its load back.
-    float const dt = 1.0f / city.config().ticksPerSecond;
-    ASSERT_FALSE(agent.update(city.router(), city.config(), dt));
-    ASSERT_EQ(home.inbound(), 1u);
-    home.resources().addResource("People", 1u);
+    float const dt = 1.0f / city.getConfig().time.ticksPerSecond;
+    ASSERT_FALSE(agent.update(city.getRouter(), city.getConfig().routing, dt));
+    ASSERT_EQ(home.getReservedCount(), 1u);
+    home.getResources().addResource("People", 1u);
 
     bool removed = false;
     for (uint32_t tick = 0u; (tick < 2000u) && !removed; ++tick)
-        removed = agent.update(city.router(), city.config(), dt);
+        removed = agent.update(city.getRouter(), city.getConfig().routing, dt);
 
     ASSERT_TRUE(removed);
-    ASSERT_EQ(home.inbound(), 0u) << "gave up but kept the place";
+    ASSERT_EQ(home.getReservedCount(), 0u) << "gave up but kept the place";
 }
 
 //------------------------------------------------------------------------------
@@ -532,23 +532,23 @@ TEST(TestsAgent, TwoAgentsForOnePlaceGoToDifferentBuildings)
     Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& n2 = path.addNode(Vector3f(60.0f, 0.0f, 0.0f));
     Node& n3 = path.addNode(Vector3f(120.0f, 0.0f, 0.0f));
-    Way& way1 = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
-    Way& way2 = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n2, n3);
+    Segment& segment1 = path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n1, n2);
+    Segment& segment2 = path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n2, n3);
 
     UnitType workType("Work");
     workType.targets.emplace_back("Work");
-    Unit& work = city.addUnit(workType, path, way1, 0.1f);
+    Unit& work = city.addUnit(workType, path, segment1, 0.1f);
 
     // The near house has room for one, the far one for plenty.
     UnitType nearType("Home");
     nearType.targets.emplace_back("Home");
     nearType.resources.setCapacity("People", 1u);
-    Unit& nearHome = city.addUnit(nearType, path, way1, 0.9f);
+    Unit& nearHome = city.addUnit(nearType, path, segment1, 0.9f);
 
     UnitType farType("Home");
     farType.targets.emplace_back("Home");
     farType.resources.setCapacity("People", 4u);
-    Unit& farHome = city.addUnit(farType, path, way2, 0.9f);
+    Unit& farHome = city.addUnit(farType, path, segment2, 0.9f);
 
     AgentType people("People", 10.0f, 3u, 42u);
     Resources carried;
@@ -556,16 +556,16 @@ TEST(TestsAgent, TwoAgentsForOnePlaceGoToDifferentBuildings)
     Agent first(1u, people, work, carried, "Home");
     Agent second(2u, people, work, carried, "Home");
 
-    float const dt = 1.0f / config::DEFAULT_TICKS_PER_SECOND;
-    ASSERT_FALSE(first.update(city.router(), dt));
-    ASSERT_FALSE(second.update(city.router(), dt));
+    float const dt = 1.0f / defaults::TICKS_PER_SECOND;
+    ASSERT_FALSE(first.update(city.getRouter(), city.getConfig().routing, dt));
+    ASSERT_FALSE(second.update(city.getRouter(), city.getConfig().routing, dt));
 
-    ASSERT_EQ(first.route().destination, &nearHome)
+    ASSERT_EQ(first.getRoute().getDestination(), &nearHome)
         << "the first one had the nearest house to itself";
-    ASSERT_EQ(second.route().destination, &farHome)
+    ASSERT_EQ(second.getRoute().getDestination(), &farHome)
         << "both were sent to the same single place";
-    ASSERT_EQ(nearHome.inbound(), 1u);
-    ASSERT_EQ(farHome.inbound(), 1u);
+    ASSERT_EQ(nearHome.getReservedCount(), 1u);
+    ASSERT_EQ(farHome.getReservedCount(), 1u);
 }
 
 //------------------------------------------------------------------------------
@@ -584,12 +584,12 @@ TEST(TestsAgent, RerouteCostDoesNotSeeItsOwnClaim)
     Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& n2 = path.addNode(Vector3f(60.0f, 0.0f, 0.0f));
     Node& n3 = path.addNode(Vector3f(120.0f, 0.0f, 0.0f));
-    Way& way1 = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
-    Way& way2 = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n2, n3);
+    Segment& segment1 = path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n1, n2);
+    Segment& segment2 = path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n2, n3);
 
     UnitType workType("Work");
     workType.targets.emplace_back("Work");
-    Unit& work = city.addUnit(workType, path, way1, 0.1f);
+    Unit& work = city.addUnit(workType, path, segment1, 0.1f);
 
     // Room for exactly one at the near house, which the Agent takes, and
     // plenty at the far one, which is the answer a search that counted the
@@ -597,33 +597,33 @@ TEST(TestsAgent, RerouteCostDoesNotSeeItsOwnClaim)
     UnitType nearType("Home");
     nearType.targets.emplace_back("Home");
     nearType.resources.setCapacity("People", 1u);
-    Unit& nearHome = city.addUnit(nearType, path, way1, 0.9f);
+    Unit& nearHome = city.addUnit(nearType, path, segment1, 0.9f);
 
     UnitType farType("Home");
     farType.targets.emplace_back("Home");
     farType.resources.setCapacity("People", 4u);
-    city.addUnit(farType, path, way2, 0.9f);
+    city.addUnit(farType, path, segment2, 0.9f);
 
     AgentType people("People", 10.0f, 3u, 42u);
     Resources carried;
     carried.addResource("People", 1u);
     Agent agent(1u, people, work, carried, "Home");
 
-    float const dt = 1.0f / config::DEFAULT_TICKS_PER_SECOND;
-    ASSERT_FALSE(agent.update(city.router(), dt));
-    ASSERT_EQ(agent.route().destination, &nearHome);
-    ASSERT_EQ(nearHome.inbound(), 1u);
+    float const dt = 1.0f / defaults::TICKS_PER_SECOND;
+    ASSERT_FALSE(agent.update(city.getRouter(), city.getConfig().routing, dt));
+    ASSERT_EQ(agent.getRoute().getDestination(), &nearHome);
+    ASSERT_EQ(nearHome.getReservedCount(), 1u);
 
-    float const remaining = agent.remainingCost();
+    float const remaining = agent.getRemainingCost();
     ASSERT_GT(remaining, 0.0f);
 
-    float const alternative = agent.rerouteCost(city.router());
+    float const alternative = agent.computeRerouteCost(city.getRouter());
     ASSERT_LE(alternative, remaining + 1e-3f)
         << "the Agent is on its cheapest itinerary, yet rerouting is priced "
            "dearer than finishing";
 
     // Measuring must leave the claim exactly as it was.
-    ASSERT_EQ(nearHome.inbound(), 1u) << "the measurement dropped the claim";
+    ASSERT_EQ(nearHome.getReservedCount(), 1u) << "the measurement dropped the claim";
     ASSERT_EQ(agent.m_reservation, &nearHome);
 }
 
@@ -638,27 +638,27 @@ TEST(TestsAgent, ItsOwnClaimDoesNotShutTheDoorOnIt)
     Path& path = city.addPath(keep<PathType>("Road"));
     Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& n2 = path.addNode(Vector3f(60.0f, 0.0f, 0.0f));
-    Way& way = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
+    Segment& segment = path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n1, n2);
 
     UnitType workType("Work");
     workType.targets.emplace_back("Work");
-    Unit& work = city.addUnit(workType, path, way, 0.9f);
+    Unit& work = city.addUnit(workType, path, segment, 0.9f);
 
     // Room for exactly one, which is the Agent's own claim.
     UnitType homeType("Home");
     homeType.targets.emplace_back("Home");
     homeType.resources.setCapacity("People", 1u);
-    Unit& home = city.addUnit(homeType, path, way, 0.1f);
+    Unit& home = city.addUnit(homeType, path, segment, 0.1f);
 
     AgentType people("People", 10.0f, 3u, 42u);
     Resources carried;
     carried.addResource("People", 1u);
     Agent agent(1u, people, work, carried, "Home");
 
-    float const dt = 1.0f / config::DEFAULT_TICKS_PER_SECOND;
+    float const dt = 1.0f / defaults::TICKS_PER_SECOND;
     ASSERT_GT(driveUntilDelivered(agent, city, dt, 4000u), 0u);
-    ASSERT_EQ(home.resources().getAmount("People"), 1u);
-    ASSERT_EQ(home.inbound(), 0u);
+    ASSERT_EQ(home.getResources().getAmount("People"), 1u);
+    ASSERT_EQ(home.getReservedCount(), 0u);
 }
 
 //------------------------------------------------------------------------------
@@ -671,41 +671,41 @@ TEST(TestsAgent, GivesThePlaceBackBeforeTheBuildingGoes)
     Path& path = city.addPath(keep<PathType>("Road"));
     Node& n1 = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& n2 = path.addNode(Vector3f(60.0f, 0.0f, 0.0f));
-    Way& way = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
+    Segment& segment = path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n1, n2);
 
     UnitType workType("Work");
     workType.targets.emplace_back("Work");
-    Unit& work = city.addUnit(workType, path, way, 0.9f);
+    Unit& work = city.addUnit(workType, path, segment, 0.9f);
 
     UnitType homeType("Home");
     homeType.targets.emplace_back("Home");
     homeType.resources.setCapacity("People", 4u);
-    Unit& home = city.addUnit(homeType, path, way, 0.1f);
+    Unit& home = city.addUnit(homeType, path, segment, 0.1f);
 
     static AgentType const people("People", 10.0f, 3u, 42u);
     Resources carried;
     carried.addResource("People", 1u);
     Agent const& agent = city.addAgent(people, work, carried, "Home");
 
-    float const dt = 1.0f / config::DEFAULT_TICKS_PER_SECOND;
+    float const dt = 1.0f / defaults::TICKS_PER_SECOND;
     for (uint32_t tick = 0u; tick < 20u; ++tick)
         city.update(dt);
-    ASSERT_EQ(agent.route().destination, &home);
-    ASSERT_EQ(home.inbound(), 1u);
+    ASSERT_EQ(agent.getRoute().getDestination(), &home);
+    ASSERT_EQ(home.getReservedCount(), 1u);
 
     city.removeUnit(home);
     ASSERT_EQ(agent.m_reservation, nullptr);
     ASSERT_NO_THROW(city.update(dt));
 }
 
-TEST(TestsAgent, ZeroLengthWayDoesNotCrash)
+TEST(TestsAgent, ZeroLengthSegmentDoesNotCrash)
 {
     TestWorld cityWorld("Paris", 32u, 32u);
     City& city = cityWorld.city;
     Path& path = city.addPath(keep<PathType>("Road"));
     Node& n1 = path.addNode(Vector3f(1.0f, 2.0f, 3.0f));
     Node& n2 = path.addNode(Vector3f(1.0f, 2.0f, 3.0f));
-    path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
+    path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n1, n2);
 
     UnitType homeType("Home");
     homeType.targets.emplace_back("Home");
@@ -720,7 +720,7 @@ TEST(TestsAgent, ZeroLengthWayDoesNotCrash)
     carried.addResource("People", 1u);
     Agent a(1u, keep<AgentType>("Worker", 5.0f, 3u, 42u), u, carried, "People");
 
-    float const dt = 1.0f / config::DEFAULT_TICKS_PER_SECOND;
-    ASSERT_NO_THROW(a.update(city.router(), dt));
-    ASSERT_NO_THROW(a.update(city.router(), dt));
+    float const dt = 1.0f / defaults::TICKS_PER_SECOND;
+    ASSERT_NO_THROW(a.update(city.getRouter(), city.getConfig().routing, dt));
+    ASSERT_NO_THROW(a.update(city.getRouter(), city.getConfig().routing, dt));
 }

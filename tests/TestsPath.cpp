@@ -18,16 +18,16 @@ TEST(TestsNode, Constructor)
     ASSERT_EQ(int32_t(n.m_position.x), 1);
     ASSERT_EQ(int32_t(n.m_position.y), 2);
     ASSERT_EQ(int32_t(n.m_position.z), 3);
-    ASSERT_EQ(n.m_ways.size(), 0u);
+    ASSERT_EQ(n.m_segments.size(), 0u);
     ASSERT_EQ(n.m_units.size(), 0u);
 
     // Check initial values (getter methods).
-    ASSERT_EQ(n.id(), 42u);
-    ASSERT_EQ(int32_t(n.position().x), 1);
-    ASSERT_EQ(int32_t(n.position().y), 2);
-    ASSERT_EQ(int32_t(n.position().z), 3);
-    ASSERT_EQ(n.ways().size(), 0u);
-    ASSERT_EQ(n.units().size(), 0u);
+    ASSERT_EQ(n.getId(), 42u);
+    ASSERT_EQ(int32_t(n.getPosition().x), 1);
+    ASSERT_EQ(int32_t(n.getPosition().y), 2);
+    ASSERT_EQ(int32_t(n.getPosition().z), 3);
+    ASSERT_EQ(n.getSegments().size(), 0u);
+    ASSERT_EQ(n.getUnits().size(), 0u);
 }
 
 // Test adding Units on a Node
@@ -36,8 +36,8 @@ TEST(TestsNode, AddUnit)
     // Create two Nodes. Check no units are attached.
     Node n1(42u, Vector3f(1.0f, 2.0f, 3.0f));
     Node n2(43u, Vector3f(2.0f, 3.0f, 4.0f));
-    ASSERT_EQ(n1.units().size(), 0u);
-    ASSERT_EQ(n2.units().size(), 0u);
+    ASSERT_EQ(n1.getUnits().size(), 0u);
+    ASSERT_EQ(n2.getUnits().size(), 0u);
 
     // Create an Unit "house" holding resources "people" attached to Node1.
     TestWorld cityWorld("Paris", 1u, 1u);
@@ -50,19 +50,19 @@ TEST(TestsNode, AddUnit)
     Unit u1(unit_type, n1, city);
 
     // Check one Unit has been added knowing Node1.
-    ASSERT_EQ(n1.units().size(), 1u);
+    ASSERT_EQ(n1.getUnits().size(), 1u);
     ASSERT_EQ(n1.m_units[0], &u1);
-    ASSERT_EQ(n1.units()[0], &u1);
-    ASSERT_EQ(n1.units()[0]->m_node, &n1);
-    ASSERT_STREQ(n1.units()[0]->type().c_str(), "house");
+    ASSERT_EQ(n1.getUnits()[0], &u1);
+    ASSERT_EQ(n1.getUnits()[0]->m_node, &n1);
+    ASSERT_STREQ(n1.getUnits()[0]->getTypeName().c_str(), "house");
 
     // Add Unit1 to Node2. Check if the Unit has been attached.
     n2.addUnit(u1);
-    ASSERT_EQ(n2.units().size(), 1u);
+    ASSERT_EQ(n2.getUnits().size(), 1u);
     ASSERT_EQ(n2.m_units[0], &u1);
-    ASSERT_EQ(n2.units()[0], &u1);
+    ASSERT_EQ(n2.getUnits()[0], &u1);
     ASSERT_EQ(n2.m_units[0]->m_node, &n1);
-    ASSERT_STREQ(n2.m_units[0]->type().c_str(), "house");
+    ASSERT_STREQ(n2.m_units[0]->getTypeName().c_str(), "house");
 
     // Add Unit2 to Node1. Check if the Unit has been attached.
     Unit u2(unit_type, n2, city);
@@ -70,57 +70,57 @@ TEST(TestsNode, AddUnit)
     ASSERT_EQ(n1.m_units.size(), 2u);
     ASSERT_EQ(n1.m_units[0], &u1);
     ASSERT_EQ(n1.m_units[1], &u2);
-    ASSERT_EQ(n1.units()[0], &u1);
-    ASSERT_EQ(n1.units()[1], &u2);
-    ASSERT_STREQ(n1.m_units[0]->type().c_str(), "house");
-    ASSERT_STREQ(n1.m_units[1]->type().c_str(), "house");
+    ASSERT_EQ(n1.getUnits()[0], &u1);
+    ASSERT_EQ(n1.getUnits()[1], &u2);
+    ASSERT_STREQ(n1.m_units[0]->getTypeName().c_str(), "house");
+    ASSERT_STREQ(n1.m_units[1]->getTypeName().c_str(), "house");
     ASSERT_EQ(n1.m_units[0]->m_node, &n1);
     ASSERT_EQ(n1.m_units[1]->m_node, &n2);
 }
 
-TEST(TestsWay, Constuctor)
+TEST(TestsSegment, Constuctor)
 {
     // Create two Nodes.
     Node n1(42u, Vector3f(1.0f, 1.0f, 0.0f));
     Node n2(43u, Vector3f(2.0f, 2.0f, 0.0f));
 
     // Create a segment linking the two Nodes.
-    WayType type("Dirt", 0xAAAAAA);
-    Way s1(55u, type, n1, n2);
+    SegmentType type("Dirt", 0xAAAAAA);
+    Segment s1(55u, type, n1, n2);
 
-    // Check if nodes are correctly hold by the Way
-    ASSERT_EQ(s1.id(), 55u);
-    ASSERT_STREQ(s1.type().c_str(), "Dirt");
-    ASSERT_EQ(s1.color(), 0xAAAAAAu);
+    // Check if nodes are correctly hold by the Segment
+    ASSERT_EQ(s1.getId(), 55u);
+    ASSERT_STREQ(s1.getTypeName().c_str(), "Dirt");
+    ASSERT_EQ(s1.getColor(), 0xAAAAAAu);
     ASSERT_EQ(s1.m_from, &n1);
     ASSERT_EQ(s1.m_to, &n2);
-    ASSERT_EQ(&s1.from(), &n1);
-    ASSERT_EQ(&s1.to(), &n2);
-    ASSERT_EQ(s1.magnitude(), std::sqrt(2.0f));
+    ASSERT_EQ(&s1.getFrom(), &n1);
+    ASSERT_EQ(&s1.getTo(), &n2);
+    ASSERT_EQ(s1.getLength(), std::sqrt(2.0f));
 }
 
 #if 0 // This method no longer exist and has been merged in its parent method
 // Test changeNode2 without using Path
-TEST(TestsWay, changeNode2)
+TEST(TestsSegment, changeNode2)
 {
     Node n1(42u, Vector3f(1.0f, 1.0f, 1.0f));
     Node n2(43u, Vector3f(2.0f, 2.0f, 2.0f));
     Node n3(43u, Vector3f(3.0f, 3.0f, 3.0f));
 
-    WayType type("Dirt", 0xAAAAAA);
-    Way s1(55u, type, n1, n2);
+    SegmentType type("Dirt", 0xAAAAAA);
+    Segment s1(55u, type, n1, n2);
 
     // Check the graph is the following:
     //     s1
     // |-------|       |
     // n1      n2      n3
     //
-    ASSERT_EQ(&s1.to(), &n2);
-    ASSERT_EQ(n1.m_ways.size(), 1u);
-    ASSERT_EQ(n2.m_ways.size(), 1u);
-    ASSERT_EQ(n3.m_ways.size(), 0u);
-    ASSERT_EQ(&*(n1.m_ways[0]), &s1);
-    ASSERT_EQ(&*(n2.m_ways[0]), &s1);
+    ASSERT_EQ(&s1.getTo(), &n2);
+    ASSERT_EQ(n1.m_segments.size(), 1u);
+    ASSERT_EQ(n2.m_segments.size(), 1u);
+    ASSERT_EQ(n3.m_segments.size(), 0u);
+    ASSERT_EQ(&*(n1.m_segments[0]), &s1);
+    ASSERT_EQ(&*(n2.m_segments[0]), &s1);
 
     // Change the Node2
     s1.changeNode2(n3);
@@ -132,13 +132,13 @@ TEST(TestsWay, changeNode2)
     //         n2
     //
     ASSERT_NE(&n2, &n3);
-    ASSERT_EQ(&s1.from(), &n1);
-    ASSERT_EQ(&s1.to(), &n3);
-    ASSERT_EQ(n1.m_ways.size(), 1u);
-    ASSERT_EQ(n2.m_ways.size(), 0u);
-    ASSERT_EQ(n3.m_ways.size(), 1u);
-    ASSERT_EQ(&*(n1.m_ways[0]), &s1);
-    ASSERT_EQ(&*(n3.m_ways[0]), &s1);
+    ASSERT_EQ(&s1.getFrom(), &n1);
+    ASSERT_EQ(&s1.getTo(), &n3);
+    ASSERT_EQ(n1.m_segments.size(), 1u);
+    ASSERT_EQ(n2.m_segments.size(), 0u);
+    ASSERT_EQ(n3.m_segments.size(), 1u);
+    ASSERT_EQ(&*(n1.m_segments[0]), &s1);
+    ASSERT_EQ(&*(n3.m_segments[0]), &s1);
 
     // Check positions of Nodes did not changed
     ASSERT_EQ(int32_t(n1.m_position.x), 1);
@@ -151,18 +151,18 @@ TEST(TestsWay, changeNode2)
     ASSERT_EQ(int32_t(n3.m_position.y), 3);
     ASSERT_EQ(int32_t(n3.m_position.z), 3);
 
-    // Check Ways of Node
-    ASSERT_EQ(n1.getWayToNode(n1), nullptr);
-    ASSERT_EQ(n1.getWayToNode(n2), nullptr);
-    ASSERT_EQ(n1.getWayToNode(n3), &s1);
+    // Check Segments of Node
+    ASSERT_EQ(n1.findSegmentTo(n1), nullptr);
+    ASSERT_EQ(n1.findSegmentTo(n2), nullptr);
+    ASSERT_EQ(n1.findSegmentTo(n3), &s1);
 }
 
 // Test changeNode2 using Path
-TEST(TestsWay, PathchangeNode2)
+TEST(TestsSegment, PathchangeNode2)
 {
     PathType type1("route");
     Path p(type1);
-    ASSERT_STREQ(p.type().c_str(), "route");
+    ASSERT_STREQ(p.getTypeName().c_str(), "route");
 
     // Create Nodes
     Node& n1 = p.addNode(Vector3f(1.0f, 1.0f, 1.0f));
@@ -171,16 +171,16 @@ TEST(TestsWay, PathchangeNode2)
     ASSERT_EQ(&*(p.m_nodes[0]), &n1);
     ASSERT_EQ(&*(p.m_nodes[1]), &n2);
     ASSERT_EQ(&*(p.m_nodes[2]), &n3);
-    ASSERT_EQ(p.m_nodes[0]->id(), 0u);
-    ASSERT_EQ(p.m_nodes[1]->id(), 1u);
-    ASSERT_EQ(p.m_nodes[2]->id(), 2u);
-    ASSERT_EQ(p.m_nodes[0]->position().x, 1.0f);
-    ASSERT_EQ(p.m_nodes[1]->position().x, 2.0f);
-    ASSERT_EQ(p.m_nodes[2]->position().x, 3.0f);
+    ASSERT_EQ(p.m_nodes[0]->getId(), 0u);
+    ASSERT_EQ(p.m_nodes[1]->getId(), 1u);
+    ASSERT_EQ(p.m_nodes[2]->getId(), 2u);
+    ASSERT_EQ(p.m_nodes[0]->getPosition().x, 1.0f);
+    ASSERT_EQ(p.m_nodes[1]->getPosition().x, 2.0f);
+    ASSERT_EQ(p.m_nodes[2]->getPosition().x, 3.0f);
 
     // Create a graph
-    WayType type2("road");
-    Way& s1 = p.addWay(type2, n1, n2);
+    SegmentType type2("road");
+    Segment& s1 = p.addSegment(type2, n1, n2);
 
     // Check the graph is the following:
     //     s1
@@ -188,12 +188,12 @@ TEST(TestsWay, PathchangeNode2)
     // n1      n2      n3
     //
     ASSERT_EQ(p.m_nodes.size(), 3u);
-    ASSERT_EQ(p.m_ways.size(), 1u);
-    ASSERT_EQ(&s1.to(), &n2);
-    ASSERT_EQ(n1.m_ways.size(), 1u);
-    ASSERT_EQ(n2.m_ways.size(), 1u);
-    ASSERT_EQ(&*(n2.m_ways[0]), &s1);
-    ASSERT_EQ(n3.m_ways.size(), 0u);
+    ASSERT_EQ(p.m_segments.size(), 1u);
+    ASSERT_EQ(&s1.getTo(), &n2);
+    ASSERT_EQ(n1.m_segments.size(), 1u);
+    ASSERT_EQ(n2.m_segments.size(), 1u);
+    ASSERT_EQ(&*(n2.m_segments[0]), &s1);
+    ASSERT_EQ(n3.m_segments.size(), 0u);
 
     // Change the Node2
     s1.changeNode2(n3);
@@ -205,23 +205,23 @@ TEST(TestsWay, PathchangeNode2)
     //         n2
     //
     ASSERT_EQ(p.m_nodes.size(), 3u);
-    ASSERT_EQ(p.m_ways.size(), 1u);
+    ASSERT_EQ(p.m_segments.size(), 1u);
     ASSERT_EQ(&*(p.m_nodes[0]), &n1);
     ASSERT_EQ(&*(p.m_nodes[1]), &n2);
     ASSERT_EQ(&*(p.m_nodes[2]), &n3);
-    ASSERT_EQ(&s1.from(), &n1);
-    ASSERT_EQ(&s1.to(), &n3);
-    ASSERT_EQ(n1.m_ways.size(), 1u);
-    ASSERT_EQ(n2.m_ways.size(), 0u);
-    ASSERT_EQ(n3.m_ways.size(), 1u);
-    ASSERT_EQ(&*(n1.m_ways[0]), &s1);
-    ASSERT_EQ(&*(n3.m_ways[0]), &s1);
-    ASSERT_EQ(p.m_nodes[0]->id(), 0u);
-    ASSERT_EQ(p.m_nodes[1]->id(), 1u);
-    ASSERT_EQ(p.m_nodes[2]->id(), 2u);
-    ASSERT_EQ(p.m_nodes[0]->position().x, 1.0f);
-    ASSERT_EQ(p.m_nodes[1]->position().x, 2.0f);
-    ASSERT_EQ(p.m_nodes[2]->position().x, 3.0f);
+    ASSERT_EQ(&s1.getFrom(), &n1);
+    ASSERT_EQ(&s1.getTo(), &n3);
+    ASSERT_EQ(n1.m_segments.size(), 1u);
+    ASSERT_EQ(n2.m_segments.size(), 0u);
+    ASSERT_EQ(n3.m_segments.size(), 1u);
+    ASSERT_EQ(&*(n1.m_segments[0]), &s1);
+    ASSERT_EQ(&*(n3.m_segments[0]), &s1);
+    ASSERT_EQ(p.m_nodes[0]->getId(), 0u);
+    ASSERT_EQ(p.m_nodes[1]->getId(), 1u);
+    ASSERT_EQ(p.m_nodes[2]->getId(), 2u);
+    ASSERT_EQ(p.m_nodes[0]->getPosition().x, 1.0f);
+    ASSERT_EQ(p.m_nodes[1]->getPosition().x, 2.0f);
+    ASSERT_EQ(p.m_nodes[2]->getPosition().x, 3.0f);
 
     // Check positions of Nodes did not changed
     ASSERT_EQ(int32_t(p.m_nodes[0]->m_position.x), 1);
@@ -234,14 +234,14 @@ TEST(TestsWay, PathchangeNode2)
     ASSERT_EQ(int32_t(p.m_nodes[2]->m_position.y), 3);
     ASSERT_EQ(int32_t(p.m_nodes[2]->m_position.z), 3);
 
-    // Check Ways of Node
-    ASSERT_EQ(n1.getWayToNode(n1), nullptr);
-    ASSERT_EQ(n1.getWayToNode(n2), nullptr);
-    ASSERT_EQ(n1.getWayToNode(n3), &s1);
+    // Check Segments of Node
+    ASSERT_EQ(n1.findSegmentTo(n1), nullptr);
+    ASSERT_EQ(n1.findSegmentTo(n2), nullptr);
+    ASSERT_EQ(n1.findSegmentTo(n3), &s1);
 }
 #endif
 
-TEST(TestsNode, getWayToNode)
+TEST(TestsNode, findSegmentTo)
 {
     // Create the following path:
     //
@@ -253,26 +253,26 @@ TEST(TestsNode, getWayToNode)
     Node n2(43u, Vector3f(2.0f, 2.0f, 0.0f));
     Node n3(43u, Vector3f(3.0f, 3.0f, 0.0f));
     Node n4(44u, Vector3f(3.0f, 4.0f, 0.0f));
-    WayType type("road");
-    Way s1(55u, type, n1, n2);
-    Way s2(56u, type, n1, n3);
+    SegmentType type("road");
+    Segment s1(55u, type, n1, n2);
+    Segment s2(56u, type, n1, n3);
 
     // Check that n1 has two neighboring segments.
-    ASSERT_EQ(n1.getWayToNode(n2), &s1);
-    ASSERT_EQ(n1.getWayToNode(n3), &s2);
+    ASSERT_EQ(n1.findSegmentTo(n2), &s1);
+    ASSERT_EQ(n1.findSegmentTo(n3), &s2);
 
     // Check that n4 has no neighboring segments.
-    ASSERT_EQ(n4.getWayToNode(n3), nullptr);
+    ASSERT_EQ(n4.findSegmentTo(n3), nullptr);
 
     // Check that n4 has no segment starting and leaving from it
-    ASSERT_EQ(n4.getWayToNode(n4), nullptr);
+    ASSERT_EQ(n4.findSegmentTo(n4), nullptr);
 
     // Add a loop segment
-    Way s3(57u, type, n4, n4);
-    ASSERT_EQ(n4.getWayToNode(n4), &s3);
+    Segment s3(57u, type, n4, n4);
+    ASSERT_EQ(n4.findSegmentTo(n4), &s3);
 
     // Check that n1 has no segment starting and leaving from it
-    ASSERT_EQ(n1.getWayToNode(n1), nullptr);
+    ASSERT_EQ(n1.findSegmentTo(n1), nullptr);
 }
 
 TEST(TestsPath, Constructor)
@@ -280,11 +280,11 @@ TEST(TestsPath, Constructor)
     PathType type("route");
     Path p(type);
 
-    ASSERT_STREQ(p.type().c_str(), "route");
+    ASSERT_STREQ(p.getTypeName().c_str(), "route");
     ASSERT_EQ(p.m_nodes.size(), 0u);
-    ASSERT_EQ(p.m_ways.size(), 0u);
+    ASSERT_EQ(p.m_segments.size(), 0u);
     ASSERT_EQ(p.m_nextNodeId, 0u);
-    ASSERT_EQ(p.m_nextWayId, 0u);
+    ASSERT_EQ(p.m_nextSegmentId, 0u);
 }
 
 TEST(TestsPath, Adding)
@@ -297,10 +297,10 @@ TEST(TestsPath, Adding)
     Node& n1 = p.addNode(Vector3f(1.0f, 1.0f, 0.0f));
     ASSERT_EQ(p.m_nodes.size(), 1u);
     ASSERT_EQ(&*(p.m_nodes[0]), &n1);
-    ASSERT_EQ(p.m_nodes[0]->id(), 0u);
-    ASSERT_EQ(p.m_ways.size(), 0u);
+    ASSERT_EQ(p.m_nodes[0]->getId(), 0u);
+    ASSERT_EQ(p.m_segments.size(), 0u);
     ASSERT_EQ(p.m_nextNodeId, 1u);
-    ASSERT_EQ(p.m_nextWayId, 0u);
+    ASSERT_EQ(p.m_nextSegmentId, 0u);
 
     // Add 2nd node on the path.
     // Check new node added in the path.
@@ -308,77 +308,77 @@ TEST(TestsPath, Adding)
     ASSERT_EQ(p.m_nodes.size(), 2u);
     ASSERT_EQ(&*(p.m_nodes[0]), &n1);
     ASSERT_EQ(&*(p.m_nodes[1]), &n2);
-    ASSERT_EQ(p.m_nodes[0]->id(), 0u);
-    ASSERT_EQ(p.m_nodes[1]->id(), 1u);
-    ASSERT_EQ(p.m_ways.size(), 0u);
+    ASSERT_EQ(p.m_nodes[0]->getId(), 0u);
+    ASSERT_EQ(p.m_nodes[1]->getId(), 1u);
+    ASSERT_EQ(p.m_segments.size(), 0u);
     ASSERT_EQ(p.m_nextNodeId, 2u);
-    ASSERT_EQ(p.m_nextWayId, 0u);
+    ASSERT_EQ(p.m_nextSegmentId, 0u);
 
     // Add 1st segment on the path.
     // Check new segment added in the path.
-    WayType type2("Dirt", 0xAAAAAA);
-    Way& s1 = p.addWay(type2, n1, n2);
+    SegmentType type2("Dirt", 0xAAAAAA);
+    Segment& s1 = p.addSegment(type2, n1, n2);
     ASSERT_EQ(p.m_nodes.size(), 2u);
-    ASSERT_EQ(p.m_nodes[0]->id(), 0u);
-    ASSERT_EQ(p.m_nodes[1]->id(), 1u);
-    ASSERT_EQ(p.m_ways.size(), 1u);
-    ASSERT_EQ(&*(p.m_ways[0]), &s1);
-    ASSERT_EQ(p.m_ways[0]->id(), 0u);
+    ASSERT_EQ(p.m_nodes[0]->getId(), 0u);
+    ASSERT_EQ(p.m_nodes[1]->getId(), 1u);
+    ASSERT_EQ(p.m_segments.size(), 1u);
+    ASSERT_EQ(&*(p.m_segments[0]), &s1);
+    ASSERT_EQ(p.m_segments[0]->getId(), 0u);
     ASSERT_EQ(p.m_nextNodeId, 2u);
-    ASSERT_EQ(p.m_nextWayId, 1u);
+    ASSERT_EQ(p.m_nextSegmentId, 1u);
 
     // Add 2nd segment on the 1st path.
     // Check new segment added in the path.
     // FIXME Replace the segment or allow multi-graph (== speedway) ?
-    Way& s2 = p.addWay(type2, n1, n2);
+    Segment& s2 = p.addSegment(type2, n1, n2);
     ASSERT_EQ(p.m_nodes.size(), 2u);
-    ASSERT_EQ(p.m_nodes[0]->id(), 0u);
-    ASSERT_EQ(p.m_nodes[1]->id(), 1u);
-    ASSERT_EQ(p.m_ways.size(), 2u);
-    ASSERT_EQ(&*(p.m_ways[0]), &s1);
-    ASSERT_EQ(&*(p.m_ways[1]), &s2);
-    ASSERT_EQ(p.m_ways[0]->id(), 0u);
-    ASSERT_EQ(p.m_ways[1]->id(), 1u);
+    ASSERT_EQ(p.m_nodes[0]->getId(), 0u);
+    ASSERT_EQ(p.m_nodes[1]->getId(), 1u);
+    ASSERT_EQ(p.m_segments.size(), 2u);
+    ASSERT_EQ(&*(p.m_segments[0]), &s1);
+    ASSERT_EQ(&*(p.m_segments[1]), &s2);
+    ASSERT_EQ(p.m_segments[0]->getId(), 0u);
+    ASSERT_EQ(p.m_segments[1]->getId(), 1u);
     ASSERT_EQ(p.m_nextNodeId, 2u);
-    ASSERT_EQ(p.m_nextWayId, 2u);
+    ASSERT_EQ(p.m_nextSegmentId, 2u);
 }
 
-TEST(TestsPath, SplitWay)
+TEST(TestsPath, SplitSegment)
 {
     PathType type1("route");
     Path p(type1);
 
     Node& n1 = p.addNode(Vector3f(1.0f, 1.0f, 0.0f));
     Node& n2 = p.addNode(Vector3f(1.0f, 3.0f, 0.0f));
-    WayType type2("Dirt", 0xAAAAAA);
-    Way& s1 = p.addWay(type2, n1, n2);
+    SegmentType type2("Dirt", 0xAAAAAA);
+    Segment& s1 = p.addSegment(type2, n1, n2);
     ASSERT_EQ(p.m_nodes.size(), 2u);
-    ASSERT_EQ(p.m_ways.size(), 1u);
+    ASSERT_EQ(p.m_segments.size(), 1u);
 
     // Split segment on the first node.
     // Check no new segment has been created.
-    Node& n3 = p.splitWay(s1, 0.0f);
+    Node& n3 = p.splitSegment(s1, 0.0f);
     ASSERT_EQ(&n3, &n1);
     ASSERT_EQ(p.m_nodes.size(), 2u);
-    ASSERT_EQ(p.m_ways.size(), 1u);
+    ASSERT_EQ(p.m_segments.size(), 1u);
 
     // Split segment on the second node.
     // Check no new segment has been created.
-    Node& n4 = p.splitWay(s1, 1.0f);
+    Node& n4 = p.splitSegment(s1, 1.0f);
     ASSERT_EQ(&n4, &n2);
     ASSERT_EQ(p.m_nodes.size(), 2u);
-    ASSERT_EQ(p.m_ways.size(), 1u);
+    ASSERT_EQ(p.m_segments.size(), 1u);
 
     // Split segment on its middle.
     // Check a new segment and a new node have been created.
-    Node& n5 = p.splitWay(s1, 0.5f);
+    Node& n5 = p.splitSegment(s1, 0.5f);
     ASSERT_NE(&n5, &n1);
     ASSERT_NE(&n5, &n2);
-    ASSERT_EQ(n5.position().x, 1.0f);
-    ASSERT_EQ(n5.position().y, 2.0f);
-    ASSERT_EQ(n5.position().z, 0.0f);
+    ASSERT_EQ(n5.getPosition().x, 1.0f);
+    ASSERT_EQ(n5.getPosition().y, 2.0f);
+    ASSERT_EQ(n5.getPosition().z, 0.0f);
     ASSERT_EQ(p.m_nodes.size(), 3u);
-    ASSERT_EQ(p.m_ways.size(), 2u);
+    ASSERT_EQ(p.m_segments.size(), 2u);
 }
 
 TEST(TestsPath, MoveNode)
@@ -391,76 +391,76 @@ TEST(TestsPath, MoveNode)
     Node& n2 = p.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& n3 = p.addNode(Vector3f(0.0f, 0.0f, 0.0f));
 
-    // Create two Ways in which Node1 is the extremity
-    WayType type2("Dirt", 0xAAAAAA);
-    Way& s1 = p.addWay(type2, n1, n2);
-    Way& s2 = p.addWay(type2, n1, n3);
+    // Create two Segments in which Node1 is the extremity
+    SegmentType type2("Dirt", 0xAAAAAA);
+    Segment& s1 = p.addSegment(type2, n1, n2);
+    Segment& s2 = p.addSegment(type2, n1, n3);
 
     // Check segments have dummy size.
-    ASSERT_EQ(s1.magnitude(), 0.0f);
-    ASSERT_EQ(s2.magnitude(), 0.0f);
+    ASSERT_EQ(s1.getLength(), 0.0f);
+    ASSERT_EQ(s2.getLength(), 0.0f);
 
     // Move nodes
     n2.translate(Vector3f(1.0f, 1.0f, 0.0f));
     n3.translate(Vector3f(-1.0f, -1.0f, 0.0f));
 
-    // Check segments they magnitude updated.
-    ASSERT_EQ(s1.magnitude(), std::sqrt(2.0f));
-    ASSERT_EQ(s2.magnitude(), std::sqrt(2.0f));
+    // Check the segments updated their length.
+    ASSERT_EQ(s1.getLength(), std::sqrt(2.0f));
+    ASSERT_EQ(s2.getLength(), std::sqrt(2.0f));
 }
 
-TEST(TestsPath, RemoveWayDetachesItsExtremities)
+TEST(TestsPath, RemoveSegmentDetachesItsExtremities)
 {
     PathType type1("route");
     Path p(type1);
-    WayType type2("Dirt", 0xAAAAAA);
+    SegmentType type2("Dirt", 0xAAAAAA);
 
     Node& n1 = p.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& n2 = p.addNode(Vector3f(10.0f, 0.0f, 0.0f));
     Node& n3 = p.addNode(Vector3f(10.0f, 10.0f, 0.0f));
 
-    Way& s1 = p.addWay(type2, n1, n2);
-    p.addWay(type2, n2, n3);
+    Segment& s1 = p.addSegment(type2, n1, n2);
+    p.addSegment(type2, n2, n3);
 
-    uint32_t const id = s1.id();
-    ASSERT_EQ(n1.ways().size(), 1u);
-    ASSERT_EQ(n2.ways().size(), 2u);
+    uint32_t const id = s1.getId();
+    ASSERT_EQ(n1.getSegments().size(), 1u);
+    ASSERT_EQ(n2.getSegments().size(), 2u);
 
-    p.removeWay(s1);
+    p.removeSegment(s1);
 
     // The segment is gone from the graph and from both of its extremities,
     // which are kept even when they become orphan.
-    ASSERT_EQ(p.ways().size(), 1u);
-    ASSERT_EQ(p.nodes().size(), 3u);
-    ASSERT_EQ(p.way(id), nullptr);
-    ASSERT_EQ(n1.ways().size(), 0u);
-    ASSERT_EQ(n2.ways().size(), 1u);
-    ASSERT_EQ(n1.hasWays(), false);
+    ASSERT_EQ(p.getSegments().size(), 1u);
+    ASSERT_EQ(p.getNodes().size(), 3u);
+    ASSERT_EQ(p.findSegment(id), nullptr);
+    ASSERT_EQ(n1.getSegments().size(), 0u);
+    ASSERT_EQ(n2.getSegments().size(), 1u);
+    ASSERT_EQ(n1.hasSegments(), false);
 }
 
-TEST(TestsPath, RemoveNodeTakesItsIncidentWays)
+TEST(TestsPath, RemoveNodeTakesItsIncidentSegments)
 {
     PathType type1("route");
     Path p(type1);
-    WayType type2("Dirt", 0xAAAAAA);
+    SegmentType type2("Dirt", 0xAAAAAA);
 
     Node& n1 = p.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& n2 = p.addNode(Vector3f(10.0f, 0.0f, 0.0f));
     Node& n3 = p.addNode(Vector3f(10.0f, 10.0f, 0.0f));
 
-    p.addWay(type2, n1, n2);
-    p.addWay(type2, n2, n3);
-    p.addWay(type2, n3, n1);
+    p.addSegment(type2, n1, n2);
+    p.addSegment(type2, n2, n3);
+    p.addSegment(type2, n3, n1);
 
-    uint32_t const id = n2.id();
+    uint32_t const id = n2.getId();
     p.removeNode(n2);
 
-    ASSERT_EQ(p.nodes().size(), 2u);
-    ASSERT_EQ(p.node(id), nullptr);
+    ASSERT_EQ(p.getNodes().size(), 2u);
+    ASSERT_EQ(p.findNode(id), nullptr);
     // Only the segment that avoided n2 is left.
-    ASSERT_EQ(p.ways().size(), 1u);
-    ASSERT_EQ(p.nodes()[0]->ways().size(), 1u);
-    ASSERT_EQ(p.nodes()[1]->ways().size(), 1u);
+    ASSERT_EQ(p.getSegments().size(), 1u);
+    ASSERT_EQ(p.getNodes()[0]->getSegments().size(), 1u);
+    ASSERT_EQ(p.getNodes()[1]->getSegments().size(), 1u);
 }
 
 TEST(TestsPath, RecreatedNodeKeepsItsIdentifier)
@@ -470,45 +470,45 @@ TEST(TestsPath, RecreatedNodeKeepsItsIdentifier)
 
     Node& n1 = p.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& n2 = p.addNode(Vector3f(10.0f, 0.0f, 0.0f));
-    uint32_t const id = n2.id();
-    ASSERT_NE(n1.id(), id);
+    uint32_t const id = n2.getId();
+    ASSERT_NE(n1.getId(), id);
 
     p.removeNode(n2);
-    ASSERT_EQ(p.node(id), nullptr);
+    ASSERT_EQ(p.findNode(id), nullptr);
 
     // Undoing an edit gives the identifier back, which is what the commands
     // stacked above the removal refer to.
     Node& restored = p.addNode(id, Vector3f(10.0f, 0.0f, 0.0f));
-    ASSERT_EQ(restored.id(), id);
-    ASSERT_EQ(p.node(id), &restored);
+    ASSERT_EQ(restored.getId(), id);
+    ASSERT_EQ(p.findNode(id), &restored);
 
     // And the identifiers handed out afterwards do not collide with it.
     Node& n3 = p.addNode(Vector3f(20.0f, 0.0f, 0.0f));
-    ASSERT_NE(n3.id(), id);
-    ASSERT_NE(n3.id(), n1.id());
+    ASSERT_NE(n3.getId(), id);
+    ASSERT_NE(n3.getId(), n1.getId());
 }
 
-TEST(TestsPath, RemoveWayLowersTheMaxFreeFlowSpeed)
+TEST(TestsPath, RemoveSegmentLowersTheMaxFreeFlowSpeed)
 {
     PathType type1("route");
     Path p(type1);
 
-    WayType slow("Dirt", 0xAAAAAA);
+    SegmentType slow("Dirt", 0xAAAAAA);
     slow.speed = 10.0f;
-    WayType fast("Highway", 0xBBBBBB);
+    SegmentType fast("Highway", 0xBBBBBB);
     fast.speed = 100.0f;
 
     Node& n1 = p.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& n2 = p.addNode(Vector3f(10.0f, 0.0f, 0.0f));
     Node& n3 = p.addNode(Vector3f(20.0f, 0.0f, 0.0f));
 
-    p.addWay(slow, n1, n2);
-    Way& highway = p.addWay(fast, n2, n3);
-    ASSERT_EQ(p.maxFreeFlowSpeed(), 100.0f);
+    p.addSegment(slow, n1, n2);
+    Segment& highway = p.addSegment(fast, n2, n3);
+    ASSERT_EQ(p.getMaxFreeFlowSpeed(), 100.0f);
 
     // Demolishing the fastest segment has to bring the cache back down: a
     // router turning a distance into a lower bound of a travel time divides by
     // this speed, and a stale value would make that bound unsound.
-    p.removeWay(highway);
-    ASSERT_EQ(p.maxFreeFlowSpeed(), 10.0f);
+    p.removeSegment(highway);
+    ASSERT_EQ(p.getMaxFreeFlowSpeed(), 10.0f);
 }

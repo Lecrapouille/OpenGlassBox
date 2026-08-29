@@ -210,7 +210,7 @@ ImU32 lerpStops(ColorStop const* stops, size_t count, float hourOfDay)
 ImU32 canvasBackground(float hourOfDay)
 {
     // Night, dawn, day, dusk. Day is clearly brighter than night so the clock
-    // is readable on the canvas, while staying dark enough for the maps.
+    // is readable on the canvas, while staying dark enough for the layers.
     static ColorStop const STOPS[] = {
         {  0.0f,  10,  14,  32 },
         {  5.0f,  22,  18,  40 },

@@ -25,7 +25,7 @@ class City;
 class Node;
 class Path;
 class RuleUnit;
-class Way;
+class Segment;
 
 //==============================================================================
 //! \brief A building: a house, a factory, a shop. It holds resources, it runs
@@ -34,37 +34,37 @@ class Way;
 //!
 //! A Unit is not a Node of the road network. It has its own world position and,
 //! separately, an anchor on the network: either a Node, which is a crossroads,
-//! or a Way at a given offset, which is an address along a street. Anchoring
-//! along a Way is what keeps the graph small: a street of forty houses used to
+//! or a Segment at a given offset, which is an address along a street. Anchoring
+//! along a Segment is what keeps the graph small: a street of forty houses used to
 //! become forty Nodes and forty-one segments, and the router paid for all of
 //! them at every tick.
 //!
 //! A third case exists and is worth knowing about: a Unit may stand at a free
 //! world position with no anchor at all. It is what \c spawn \c at \c freeCell
 //! produces, and what a save restores for such a building. It can hold
-//! resources and run rules that only touch the Maps under it, but no Agent can
-//! ever leave it or reach it. hasWays() is how to tell, and the inspector of
+//! resources and run rules that only touch the Layers under it, but no Agent can
+//! ever leave it or reach it. hasSegments() is how to tell, and the inspector of
 //! the demo says so in red.
 //!
-//! A Unit does not own its UnitType, its Node or its Way, and the City owns the
+//! A Unit does not own its UnitType, its Node or its Segment, and the City owns the
 //! Unit. Destroying it detaches it from whatever it was anchored to.
 //!
 //! Example:
 //! \code
 //! // A house on a crossroads, and a shop halfway down the street.
 //! Node& corner = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
-//! Unit& home = city.addUnit(simulation.script().getUnitType("Home"), corner);
-//! Unit& shop = city.addUnit(simulation.script().getUnitType("Shop"),
+//! Unit& home = city.addUnit(simulation.script().unitType("Home"), corner);
+//! Unit& shop = city.addUnit(simulation.script().unitType("Shop"),
 //!                           path, street, 0.5f);
 //!
-//! if (!shop.hasWays())
+//! if (!shop.hasSegments())
 //!     std::cout << "nobody will ever shop there\n";
 //! \endcode
 //!
 //! The matching script, where \c rules is what makes the building do anything
 //! and \c targets is what lets an Agent end its trip there:
 //! \code
-//! unit Shop color 0xFFAA00 mapRadius 2 rules [ SellGoods ReceiveShopper ]
+//! unit Shop color 0xFFAA00 layerRadius 2 rules [ SellGoods ReceiveShopper ]
 //!      targets [ Shop ] caps [ People 6 Goods 30 ] resources [ ]
 //! \endcode
 //==============================================================================
@@ -85,23 +85,23 @@ public:
     Unit(UnitType const& type, Node& node, City& city);
 
     // -------------------------------------------------------------------------
-    //! \brief Stand along a Way, without splitting it: an address on a street.
+    //! \brief Stand along a Segment, without splitting it: an address on a street.
     //! \param[in] type recipe of the building.
-    //! \param[in] way the segment to stand along.
-    //! \param[in] offset where along it, from 0 at way.from() to 1 at
-    //! way.to(). Clamped to that range. The position is interpolated between
+    //! \param[in] segment the segment to stand along.
+    //! \param[in] offset where along it, from 0 at segment.getFrom() to 1 at
+    //! segment.getTo(). Clamped to that range. The position is interpolated between
     //! the two ends.
     //! \param[in] city the City that will own it.
     // -------------------------------------------------------------------------
-    Unit(UnitType const& type, Way& way, float offset, City& city);
+    Unit(UnitType const& type, Segment& segment, float offset, City& city);
 
     // -------------------------------------------------------------------------
     //! \brief Stand at a free world position, anchored to nothing.
     //!
     //! No Agent can leave such a building and none can reach it, which is
     //! deliberate: this is what \c spawn \c at \c freeCell asks for, and what a
-    //! save file restores when it wrote a position rather than a node. An Area
-    //! asked for \c nearestWay refuses to grow one at all rather than scatter
+    //! save file restores when it wrote a position rather than a node. A Zone
+    //! asked for \c nearestSegment refuses to grow one at all rather than scatter
     //! unreachable houses in a field.
     //!
     //! \param[in] type recipe of the building.
@@ -111,7 +111,7 @@ public:
     Unit(UnitType const& type, Vector3f const& position, City& city);
 
     // -------------------------------------------------------------------------
-    //! \brief Detach from the Node or the Way it stood on.
+    //! \brief Detach from the Node or the Segment it stood on.
     // -------------------------------------------------------------------------
     ~Unit();
 
@@ -120,7 +120,7 @@ public:
     //!
     //! Each rule has its own period, and the counter is shared: a rule fires
     //! when the count is a multiple of its period. The count starts at a phase
-    //! of its own, see desynchronise().
+    //! of its own, see spreadRuleStart().
     // -------------------------------------------------------------------------
     void executeRules();
 
@@ -147,7 +147,7 @@ public:
     //! Agent delivers, gives up, changes its mind or is destroyed. A count that
     //! never comes back down makes the building invisible to every Agent for
     //! the rest of the game, which is worse than the crowding it prevents.
-    //! Agent::setRoute is the single place both are called from.
+    //! Agent::route is the single place both are called from.
     // -------------------------------------------------------------------------
     inline void reserve()
     {
@@ -169,107 +169,98 @@ public:
     //! Not saved: itineraries are recomputed on loading, so the counts rebuild
     //! themselves. Exposed for the leak invariant the tests check.
     // -------------------------------------------------------------------------
-    inline uint32_t inbound() const
+    [[nodiscard]] inline uint32_t getReservedCount() const
     {
         return m_inbound;
     }
 
     // -------------------------------------------------------------------------
-    //! \brief What the building currently holds, and how much of each resource
-    //! it can hold. Writable: this is what a delivery lands in and what a rule
+    //! \brief \return what the building currently holds, and how much of each
+    //! resource it can hold.
+    //!
+    //! \note Writable: this is what a delivery lands in and what a rule
     //! consumes.
     // -------------------------------------------------------------------------
-    inline Resources& resources()
+    [[nodiscard]] inline Resources& getResources()
+    {
+        return m_resources;
+    }
+
+    //! \copydoc getResources()
+    [[nodiscard]] inline Resources const& getResources() const
     {
         return m_resources;
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \copydoc resources()
-    // -------------------------------------------------------------------------
-    inline Resources const& resources() const
-    {
-        return m_resources;
-    }
-
-    // -------------------------------------------------------------------------
-    //! \brief The Node it stands on, or nullptr when it stands along a Way or
+    //! \brief The Node it stands on, or nullptr when it stands along a Segment or
     //! at a free position.
     // -------------------------------------------------------------------------
-    inline Node* node() const
+    [[nodiscard]] inline Node* getNode() const
     {
         return m_node;
     }
 
     // -------------------------------------------------------------------------
-    //! \brief The Way it stands along, or nullptr when it stands on a Node or
+    //! \brief The Segment it stands along, or nullptr when it stands on a Node or
     //! at a free position.
     // -------------------------------------------------------------------------
-    inline Way* way() const
+    [[nodiscard]] inline Segment* getSegment() const
     {
-        return m_way;
+        return m_segment;
     }
 
     // -------------------------------------------------------------------------
-    //! \brief Where along way() it stands, from 0 at the origin Node to 1 at
-    //! the other end. Meaningless when way() is null.
+    //! \brief \return where along getSegment() it stands, from 0 at the origin
+    //! node to 1 at the other end. Meaningless when getSegment() is null.
     // -------------------------------------------------------------------------
-    inline float wayOffset() const
+    [[nodiscard]] inline float getSegmentOffset() const
     {
         return m_offset;
     }
 
     // -------------------------------------------------------------------------
     //! \brief Whether Agents can leave this building and reach it: it has to
-    //! stand along a Way, or on a Node that at least one Way is incident to.
+    //! stand along a Segment, or on a Node that at least one Segment is incident to.
     //!
     //! A house put up before the road that was meant to serve it answers false,
     //! and so does one left behind by a demolished street.
     // -------------------------------------------------------------------------
-    bool hasWays() const;
+    [[nodiscard]] bool hasSegments() const;
 
     // -------------------------------------------------------------------------
     //! \brief The Node an Agent starts from or aims at when dealing with this
-    //! building: the Node it stands on, or the nearer end of the Way it stands
+    //! building: the Node it stands on, or the nearer end of the Segment it stands
     //! along.
     //! \return nullptr when the building is anchored to nothing.
     //!
     //! An Agent leaving a building along a street does not always leave by that
-    //! end: see Agent::computeRouteAlongWay, which weighs both.
+    //! end: see Agent::computeRouteAlongSegment, which weighs both.
     // -------------------------------------------------------------------------
-    Node* accessNode() const;
+    [[nodiscard]] Node* getAccessNode() const;
 
     // -------------------------------------------------------------------------
     //! \brief The road network it is anchored to, or nullptr when it is
     //! anchored to nothing. Two Paths never meet, so this is also which network
     //! an Agent dealing with it will drive on.
     // -------------------------------------------------------------------------
-    Path* path() const;
+    [[nodiscard]] Path* getPath() const;
 
     // -------------------------------------------------------------------------
-    //! \brief How far, in grid cells, its rules read and write the Maps around
-    //! it. From the script: \c mapRadius.
+    //! \brief How far, in grid cells, its rules read and write the Layers around
+    //! it. From the script: \c layerRadius.
     // -------------------------------------------------------------------------
-    inline uint32_t mapRadius() const
+    [[nodiscard]] inline uint32_t getLayerRadius() const
     {
         return m_type.radius;
     }
 
     // -------------------------------------------------------------------------
-    //! \brief Column of the grid cell it stands on. Signed: the grid grows in
-    //! the four directions.
+    //! \brief \return the grid cell it stands on.
     // -------------------------------------------------------------------------
-    inline int32_t mapU() const
+    [[nodiscard]] inline Cell getCell() const
     {
-        return m_context.u;
-    }
-
-    // -------------------------------------------------------------------------
-    //! \brief Row of the grid cell it stands on. See mapU().
-    // -------------------------------------------------------------------------
-    inline int32_t mapV() const
-    {
-        return m_context.v;
+        return m_context.cell;
     }
 
     // -------------------------------------------------------------------------
@@ -277,16 +268,16 @@ public:
     //! by ScriptDefinitions and possibly holding nullptr, when the script named
     //! a rule that does not exist.
     // -------------------------------------------------------------------------
-    inline std::vector<RuleUnit*> const& rules() const
+    [[nodiscard]] inline std::vector<RuleUnit*> const& getRules() const
     {
         return m_type.rules;
     }
 
     // -------------------------------------------------------------------------
     //! \brief Ticks counted so far, which is what decides which rules fall due.
-    //! Starts at a phase of its own, see desynchronise().
+    //! Starts at a phase of its own, see spreadRuleStart().
     // -------------------------------------------------------------------------
-    inline uint32_t ticks() const
+    [[nodiscard]] inline uint32_t getTicks() const
     {
         return m_ticks;
     }
@@ -295,7 +286,7 @@ public:
     //! \brief The names an Agent may look for to end its trip here. Empty means
     //! nothing can ever be delivered to it.
     // -------------------------------------------------------------------------
-    inline std::vector<Name> const& targets() const
+    [[nodiscard]] inline std::vector<Name> const& getTargets() const
     {
         return m_type.targets;
     }
@@ -305,35 +296,34 @@ public:
     //! \c between conditions of its rules.
     //!
     //! \return the timetable of the building. A building whose rules keep no
-    //! office hours is open around the clock, and OpeningHours::bounded() says
-    //! so, which is what keeps the inspector from claiming that a road is open.
+    //! office hours is open around the clock, and OpeningHours::isRestricted()
+    //! says so, which keeps the inspector from claiming that a road is open.
     // -------------------------------------------------------------------------
-    OpeningHours openingHours() const;
+    [[nodiscard]] OpeningHours getOpeningHours() const;
 
     // -------------------------------------------------------------------------
     //! \brief Follow the City as it is moved in the world.
     //! \param[in] direction how far the City moved.
     //!
-    //! A building anchored to a Node or a Way is moved by it instead, so as not
+    //! A building anchored to a Node or a Segment is moved by it instead, so as not
     //! to be moved twice.
     // -------------------------------------------------------------------------
     void translate(Vector3f const& direction);
 
     // -------------------------------------------------------------------------
-    //! \brief Let go of the Node or the Way it stands on, becoming a building
+    //! \brief Let go of the Node or the Segment it stands on, becoming a building
     //! anchored to nothing. Called by the destructor and by City::removeUnit.
     // -------------------------------------------------------------------------
     void detach();
 
     // -------------------------------------------------------------------------
-    //! \brief Number the building. Called by City::addUnit, and by a load with
-    //! the number the save file wrote, so that what refers to a building by
-    //! number still finds it.
-    //! \param[in] id identifier, unique among the buildings of the City.
+    //! \brief Number the building. Called by City::addUnit(), and by a load
+    //! with the number the save file wrote.
+    //! \param[in] value identifier, unique among the buildings of the City.
     // -------------------------------------------------------------------------
-    void setId(uint32_t id)
+    void setId(uint32_t value)
     {
-        m_id = id;
+        m_id = value;
     }
 
     // -------------------------------------------------------------------------
@@ -342,45 +332,45 @@ public:
     //!
     //! Every Unit used to start counting at zero, so at eight in the morning
     //! the whole city left home on the same tick. The phase is derived from the
-    //! identifier and from SimulationConfig::randomSeed, which keeps a run
-    //! reproducible, and it never exceeds one game hour so that a rule counted
-    //! in days cannot fire the moment the building goes up.
+    //! identifier and from Config::randomSeed, which keeps a run reproducible,
+    //! and it never exceeds one game hour so a rule counted in days cannot fire
+    //! the moment the building goes up.
     //!
     //! Call it once, after setId().
     // -------------------------------------------------------------------------
-    void desynchronise();
+    void spreadRuleStart();
 
     // -------------------------------------------------------------------------
     //! \brief Recompute which grid cell it stands on. Called after the City has
     //! been moved, or after the building itself has.
     // -------------------------------------------------------------------------
-    void refreshMapPosition();
+    void updateCell();
 
     // -------------------------------------------------------------------------
     //! \brief Stand at that world position while staying anchored to the Node
-    //! or the Way given at construction.
+    //! or the Segment given at construction.
     //!
-    //! This is how a building occupies the cell its Area chose for it while
+    //! This is how a building occupies the cell its Zone chose for it while
     //! being served by a road running a few cells away. Such a position is kept
-    //! as is by reanchor(), which would otherwise pull the building back onto
+    //! as is by moveOntoSegment(), which would otherwise pull the building back onto
     //! the street.
     //!
     //! \param[in] position where to stand, in world coordinates.
     // -------------------------------------------------------------------------
-    void placeAt(Vector3f const& position);
+    void setPosition(Vector3f const& position);
 
     // -------------------------------------------------------------------------
-    //! \brief Move the anchor onto another Way, at the given offset.
+    //! \brief Move the anchor onto another Segment, at the given offset.
     //!
     //! Cutting a segment in two leaves the buildings along it anchored to a
-    //! segment that no longer runs under them, and this is how City::splitWay
-    //! puts them back where they stand. A building placed by an Area keeps its
-    //! footprint, see placeAt().
+    //! segment that no longer runs under them, and this is how City::splitSegment
+    //! puts them back where they stand. A building placed by an Zone keeps its
+    //! footprint, see setPosition().
     //!
-    //! \param[in] way the segment to stand along from now on.
+    //! \param[in] segment the segment to stand along from now on.
     //! \param[in] offset where along it, clamped to [0..1].
     // -------------------------------------------------------------------------
-    void reanchor(Way& way, float offset);
+    void moveOntoSegment(Segment& segment, float offset);
 
 private:
 
@@ -395,11 +385,11 @@ private:
     //! \brief The crossroads it stands on, or nullptr. Not owned.
     Node* m_node = nullptr;
     //! \brief The street it stands along, or nullptr. Not owned.
-    Way* m_way = nullptr;
-    //! \brief Where along m_way it stands, in [0..1].
+    Segment* m_segment = nullptr;
+    //! \brief Where along m_segment it stands, in [0..1].
     float m_offset = 0.0f;
     //! \brief Whether m_position is the footprint of the building rather than
-    //! the position of its anchor. Set by placeAt().
+    //! the position of its anchor. Set by setPosition().
     bool m_placed = false;
     //! \brief What it holds now. Starts as a copy of UnitType::resources.
     Resources m_resources;

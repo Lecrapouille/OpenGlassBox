@@ -8,33 +8,42 @@
 #include "OpenGlassBox/Simulation.hpp"
 #include "OpenGlassBox/Agent.hpp"
 
-#include <cmath>
-#include <limits>
-
 //------------------------------------------------------------------------------
 namespace ogb
 {
 
-Simulation::Simulation(uint32_t gridSizeU,
-                       uint32_t gridSizeV,
-                       SimulationConfig const& config)
-    : m_world(config), m_gridSizeU(gridSizeU), m_gridSizeV(gridSizeV)
+Simulation::Simulation(Config const& config)
+    : m_clock(config.time.ticksPerMinute), m_world(config, m_clock)
 {
-    static Simulation::Listener listener;
-    setListener(listener);
+    // A city that opens at midnight keeps the player waiting until the rules
+    // that hold office hours wake up. Loading a save overwrites this, since it
+    // restores the tick counter it was written with.
+    m_clock.setTimeOfDay(0u, config.time.startHour, 0u);
 }
 
 // -----------------------------------------------------------------------------
 void Simulation::setListener(Simulation::Listener& listener)
 {
-    m_listener = &listener;
+    m_world.setListener(listener);
+}
+
+// -----------------------------------------------------------------------------
+bool Simulation::loadScriptFile(std::string const& filename)
+{
+    return m_ruleset.loadFile(filename);
+}
+
+// -----------------------------------------------------------------------------
+bool Simulation::loadScriptString(std::string const& source,
+                                  std::string const& name)
+{
+    return m_ruleset.loadString(source, name);
 }
 
 //------------------------------------------------------------------------------
 void Simulation::stepOneTick()
 {
-    m_world.update(config().tickDuration());
-    ++m_totalTicks;
+    m_world.update(getConfig().time.tickDuration());
 }
 
 //------------------------------------------------------------------------------
@@ -45,8 +54,8 @@ void Simulation::update(float const deltaTime)
 
     m_time += deltaTime * m_timeScale;
 
-    float const tick = config().tickDuration();
-    uint32_t maxIterations = config().maxTicksPerUpdate;
+    float const tick = getConfig().time.tickDuration();
+    uint32_t maxIterations = getConfig().time.maxTicksPerUpdate;
     while ((m_time >= tick) && (maxIterations-- > 0u))
     {
         m_time -= tick;
@@ -55,25 +64,25 @@ void Simulation::update(float const deltaTime)
 }
 
 //------------------------------------------------------------------------------
-void Simulation::updateAssignmentMetrics() const
+void Simulation::updateTrafficMetrics() const
 {
     // A panel reads these on every frame while the simulation advances twenty
     // times a second, and the answer cannot change between two ticks. Nothing
     // below runs again until the world has actually moved.
-    if (m_assignmentMetricsTick == m_totalTicks)
+    if (m_trafficMetricsTick == m_clock.getTicks())
         return;
 
     float tstt = 0.0f;
     float sptt = 0.0f;
 
-    uint32_t const budget = config().relativeGapSamples;
+    uint32_t const budget = getConfig().traffic.relativeGapSamples;
 
-    for (auto const& cityIt : m_world.cities())
+    for (auto const& cityIt : m_world.getCities())
     {
         City const& city = *cityIt.second;
-        auto const& agents = city.agents();
+        auto const& agents = city.getAgents();
 
-        // Walking one Agent in every stride samples the whole population
+        // Walking one agent in every stride samples the whole population
         // instead of whichever end of the vector the loop starts at. Both
         // sums are scaled the same way, and the gap being their ratio, the
         // estimate needs no correction factor.
@@ -83,26 +92,26 @@ void Simulation::updateAssignmentMetrics() const
             stride = agents.size() / size_t(budget);
         }
 
-        IRouter& router = const_cast<City&>(city).router();
+        IRouter& router = city.getRouter();
 
         for (size_t i = 0u; i < agents.size(); i += stride)
         {
             Agent& agent = *agents[i];
 
-            // The two sums have to run over the same Agents, or their ratio
+            // The two sums have to run over the same agents, or their ratio
             // measures the difference in populations rather than the distance
-            // to equilibrium. An Agent with no itinerary has no remaining cost
+            // to equilibrium. An agent with no itinerary has no remaining cost
             // to put in TSTT, so it must not put an alternative in SPTT
             // either; one whose reroute is unreachable has no alternative, so
             // it must not put its remaining cost in TSTT.
-            if (!agent.route().found)
+            if (!agent.getRoute().isFound())
                 continue;
 
-            float const alternative = agent.rerouteCost(router);
+            float const alternative = agent.computeRerouteCost(router);
             if (routingCostUnreachable(alternative))
                 continue;
 
-            tstt += agent.remainingCost();
+            tstt += agent.getRemainingCost();
             sptt += alternative;
         }
     }
@@ -115,48 +124,38 @@ void Simulation::updateAssignmentMetrics() const
             gap = 0.0f;
     }
 
-    m_tstt = tstt;
-    m_sptt = sptt;
-    m_relativeGap = gap;
-    m_assignmentMetricsTick = m_totalTicks;
+    m_trafficMetrics.totalTravelTime = tstt;
+    m_trafficMetrics.shortestPathTime = sptt;
+    m_trafficMetrics.relativeGap = gap;
+    m_trafficMetricsTick = m_clock.getTicks();
 }
 
 //------------------------------------------------------------------------------
-float Simulation::relativeGap() const
+Simulation::TrafficMetrics Simulation::getTrafficMetrics() const
 {
-    updateAssignmentMetrics();
-    return m_relativeGap;
+    updateTrafficMetrics();
+    return m_trafficMetrics;
 }
 
 //------------------------------------------------------------------------------
-float Simulation::totalSystemTravelTime() const
+City& Simulation::addCity(std::string const& name, Vector3f const& position)
 {
-    updateAssignmentMetrics();
-    return m_tstt;
-}
-
-//------------------------------------------------------------------------------
-float Simulation::shortestPathTravelTime() const
-{
-    updateAssignmentMetrics();
-    return m_sptt;
-}
-
-//------------------------------------------------------------------------------
-City& Simulation::addCity(std::string const& name, Vector3f position)
-{
-    return addCity(name, position, m_gridSizeU, m_gridSizeV);
+    return m_world.addCity(name, position);
 }
 
 //------------------------------------------------------------------------------
 City& Simulation::addCity(std::string const& name,
-                          Vector3f position,
+                          Vector3f const& position,
                           uint32_t sizeU,
                           uint32_t sizeV)
 {
-    City& city = m_world.addCity(name, position, sizeU, sizeV);
-    m_listener->onCityAdded(city);
-    return city;
+    return m_world.addCity(name, position, sizeU, sizeV);
+}
+
+//------------------------------------------------------------------------------
+bool Simulation::removeCity(std::string const& name)
+{
+    return m_world.removeCity(name);
 }
 
 //------------------------------------------------------------------------------
@@ -166,9 +165,43 @@ City& Simulation::getCity(std::string const& name)
 }
 
 //------------------------------------------------------------------------------
-City const& Simulation::getCity(std::string const& name) const
+City* Simulation::findCity(std::string const& name)
 {
-    return m_world.getCity(name);
+    return m_world.findCity(name);
+}
+
+//------------------------------------------------------------------------------
+City* Simulation::findCityAt(Vector3f const& position)
+{
+    return m_world.findCityAt(position);
+}
+
+//------------------------------------------------------------------------------
+Layer* Simulation::findLayer(std::string const& name)
+{
+    return m_world.findLayer(name);
+}
+
+//------------------------------------------------------------------------------
+Cell Simulation::worldToCell(Vector3f const& position) const
+{
+    return m_world.worldToCell(position);
+}
+
+//------------------------------------------------------------------------------
+Vector3f Simulation::cellToWorld(Cell const cell) const
+{
+    return m_world.cellToWorld(cell);
+}
+
+//------------------------------------------------------------------------------
+bool Simulation::addRoad(City& owner,
+                         std::string const& pathType,
+                         SegmentType const& segmentType,
+                         Vector3f const& from,
+                         Vector3f const& to)
+{
+    return m_world.addRoad(owner, pathType, segmentType, from, to);
 }
 
 } // namespace ogb

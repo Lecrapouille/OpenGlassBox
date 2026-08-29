@@ -116,11 +116,11 @@ std::string fileBasename(std::string const& path)
 void writeResources(std::ostream& out, Resources const& resources)
 {
     out << "[";
-    for (Resource const& resource : resources.container())
+    for (Resource const& resource : resources.getAll())
     {
         if (resource.getAmount() == 0u)
             continue;
-        out << " " << resource.type() << " " << resource.getAmount();
+        out << " " << resource.getTypeName() << " " << resource.getAmount();
     }
     out << " ]";
 }
@@ -248,88 +248,45 @@ bool parseHeader(Lexer& lexer, CitySaveHeader& header, std::string& error)
 std::vector<std::string> usedTypes(Simulation const& simulation)
 {
     std::vector<std::string> names;
-    auto const add = [&](std::string const& name)
+    auto const add = [&](Name const& name)
     {
         if (name.empty())
             return;
         for (std::string const& existing : names)
         {
-            if (existing == name)
+            if (existing == name.str())
                 return;
         }
-        names.push_back(name);
+        names.push_back(name.str());
     };
 
-    for (auto const& cityIt : simulation.cities())
+    for (auto const& cityIt : simulation.getCities())
     {
         City const& city = *cityIt.second;
-        for (auto const& pathIt : city.paths())
+        for (auto const& pathIt : city.getPaths())
         {
-            add(pathIt.second->type());
-            for (auto const& way : pathIt.second->ways())
-                add(way->type());
+            add(pathIt.second->getTypeName());
+            for (auto const& segment : pathIt.second->getSegments())
+                add(segment->getTypeName());
         }
-        for (auto const& unit : city.units())
-            add(unit->type());
-        for (auto const& area : city.areas())
-            add(area->type());
-        for (auto const& agent : city.agents())
-            add(agent->type());
+        for (auto const& unit : city.getUnits())
+            add(unit->getTypeName());
+        for (auto const& zone : city.getZones())
+            add(zone->getTypeName());
+        for (auto const& agent : city.getAgents())
+            add(agent->getTypeName());
     }
     return names;
 }
 
-bool typeExists(Script const& script, std::string const& name)
+bool typeExists(Ruleset const& script, std::string const& name)
 {
-    try
-    {
-        script.getPathType(name);
-        return true;
-    }
-    catch (...)
-    {
-    }
-    try
-    {
-        script.getWayType(name);
-        return true;
-    }
-    catch (...)
-    {
-    }
-    try
-    {
-        script.getUnitType(name);
-        return true;
-    }
-    catch (...)
-    {
-    }
-    try
-    {
-        script.getAreaType(name);
-        return true;
-    }
-    catch (...)
-    {
-    }
-    try
-    {
-        script.getAgentType(name);
-        return true;
-    }
-    catch (...)
-    {
-    }
-    try
-    {
-        script.getMapType(name);
-        return true;
-    }
-    catch (...)
-    {
-    }
-    return false;
+    return (script.findPathType(name) != nullptr) ||
+           (script.findSegmentType(name) != nullptr) ||
+           (script.findUnitType(name) != nullptr) ||
+           (script.findZoneType(name) != nullptr) ||
+           (script.findAgentType(name) != nullptr) ||
+           (script.findLayerType(name) != nullptr);
 }
 
 } // namespace
@@ -407,89 +364,86 @@ bool CitySave::write(std::string const& path,
         out << " " << type;
     out << " ]\nend\n\n";
 
-    out << "clock " << simulation.world().clock().ticks() << "\n\n";
+    out << "clock " << simulation.getClock().getTicks() << "\n\n";
 
-    if (simulation.cities().empty())
+    if (simulation.getCities().empty())
         return true;
 
-    City const& city = *simulation.cities().begin()->second;
-    out << "city " << city.name() << " size " << city.gridSizeU() << " "
-        << city.gridSizeV() << "\n";
+    City const& city = *simulation.getCities().begin()->second;
+    out << "city " << city.getName() << " size " << city.getRegion().sizeU
+        << " " << city.getRegion().sizeV << "\n";
     out << "globals ";
-    writeResources(out, city.globals());
+    writeResources(out, city.getGlobals());
     out << "\n";
 
-    for (auto const& pathIt : city.paths())
+    for (auto const& pathIt : city.getPaths())
     {
         Path const& road = *pathIt.second;
-        out << "path " << road.type() << "\n";
-        for (auto const& node : road.nodes())
+        out << "path " << road.getTypeName() << "\n";
+        for (auto const& node : road.getNodes())
         {
-            int32_t u = 0;
-            int32_t v = 0;
-            city.world().world2mapPosition(node->position(), u, v);
-            out << "\tnode " << node->id() << " " << u << " " << v << "\n";
+            Cell const cell = city.worldToCell(node->getPosition());
+            out << "\tnode " << node->getId() << " " << cell.u << " "
+                << cell.v << "\n";
         }
-        for (auto const& way : road.ways())
+        for (auto const& segment : road.getSegments())
         {
-            out << "\tway " << way->id() << " " << way->type() << " "
-                << way->from().id() << " " << way->to().id() << " flow "
-                << way->flow() << "\n";
+            out << "\tsegment " << segment->getId() << " " << segment->getTypeName() << " "
+                << segment->getFrom().getId() << " " << segment->getTo().getId() << " flow "
+                << segment->getFlow() << "\n";
         }
         out << "end\n";
     }
 
-    for (auto const& unit : city.units())
+    for (auto const& unit : city.getUnits())
     {
-        out << "unit " << unit->type();
-        if (unit->way() != nullptr)
+        out << "unit " << unit->getTypeName();
+        if (unit->getSegment() != nullptr)
         {
-            out << " on way " << unit->way()->id() << " " << unit->wayOffset();
+            out << " on segment " << unit->getSegment()->getId() << " " << unit->getSegmentOffset();
         }
-        else if (unit->node() != nullptr)
+        else if (unit->getNode() != nullptr)
         {
-            out << " on node " << unit->node()->id();
+            out << " on node " << unit->getNode()->getId();
         }
         else
         {
-            int32_t u = 0;
-            int32_t v = 0;
-            city.world().world2mapPosition(unit->position(), u, v);
-            out << " at " << u << " " << v;
+            Cell const cell = city.worldToCell(unit->getPosition());
+            out << " at " << cell.u << " " << cell.v;
         }
         out << " resources ";
-        writeResources(out, unit->resources());
+        writeResources(out, unit->getResources());
         out << "\n";
     }
 
-    for (auto const& area : city.areas())
+    for (auto const& zone : city.getZones())
     {
-        MapRegion const& region = area->footprint();
-        out << "area " << area->type() << " " << region.u0 << " " << region.v0
+        CellRegion const& region = zone->getRegion();
+        out << "zone " << zone->getTypeName() << " " << region.u0 << " " << region.v0
             << " " << region.sizeU << " " << region.sizeV << "\n";
     }
 
-    for (auto const& mapIt : city.maps())
+    for (auto const& layerIt : city.getLayers())
     {
-        Map const& map = *mapIt.second;
-        out << "map " << map.type() << "\n";
-        map.forEachCell(
+        Layer const& layer = *layerIt.second;
+        out << "layer " << layer.getTypeName() << "\n";
+        layer.forEachCell(
             [&](int32_t u, int32_t v, uint32_t amount)
             { out << "\tcell " << u << " " << v << " " << amount << "\n"; });
         out << "end\n";
     }
 
-    for (auto const& agent : city.agents())
+    for (auto const& agent : city.getAgents())
     {
-        out << "agent " << agent->type() << " to " << agent->searchTarget()
-            << " pos " << agent->position().x << " " << agent->position().y
-            << " offset " << agent->offset();
-        if (agent->currentWay() != nullptr)
-            out << " way " << agent->currentWay()->id();
-        if (agent->lastNode() != nullptr)
-            out << " last " << agent->lastNode()->id();
+        out << "agent " << agent->getTypeName() << " to " << agent->getTarget()
+            << " pos " << agent->getPosition().x << " " << agent->getPosition().y
+            << " offset " << agent->getOffset();
+        if (agent->getSegment() != nullptr)
+            out << " segment " << agent->getSegment()->getId();
+        if (agent->getPreviousNode() != nullptr)
+            out << " last " << agent->getPreviousNode()->getId();
         out << " resources ";
-        writeResources(out, agent->resources());
+        writeResources(out, agent->getResources());
         out << "\n";
     }
 
@@ -514,7 +468,7 @@ bool CitySave::read(std::string const& filePath,
 
     for (std::string const& type : header.types)
     {
-        if (!typeExists(simulation.script(), type))
+        if (!typeExists(simulation.getRuleset(), type))
         {
             error = "This save expects type '" + type +
                     "'; the open ruleset does not define it";
@@ -522,7 +476,7 @@ bool CitySave::read(std::string const& filePath,
         }
     }
 
-    Script const& script = simulation.script();
+    Ruleset const& script = simulation.getRuleset();
     City* city = nullptr;
     Path* currentPath = nullptr;
 
@@ -534,8 +488,7 @@ bool CitySave::read(std::string const& filePath,
             uint32_t ticks = 0u;
             if (!readUint(lexer, ticks, error))
                 return false;
-            simulation.world().clock().setTicks(ticks);
-            simulation.setTotalTicks(ticks);
+            simulation.setTicks(ticks);
         }
         else if (token.text == "city")
         {
@@ -549,8 +502,8 @@ bool CitySave::read(std::string const& filePath,
                 return false;
             city = &simulation.addCity(
                 name.text, Vector3f(0.0f, 0.0f, 0.0f), sizeU, sizeV);
-            for (auto const& it : script.mapTypes())
-                city->addMap(*it.second);
+            for (auto const& it : script.getLayerTypes())
+                city->addLayer(*it.second);
         }
         else if (token.text == "globals")
         {
@@ -559,7 +512,7 @@ bool CitySave::read(std::string const& filePath,
                 error = "globals before city";
                 return false;
             }
-            if (!readResources(lexer, city->globals(), error))
+            if (!readResources(lexer, city->getGlobals(), error))
                 return false;
         }
         else if (token.text == "path")
@@ -584,10 +537,9 @@ bool CitySave::read(std::string const& filePath,
                     {
                         return false;
                     }
-                    currentPath->addNode(id,
-                                         city->world().mapPosition2world(u, v));
+                    currentPath->addNode(id, city->cellToWorld({ u, v }));
                 }
-                else if (kind.text == "way")
+                else if (kind.text == "segment")
                 {
                     uint32_t id = 0u;
                     uint32_t from = 0u;
@@ -600,22 +552,22 @@ bool CitySave::read(std::string const& filePath,
                     {
                         return false;
                     }
-                    Node* n1 = currentPath->node(from);
-                    Node* n2 = currentPath->node(to);
+                    Node* n1 = currentPath->findNode(from);
+                    Node* n2 = currentPath->findNode(to);
                     if ((n1 == nullptr) || (n2 == nullptr))
                     {
-                        error = "Unknown node in way";
+                        error = "Unknown node in segment";
                         return false;
                     }
-                    Way& way = currentPath->addWay(
-                        id, script.getWayType(type.text), *n1, *n2);
+                    Segment& segment = currentPath->addSegment(
+                        id, script.getSegmentType(type.text), *n1, *n2);
                     if (lexer.peek().text == "flow")
                     {
                         lexer.next();
                         float flow = 0.0f;
                         if (!readFloat(lexer, flow, error))
                             return false;
-                        way.setFlow(flow);
+                        segment.setFlow(flow);
                     }
                 }
                 else
@@ -629,31 +581,31 @@ bool CitySave::read(std::string const& filePath,
         }
         else if (token.text == "unit")
         {
-            if ((city == nullptr) || (city->paths().empty()))
+            if ((city == nullptr) || (city->getPaths().empty()))
             {
                 error = "unit before path";
                 return false;
             }
             Token const type = lexer.next();
-            Path* path = city->paths().begin()->second.get();
+            Path* path = city->getPaths().begin()->second.get();
             Token const where = lexer.next();
             Unit* unit = nullptr;
-            if ((where.text == "on") && (lexer.peek().text == "way"))
+            if ((where.text == "on") && (lexer.peek().text == "segment"))
             {
                 lexer.next();
-                uint32_t wayId = 0u;
+                uint32_t segmentId = 0u;
                 float offset = 0.5f;
-                if (!readUint(lexer, wayId, error) ||
+                if (!readUint(lexer, segmentId, error) ||
                     !readFloat(lexer, offset, error))
                     return false;
-                Way* way = path->way(wayId);
-                if (way == nullptr)
+                Segment* segment = path->findSegment(segmentId);
+                if (segment == nullptr)
                 {
-                    error = "Unknown way for unit";
+                    error = "Unknown segment for unit";
                     return false;
                 }
                 unit = &city->addUnit(
-                    script.getUnitType(type.text), *path, *way, offset);
+                    script.getUnitType(type.text), *path, *segment, offset);
             }
             else if ((where.text == "on") && (lexer.peek().text == "node"))
             {
@@ -661,7 +613,7 @@ bool CitySave::read(std::string const& filePath,
                 uint32_t nodeId = 0u;
                 if (!readUint(lexer, nodeId, error))
                     return false;
-                Node* node = path->node(nodeId);
+                Node* node = path->findNode(nodeId);
                 if (node == nullptr)
                 {
                     error = "Unknown node for unit";
@@ -676,7 +628,7 @@ bool CitySave::read(std::string const& filePath,
                 if (!readInt(lexer, u, error) || !readInt(lexer, v, error))
                     return false;
                 unit = &city->addUnit(script.getUnitType(type.text),
-                                      city->world().mapPosition2world(u, v));
+                                      city->cellToWorld({ u, v }));
             }
             else
             {
@@ -694,15 +646,15 @@ bool CitySave::read(std::string const& filePath,
                     // Only the amounts come from the save. The capacities come
                     // from the ruleset, and overwriting them left every loaded
                     // building unable to hold anything.
-                    unit->resources().setAmounts(loaded);
+                    unit->getResources().setAmounts(loaded);
                 }
             }
         }
-        else if (token.text == "area")
+        else if (token.text == "zone")
         {
             if (city == nullptr)
             {
-                error = "area before city";
+                error = "zone before city";
                 return false;
             }
             Token const type = lexer.next();
@@ -716,13 +668,13 @@ bool CitySave::read(std::string const& filePath,
             {
                 return false;
             }
-            city->addArea(script.getAreaType(type.text),
-                          MapRegion{ u0, v0, sizeU, sizeV });
+            city->addZone(script.getZoneType(type.text),
+                          CellRegion{ u0, v0, sizeU, sizeV });
         }
-        else if (token.text == "map")
+        else if (token.text == "layer")
         {
             Token const name = lexer.next();
-            Map* map = simulation.world().findMap(name.text);
+            Layer* layer = simulation.findLayer(name.text);
             while (lexer.peek().valid() && (lexer.peek().text != "end"))
             {
                 if (!expect(lexer, "cell", error))
@@ -735,15 +687,15 @@ bool CitySave::read(std::string const& filePath,
                 {
                     return false;
                 }
-                if (map != nullptr)
-                    map->setResource(u, v, amount);
+                if (layer != nullptr)
+                    layer->setResource({ u, v }, amount);
             }
             if (!expect(lexer, "end", error))
                 return false;
         }
         else if (token.text == "agent")
         {
-            if ((city == nullptr) || city->units().empty())
+            if ((city == nullptr) || city->getUnits().empty())
             {
                 error = "agent before unit";
                 return false;
@@ -754,16 +706,16 @@ bool CitySave::read(std::string const& filePath,
             Token const target = lexer.next();
             Vector3f position;
             float offset = 0.0f;
-            uint32_t wayId = 0u;
+            uint32_t segmentId = 0u;
             uint32_t lastId = 0u;
-            bool hasWay = false;
+            bool hasSegment = false;
             bool hasLast = false;
             Resources cargo;
             while (lexer.peek().valid())
             {
                 std::string const& look = lexer.peek().text;
                 if ((look == "city") || (look == "path") || (look == "unit") ||
-                    (look == "area") || (look == "map") || (look == "agent") ||
+                    (look == "zone") || (look == "layer") || (look == "agent") ||
                     (look == "clock"))
                 {
                     break;
@@ -782,10 +734,10 @@ bool CitySave::read(std::string const& filePath,
                     if (!readFloat(lexer, offset, error))
                         return false;
                 }
-                else if (key.text == "way")
+                else if (key.text == "segment")
                 {
-                    hasWay = readUint(lexer, wayId, error);
-                    if (!hasWay)
+                    hasSegment = readUint(lexer, segmentId, error);
+                    if (!hasSegment)
                         return false;
                 }
                 else if (key.text == "last")
@@ -806,20 +758,20 @@ bool CitySave::read(std::string const& filePath,
                 }
             }
             Agent& agent = city->addAgent(script.getAgentType(type.text),
-                                          *city->units().front(),
+                                          *city->getUnits().front(),
                                           cargo,
                                           target.text);
-            Way* way = nullptr;
+            Segment* segment = nullptr;
             Node* last = nullptr;
-            if (!city->paths().empty())
+            if (!city->getPaths().empty())
             {
-                Path& path = *city->paths().begin()->second;
-                if (hasWay)
-                    way = path.way(wayId);
+                Path& path = *city->getPaths().begin()->second;
+                if (hasSegment)
+                    segment = path.findSegment(segmentId);
                 if (hasLast)
-                    last = path.node(lastId);
+                    last = path.findNode(lastId);
             }
-            agent.relocate(position, way, offset, last);
+            agent.relocate(position, segment, offset, last);
         }
         else
         {

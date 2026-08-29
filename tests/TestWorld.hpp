@@ -23,7 +23,7 @@ using namespace ogb;
 //! \brief Build a script-defined type and keep it alive until the test binary
 //! exits.
 //!
-//! Units, Agents, Ways, Paths, Areas and Maps hold their type by reference: one
+//! Units, Agents, Segments, Paths, Zones and Layers hold their type by reference: one
 //! recipe is shared by every entity of that kind, and in a running simulation
 //! ScriptDefinitions owns it and outlives every City. A test writing
 //! \c city.addUnit(UnitType("Home"), node) hands over a temporary that dies at
@@ -52,13 +52,17 @@ struct TestWorld
     explicit TestWorld(std::string const& name = "Paris",
                        uint32_t sizeU = 32u,
                        uint32_t sizeV = 32u,
-                       Vector3f const& position = Vector3f(0.0f, 0.0f, 0.0f),
-                       SimulationConfig const& config = {})
-        : world(config), city(world.addCity(name, position, sizeU, sizeV))
+                       Vector3f const& position = {},
+                       Config const& config = {})
+        : clock(config.time.ticksPerMinute),
+          world(config, clock),
+          city(world.addCity(name, position, sizeU, sizeV))
     {
-        installDijkstraRouter(city, world.config());
+        clock.setTimeOfDay(0u, config.time.startHour, 0u);
+        installDijkstraRouter(city, world.getConfig());
     }
 
+    SimulationClock clock;
     World world;
     City& city;
 };

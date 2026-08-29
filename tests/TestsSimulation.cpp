@@ -11,70 +11,74 @@
 // -----------------------------------------------------------------------------
 TEST(TestsSimulation, Constants)
 {
-    ASSERT_GT(config::DEFAULT_TICKS_PER_SECOND, 0.0f);
+    ASSERT_GT(defaults::TICKS_PER_SECOND, 0.0f);
 
-    SimulationConfig config;
-    ASSERT_EQ(config.ticksPerSecond, config::DEFAULT_TICKS_PER_SECOND);
-    ASSERT_EQ(config.tickDuration(), 1.0f / config::DEFAULT_TICKS_PER_SECOND);
+    Config config;
+    ASSERT_EQ(config.time.ticksPerSecond, defaults::TICKS_PER_SECOND);
+    ASSERT_EQ(config.time.tickDuration(), 1.0f / defaults::TICKS_PER_SECOND);
 }
 
 // -----------------------------------------------------------------------------
 TEST(TestsSimulation, TimeControl)
 {
-    SimulationConfig config;
-    config.ticksPerSecond = 10.0f;
-    Simulation sim(4u, 4u, config);
+    Config config;
+    config.time.ticksPerSecond = 10.0f;
+    config.time.startHour = 0u;
+    Simulation sim(config);
 
-    ASSERT_EQ(sim.totalTicks(), 0u);
-    ASSERT_EQ(sim.paused(), true);
-    ASSERT_EQ(sim.timeScale(), 1.0f);
+    ASSERT_EQ(sim.getClock().getTicks(), 0u);
+    ASSERT_EQ(sim.isPaused(), true);
+    ASSERT_EQ(sim.getTimeScale(), 1.0f);
 
     sim.setPaused(false);
 
     // One tick lasts 100 ms: 250 ms is worth two ticks and leaves 50 ms.
     sim.update(0.25f);
-    ASSERT_EQ(sim.totalTicks(), 2u);
+    ASSERT_EQ(sim.getClock().getTicks(), 2u);
 
     // Twice as fast: the same elapsed time is worth five ticks.
     sim.setTimeScale(2.0f);
     sim.update(0.25f);
-    ASSERT_EQ(sim.totalTicks(), 7u);
+    ASSERT_EQ(sim.getClock().getTicks(), 7u);
 
     // Paused: time is not accumulated at all.
     sim.setPaused(true);
     sim.update(10.0f);
-    ASSERT_EQ(sim.totalTicks(), 7u);
+    ASSERT_EQ(sim.getClock().getTicks(), 7u);
 
     // Stepping ignores the pause state.
     sim.stepOneTick();
-    ASSERT_EQ(sim.totalTicks(), 8u);
+    ASSERT_EQ(sim.getClock().getTicks(), 8u);
 
-    // A huge elapsed time is clamped by maxTicksPerUpdate.
+    // A huge elapsed time is clamped by TimeConfig::maxTicksPerUpdate.
     sim.setPaused(false);
     sim.setTimeScale(1.0f);
-    sim.config().maxTicksPerUpdate = 3u;
+    config.time.maxTicksPerUpdate = 3u;
+    sim.setConfig(config);
     sim.update(1000.0f);
-    ASSERT_EQ(sim.totalTicks(), 11u);
+    ASSERT_EQ(sim.getClock().getTicks(), 11u);
 }
 
 // -----------------------------------------------------------------------------
 TEST(TestsSimulation, Constructor)
 {
-    Simulation sim(4u, 5u);
+    Simulation sim;
 
-    ASSERT_EQ(sim.m_gridSizeU, 4u);
-    ASSERT_EQ(sim.m_gridSizeV, 5u);
     ASSERT_EQ(sim.m_time, 0.0f);
-    ASSERT_EQ(sim.m_world.m_cities.size(), 0u);
+    ASSERT_EQ(sim.getCities().size(), 0u);
 
     City& c1 = sim.addCity("Paris", Vector3f(0.0f, 0.0f, 0.0f));
-    ASSERT_STREQ(c1.name().c_str(), "Paris");
+    ASSERT_STREQ(c1.getName().c_str(), "Paris");
 
     City& c2 = sim.getCity("Paris");
     ASSERT_EQ(&c1, &c2);
-    ASSERT_STREQ(c2.name().c_str(), "Paris");
+    ASSERT_STREQ(c2.getName().c_str(), "Paris");
 
-    ASSERT_EQ(sim.m_world.m_cities.size(), 1u);
-    ASSERT_EQ(sim.m_world.m_cities["Paris"].get(), &c1);
-    ASSERT_STREQ(sim.m_world.m_cities["Paris"]->name().c_str(), "Paris");
+    ASSERT_EQ(sim.getCities().size(), 1u);
+    ASSERT_EQ(sim.findCity("Paris"), &c1);
+    ASSERT_EQ(sim.findCity("Berlin"), nullptr);
+
+    // The grid of a city defaults to what GridConfig says.
+    ASSERT_EQ(c1.getRegion().sizeU, sim.getConfig().grid.defaultCitySizeU);
+    ASSERT_EQ(c1.getRegion().sizeV, sim.getConfig().grid.defaultCitySizeV);
 }

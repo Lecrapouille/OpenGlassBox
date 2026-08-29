@@ -7,10 +7,11 @@
 
 #include "OpenGlassBox/RuleCommand.hpp"
 #include "OpenGlassBox/City.hpp"
-#include "OpenGlassBox/Area.hpp"
+#include "OpenGlassBox/Zone.hpp"
 #include "OpenGlassBox/World.hpp"
 #include <cassert>
 #include <iostream>
+#include <optional>
 #include <sstream>
 
 //------------------------------------------------------------------------------
@@ -18,7 +19,7 @@ namespace ogb {
 
 bool RuleCommandAdd::validate(RuleContext& context)
 {
-    return m_target.get(context) < m_target.capacity(context);
+    return m_target.get(context) < m_target.getCapacity(context);
 }
 
 //------------------------------------------------------------------------------
@@ -28,10 +29,10 @@ void RuleCommandAdd::execute(RuleContext& context)
 }
 
 //------------------------------------------------------------------------------
-std::string RuleCommandAdd::type()
+std::string RuleCommandAdd::getDescription() const
 {
     std::stringstream ss;
-    ss << "Add " << m_amount << " Resources " << m_target.type();
+    ss << "Add " << m_amount << " Resources " << m_target.getTypeName();
     return ss.str().c_str();
 }
 
@@ -48,10 +49,10 @@ void RuleCommandRemove::execute(RuleContext& context)
 }
 
 //------------------------------------------------------------------------------
-std::string RuleCommandRemove::type()
+std::string RuleCommandRemove::getDescription() const
 {
     std::stringstream ss;
-    ss << "Remove " << m_amount << " Resources " << m_target.type();
+    ss << "Remove " << m_amount << " Resources " << m_target.getTypeName();
     return ss.str().c_str();
 }
 
@@ -79,7 +80,7 @@ void RuleCommandTest::execute(RuleContext& /*context*/)
 }
 
 //------------------------------------------------------------------------------
-std::string RuleCommandTest::type()
+std::string RuleCommandTest::getDescription() const
 {
     std::stringstream ss;
     switch (m_comparison)
@@ -96,7 +97,7 @@ std::string RuleCommandTest::type()
     default:
         break;
     }
-    ss << m_amount << " Resources " << m_target.type();
+    ss << m_amount << " Resources " << m_target.getTypeName();
     return ss.str().c_str();
 }
 
@@ -106,23 +107,23 @@ bool RuleCommandAgent::validate(RuleContext& context)
     if ((context.unit == nullptr) || (context.city == nullptr))
         return false;
 
-    if (!context.unit->hasWays())
+    if (!context.unit->hasSegments())
         return false;
 
     Resources probe;
-    for (auto const& resource: m_resources.container())
+    for (auto const& resource: m_resources.getAll())
     {
-        if (context.unit->resources().getAmount(resource.type()) <
+        if (context.unit->getResources().getAmount(resource.getTypeName()) <
             resource.getAmount())
         {
             return false;
         }
-        probe.addResource(resource.type(), resource.getAmount());
+        probe.addResource(resource.getTypeName(), resource.getAmount());
     }
 
-    for (auto& unit: context.city->units())
+    for (auto& unit: context.city->getUnits())
     {
-        if (unit->type() != m_target)
+        if (unit->getTypeName() != m_target)
             continue;
         if (unit->accepts(m_target, probe))
             return true;
@@ -137,14 +138,15 @@ void RuleCommandAgent::execute(RuleContext& context)
     if ((context.unit == nullptr) || (context.city == nullptr))
         return;
 
-    if (context.unit->hasWays())
+    if (context.unit->hasSegments())
     {
-        context.city->addAgent(*this, *(context.unit), m_resources, m_target);
+        context.city->addAgent(
+            m_type, *(context.unit), m_resources, m_target);
     }
 #if !defined(NDEBUG)
     else
     {
-       std::cerr << "Ill-formed: Unit " << context.unit->id() << " is attached "
+       std::cerr << "Ill-formed: Unit " << context.unit->getId() << " is attached "
                  << "to a orphan Path Node and its Agent will not be able to "
                  << "move towards the City." << std::endl;
     }
@@ -152,7 +154,7 @@ void RuleCommandAgent::execute(RuleContext& context)
 }
 
 //------------------------------------------------------------------------------
-std::string RuleCommandAgent::type()
+std::string RuleCommandAgent::getDescription() const
 {
     return {"Add Agent"};
 }
@@ -162,7 +164,7 @@ bool RuleCommandHour::validate(RuleContext& context)
 {
     if (context.clock == nullptr)
         return false;
-    return context.clock->hourBetween(m_from, m_to);
+    return context.clock->isHourBetween(m_from, m_to);
 }
 
 //------------------------------------------------------------------------------
@@ -170,7 +172,7 @@ void RuleCommandHour::execute(RuleContext& /*context*/)
 {}
 
 //------------------------------------------------------------------------------
-std::string RuleCommandHour::type()
+std::string RuleCommandHour::getDescription() const
 {
     std::stringstream ss;
     ss << "Hour between " << m_from << " and " << m_to;
@@ -180,10 +182,10 @@ std::string RuleCommandHour::type()
 //------------------------------------------------------------------------------
 bool RuleCommandCount::validate(RuleContext& context)
 {
-    if (context.area == nullptr)
+    if (context.zone == nullptr)
         return false;
 
-    uint32_t const n = context.area->countUnits(m_unitType);
+    uint32_t const n = context.zone->countUnits(m_unitType);
     switch (m_comparison)
     {
     case RuleCommandTest::Comparison::EQUALS:
@@ -202,7 +204,7 @@ void RuleCommandCount::execute(RuleContext& /*context*/)
 {}
 
 //------------------------------------------------------------------------------
-std::string RuleCommandCount::type()
+std::string RuleCommandCount::getDescription() const
 {
     std::stringstream ss;
     ss << "Count " << m_unitType;
@@ -217,71 +219,71 @@ std::string RuleCommandCount::type()
 static float maxAccessDistance(City const& city)
 {
     static constexpr float ACCESS_CELLS = 2.0f;
-    return ACCESS_CELLS * city.gridCellSize();
+    return ACCESS_CELLS * city.getCellSize();
 }
 
 //------------------------------------------------------------------------------
 bool RuleCommandSpawn::validate(RuleContext& context)
 {
-    if (context.area == nullptr || context.city == nullptr)
+    if (context.zone == nullptr || context.city == nullptr)
         return false;
 
-    int32_t u = 0, v = 0;
-
-    if (m_placement != Placement::NearestWay)
-        return context.area->findFreeCell(u, v);
+    if (m_placement != Placement::NearestSegment)
+        return context.zone->findFreeCell().has_value();
 
     // A building has to be reachable. Without a road, no Agent could ever
-    // leave it or deliver to it, and the Area would keep growing ghosts, so the
+    // leave it or deliver to it, and the Zone would keep growing ghosts, so the
     // free cell is looked for along the network instead of anywhere in the
     // footprint.
-    if (!context.area->findBuildableCell(u, v))
+    std::optional<Cell> const cell = context.zone->findFreeCellNearRoad();
+    if (!cell.has_value())
         return false;
 
     float offset = 0.5f;
-    Way const* way =
-        context.area->nearestWay(context.area->cellWorldPosition(u, v), offset,
-                                 maxAccessDistance(*context.city));
-    return (way != nullptr) && (way->from().path() != nullptr);
+    Segment const* segment = context.zone->findNearestSegment(
+        context.zone->getCellCentre(*cell), offset,
+        maxAccessDistance(*context.city));
+    return (segment != nullptr) && (segment->getFrom().getPath() != nullptr);
 }
 
 //------------------------------------------------------------------------------
 void RuleCommandSpawn::execute(RuleContext& context)
 {
-    if ((context.area == nullptr) || (context.city == nullptr))
+    if ((context.zone == nullptr) || (context.city == nullptr))
         return;
 
-    int32_t u = 0, v = 0;
-
-    if (m_placement != Placement::NearestWay)
+    if (m_placement != Placement::NearestSegment)
     {
-        if (!context.area->findFreeCell(u, v))
+        std::optional<Cell> const free = context.zone->findFreeCell();
+        if (!free.has_value())
             return;
-        context.city->addUnit(m_unitType, context.area->cellWorldPosition(u, v));
+        context.city->addUnit(m_unitType,
+                              context.zone->getCellCentre(*free));
         return;
     }
 
-    if (!context.area->findBuildableCell(u, v))
+    std::optional<Cell> const cell = context.zone->findFreeCellNearRoad();
+    if (!cell.has_value())
         return;
 
-    Vector3f const world = context.area->cellWorldPosition(u, v);
+    Vector3f const world = context.zone->getCellCentre(*cell);
     float offset = 0.5f;
-    Way* way =
-        context.area->nearestWay(world, offset, maxAccessDistance(*context.city));
-    Path* path = (way == nullptr) ? nullptr : way->from().path();
-    if ((way == nullptr) || (path == nullptr))
+    Segment* segment = context.zone->findNearestSegment(world, offset,
+                                            maxAccessDistance(*context.city));
+    Path* path = (segment == nullptr) ? nullptr : segment->getFrom().getPath();
+    if ((segment == nullptr) || (path == nullptr))
         return;
 
-    // The Way is how the building reaches the network, not where it stands: it
-    // keeps the cell the Area picked for it. Reading the cell of the road
+    // The Segment is how the building reaches the network, not where it stands: it
+    // keeps the cell the Zone picked for it. Reading the cell of the road
     // instead would leave that cell free, and the next tick would grow another
     // building on the very same spot.
-    Unit& unit = context.city->addUnit(m_unitType, *path, *way, offset);
-    unit.placeAt(world);
+    Unit& unit = context.city->addUnit(m_unitType, *path, *segment, offset);
+    unit.setPosition(world);
 }
 
 //------------------------------------------------------------------------------
-std::string RuleCommandSpawn::type()
+std::string RuleCommandSpawn::getDescription() const
 {
     return "Spawn " + m_unitType.name.str();
 }
@@ -289,36 +291,36 @@ std::string RuleCommandSpawn::type()
 //------------------------------------------------------------------------------
 bool RuleCommandUpgrade::validate(RuleContext& context)
 {
-    return (context.area != nullptr) &&
-           (context.area->countUnits(m_fromType.name) > 0u);
+    return (context.zone != nullptr) &&
+           (context.zone->countUnits(m_fromType.name) > 0u);
 }
 
 //------------------------------------------------------------------------------
 void RuleCommandUpgrade::execute(RuleContext& context)
 {
-    auto units = context.area->unitsInside(m_fromType.name);
+    auto units = context.zone->getUnitsInside(m_fromType.name);
     if (units.empty())
         return;
 
     Unit* unit = units.front();
-    Vector3f const position = unit->position();
-    Node* node = unit->node();
-    Way* way = unit->way();
-    float const offset = unit->wayOffset();
-    Path* path = unit->path();
+    Vector3f const position = unit->getPosition();
+    Node* node = unit->getNode();
+    Segment* segment = unit->getSegment();
+    float const offset = unit->getSegmentOffset();
+    Path* path = unit->getPath();
 
     context.city->removeUnit(*unit);
 
     if (node != nullptr)
         context.city->addUnit(m_toType, *node);
-    else if ((way != nullptr) && (path != nullptr))
-        context.city->addUnit(m_toType, *path, *way, offset);
+    else if ((segment != nullptr) && (path != nullptr))
+        context.city->addUnit(m_toType, *path, *segment, offset);
     else
         context.city->addUnit(m_toType, position);
 }
 
 //------------------------------------------------------------------------------
-std::string RuleCommandUpgrade::type()
+std::string RuleCommandUpgrade::getDescription() const
 {
     return "Upgrade " + m_fromType.name.str() + " to " + m_toType.name.str();
 }
@@ -326,20 +328,20 @@ std::string RuleCommandUpgrade::type()
 //------------------------------------------------------------------------------
 bool RuleCommandDestroy::validate(RuleContext& context)
 {
-    return (context.area != nullptr) &&
-           (context.area->countUnits(m_unitType) > 0u);
+    return (context.zone != nullptr) &&
+           (context.zone->countUnits(m_unitType) > 0u);
 }
 
 //------------------------------------------------------------------------------
 void RuleCommandDestroy::execute(RuleContext& context)
 {
-    auto units = context.area->unitsInside(m_unitType);
+    auto units = context.zone->getUnitsInside(m_unitType);
     if (!units.empty())
         context.city->removeUnit(*units.front());
 }
 
 //------------------------------------------------------------------------------
-std::string RuleCommandDestroy::type()
+std::string RuleCommandDestroy::getDescription() const
 {
     return "Destroy " + m_unitType.str();
 }

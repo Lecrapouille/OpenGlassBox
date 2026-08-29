@@ -6,8 +6,8 @@
 //-----------------------------------------------------------------------------
 
 //! \file Types.hpp
-//! \brief Descriptor structs for the paths, ways, units, maps, areas, agents
-//! and rules a simulation script defines.
+//! \brief Descriptor structs for the paths, segments, units, layers, zones,
+//! agents and rules a simulation script defines.
 //!
 //! Nothing here holds any state of a running city: these are the read-only
 //! recipes the parser produces, shared by every entity of the same kind. A city
@@ -24,16 +24,16 @@ namespace ogb
 {
 
 class RuleUnit;
-class RuleMap;
-class RuleArea;
+class RuleLayer;
+class RuleZone;
 class IRuleCommand;
 
 //==============================================================================
 //! \brief What every type a script declares has in common: the name it is
 //! referred to by, and the colour the demo paints it with.
 //!
-//! The name is the identity of the type: rules, units and maps refer to each
-//! other by name, and a save file names what it puts back on the map. The
+//! The name is the identity of the type: rules, units and layers refer to each
+//! other by name, and a save file names what it puts back on the grid. The
 //! colour belongs here rather than in the renderer because a script author
 //! choosing what a thing is also chooses what it looks like.
 //==============================================================================
@@ -56,7 +56,7 @@ struct EntityType
 //==============================================================================
 struct RuleType
 {
-    //! \brief Name given by the script, by which units, maps and areas list the
+    //! \brief Name given by the script, by which units, layers and zones list the
     //! rules they run. Interned: see Name.
     Name name;
     //! \brief Period in simulation ticks, as written by \c rate \c 7. One means
@@ -64,8 +64,8 @@ struct RuleType
     uint32_t rate = 1u;
     //! \brief Period written as a duration of game time, in minutes, as written
     //! by \c rate \c 30 \c minutes. Zero when the script counted ticks instead.
-    //! Turned into ticks by IRule::periodTicks, which is what lets the whole
-    //! ruleset follow SimulationConfig::ticksPerMinute.
+    //! Turned into ticks by IRule::getPeriodTicks(), which is what lets the
+    //! whole ruleset follow TimeConfig::ticksPerMinute.
     uint32_t rateMinutes = 0u;
     //! \brief Body of the rule, in the order the script wrote it. The pointers
     //! are owned by ScriptDefinitions: they are never freed here and have to
@@ -74,42 +74,42 @@ struct RuleType
 };
 
 //==============================================================================
-//! \brief Recipe of a rule run by a Map, on one cell of the grid at a time.
+//! \brief Recipe of a rule run by a Layer, on one cell of the grid at a time.
 //!
-//! A map rule may run on a random sample of its cells rather than on all of
+//! A layer rule may run on a random sample of its cells rather than on all of
 //! them, which is how a slow diffusion is written without giving every cell its
 //! own rule.
 //!
 //! Example:
 //! \code
-//! mapRule CreateGrass
+//! layerRule CreateGrass
 //!     rate 20 minutes
 //!     randomTilesPercent 90
-//!     map Water remove 10
-//!     map Grass add 1
+//!     layer Water remove 10
+//!     layer Grass add 1
 //! end
 //! \endcode
 //==============================================================================
-class RuleMapType: public RuleType
+class RuleLayerType: public RuleType
 {
 public:
 
-    RuleMapType(RuleMapType const&) = default;
+    RuleLayerType(RuleLayerType const&) = default;
 
     //--------------------------------------------------------------------------
     //! \brief \param[in] name_ name the script gave the rule.
     //--------------------------------------------------------------------------
-    explicit RuleMapType(std::string const& name_)
+    explicit RuleLayerType(std::string const& name_)
     {
         name = name_;
     }
 
-    //! \brief Whether the rule runs on a sample of the cells of the Map instead
+    //! \brief Whether the rule runs on a sample of the cells of the Layer instead
     //! of on every one of them.
     bool randomTiles = false;
 
-    //! \brief Size of that sample, in percent of the cells of the Map. Clamped
-    //! to a hundred by RuleMap.
+    //! \brief Size of that sample, in percent of the cells of the Layer. Clamped
+    //! to a hundred by RuleLayer.
     uint32_t randomTilesPercent = 10u;
 };
 
@@ -152,30 +152,30 @@ public:
 };
 
 //==============================================================================
-//! \brief Recipe of a rule run by an Area, on the zone as a whole.
+//! \brief Recipe of a rule run by an Zone, on the zone as a whole.
 //!
-//! Area rules are the only ones that create and destroy buildings, which is why
+//! Zone rules are the only ones that create and destroy buildings, which is why
 //! they count what already stands inside the zone.
 //!
 //! Example:
 //! \code
-//! areaRule GrowHomes
+//! zoneRule GrowHomes
 //!     rate 4 hours
 //!     count Home less 12
-//!     spawn Home at nearestWay
+//!     spawn Home at nearestSegment
 //! end
 //! \endcode
 //==============================================================================
-class RuleAreaType: public RuleType
+class RuleZoneType: public RuleType
 {
 public:
 
-    RuleAreaType(RuleAreaType const&) = default;
+    RuleZoneType(RuleZoneType const&) = default;
 
     //--------------------------------------------------------------------------
     //! \brief \param[in] name_ name the script gave the rule.
     //--------------------------------------------------------------------------
-    explicit RuleAreaType(std::string const& name_)
+    explicit RuleZoneType(std::string const& name_)
     {
         name = name_;
     }
@@ -187,13 +187,13 @@ public:
 //!
 //! Example:
 //! \code
-//! unit Home color 0xFF00FF mapRadius 1 rules [ SendPeopleToWork ]
+//! unit Home color 0xFF00FF layerRadius 1 rules [ SendPeopleToWork ]
 //!      targets [ Home ] caps [ People 8 ] resources [ People 8 ]
 //! \endcode
 //!
 //! \code
 //! // The type is looked up by name and outlives every building of that type.
-//! UnitType const& type = simulation.script().getUnitType("Home");
+//! UnitType const& type = simulation.getRuleset().getUnitType("Home");
 //! Unit& home = city.addUnit(type, node);
 //! \endcode
 //==============================================================================
@@ -213,7 +213,7 @@ public:
     }
 
     //! \brief How far, in grid cells, the rules of the building read and write
-    //! the Maps around it. One means the cell it stands on and its neighbours.
+    //! the Layers around it. One means the cell it stands on and its neighbours.
     uint32_t radius = 1u;
 
     //! \brief What a fresh building of that type holds, and how much of each
@@ -241,47 +241,47 @@ public:
 //!
 //! Example:
 //! \code
-//! map Water color 0x0000FF capacity 100 rules [ ]
-//! map Grass color 0x00FF00 capacity 10 rules [ CreateGrass ]
+//! layer Water color 0x0000FF capacity 100 rules [ ]
+//! layer Grass color 0x00FF00 capacity 10 rules [ CreateGrass ]
 //! \endcode
 //==============================================================================
-class MapType: public EntityType
+class LayerType: public EntityType
 {
 public:
 
-    MapType(MapType const&) = default;
+    LayerType(LayerType const&) = default;
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] name_ name the script gave the map. The capacity of a
+    //! \brief \param[in] name_ name the script gave the layer. The capacity of a
     //! cell defaults to the largest one a Resource allows.
     //--------------------------------------------------------------------------
-    explicit MapType(std::string const& name_)
+    explicit LayerType(std::string const& name_)
     {
         name = name_;
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] name_ name the script gave the map.
+    //! \brief \param[in] name_ name the script gave the layer.
     //! \param[in] color_ 0xRRGGBB the demo shades the cells with.
     //! \param[in] capacity_ largest amount one cell may hold.
-    //! \param[in] list rules the map runs. Not owned.
+    //! \param[in] list rules the layer runs. Not owned.
     //--------------------------------------------------------------------------
-    MapType(std::string const& name_,
+    LayerType(std::string const& name_,
             uint32_t color_,
             uint32_t capacity_,
-            std::initializer_list<RuleMap*> list = {})
+            std::initializer_list<RuleLayer*> list = {})
         : capacity(capacity_), rules(list)
     {
         name = name_;
         color = color_;
     }
 
-    //! \brief Largest amount one cell may hold. The same for every cell: a Map
-    //! is a grid of identical bins.
+    //! \brief Largest amount one cell may hold. The same value for every cell
+    //! of the layer.
     uint32_t capacity = Resource::MAX_CAPACITY;
 
-    //! \brief Rules the map attempts. Owned by ScriptDefinitions.
-    std::vector<RuleMap*> rules;
+    //! \brief Rules the layer attempts. Owned by ScriptDefinitions.
+    std::vector<RuleLayer*> rules;
 };
 
 //==============================================================================
@@ -316,7 +316,7 @@ public:
     //--------------------------------------------------------------------------
     //! \brief \param[in] name_ name the script gave the agent.
     //! \param[in] speed_ top speed, in world units per second of game time.
-    //! \param[in] radius_ radius of action on the Maps, in grid cells.
+    //! \param[in] radius_ radius of action on the Layers, in grid cells.
     //! \param[in] color_ 0xRRGGBB the demo draws it with.
     //--------------------------------------------------------------------------
     AgentType(std::string const& name_,
@@ -330,11 +330,11 @@ public:
     }
 
     //! \brief Top speed, in world units per second of game time. What an Agent
-    //! actually drives is the lesser of this and the speed of the Way under it,
+    //! actually drives is the lesser of this and the speed of the Segment under it,
     //! so a fast truck on a dirt road is a slow truck.
     float speed = 1.0f;
 
-    //! \brief Radius of action on the Maps, in grid cells. Reserved: an Agent
+    //! \brief Radius of action on the Layers, in grid cells. Reserved: an Agent
     //! does not run rules.
     uint32_t radius = 1u;
 };
@@ -344,23 +344,23 @@ public:
 //! and how badly it suffers from more.
 //!
 //! The three numbers are the parameters of the BPR travel time function the
-//! router uses. See Way::travelTime and the traffic section of the README.
+//! router uses. See Segment::getTravelTime() and doc/traffic.md.
 //!
 //! Example:
 //! \code
 //! segment Dirt color 0xAAAAAA speed 30 capacity 20 beta 4
 //! \endcode
 //==============================================================================
-class WayType: public EntityType
+class SegmentType: public EntityType
 {
 public:
 
-    WayType(WayType const&) = default;
+    SegmentType(SegmentType const&) = default;
 
     //--------------------------------------------------------------------------
     //! \brief \param[in] name_ name the script gave the segment type.
     //--------------------------------------------------------------------------
-    explicit WayType(std::string const& name_)
+    explicit SegmentType(std::string const& name_)
     {
         name = name_;
     }
@@ -370,17 +370,17 @@ public:
     //! \param[in] color_ 0xRRGGBB the demo draws it with, unless the traffic
     //! colours are on.
     //--------------------------------------------------------------------------
-    WayType(std::string const& name_, uint32_t color_)
+    SegmentType(std::string const& name_, uint32_t color_)
     {
         name = name_;
         color = color_;
     }
 
     //! \brief Free flow speed, in world units per second of game time. Used to
-    //! derive the zero-traffic travel time of a Way from its length.
+    //! derive the zero-traffic travel time of a Segment from its length.
     float speed = 50.0f;
 
-    //! \brief Number of Agents a Way of this type carries before the travel
+    //! \brief Number of Agents a Segment of this type carries before the travel
     //! time starts to grow noticeably. This is the practical capacity of the
     //! BPR function, not a hard limit: a saturated road stays passable, it just
     //! becomes expensive.
@@ -429,31 +429,31 @@ public:
 };
 
 //==============================================================================
-//! \brief Recipe of a zone: what the player paints on the map, and the rules
+//! \brief Recipe of a zone: what the player paints on the grid, and the rules
 //! that grow, upgrade and abandon the buildings inside it.
 //!
 //! Example:
 //! \code
-//! area Residential color 0x44AA44 rules [ GrowHomes AbandonHomes ]
+//! zone Residential color 0x44AA44 rules [ GrowHomes AbandonHomes ]
 //! \endcode
 //==============================================================================
-class AreaType: public EntityType
+class ZoneType: public EntityType
 {
 public:
 
-    AreaType(AreaType const&) = default;
+    ZoneType(ZoneType const&) = default;
 
     //--------------------------------------------------------------------------
     //! \brief \param[in] name_ name the script gave the zone.
     //--------------------------------------------------------------------------
-    explicit AreaType(std::string const& name_)
+    explicit ZoneType(std::string const& name_)
     {
         name = name_;
         color = 0x44AA44;
     }
 
     //! \brief Rules the zone attempts. Owned by ScriptDefinitions.
-    std::vector<RuleArea*> rules;
+    std::vector<RuleZone*> rules;
 };
 
 } // namespace ogb

@@ -1,6 +1,6 @@
 #include "main.hpp"
 
-#include "OpenGlassBox/DijkstraRouter.hpp"
+#include "OpenGlassBox/InstallRouter.hpp"
 #include "OpenGlassBox/Simulation.hpp"
 #include "Save/CitySave.hpp"
 #include "TestDataPath.hpp"
@@ -19,8 +19,8 @@ static std::string testCitySave()
 
 TEST(TestsCitySave, LoadShippedParis)
 {
-    Simulation simulation{ 32u, 32u };
-    ASSERT_TRUE(simulation.script().parseFile(testCityRuleset()));
+    Simulation simulation;
+    ASSERT_TRUE(simulation.loadScriptFile(testCityRuleset()));
 
     CitySaveHeader header;
     std::string error;
@@ -30,18 +30,18 @@ TEST(TestsCitySave, LoadShippedParis)
         << error;
     ASSERT_TRUE(CitySave::read(testCitySave(), simulation, error)) << error;
 
-    ASSERT_EQ(simulation.cities().size(), 1u);
-    City& city = *simulation.cities().begin()->second;
-    ASSERT_STREQ(city.name().c_str(), "Paris");
-    ASSERT_FALSE(city.paths().empty());
-    ASSERT_GE(city.units().size(), 5u);
-    ASSERT_FALSE(city.areas().empty());
+    ASSERT_EQ(simulation.getCities().size(), 1u);
+    City& city = *simulation.getCities().begin()->second;
+    ASSERT_STREQ(city.getName().c_str(), "Paris");
+    ASSERT_FALSE(city.getPaths().empty());
+    ASSERT_GE(city.getUnits().size(), 5u);
+    ASSERT_FALSE(city.getZones().empty());
 }
 
 TEST(TestsCitySave, MissingTypeIsRefused)
 {
-    Simulation simulation{ 32u, 32u };
-    ASSERT_TRUE(simulation.script().parseFile(testCityRuleset()));
+    Simulation simulation;
+    ASSERT_TRUE(simulation.loadScriptFile(testCityRuleset()));
 
     std::string const path = tempTestPath("openglassbox-missing-type.ogc");
     {
@@ -79,13 +79,13 @@ TEST(TestsCitySave, LoadShippedBraessAndGrids)
         ASSERT_TRUE(CitySave::peekHeader(save, header, error)) << error;
 
         std::string const ruleset = testDataPath(header.ruleset);
-        Simulation simulation{ 32u, 32u };
-        ASSERT_TRUE(simulation.script().parseFile(ruleset)) << ruleset;
+        Simulation simulation;
+        ASSERT_TRUE(simulation.loadScriptFile(ruleset)) << ruleset;
         ASSERT_TRUE(CitySave::matchesRuleset(header, ruleset, error)) << error;
         ASSERT_TRUE(CitySave::read(save, simulation, error))
             << save << ": " << error;
         installDijkstraRouters(simulation);
-        ASSERT_FALSE(simulation.cities().empty()) << save;
+        ASSERT_FALSE(simulation.getCities().empty()) << save;
     }
 }
 
@@ -96,22 +96,22 @@ TEST(TestsCitySave, LoadShippedBraessAndGrids)
 //! every rule that adds anything.
 TEST(TestsCitySave, LoadedUnitsKeepTheCapacitiesOfTheirType)
 {
-    Simulation simulation{ 32u, 32u };
-    ASSERT_TRUE(simulation.script().parseFile(testCityRuleset()));
+    Simulation simulation;
+    ASSERT_TRUE(simulation.loadScriptFile(testCityRuleset()));
 
     std::string error;
     ASSERT_TRUE(CitySave::read(testCitySave(), simulation, error)) << error;
 
-    City& city = *simulation.cities().begin()->second;
+    City& city = *simulation.getCities().begin()->second;
     uint32_t checked = 0u;
-    for (auto& unit : city.units())
+    for (auto& unit : city.getUnits())
     {
-        UnitType const& type = simulation.script().getUnitType(unit->type());
-        for (Resource const& capped : type.resources.container())
+        UnitType const& type = simulation.getRuleset().getUnitType(unit->getTypeName().str());
+        for (Resource const& capped : type.resources.getAll())
         {
-            ASSERT_EQ(unit->resources().getCapacity(capped.type()),
+            ASSERT_EQ(unit->getResources().getCapacity(capped.getTypeName()),
                       capped.getCapacity())
-                << unit->type() << " lost the capacity of " << capped.type();
+                << unit->getTypeName() << " lost the capacity of " << capped.getTypeName();
             ++checked;
         }
     }

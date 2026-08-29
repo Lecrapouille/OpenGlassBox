@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------------
 
 //! \file Editor.hpp
-//! \brief Interactive map editor: tools, previews and command history.
+//! \brief Interactive city editor: tools, previews and command history.
 
 
 #ifndef OPEN_GLASSBOX_DEMO_EDITOR_HPP
@@ -22,7 +22,7 @@ namespace ui { class CityViewer; }
 namespace editor {
 
 // ============================================================================
-//! \brief What a click on the map does.
+//! \brief What a click on the city view does.
 // ============================================================================
 enum class EditTool
 {
@@ -32,16 +32,16 @@ enum class EditTool
     Road,
     //! \brief Click on a road to drop a building on it.
     Building,
-    //! \brief Drag a rectangle to paint an Area (a zone).
+    //! \brief Drag a rectangle to paint an Zone (a zone).
     Zone,
-    //! \brief Drag a rectangle to set an amount of resource on Map cells.
+    //! \brief Drag a rectangle to set an amount of resource on Layer cells.
     Paint,
     //! \brief Click to demolish a building or a stretch of road.
     Bulldozer,
 };
 
 // ============================================================================
-//! \brief The map editor: the current tool, its settings, and the undo history.
+//! \brief The city editor: the current tool, its settings, and the undo history.
 //!
 //! Every change the editor makes goes through a command, so undo is a property
 //! of the editor rather than something each tool reimplements. The tools do the
@@ -53,7 +53,7 @@ public:
 
     // ------------------------------------------------------------------------
     //! \brief Row of tool buttons and their settings, drawn in the toolbar of
-    //! the map panel.
+    //! the city panel.
     // ------------------------------------------------------------------------
     void drawToolbar(Simulation& simulation, game::DebugState& state);
 
@@ -110,7 +110,7 @@ public:
 private:
 
     // ------------------------------------------------------------------------
-    //! \brief Make sure the target city, path, way type, unit type and map name
+    //! \brief Make sure the target city, path, way type, unit type and layer name
     //! still exist, and pick sensible ones when they do not. Called every frame
     //! because a script reload can replace all of them.
     // ------------------------------------------------------------------------
@@ -135,7 +135,7 @@ private:
     void handleBulldozer(Simulation& simulation, ui::CityViewer& viewer);
 
     // ------------------------------------------------------------------------
-    //! \brief Follow the rectangular drag shared by the zone and the map
+    //! \brief Follow the rectangular drag shared by the zone and the layer
     //! brushes.
     //! \return true on the frame the stroke is finished and has to be applied.
     // ------------------------------------------------------------------------
@@ -150,8 +150,8 @@ private:
     void drawBrushSlider(float width);
 
     // ------------------------------------------------------------------------
-    //! \brief Options of the zone and map brushes. They are laid out on one row
-    //! when the canvas is wide enough and stacked otherwise, because the map
+    //! \brief Options of the zone and layer brushes. They are laid out on one row
+    //! when the canvas is wide enough and stacked otherwise, because the layer
     //! panel can be docked in a column narrower than the controls.
     // ------------------------------------------------------------------------
     void drawZoneOptions(Simulation& simulation);
@@ -167,16 +167,16 @@ private:
     //! pointers for the same reason the commands are.
     std::string m_city;
     std::string m_path;
-    std::string m_wayType;
+    std::string m_segmentType;
     std::string m_unitType;
-    std::string m_map;
-    std::string m_areaType;
-    //! \brief Map the layer list was last switched to, so that arming the paint
+    std::string m_layer;
+    std::string m_zoneType;
+    //! \brief Layer the layer list was last switched to, so that arming the paint
     //! tool shows it once instead of forcing it on at every frame.
-    std::string m_shownMap;
+    std::string m_shownLayer;
 
     int m_paintAmount = 10;
-    //! \brief Side, in cells, of the square a single click of the zone or map
+    //! \brief Side, in cells, of the square a single click of the zone or layer
     //! brush covers. One cell of a large city is sub-pixel on screen, so a
     //! wider default is what makes an edit visible.
     int m_brush = 4;

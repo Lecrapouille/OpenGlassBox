@@ -2,16 +2,16 @@
 
 #define protected public
 #define private public
-#  include "OpenGlassBox/MapCoordinatesInsideRadius.hpp"
+#  include "OpenGlassBox/CellsInRadius.hpp"
 #undef protected
 #undef private
 
-using MCIR = MapCoordinatesInsideRadius;
+using MCIR = CellsInRadius;
 
 // -----------------------------------------------------------------------------
 // Check compressing coordinates then decompressing them return the original
 // coordinate values.
-TEST(TestsMapCoordinatesInsideRadius, CompressUncompressIdentity)
+TEST(TestsLayerCoordinatesInsideRadius, CompressUncompressIdentity)
 {
     int32_t u, v;
 
@@ -28,7 +28,7 @@ TEST(TestsMapCoordinatesInsideRadius, CompressUncompressIdentity)
 
 // -----------------------------------------------------------------------------
 // Radius = 0
-TEST(TestsMapCoordinatesInsideRadius, ConstructorZeroUnitRadius)
+TEST(TestsLayerCoordinatesInsideRadius, ConstructorZeroUnitRadius)
 {
     MCIR coord1;
     MCIR coord2;
@@ -78,7 +78,7 @@ TEST(TestsMapCoordinatesInsideRadius, ConstructorZeroUnitRadius)
 }
 
 // -----------------------------------------------------------------------------
-TEST(TestsMapCoordinatesInsideRadius, relativeCoordinates)
+TEST(TestsLayerCoordinatesInsideRadius, relativeCoordinates)
 {
     int32_t u, v;
     MCIR coord;
@@ -129,7 +129,7 @@ TEST(TestsMapCoordinatesInsideRadius, relativeCoordinates)
 }
 
 // -----------------------------------------------------------------------------
-TEST(TestsMapCoordinatesInsideRadius, cachedRelativeCoordinatesClipped)
+TEST(TestsLayerCoordinatesInsideRadius, cachedRelativeCoordinatesClipped)
 {
     int32_t u, v;
     MCIR coord;

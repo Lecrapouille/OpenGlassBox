@@ -22,7 +22,7 @@ ImU32 const ACCENT = IM_COL32(86, 156, 214, 255);
 ImU32 const SUCCESS = IM_COL32(106, 190, 120, 255);
 ImU32 const FAILURE = IM_COL32(224, 108, 117, 255);
 ImU32 const MUTED = IM_COL32(150, 155, 165, 255);
-//! \brief Background of the map canvas.
+//! \brief Background of the city canvas.
 ImU32 const CANVAS_BACKGROUND = IM_COL32(24, 26, 31, 255);
 
 // ----------------------------------------------------------------------------
@@ -35,7 +35,7 @@ ImU32 canvasBackground(float hourOfDay);
 //! \brief Colour of the clock HUD, warm by day and cool at night.
 // ----------------------------------------------------------------------------
 ImU32 clockHudColor(float hourOfDay);
-//! \brief Grid lines drawn over the maps.
+//! \brief Grid lines drawn over the layers.
 ImU32 const GRID_LINE = IM_COL32(255, 255, 255, 18);
 ImU32 const GRID_LINE_STRONG = IM_COL32(255, 255, 255, 40);
 
@@ -60,7 +60,7 @@ void loadFonts();
 ImU32 fromScript(uint32_t color, float alpha = 1.0f);
 
 // ----------------------------------------------------------------------------
-//! \brief Map a ratio in [0..1] onto a green to red gradient, used for the
+//! \brief Layer a ratio in [0..1] onto a green to red gradient, used for the
 //! saturation of the ways and for the heatmaps.
 // ----------------------------------------------------------------------------
 ImU32 congestionColor(float ratio, float alpha = 1.0f);

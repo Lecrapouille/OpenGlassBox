@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------------
 
 //! \file EditCommands.hpp
-//! \brief Undoable commands that mutate the map through the editor.
+//! \brief Undoable commands that mutate the city through the editor.
 
 
 #ifndef OPEN_GLASSBOX_DEMO_EDIT_COMMANDS_HPP
@@ -144,11 +144,11 @@ private:
 //! resolved when the command runs, so that a redo reuses the same node the
 //! original edit did.
 // ============================================================================
-class AddWayCommand: public ICommand
+class AddSegmentCommand: public ICommand
 {
 public:
 
-    AddWayCommand(std::string city, std::string path, std::string wayType,
+    AddSegmentCommand(std::string city, std::string path, std::string segmentType,
                   Vector3f from, Vector3f to, float snapRadius);
 
     bool redo(Simulation& simulation) override;
@@ -160,14 +160,14 @@ private:
 
     std::string m_city;
     std::string m_path;
-    std::string m_wayType;
+    std::string m_segmentType;
     Vector3f m_from;
     Vector3f m_to;
     float m_snapRadius;
 
     //! \brief Identifiers handed out by the first run, replayed by the redos so
     //! that the commands stacked above keep pointing at the right things.
-    uint32_t m_wayId = NO_ID;
+    uint32_t m_segmentId = NO_ID;
     uint32_t m_fromId = NO_ID;
     uint32_t m_toId = NO_ID;
     //! \brief Whether the end points were created by this command, and so have
@@ -189,7 +189,7 @@ class AddUnitCommand: public ICommand
 public:
 
     AddUnitCommand(std::string city, std::string path, std::string unitType,
-                   uint32_t wayId, float offset);
+                   uint32_t segmentId, float offset);
 
     //! \brief Place the building on an existing node.
     AddUnitCommand(std::string city, std::string path, std::string unitType,
@@ -211,7 +211,7 @@ private:
     std::string m_city;
     std::string m_path;
     std::string m_unitType;
-    uint32_t m_wayId = NO_ID;
+    uint32_t m_segmentId = NO_ID;
     float m_offset = 0.5f;
     uint32_t m_nodeId = NO_ID;
     uint32_t m_unitId = NO_ID;
@@ -221,7 +221,7 @@ private:
     //! far end the segment used to reach.
     uint32_t m_junctionId = NO_ID;
     uint32_t m_secondHalfId = NO_ID;
-    std::string m_wayType;
+    std::string m_segmentType;
 };
 
 // ============================================================================
@@ -245,7 +245,7 @@ private:
     uint32_t m_id;
     std::string m_unitType;
     bool m_byUnitId = false;
-    uint32_t m_wayId = NO_ID;
+    uint32_t m_segmentId = NO_ID;
     float m_offset = 0.5f;
     Vector3f m_position;
     bool m_onNode = true;
@@ -258,11 +258,11 @@ private:
 //! it: they are gone for good, the same way they are when a rule stops
 //! producing them. The road network is the state worth restoring.
 // ============================================================================
-class RemoveWayCommand: public ICommand
+class RemoveSegmentCommand: public ICommand
 {
 public:
 
-    RemoveWayCommand(std::string city, std::string path, uint32_t wayId);
+    RemoveSegmentCommand(std::string city, std::string path, uint32_t segmentId);
 
     bool redo(Simulation& simulation) override;
     void undo(Simulation& simulation) override;
@@ -273,8 +273,8 @@ private:
 
     std::string m_city;
     std::string m_path;
-    uint32_t m_wayId;
-    std::string m_wayType;
+    uint32_t m_segmentId;
+    std::string m_segmentType;
     uint32_t m_fromId = 0u;
     uint32_t m_toId = 0u;
     Vector3f m_fromPosition;
@@ -297,11 +297,11 @@ public:
     bool redo(Simulation& simulation) override;
     void undo(Simulation& simulation) override;
     std::string label() const override;
-    void onWorldRebuilt() override { m_captured = false; m_ways.clear(); }
+    void onWorldRebuilt() override { m_captured = false; m_segments.clear(); }
 
 private:
 
-    struct WaySnapshot
+    struct SegmentSnapshot
     {
         uint32_t id = 0u;
         std::string type;
@@ -315,12 +315,12 @@ private:
     std::string m_path;
     uint32_t m_nodeId;
     Vector3f m_position;
-    std::vector<WaySnapshot> m_ways;
+    std::vector<SegmentSnapshot> m_segments;
     bool m_captured = false;
 };
 
 // ============================================================================
-//! \brief Paint an amount of resource over a rectangle of Map cells.
+//! \brief Paint an amount of resource over a rectangle of Layer cells.
 //!
 //! The previous content of the rectangle is copied before being overwritten,
 //! which is what makes the brush undoable.
@@ -329,7 +329,7 @@ class PaintResourceCommand: public ICommand
 {
 public:
 
-    PaintResourceCommand(std::string city, std::string map, int32_t u0,
+    PaintResourceCommand(std::string city, std::string layer, int32_t u0,
                          int32_t v0, int32_t u1, int32_t v1, uint32_t amount);
 
     bool redo(Simulation& simulation) override;
@@ -346,7 +346,7 @@ public:
 private:
 
     std::string m_city;
-    std::string m_map;
+    std::string m_layer;
     int32_t m_u0;
     int32_t m_v0;
     int32_t m_u1;
@@ -357,18 +357,18 @@ private:
 };
 
 // ============================================================================
-//! \brief Paint an Area over a rectangle of cells.
+//! \brief Paint a Zone over a rectangle of cells.
 //!
-//! Areas do not overlap: painting Commercial over a corner of a Residential
-//! rectangle re-zones exactly the cells painted. The part of the old Area that
+//! Zones do not overlap: painting Commercial over a corner of a Residential
+//! rectangle re-zones exactly the cells painted. The part of the old Zone that
 //! survives is put back as up to four rectangles, which is what lets a zone be
 //! converted piece by piece instead of being wiped out whole.
 // ============================================================================
-class AddAreaCommand: public ICommand
+class AddZoneCommand: public ICommand
 {
 public:
 
-    AddAreaCommand(std::string city, std::string areaType, int32_t u0,
+    AddZoneCommand(std::string city, std::string zoneType, int32_t u0,
                    int32_t v0, int32_t u1, int32_t v1);
 
     bool redo(Simulation& simulation) override;
@@ -376,14 +376,14 @@ public:
     std::string label() const override;
     void onWorldRebuilt() override
     {
-        m_areaId = NO_ID;
+        m_zoneId = NO_ID;
         m_removed.clear();
         m_leftovers.clear();
     }
 
 private:
 
-    struct SavedArea
+    struct SavedZone
     {
         std::string type;
         int32_t u0 = 0;
@@ -393,16 +393,16 @@ private:
     };
 
     std::string m_city;
-    std::string m_areaType;
+    std::string m_zoneType;
     int32_t m_u0;
     int32_t m_v0;
     int32_t m_u1;
     int32_t m_v1;
-    uint32_t m_areaId = NO_ID;
-    //! \brief The Areas this command re-zoned, as they were before it ran.
-    std::vector<SavedArea> m_removed;
+    uint32_t m_zoneId = NO_ID;
+    //! \brief The Zones this command re-zoned, as they were before it ran.
+    std::vector<SavedZone> m_removed;
     //! \brief Identifiers of the rectangles added back for the parts of those
-    //! Areas the new one does not cover.
+    //! Zones the new one does not cover.
     std::vector<uint32_t> m_leftovers;
 };
 } // namespace editor

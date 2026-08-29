@@ -13,11 +13,9 @@
 namespace ogb
 {
 
-template <class T, class Compare = std::less<>>
+template<class T>
 static T const&
-lookup(std::map<std::string, std::unique_ptr<T>, Compare> const& container,
-       std::string const& id,
-       char const* what)
+lookup(Catalog<T> const& container, std::string const& id, char const* what)
 {
     auto const it = container.find(id);
     if (it == container.end())
@@ -30,9 +28,16 @@ lookup(std::map<std::string, std::unique_ptr<T>, Compare> const& container,
 }
 
 // -----------------------------------------------------------------------------
-template <class T, class Compare = std::less<>>
-static T* search(std::map<std::string, std::unique_ptr<T>, Compare>& container,
-                 std::string const& id)
+template<class T>
+static T* search(Catalog<T>& container, std::string const& id)
+{
+    auto const it = container.find(id);
+    return (it == container.end()) ? nullptr : it->second.get();
+}
+
+// -----------------------------------------------------------------------------
+template<class T>
+static T const* search(Catalog<T> const& container, std::string const& id)
 {
     auto const it = container.find(id);
     return (it == container.end()) ? nullptr : it->second.get();
@@ -41,10 +46,8 @@ static T* search(std::map<std::string, std::unique_ptr<T>, Compare>& container,
 // -----------------------------------------------------------------------------
 //! \brief Create a named entry, or return nullptr when the name is taken.
 // -----------------------------------------------------------------------------
-template <class T, class Compare = std::less<>, class... Args>
-static T* create(std::map<std::string, std::unique_ptr<T>, Compare>& container,
-                 std::string const& id,
-                 Args&&... args)
+template<class T, class... Args>
+static T* create(Catalog<T>& container, std::string const& id, Args&&... args)
 {
     if (container.find(id) != container.end())
         return nullptr;
@@ -67,9 +70,9 @@ PathType const& ScriptDefinitions::getPathType(std::string const& id) const
     return lookup(m_pathTypes, id, "path type");
 }
 
-WayType const& ScriptDefinitions::getWayType(std::string const& id) const
+SegmentType const& ScriptDefinitions::getSegmentType(std::string const& id) const
 {
-    return lookup(m_wayTypes, id, "segment type");
+    return lookup(m_segmentTypes, id, "segment type");
 }
 
 AgentType const& ScriptDefinitions::getAgentType(std::string const& id) const
@@ -82,14 +85,14 @@ UnitType const& ScriptDefinitions::getUnitType(std::string const& id) const
     return lookup(m_unitTypes, id, "unit type");
 }
 
-MapType const& ScriptDefinitions::getMapType(std::string const& id) const
+LayerType const& ScriptDefinitions::getLayerType(std::string const& id) const
 {
-    return lookup(m_mapTypes, id, "map type");
+    return lookup(m_layerTypes, id, "layer type");
 }
 
-RuleMap const& ScriptDefinitions::getRuleMap(std::string const& id) const
+RuleLayer const& ScriptDefinitions::getRuleLayer(std::string const& id) const
 {
-    return lookup(m_ruleMaps, id, "map rule");
+    return lookup(m_ruleLayers, id, "layer rule");
 }
 
 RuleUnit const& ScriptDefinitions::getRuleUnit(std::string const& id) const
@@ -97,14 +100,14 @@ RuleUnit const& ScriptDefinitions::getRuleUnit(std::string const& id) const
     return lookup(m_ruleUnits, id, "unit rule");
 }
 
-RuleArea const& ScriptDefinitions::getRuleArea(std::string const& id) const
+RuleZone const& ScriptDefinitions::getRuleZone(std::string const& id) const
 {
-    return lookup(m_ruleAreas, id, "area rule");
+    return lookup(m_ruleZones, id, "zone rule");
 }
 
-AreaType const& ScriptDefinitions::getAreaType(std::string const& id) const
+ZoneType const& ScriptDefinitions::getZoneType(std::string const& id) const
 {
-    return lookup(m_areaTypes, id, "area type");
+    return lookup(m_zoneTypes, id, "zone type");
 }
 
 // -----------------------------------------------------------------------------
@@ -118,9 +121,9 @@ PathType* ScriptDefinitions::findPathType(std::string const& id)
     return search(m_pathTypes, id);
 }
 
-WayType* ScriptDefinitions::findWayType(std::string const& id)
+SegmentType* ScriptDefinitions::findSegmentType(std::string const& id)
 {
-    return search(m_wayTypes, id);
+    return search(m_segmentTypes, id);
 }
 
 AgentType* ScriptDefinitions::findAgentType(std::string const& id)
@@ -133,14 +136,14 @@ UnitType* ScriptDefinitions::findUnitType(std::string const& id)
     return search(m_unitTypes, id);
 }
 
-MapType* ScriptDefinitions::findMapType(std::string const& id)
+LayerType* ScriptDefinitions::findLayerType(std::string const& id)
 {
-    return search(m_mapTypes, id);
+    return search(m_layerTypes, id);
 }
 
-RuleMap* ScriptDefinitions::findRuleMap(std::string const& id)
+RuleLayer* ScriptDefinitions::findRuleLayer(std::string const& id)
 {
-    return search(m_ruleMaps, id);
+    return search(m_ruleLayers, id);
 }
 
 RuleUnit* ScriptDefinitions::findRuleUnit(std::string const& id)
@@ -148,14 +151,65 @@ RuleUnit* ScriptDefinitions::findRuleUnit(std::string const& id)
     return search(m_ruleUnits, id);
 }
 
-RuleArea* ScriptDefinitions::findRuleArea(std::string const& id)
+RuleZone* ScriptDefinitions::findRuleZone(std::string const& id)
 {
-    return search(m_ruleAreas, id);
+    return search(m_ruleZones, id);
 }
 
-AreaType* ScriptDefinitions::findAreaType(std::string const& id)
+ZoneType* ScriptDefinitions::findZoneType(std::string const& id)
 {
-    return search(m_areaTypes, id);
+    return search(m_zoneTypes, id);
+}
+
+// -----------------------------------------------------------------------------
+Resource const* ScriptDefinitions::findResource(std::string const& id) const
+{
+    return search(m_resources, id);
+}
+
+PathType const* ScriptDefinitions::findPathType(std::string const& id) const
+{
+    return search(m_pathTypes, id);
+}
+
+SegmentType const* ScriptDefinitions::findSegmentType(std::string const& id) const
+{
+    return search(m_segmentTypes, id);
+}
+
+AgentType const* ScriptDefinitions::findAgentType(std::string const& id) const
+{
+    return search(m_agentTypes, id);
+}
+
+UnitType const* ScriptDefinitions::findUnitType(std::string const& id) const
+{
+    return search(m_unitTypes, id);
+}
+
+LayerType const* ScriptDefinitions::findLayerType(std::string const& id) const
+{
+    return search(m_layerTypes, id);
+}
+
+RuleLayer const* ScriptDefinitions::findRuleLayer(std::string const& id) const
+{
+    return search(m_ruleLayers, id);
+}
+
+RuleUnit const* ScriptDefinitions::findRuleUnit(std::string const& id) const
+{
+    return search(m_ruleUnits, id);
+}
+
+RuleZone const* ScriptDefinitions::findRuleZone(std::string const& id) const
+{
+    return search(m_ruleZones, id);
+}
+
+ZoneType const* ScriptDefinitions::findZoneType(std::string const& id) const
+{
+    return search(m_zoneTypes, id);
 }
 
 // -----------------------------------------------------------------------------
@@ -169,9 +223,9 @@ PathType* ScriptDefinitions::addPathType(std::string const& id)
     return create(m_pathTypes, id, id);
 }
 
-WayType* ScriptDefinitions::addWayType(std::string const& id)
+SegmentType* ScriptDefinitions::addSegmentType(std::string const& id)
 {
-    return create(m_wayTypes, id, id);
+    return create(m_segmentTypes, id, id);
 }
 
 AgentType* ScriptDefinitions::addAgentType(std::string const& id)
@@ -184,17 +238,17 @@ UnitType* ScriptDefinitions::addUnitType(std::string const& id)
     return create(m_unitTypes, id, id);
 }
 
-MapType* ScriptDefinitions::addMapType(std::string const& id)
+LayerType* ScriptDefinitions::addLayerType(std::string const& id)
 {
-    return create(m_mapTypes, id, id);
+    return create(m_layerTypes, id, id);
 }
 
 // -----------------------------------------------------------------------------
-RuleMap* ScriptDefinitions::addRuleMap(std::string const& id)
+RuleLayer* ScriptDefinitions::addRuleLayer(std::string const& id)
 {
     // Born empty: the second pass gives it its rate and its commands, once
     // every name it may refer to has been declared.
-    return create(m_ruleMaps, id, RuleMapType(id));
+    return create(m_ruleLayers, id, RuleLayerType(id));
 }
 
 // -----------------------------------------------------------------------------
@@ -203,14 +257,14 @@ RuleUnit* ScriptDefinitions::addRuleUnit(std::string const& id)
     return create(m_ruleUnits, id, RuleUnitType(id));
 }
 
-RuleArea* ScriptDefinitions::addRuleArea(std::string const& id)
+RuleZone* ScriptDefinitions::addRuleZone(std::string const& id)
 {
-    return create(m_ruleAreas, id, RuleAreaType(id));
+    return create(m_ruleZones, id, RuleZoneType(id));
 }
 
-AreaType* ScriptDefinitions::addAreaType(std::string const& id)
+ZoneType* ScriptDefinitions::addZoneType(std::string const& id)
 {
-    return create(m_areaTypes, id, id);
+    return create(m_zoneTypes, id, id);
 }
 
 // -----------------------------------------------------------------------------
@@ -234,27 +288,27 @@ void ScriptDefinitions::clear()
 {
     // The rules point at the commands and the commands at the values, so unwind
     // in that order: rules first, then commands, then what they read.
-    m_mapTypes.clear();
+    m_layerTypes.clear();
     m_unitTypes.clear();
-    m_ruleMaps.clear();
+    m_ruleLayers.clear();
     m_ruleUnits.clear();
-    m_ruleAreas.clear();
-    m_areaTypes.clear();
+    m_ruleZones.clear();
+    m_zoneTypes.clear();
     m_commands.clear();
     m_values.clear();
     m_agentTypes.clear();
-    m_wayTypes.clear();
+    m_segmentTypes.clear();
     m_pathTypes.clear();
     m_resources.clear();
 }
 
 // -----------------------------------------------------------------------------
-bool ScriptDefinitions::empty() const
+bool ScriptDefinitions::isEmpty() const
 {
-    return m_resources.empty() && m_pathTypes.empty() && m_wayTypes.empty() &&
-           m_agentTypes.empty() && m_unitTypes.empty() && m_mapTypes.empty() &&
-           m_ruleMaps.empty() && m_ruleUnits.empty() && m_ruleAreas.empty() &&
-           m_areaTypes.empty();
+    return m_resources.empty() && m_pathTypes.empty() && m_segmentTypes.empty() &&
+           m_agentTypes.empty() && m_unitTypes.empty() && m_layerTypes.empty() &&
+           m_ruleLayers.empty() && m_ruleUnits.empty() && m_ruleZones.empty() &&
+           m_zoneTypes.empty();
 }
 
 } // namespace ogb

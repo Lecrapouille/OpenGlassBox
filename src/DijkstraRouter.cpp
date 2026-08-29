@@ -24,7 +24,7 @@ Unit* acceptingUnitOnNode(Node* current,
                           Name const& searchTarget,
                           Resources const& resources)
 {
-    std::vector<Unit*>& units = current->units();
+    std::vector<Unit*> const& units = current->getUnits();
     size_t i = units.size();
     while (i--)
     {
@@ -35,11 +35,11 @@ Unit* acceptingUnitOnNode(Node* current,
 }
 
 //! \brief First building along a segment that accepts the load, or nullptr.
-Unit* acceptingUnitOnWay(Way* way,
+Unit* acceptingUnitOnSegment(Segment* segment,
                          Name const& searchTarget,
                          Resources const& resources)
 {
-    std::vector<Unit*>& units = way->units();
+    std::vector<Unit*> const& units = segment->getUnits();
     size_t i = units.size();
     while (i--)
     {
@@ -60,19 +60,19 @@ void Dijkstra::setRandomSeed(unsigned seed)
 }
 
 //------------------------------------------------------------------------------
-Node* Dijkstra::randomNeighbor(Node& fromNode)
+Node* Dijkstra::findRandomNeighbor(Node& fromNode)
 {
-    std::vector<Way*>& ways = fromNode.ways();
-    if (ways.empty())
+    std::vector<Segment*> const& segments = fromNode.getSegments();
+    if (segments.empty())
         return nullptr;
 
-    std::uniform_int_distribution<size_t> dist(0u, ways.size() - 1u);
-    Way* randomSegment = ways[dist(m_rng)];
+    std::uniform_int_distribution<size_t> dist(0u, segments.size() - 1u);
+    Segment* randomSegment = segments[dist(m_rng)];
 
-    if (&randomSegment->from() == &fromNode)
-        return &randomSegment->to();
-    if (&randomSegment->to() == &fromNode)
-        return &randomSegment->from();
+    if (&randomSegment->getFrom() == &fromNode)
+        return &randomSegment->getTo();
+    if (&randomSegment->getTo() == &fromNode)
+        return &randomSegment->getFrom();
 
     return nullptr;
 }
@@ -107,16 +107,12 @@ void Dijkstra::beginSearch(size_t const nodeCount)
 Route Dijkstra::reconstruct(Node const& fromNode,
                             Node* goalNode,
                             Unit* destination,
-                            Way* approachWay,
+                            Segment* approachSegment,
                             float approachOffset,
                             float cost)
 {
     Route route;
-    route.found = true;
-    route.destination = destination;
-    route.approachWay = approachWay;
-    route.approachOffset = approachOffset;
-    route.cost = cost;
+    route.setTarget(destination, approachSegment, approachOffset, cost);
 
     if (goalNode == nullptr || goalNode == &fromNode)
         return route;
@@ -126,8 +122,8 @@ Route Dijkstra::reconstruct(Node const& fromNode,
     Node* current = goalNode;
     while (current != &fromNode)
     {
-        uint32_t const index = current->index();
-        if (!visited(index))
+        uint32_t const index = current->getIndex();
+        if (!isVisited(index))
             break;
 
         Node* const previous = m_cameFrom[index];
@@ -138,7 +134,7 @@ Route Dijkstra::reconstruct(Node const& fromNode,
         current = previous;
     }
 
-    route.nodes.assign(m_reverse.rbegin(), m_reverse.rend());
+    route.setWaypoints(m_reverse.rbegin(), m_reverse.rend());
     return route;
 }
 
@@ -147,16 +143,16 @@ Route Dijkstra::findRoute(Node& fromNode,
                           Name const& searchTarget,
                           Resources const& resources)
 {
-    // Node::index() is what the arrays below are indexed by, and only a Path
+    // Node::getIndex() is what the arrays below are indexed by, and only a Path
     // hands out those indices. A crossroads outside any network is therefore
     // not somewhere a trip can start, and there is nowhere to go from it.
-    Path const* const scope = fromNode.path();
+    Path const* const scope = fromNode.getPath();
     if (scope == nullptr)
         return Route();
 
-    beginSearch(scope->nodeCount());
+    beginSearch(scope->getNodeCount());
 
-    setScore(fromNode.index(), 0.0f, nullptr);
+    setScore(fromNode.getIndex(), 0.0f, nullptr);
     m_open.push_back({ 0.0f, 0.0f, &fromNode });
     std::push_heap(m_open.begin(), m_open.end(), std::greater<QueueEntry>());
 
@@ -164,7 +160,7 @@ Route Dijkstra::findRoute(Node& fromNode,
     // answer yet: the search carries on until every crossroads it could still
     // reach is already more expensive than this.
     Route best;
-    float bestCost = config::ROUTING_INFINITY;
+    float bestCost = ROUTING_INFINITY;
 
     while (!m_open.empty())
     {
@@ -173,7 +169,7 @@ Route Dijkstra::findRoute(Node& fromNode,
         m_open.pop_back();
 
         Node* const currentNode = current.node;
-        uint32_t const currentIndex = currentNode->index();
+        uint32_t const currentIndex = currentNode->getIndex();
         float const g = current.g;
 
         // A cheaper way of reaching this crossroads was found after this entry
@@ -196,21 +192,21 @@ Route Dijkstra::findRoute(Node& fromNode,
 
         // A building standing along one of the streets is only a candidate: a
         // crossroads one hop further may hold a cheaper one.
-        for (auto* way : currentNode->ways())
+        for (auto* segment : currentNode->getSegments())
         {
-            Unit* unit = acceptingUnitOnWay(way, searchTarget, resources);
+            Unit* unit = acceptingUnitOnSegment(segment, searchTarget, resources);
             if (unit == nullptr)
                 continue;
 
             float const extra =
-                way->travelTime() * ((&way->from() == currentNode)
-                                         ? unit->wayOffset()
-                                         : (1.0f - unit->wayOffset()));
+                segment->getTravelTime() * ((&segment->getFrom() == currentNode)
+                                         ? unit->getSegmentOffset()
+                                         : (1.0f - unit->getSegmentOffset()));
             float const cost = g + extra;
             if (cost < bestCost)
             {
                 best = reconstruct(
-                    fromNode, currentNode, unit, way, unit->wayOffset(), cost);
+                    fromNode, currentNode, unit, segment, unit->getSegmentOffset(), cost);
                 bestCost = cost;
             }
         }
@@ -218,20 +214,20 @@ Route Dijkstra::findRoute(Node& fromNode,
         m_closed[currentIndex] = 1u;
 
         // Relax the streets leaving the crossroads.
-        for (auto* way : currentNode->ways())
+        for (auto* segment : currentNode->getSegments())
         {
             Node* const neighbor =
-                (&way->from() == currentNode) ? &way->to() : &way->from();
+                (&segment->getFrom() == currentNode) ? &segment->getTo() : &segment->getFrom();
 
             // A road and a railway may share a crossroads without a trip being
             // allowed to change from one to the other.
-            if (neighbor->path() != scope)
+            if (neighbor->getPath() != scope)
                 continue;
 
-            uint32_t const neighborIndex = neighbor->index();
-            float const tentativeG = g + way->travelTime();
+            uint32_t const neighborIndex = neighbor->getIndex();
+            float const tentativeG = g + segment->getTravelTime();
 
-            if (visited(neighborIndex) &&
+            if (isVisited(neighborIndex) &&
                 (tentativeG >= m_scoreFromStart[neighborIndex]))
                 continue;
 
@@ -247,25 +243,25 @@ Route Dijkstra::findRoute(Node& fromNode,
 }
 
 //------------------------------------------------------------------------------
-Node* Dijkstra::findNextPoint(Node& fromNode,
-                              Name& searchTarget,
-                              Resources& resources)
+Node* Dijkstra::findNextNode(Node& fromNode,
+                             Name& searchTarget,
+                             Resources& resources)
 {
     Route const route = findRoute(fromNode, searchTarget, resources);
-    if (!route.found)
-        return randomNeighbor(fromNode);
-    if (!route.waypointsLeft())
+    if (!route.isFound())
+        return findRandomNeighbor(fromNode);
+    if (!route.hasWaypointsLeft())
         return &fromNode;
-    return route.nextWaypoint();
+    return route.getNextWaypoint();
 }
 
 //------------------------------------------------------------------------------
-float Dijkstra::shortestPathCost(Node& fromNode,
-                                 Name const& searchTarget,
-                                 Resources const& resources)
+float Dijkstra::computeShortestPathCost(Node& fromNode,
+                                     Name const& searchTarget,
+                                     Resources const& resources)
 {
     Route const route = findRoute(fromNode, searchTarget, resources);
-    return route.found ? route.cost : config::ROUTING_INFINITY;
+    return route.isFound() ? route.getCost() : ROUTING_INFINITY;
 }
 
 } // namespace ogb

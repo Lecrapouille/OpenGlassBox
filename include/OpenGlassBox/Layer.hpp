@@ -5,15 +5,15 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
-//! \file Map.hpp
-//! \brief Grid-backed resource layer shared by cities on the world map.
+//! \file Layer.hpp
+//! \brief Grid-backed resource layer shared by cities on the world grid.
 
-#ifndef OPEN_GLASSBOX_MAP_HPP
-#define OPEN_GLASSBOX_MAP_HPP
+#ifndef OPEN_GLASSBOX_LAYER_HPP
+#define OPEN_GLASSBOX_LAYER_HPP
 
-#include "OpenGlassBox/MapCoordinatesInsideRadius.hpp"
-#include "OpenGlassBox/MapRandomCoordinates.hpp"
-#include "OpenGlassBox/MapRegion.hpp"
+#include "OpenGlassBox/CellsInRadius.hpp"
+#include "OpenGlassBox/RandomCells.hpp"
+#include "OpenGlassBox/CellRegion.hpp"
 #include "OpenGlassBox/Rule.hpp"
 #include "OpenGlassBox/Vector.hpp"
 
@@ -27,7 +27,7 @@ namespace ogb
 class City;
 class World;
 
-//! \brief Collection of City, declared here because a Map runs its rules over
+//! \brief Collection of City, declared here because a Layer runs its rules over
 //! the region of each of them.
 using Cities = std::map<std::string, std::unique_ptr<City>, std::less<>>;
 
@@ -36,7 +36,7 @@ using Cities = std::map<std::string, std::unique_ptr<City>, std::less<>>;
 //! pollution, land value or desirability. Every cell of the grid holds an
 //! amount of that one thing, and rules read and write those amounts.
 //!
-//! A Map is what lets a rule ask a question about a place rather than about a
+//! A Layer is what lets a rule ask a question about a place rather than about a
 //! building: "is there water within three cells of here?" A building reads and
 //! writes its neighbourhood through its footprint, which is a radius around the
 //! cell it stands on.
@@ -44,42 +44,42 @@ using Cities = std::map<std::string, std::unique_ptr<City>, std::less<>>;
 //! The grid is the one of the World, shared by every City and unbounded in the
 //! four directions, which is why cell coordinates are signed. Storage is
 //! sparse, by blocks of CHUNK_SIZE x CHUNK_SIZE cells allocated the first time
-//! something is written into them: an empty map costs nothing, and a city can
+//! something is written into them: an empty layer costs nothing, and a city can
 //! be founded anywhere without deciding on a size beforehand.
 //!
-//! Each cell is capped at the capacity of the map type, so a resource cannot
+//! Each cell is capped at the capacity of the layer type, so a resource cannot
 //! pile up without bound in one place. A rule asking over a radius therefore
 //! reads at most capacity times the number of cells covered, which is what
-//! cellsInRadius() is for.
+//! countCellsInRadius() is for.
 //!
 //! Example:
 //! \code
-//! Map& water = city.addMap(simulation.script().getMapType("Water"));
+//! Layer& water = city.addLayer(simulation.getRuleset().getLayerType("Water"));
 //!
 //! // Fill a pond by hand, then read what a building standing at (10,10) with a
 //! // footprint of three cells would see.
-//! water.setResource(10, 10, water.getCapacity());
-//! uint32_t const seen = water.getResource(10, 10, 3u, city.region());
+//! water.setResource({ 10, 10 }, water.getCellCapacity());
+//! uint32_t const seen = water.getResource({ 10, 10 }, 3u, city.getRegion());
 //! \endcode
 //!
 //! The matching script. The rule below turns water into grass, one cell at a
 //! time, which is how a forest grows or pollution creeps:
 //! \code
 //! rules
-//!     mapRule CreateGrass
+//!     layerRule CreateGrass
 //!         rate 20 minutes
-//!         map Water remove 10 randomTilesPercent 90
-//!         map Grass add 1
+//!         layer Water remove 10 randomTilesPercent 90
+//!         layer Grass add 1
 //!     end
 //! end
 //!
-//! maps
-//!     map Water color 0x0000FF capacity 100 rules [ ]
-//!     map Grass color 0x00FF00 capacity 10 rules [ CreateGrass ]
+//! layers
+//!     layer Water color 0x0000FF capacity 100 rules [ ]
+//!     layer Grass color 0x00FF00 capacity 10 rules [ CreateGrass ]
 //! end
 //! \endcode
 //==============================================================================
-class Map
+class Layer
 {
 public:
 
@@ -88,26 +88,32 @@ public:
     static constexpr int32_t CHUNK_SIZE = 16;
 
     // -------------------------------------------------------------------------
-    //! \brief An empty map: every cell reads as zero until written to, and
+    //! \brief An empty layer: every cell reads as zero until written to, and
     //! nothing is allocated yet.
     //! \param[in] type recipe of the layer: its name, its colour, the cap of a
-    //! cell and the rules to run. Kept by reference and has to outlive the Map.
-    //! \param[in] world the world owning the grid the map is laid on. Kept by
+    //! cell and the rules to run. Kept by reference and has to outlive the Layer.
+    //! \param[in] world the world owning the grid the layer is laid on. Kept by
     //! reference.
     // -------------------------------------------------------------------------
-    Map(MapType const& type, World& world);
+    Layer(LayerType const& type, World& world);
+
+    Layer(Layer const&) = delete;
+    Layer& operator=(Layer const&) = delete;
+    Layer(Layer&&) = delete;
+    Layer& operator=(Layer&&) = delete;
 
     // -------------------------------------------------------------------------
     //! \brief Write the amount held by one cell, capped by the capacity of the
     //! type.
     //!
     //! Writing zero into a cell of a block that was never touched allocates
-    //! nothing, so clearing a map one cell at a time does not make it grow.
+    //! nothing, so clearing a layer one cell at a time does not make it grow.
     //!
-    //! \param[in] u, v coordinates of the cell, on the grid of the World.
-    //! \param[in] amount what to store. Values above getCapacity() are clamped.
+    //! \param[in] cell the cell, on the grid of the World.
+    //! \param[in] amount what to store. Values above getCellCapacity() are
+    //! clamped.
     // -------------------------------------------------------------------------
-    void setResource(int32_t const u, int32_t const v, uint32_t amount)
+    void setResource(Cell const cell, uint32_t amount)
     {
         if (amount > m_type.capacity)
             amount = m_type.capacity;
@@ -116,91 +122,85 @@ public:
         // already read as.
         if (amount == 0u)
         {
-            Chunk* const chunk = findChunk(u, v);
+            Chunk* const chunk = findChunk(cell);
             if (chunk == nullptr)
                 return;
 
-            uint32_t& cell = chunk->cells[cellIndex(u, v)];
-            chunk->total -= cell;
-            cell = 0u;
+            uint32_t& stored = chunk->cells[cellIndex(cell)];
+            chunk->total -= stored;
+            stored = 0u;
             return;
         }
 
-        Chunk& chunk = chunkFor(u, v);
-        uint32_t& cell = chunk.cells[cellIndex(u, v)];
-        chunk.total = chunk.total - cell + amount;
-        cell = amount;
+        Chunk& chunk = chunkFor(cell);
+        uint32_t& stored = chunk.cells[cellIndex(cell)];
+        chunk.total = chunk.total - stored + amount;
+        stored = amount;
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \param[in] u, v coordinates of the cell.
+    //! \brief \param[in] cell the cell to read.
     //! \return the amount held by that cell. A cell that was never written to
     //! reads as zero, which is also the answer for a cell outside every
     //! allocated block.
     // -------------------------------------------------------------------------
-    uint32_t getResource(int32_t const u, int32_t const v) const
+    [[nodiscard]] uint32_t getResource(Cell const cell) const
     {
-        Chunk const* const chunk = findChunk(u, v);
-        return (chunk == nullptr) ? 0u : chunk->cells[cellIndex(u, v)];
+        Chunk const* const chunk = findChunk(cell);
+        return (chunk == nullptr) ? 0u : chunk->cells[cellIndex(cell)];
     }
 
     // -------------------------------------------------------------------------
     //! \brief What a building with a footprint would see: the sum over its
     //! neighbourhood.
     //!
-    //! \param[in] u, v coordinates of the centre cell.
+    //! \param[in] centre the cell the footprint is centred on.
     //! \param[in] radius how far the footprint reaches, as a taxicab distance:
-    //! zero is the centre cell alone. See MapCoordinatesInsideRadius.
-    //! \param[in] region the cells the calling City administers. Cells outside
-    //! it are left out, so a city never reads over the shoulder of its
-    //! neighbour.
+    //! zero is the centre cell alone. See CellsInRadius.
+    //! \param[in] region the cells the calling City owns. Cells outside it are
+    //! left out, so a city never reads over the shoulder of its neighbour.
     //! \return the sum, capped at the largest value a uint32_t holds.
-    //! \note Not const: the walk over the neighbourhood reuses a cache held by
-    //! the Map, so that a rule firing every tick does not allocate.
     // -------------------------------------------------------------------------
-    uint32_t getResource(int32_t const u,
-                         int32_t const v,
+    [[nodiscard]] uint32_t getResource(Cell const centre,
                          uint32_t radius,
-                         MapRegion const& region)
+                         CellRegion const& region) const
     {
         // A rule of a layer stands on the cell it reads, and does so on every
         // cell of the region: worth not walking a one element diamond, and
         // worth being inlined into the caller.
         if (radius == 0u)
-            return region.contains(u, v) ? getResource(u, v) : 0u;
+            return region.contains(centre) ? getResource(centre) : 0u;
 
-        return getResourceInRadius(u, v, radius, region);
+        return sumInRadius(centre, radius, region);
     }
 
     // -------------------------------------------------------------------------
-    //! \brief How many cells the footprint of (u,v) covers inside the region.
+    //! \brief How many cells the footprint of a cell covers inside the region.
     //!
     //! getResource() over a radius sums that many cells, so this is what turns
     //! the capacity of one cell into the largest value a rule may read. A rule
     //! comparing against a proportion needs both.
     //!
-    //! \param[in] u, v coordinates of the centre cell.
+    //! \param[in] centre the cell the footprint is centred on.
     //! \param[in] radius how far the footprint reaches.
-    //! \param[in] region the cells the calling City administers.
-    //! \return the number of cells covered, at least zero when the centre
-    //! itself lies outside the region.
-    //! \note Not const, for the same reason as getResource().
+    //! \param[in] region the cells the calling City owns.
+    //! \return how many cells are covered, zero when the centre itself lies
+    //! outside the region.
     // -------------------------------------------------------------------------
-    uint32_t cellsInRadius(int32_t const u,
-                           int32_t const v,
-                           uint32_t const radius,
-                           MapRegion const& region)
+    uint32_t countCellsInRadius(Cell const centre,
+                                uint32_t const radius,
+                                CellRegion const& region) const
     {
         if (radius == 0u)
-            return region.contains(u, v) ? 1u : 0u;
+            return region.contains(centre) ? 1u : 0u;
 
-        return countCellsInRadius(u, v, radius, region);
+        return walkCellsInRadius(centre, radius, region);
     }
 
     // -------------------------------------------------------------------------
     //! \brief \return the largest amount a single cell may hold, from the type.
     // -------------------------------------------------------------------------
-    uint32_t getCapacity() const
+    [[nodiscard]] uint32_t getCellCapacity() const
     {
         return m_type.capacity;
     }
@@ -208,12 +208,12 @@ public:
     // -------------------------------------------------------------------------
     //! \brief Add to one cell, up to the capacity of the type. What overflows
     //! is dropped rather than pushed to a neighbour.
-    //! \param[in] u, v coordinates of the cell.
+    //! \param[in] cell the cell to fill.
     //! \param[in] toAdd how much to add.
     // -------------------------------------------------------------------------
-    void addResource(int32_t const u, int32_t const v, uint32_t const toAdd)
+    void addResource(Cell const cell, uint32_t const toAdd)
     {
-        uint32_t amount = getResource(u, v);
+        uint32_t amount = getResource(cell);
 
         // Avoid integer overflow
         if (amount >= Resource::MAX_CAPACITY - toAdd)
@@ -221,91 +221,88 @@ public:
         else
             amount += toAdd;
 
-        setResource(u, v, amount);
+        setResource(cell, amount);
     }
 
     // -------------------------------------------------------------------------
     //! \brief Add to the cells of a footprint.
     //!
-    //! \param[in] u, v coordinates of the centre cell.
+    //! \param[in] centre the cell the footprint is centred on.
     //! \param[in] radius how far the footprint reaches.
-    //! \param[in] region the cells the calling City administers. Cells outside
-    //! it get nothing.
+    //! \param[in] region the cells the calling City owns. Cells outside it get
+    //! nothing.
     //! \param[in] toAdd how much to hand out over the whole footprint when
     //! \c distributed is true, or to each cell of it when false.
     //! \param[in] distributed true to walk the cells in random order and take
     //! from \c toAdd as it goes, so that the footprint receives \c toAdd in
     //! total and the last cells may get nothing; false to give \c toAdd to
     //! every cell.
-    //! \note Every cell is still capped at getCapacity(), so a saturated
+    //! \note Every cell is still capped at getCellCapacity(), so a saturated
     //! footprint swallows nothing and the remainder is dropped.
     // -------------------------------------------------------------------------
-    void addResource(int32_t const u,
-                     int32_t const v,
+    void addResource(Cell const centre,
                      uint32_t const radius,
-                     MapRegion const& region,
+                     CellRegion const& region,
                      uint32_t const toAdd,
                      bool distributed = true)
     {
         if (radius == 0u)
         {
-            if (region.contains(u, v))
-                addResource(u, v, toAdd);
+            if (region.contains(centre))
+                addResource(centre, toAdd);
             return;
         }
 
-        addResourceInRadius(u, v, radius, region, toAdd, distributed);
+        addResourceInRadius(centre, radius, region, toAdd, distributed);
     }
 
     // -------------------------------------------------------------------------
     //! \brief Take from one cell, down to zero. What is missing is simply not
     //! taken: the cell never goes negative.
-    //! \param[in] u, v coordinates of the cell.
+    //! \param[in] cell the cell to empty.
     //! \param[in] toRemove how much to take.
     // -------------------------------------------------------------------------
-    void
-    removeResource(int32_t const u, int32_t const v, uint32_t const toRemove)
+    void removeResource(Cell const cell, uint32_t const toRemove)
     {
-        uint32_t const amount = getResource(u, v);
+        uint32_t const amount = getResource(cell);
 
-        setResource(u, v, (amount > toRemove) ? (amount - toRemove) : 0u);
+        setResource(cell, (amount > toRemove) ? (amount - toRemove) : 0u);
     }
 
     // -------------------------------------------------------------------------
     //! \brief Take from the cells of a footprint. The mirror of
-    //! addResource(int32_t, int32_t, uint32_t, MapRegion const&, uint32_t,
-    //! bool) down to zero instead of up to the capacity.
+    //! addResource(Cell, uint32_t, CellRegion const&, uint32_t, bool), going
+    //! down to zero instead of up to the capacity.
     //!
-    //! \param[in] u, v coordinates of the centre cell.
+    //! \param[in] centre the cell the footprint is centred on.
     //! \param[in] radius how far the footprint reaches.
-    //! \param[in] region the cells the calling City administers.
+    //! \param[in] region the cells the calling City owns.
     //! \param[in] toRemove how much to take over the whole footprint when
     //! \c distributed is true, or from each cell of it when false.
     //! \param[in] distributed see the matching parameter of addResource().
     // -------------------------------------------------------------------------
-    void removeResource(int32_t const u,
-                        int32_t const v,
+    void removeResource(Cell const centre,
                         uint32_t const radius,
-                        MapRegion const& region,
+                        CellRegion const& region,
                         uint32_t const toRemove,
                         bool distributed = true)
     {
         if (radius == 0u)
         {
-            if (region.contains(u, v))
-                removeResource(u, v, toRemove);
+            if (region.contains(centre))
+                removeResource(centre, toRemove);
             return;
         }
 
-        removeResourceInRadius(u, v, radius, region, toRemove, distributed);
+        removeResourceInRadius(centre, radius, region, toRemove, distributed);
     }
 
     // -------------------------------------------------------------------------
-    //! \brief \param[in] u, v coordinates of the cell.
+    //! \brief \param[in] cell the cell to locate.
     //! \return the world position of its top-left corner, which is what the
     //! renderer draws a rectangle from.
     // -------------------------------------------------------------------------
-    Vector3f getWorldPosition(int32_t const u, int32_t const v) const;
+    Vector3f cellToWorld(Cell cell) const;
 
     // -------------------------------------------------------------------------
     //! \brief Run the rules of the type over the region of every City, and
@@ -321,7 +318,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief \return the name of its type, such as "Water".
     // -------------------------------------------------------------------------
-    std::string const& type() const
+    [[nodiscard]] Name const& getTypeName() const
     {
         return m_type.name;
     }
@@ -330,7 +327,7 @@ public:
     //! \brief \return the recipe itself, so that another City can be given a
     //! layer of the same kind without looking it up by name.
     // -------------------------------------------------------------------------
-    MapType const& getMapType() const
+    [[nodiscard]] LayerType const& getType() const
     {
         return m_type;
     }
@@ -339,7 +336,7 @@ public:
     //! \brief \return the colour of its type, as 0xRRGGBB, which the demo
     //! shades a cell with according to how full it is.
     // -------------------------------------------------------------------------
-    uint32_t color() const
+    [[nodiscard]] uint32_t getColor() const
     {
         return m_type.color;
     }
@@ -348,13 +345,13 @@ public:
     //! \brief \return the side of a cell, in world units. Comes from the World,
     //! so that every layer of a world lines up.
     // -------------------------------------------------------------------------
-    float cellSize() const;
+    [[nodiscard]] float getCellSize() const;
 
     // -------------------------------------------------------------------------
     //! \brief \return the rules the layer runs, from its type. Read by the demo
     //! to show what a layer is doing.
     // -------------------------------------------------------------------------
-    std::vector<RuleMap*> const& rules() const
+    [[nodiscard]] std::vector<RuleLayer*> const& getRules() const
     {
         return m_type.rules;
     }
@@ -363,7 +360,7 @@ public:
     //! \brief \return how many ticks the layer has lived. A rule with a rate of
     //! twenty fires when this is a multiple of twenty.
     // -------------------------------------------------------------------------
-    uint32_t ticks() const
+    [[nodiscard]] uint32_t getTicks() const
     {
         return m_ticks;
     }
@@ -372,14 +369,14 @@ public:
     //! \brief \return the sum over every allocated cell. Read from the cached
     //! total of each block, so it does not walk the grid.
     // -------------------------------------------------------------------------
-    uint64_t totalResource() const;
+    [[nodiscard]] uint64_t getTotalResource() const;
 
     // -------------------------------------------------------------------------
     //! \brief \return how many blocks are allocated. Shown by the debug panel
     //! to make the memory cost of a layer visible: each block is
     //! CHUNK_SIZE x CHUNK_SIZE cells whether or not they hold anything.
     // -------------------------------------------------------------------------
-    size_t allocatedChunks() const
+    [[nodiscard]] size_t getBlockCount() const
     {
         return m_chunks.size();
     }
@@ -425,11 +422,11 @@ public:
     //! f(int32_t, int32_t, int32_t, uint32_t).
     // -------------------------------------------------------------------------
     template <class Function>
-    void forEachBlockInRegion(MapRegion const& region,
+    void forEachBlockInRegion(CellRegion const& region,
                               int32_t side,
                               Function function) const
     {
-        if (region.empty())
+        if (region.isEmpty())
             return;
 
         side = std::min(std::max(side, 1), CHUNK_SIZE);
@@ -443,7 +440,8 @@ public:
                 continue;
             if ((chunk.u0 + CHUNK_SIZE <= region.u0) ||
                 (chunk.v0 + CHUNK_SIZE <= region.v0) ||
-                (chunk.u0 >= region.u1()) || (chunk.v0 >= region.v1()))
+                (chunk.u0 >= region.getMaxU()) ||
+                (chunk.v0 >= region.getMaxV()))
             {
                 continue;
             }
@@ -456,7 +454,7 @@ private:
 
     //==========================================================================
     //! \brief A square block of cells, allocated as a whole. The unit in which
-    //! a sparse map grows.
+    //! a sparse layer grows.
     //==========================================================================
     struct Chunk
     {
@@ -496,7 +494,7 @@ private:
     //--------------------------------------------------------------------------
     template <class Function>
     static void forEachBlockOfChunk(Chunk const& chunk,
-                                    MapRegion const& region,
+                                    CellRegion const& region,
                                     int32_t const side,
                                     Function function)
     {
@@ -530,7 +528,7 @@ private:
     //! \param[out] counted how many of them lay inside the region.
     //--------------------------------------------------------------------------
     static void sumSquare(Chunk const& chunk,
-                          MapRegion const& region,
+                          CellRegion const& region,
                           int32_t const du,
                           int32_t const dv,
                           int32_t const side,
@@ -541,7 +539,7 @@ private:
         {
             for (int32_t u = du; u < du + side; ++u)
             {
-                if (!region.contains(chunk.u0 + u, chunk.v0 + v))
+                if (!region.contains(Cell{ chunk.u0 + u, chunk.v0 + v }))
                     continue;
                 sum += chunk.cells[size_t(v * CHUNK_SIZE + u)];
                 ++counted;
@@ -568,7 +566,7 @@ private:
 
     // The three functions below sit on the hottest path of the whole library:
     // a rule of a layer addresses a cell several times over, on every cell of
-    // the town, on every tick. They are defined here rather than in the source
+    // the city, on every tick. They are defined here rather than in the source
     // file so that the caller can inline them, and they use masks rather than
     // divisions, which a side that is a power of two makes exact.
     static_assert((CHUNK_SIZE & (CHUNK_SIZE - 1)) == 0,
@@ -602,34 +600,34 @@ private:
     //--------------------------------------------------------------------------
     //! \brief Pack the origin of the block holding a cell into one key, which
     //! is what the table of blocks is indexed by.
-    //! \param[in] u, v coordinates of the cell.
+    //! \param[in] cell the cell.
     //! \return the key of its block.
     //--------------------------------------------------------------------------
-    static int64_t chunkKey(int32_t const u, int32_t const v)
+    static int64_t chunkKey(Cell const cell)
     {
         // Shifting a negative number right rounds towards minus infinity on
         // every compiler this builds with, and C++20 requires it, which is the
         // same rounding chunkOrigin() uses.
-        int64_t const cu = u >> CHUNK_SHIFT;
-        int64_t const cv = v >> CHUNK_SHIFT;
+        int64_t const cu = cell.u >> CHUNK_SHIFT;
+        int64_t const cv = cell.v >> CHUNK_SHIFT;
 
         return (cu << 32) ^ (cv & 0xFFFFFFFF);
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] u, v coordinates of the cell.
+    //! \brief \param[in] cell the cell.
     //! \return where it sits inside Chunk::cells.
     //--------------------------------------------------------------------------
-    static size_t cellIndex(int32_t const u, int32_t const v)
+    static size_t cellIndex(Cell const cell)
     {
-        int32_t const du = u & CHUNK_MASK;
-        int32_t const dv = v & CHUNK_MASK;
+        int32_t const du = cell.u & CHUNK_MASK;
+        int32_t const dv = cell.v & CHUNK_MASK;
 
         return size_t(dv * CHUNK_SIZE + du);
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] u, v coordinates of the cell.
+    //! \brief \param[in] cell the cell.
     //! \return the block holding it, or nullptr when nothing was ever written
     //! anywhere near it. Reading is allowed not to allocate.
     //!
@@ -637,9 +635,9 @@ private:
     //! consecutive cells share a block sixteen times out of seventeen, so the
     //! last block found is remembered and the table is left alone.
     //--------------------------------------------------------------------------
-    Chunk const* findChunk(int32_t const u, int32_t const v) const
+    [[nodiscard]] Chunk const* findChunk(Cell const cell) const
     {
-        int64_t const key = chunkKey(u, v);
+        int64_t const key = chunkKey(cell);
 
         if (m_cacheFilled && (m_cachedKey == key))
             return m_cachedChunk;
@@ -650,31 +648,31 @@ private:
     //--------------------------------------------------------------------------
     //! \brief The writable counterpart of findChunk(), for the caller that
     //! clears a cell of a block it is not allowed to create.
-    //! \param[in] u, v coordinates of the cell.
+    //! \param[in] cell the cell.
     //! \return the block holding it, or nullptr.
     //--------------------------------------------------------------------------
-    Chunk* findChunk(int32_t const u, int32_t const v)
+    [[nodiscard]] Chunk* findChunk(Cell const cell)
     {
-        // This Map is not const here, so neither are the blocks it owns: only
+        // This Layer is not const here, so neither are the blocks it owns: only
         // the memoisation, which reading a cell has to fill too, made the
         // other overload the const one.
         return const_cast<Chunk*>(
-            static_cast<Map const*>(this)->findChunk(u, v));
+            static_cast<Layer const*>(this)->findChunk(cell));
     }
 
     //--------------------------------------------------------------------------
-    //! \brief \param[in] u, v coordinates of the cell.
+    //! \brief \param[in] cell the cell.
     //! \return the block holding it, allocating and zero filling it when it did
     //! not exist yet.
     //--------------------------------------------------------------------------
-    Chunk& chunkFor(int32_t const u, int32_t const v)
+    Chunk& chunkFor(Cell const cell)
     {
-        int64_t const key = chunkKey(u, v);
+        int64_t const key = chunkKey(cell);
 
         if (m_cacheFilled && (m_cachedKey == key) && (m_cachedChunk != nullptr))
-            return *findChunk(u, v);
+            return *findChunk(cell);
 
-        return createChunk(key, u, v);
+        return createChunk(key, cell);
     }
 
     //--------------------------------------------------------------------------
@@ -687,38 +685,37 @@ private:
     //--------------------------------------------------------------------------
     //! \brief The part of chunkFor() that has to read or grow the table.
     //! \param[in] key key of the block, from chunkKey().
-    //! \param[in] u, v coordinates of a cell of the block, which give its
-    //! origin when it has to be created.
+    //! \param[in] cell a cell of the block, which gives its origin when it has
+    //! to be created.
     //! \return the block. Fills the memo.
     //--------------------------------------------------------------------------
-    Chunk& createChunk(int64_t const key, int32_t const u, int32_t const v);
+    Chunk& createChunk(int64_t const key, Cell const cell);
 
     //--------------------------------------------------------------------------
     //! \brief The part of getResource() that walks a footprint of more than one
     //! cell. Same parameters and same result.
+    //! \note Const, but it reuses the walk held by the Layer, which is therefore
+    //! mutable: a rule firing on every cell of every tick must not allocate.
     //--------------------------------------------------------------------------
-    uint32_t getResourceInRadius(int32_t const u,
-                                 int32_t const v,
-                                 uint32_t const radius,
-                                 MapRegion const& region);
+    uint32_t sumInRadius(Cell const centre,
+                         uint32_t const radius,
+                         CellRegion const& region) const;
 
     //--------------------------------------------------------------------------
-    //! \brief The part of cellsInRadius() that walks a footprint of more than
-    //! one cell. Same parameters and same result.
+    //! \brief The part of countCellsInRadius() that walks a footprint of more
+    //! than one cell. Same parameters and same result.
     //--------------------------------------------------------------------------
-    uint32_t countCellsInRadius(int32_t const u,
-                                int32_t const v,
-                                uint32_t const radius,
-                                MapRegion const& region);
+    uint32_t walkCellsInRadius(Cell const centre,
+                               uint32_t const radius,
+                               CellRegion const& region) const;
 
     //--------------------------------------------------------------------------
     //! \brief The part of addResource() that walks a footprint of more than one
     //! cell. Same parameters.
     //--------------------------------------------------------------------------
-    void addResourceInRadius(int32_t const u,
-                             int32_t const v,
+    void addResourceInRadius(Cell const centre,
                              uint32_t const radius,
-                             MapRegion const& region,
+                             CellRegion const& region,
                              uint32_t const toAdd,
                              bool const distributed);
 
@@ -726,10 +723,9 @@ private:
     //! \brief The part of removeResource() that walks a footprint of more than
     //! one cell. Same parameters.
     //--------------------------------------------------------------------------
-    void removeResourceInRadius(int32_t const u,
-                                int32_t const v,
+    void removeResourceInRadius(Cell const centre,
                                 uint32_t const radius,
-                                MapRegion const& region,
+                                CellRegion const& region,
                                 uint32_t const toRemove,
                                 bool const distributed);
 
@@ -739,12 +735,12 @@ private:
     //! \param[in] city whose region bounds the walk and on whose behalf the
     //! rule reads and writes.
     //--------------------------------------------------------------------------
-    void executeRule(RuleMap& rule, City& city);
+    void executeRule(RuleLayer& rule, City& city);
 
 private:
 
     //! \brief Recipe of the layer, shared with every layer of that kind.
-    MapType const& m_type;
+    LayerType const& m_type;
 
     //! \brief The world owning the grid the layer is laid on. Where the size of
     //! a cell comes from.
@@ -768,7 +764,7 @@ private:
 
     //! \brief The block that key names, or nullptr when there is none. Blocks
     //! are never removed and \c std::unordered_map keeps its elements put
-    //! across a rehash, so a pointer stays good for the life of the Map.
+    //! across a rehash, so a pointer stays good for the life of the Layer.
     mutable Chunk const* m_cachedChunk = nullptr;
 
     //! \brief Whether the two above hold an answer. A rule sweeping the grid
@@ -777,16 +773,17 @@ private:
     mutable bool m_cacheFilled = false;
 
     //! \brief Reusable walk over the cells of a footprint. Held here so that
-    //! reading a neighbourhood does not allocate.
-    MapCoordinatesInsideRadius m_coordinates;
+    //! reading a neighbourhood does not allocate. Mutable so that reading a
+    //! neighbourhood stays a const operation.
+    mutable CellsInRadius m_coordinates;
 
     //! \brief Reusable walk over the cells of a footprint in random order, used
     //! when handing out a resource unevenly.
-    MapRandomCoordinates m_randomCoordinates;
+    RandomCells m_randomCoordinates;
 };
 
 //! \brief The layers of a World, by name, which owns them.
-using Maps = std::map<std::string, std::unique_ptr<Map>, std::less<>>;
+using Layers = std::map<std::string, std::unique_ptr<Layer>, std::less<>>;
 
 } // namespace ogb
 

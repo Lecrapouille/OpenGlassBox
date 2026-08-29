@@ -2,19 +2,19 @@
 
 **Scripts are the heart of OpenGlassBox.** The C++ engine is a host: it advances time, routes agents, and executes rules. The **gameplay lives in `.ogs` files**. Change a script and you change the game—new building types, resources, traffic behaviour, zone growth—without recompiling the engine.
 
-That is the idea behind GlassBox (Willmott, GDC 2012): a city simulation can be **data** rather than a tree of objects with an `Update()` method. OpenGlassBox adds **Areas** (RCI zones) on top of the original MultiAgentSimulation model. For most users and contributors, the scripts are the most important part of the project; the demo is only one way to edit and watch them run.
+That is the idea behind GlassBox (Willmott, GDC 2012): a city simulation can be **data** rather than a tree of objects with an `Update()` method. OpenGlassBox adds **Zones** (RCI zones) on top of the original MultiAgentSimulation model. For most users and contributors, the scripts are the most important part of the project; the demo is only one way to edit and watch them run.
 
 A ruleset combines five concepts, connected by **rules**:
 
 | Concept | Role |
 | ------- | ---- |
-| **Maps** | 2D fields (water, pollution, desirability, …). |
+| **Layers** | 2D fields (water, pollution, desirability, …). |
 | **Units** | Buildings with bounded resource stocks. |
 | **Agents** | Travellers that carry resources between units. |
 | **Paths** | Road (or rail) networks made of nodes and segments. |
-| **Areas** | Zones whose rules spawn, upgrade, and remove buildings. |
+| **Zones** | Zones whose rules spawn, upgrade, and remove buildings. |
 
-Rules are atomic: every command in a rule must validate before any command runs. Buildings use `unitRule`, map layers use `mapRule`, and zones use `areaRule`.
+Rules are atomic: every command in a rule must validate before any command runs. Buildings use `unitRule`, layers use `layerRule`, and zones use `zoneRule`.
 
 Two file formats exist:
 
@@ -36,7 +36,7 @@ resources
 end
 ```
 
-Resources are named quantities shared by the rest of the ruleset. Units, maps, agents, and city-wide globals all refer to these names.
+Resources are named quantities shared by the rest of the ruleset. Units, layers, agents, and city-wide globals all refer to these names.
 
 ### `paths` and `segments`
 
@@ -50,7 +50,7 @@ segments
 end
 ```
 
-A `path` defines a network family, such as roads or rails. A `segment` (`WayType`) defines one kind of connection: its free-flow `speed`, `capacity` at which congestion becomes significant, and BPR exponent `beta` (4 by default). These three are the parameters of the travel time the router minimises; see the [traffic documentation](traffic.md#travel-time-on-a-road-the-bpr-function) for what they do and how to tune them.
+A `path` defines a network family, such as roads or rails. A `segment` (`SegmentType`) defines one kind of connection: its free-flow `speed`, `capacity` at which congestion becomes significant, and BPR exponent `beta` (4 by default). These three are the parameters of the travel time the router minimises; see the [traffic documentation](traffic.md#travel-time-on-a-road-the-bpr-function) for what they do and how to tune them.
 
 ### `agents`
 
@@ -62,22 +62,22 @@ end
 
 Agents are mobile entities. Their `speed` is expressed in world units per second. They carry resources and search for a unit matching a `target`.
 
-### `maps`
+### `layers`
 
 ```text
-maps
-    map Water color 0x0000FF capacity 100 rules [ ]
-    map Pollution color 0x555555 capacity 80 rules [ SpreadPollution ]
+layers
+    layer Water color 0x0000FF capacity 100 rules [ ]
+    layer Pollution color 0x555555 capacity 80 rules [ SpreadPollution ]
 end
 ```
 
-Maps are shared 2D fields on the world grid. Units read and modify nearby map cells within their `mapRadius`.
+Layers are shared 2D fields on the world grid. Units read and modify nearby layer cells within their `layerRadius`.
 
 ### `units`
 
 ```text
 units
-    unit Home color 0xFF00FF mapRadius 1
+    unit Home color 0xFF00FF layerRadius 1
         rules [ SendPeopleToWork ]
         targets [ Home ]
         caps [ People 4 ]
@@ -87,24 +87,24 @@ end
 
 Units are buildings. `caps` sets local resource capacities, `resources` sets initial amounts, and `targets` lists the names agents use to find the building. A unit is **not** a graph node: it may be anchored to a segment or node, or stand freely in the world.
 
-### `areas`
+### `zones`
 
 ```text
-areas
-    area Residential color 0x44AA44 rules [ GrowHomes AbandonHomes ]
+zones
+    zone Residential color 0x44AA44 rules [ GrowHomes AbandonHomes ]
 end
 ```
 
-Areas are RCI-style zones. Their rules operate on the painted rectangle with commands such as `spawn`, `upgrade`, `destroy`, and `count`.
+Zones are RCI-style zones. Their rules operate on the painted rectangle with commands such as `spawn`, `upgrade`, `destroy`, and `count`.
 
 ### `rules`
 
 ```text
 rules
-    mapRule CreateGrass
+    layerRule CreateGrass
         rate 7
-        map Water remove 10 randomTilesPercent 90
-        map Grass add 1
+        layer Water remove 10 randomTilesPercent 90
+        layer Grass add 1
     end
 
     unitRule SendPeopleToWork
@@ -114,19 +114,19 @@ rules
         agent Worker to Work add [ People 1 ]
     end
 
-    areaRule GrowHomes
+    zoneRule GrowHomes
         rate 80
         count Home less 10
-        spawn Home at nearestWay
+        spawn Home at nearestSegment
     end
 end
 ```
 
 Every command in a rule must validate before any command is executed. If one refuses, the whole rule is skipped for that tick.
 
-- `mapRule` uses map commands and can select cells with `randomTilesPercent`.
-- `unitRule` uses `local`, `global`, `map`, `agent Type to Target add [ Res N ]`, and `hour between A B`.
-- `areaRule` uses `count`, `spawn`, `upgrade`, and `destroy` to manage buildings in a zone.
+- `layerRule` uses layer commands and can select cells with `randomTilesPercent`.
+- `unitRule` uses `local`, `global`, `layer`, `agent Type to Target add [ Res N ]`, and `hour between A B`.
+- `zoneRule` uses `count`, `spawn`, `upgrade`, and `destroy` to manage buildings in a zone.
 
 `hour between` uses the simulation clock and wraps around midnight when `A > B`.
 
@@ -139,7 +139,7 @@ Every command in a rule must validate before any command is executed. If one ref
         rate 30 minutes
     end
 
-    areaRule AbandonHomes
+    zoneRule AbandonHomes
         rate 1 day
     end
 ```
@@ -148,7 +148,7 @@ At the default 20 ticks per game minute, `rate 1 minute` is 20 ticks, `rate 30 m
 
 Write the time unit on the same line as the number, because `hour` is also a command. For example, `rate 1` followed by `hour between 8 18` means one tick, not one hour.
 
-Durations are converted to ticks when rules run. Changing `SimulationConfig::ticksPerMinute` therefore rescales the whole ruleset. A zero period is invalid.
+Durations are converted to ticks when rules run. Changing `TimeConfig::ticksPerMinute` therefore rescales the whole ruleset. A zero period is invalid.
 
 ## `.ogc` save structure
 
@@ -160,7 +160,7 @@ save
 end
 ```
 
-The header is followed by the clock, `city Name size U V`, globals, paths, nodes, segments, units, areas, map cells, and agents. Traffic flow is also saved so a loaded city does not treat every road as empty.
+The header is followed by the clock, `city Name size U V`, globals, paths, nodes, segments, units, zones, layer cells, and agents. Traffic flow is also saved so a loaded city does not treat every road as empty.
 
 A save identifies the ruleset it was created with. Loading fails if a required type is missing or the ruleset hash differs. During ruleset development, the demo can open saves with a stale checksum; required types must still exist.
 

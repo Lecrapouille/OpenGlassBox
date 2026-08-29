@@ -26,7 +26,7 @@ TEST(TestsValue, TestsValue)
     context.unit = &unit;
     context.locals = &locals;
     context.globals = &globals;
-    context.u = context.v = 4u;
+    context.cell.u = context.cell.v = 4u;
     context.radius = 1.0;
 
     //
@@ -43,7 +43,7 @@ TEST(TestsValue, TestsValue)
     EXPECT_EQ(globals.getAmount("money"), 10u);
     EXPECT_EQ(globals.getCapacity("money"), 50u);
 
-    EXPECT_EQ(g.capacity(context), 50u);
+    EXPECT_EQ(g.getCapacity(context), 50u);
     EXPECT_EQ(g.get(context), 10u);
     EXPECT_EQ(globals.getAmount("money"), 10u);
     EXPECT_EQ(globals.getCapacity("money"), 50u);
@@ -62,45 +62,45 @@ TEST(TestsValue, TestsValue)
     EXPECT_EQ(locals.getAmount("oil"), 10u);
     EXPECT_EQ(locals.getCapacity("oil"), 50u);
 
-    EXPECT_EQ(l.capacity(context), 50u);
+    EXPECT_EQ(l.getCapacity(context), 50u);
     EXPECT_EQ(l.get(context), 10u);
     EXPECT_EQ(locals.getAmount("oil"), 10u);
     EXPECT_EQ(locals.getCapacity("oil"), 50u);
 
     //
-    MapType map_type("water");
-    map_type.capacity = 50u;
-    Map& map = city.addMap(map_type);
-    map.setResource(context.u, context.v, 5u);
+    LayerType layer_type("water");
+    layer_type.capacity = 50u;
+    Layer& layer = city.addLayer(layer_type);
+    layer.setResource({ context.cell.u, context.cell.v }, 5u);
 
-    RuleValueMap m("water");
+    RuleValueLayer m("water");
     EXPECT_EQ(m.get(context), 5u);
 
 #if 0
     // FIXME not sure of ALL VALUES
     m.add(context, 10u);
     EXPECT_EQ(m.get(context), 20u);
-    EXPECT_EQ(map.getResource(context.u, context.v), 5u);
-    EXPECT_EQ(map.getCapacity(/*context.u, context.v*/), 50u);
+    EXPECT_EQ(layer.getResource({ context.cell.u, context.cell.v }), 5u);
+    EXPECT_EQ(layer.setCapacity(/*context.cell.u, context.cell.v*/), 50u);
 
     m.remove(context, 5u);
     EXPECT_EQ(m.get(context), 15u);
-    EXPECT_EQ(map.getResource(context.u, context.v), 5u);
-    EXPECT_EQ(map.getCapacity(/*context.u, context.v*/), 50u);
+    EXPECT_EQ(layer.getResource({ context.cell.u, context.cell.v }), 5u);
+    EXPECT_EQ(layer.setCapacity(/*context.cell.u, context.cell.v*/), 50u);
 
-    EXPECT_EQ(m.capacity(context), 50u);
+    EXPECT_EQ(m.getCapacity(context), 50u);
     EXPECT_EQ(m.get(context), 15u);
-    EXPECT_EQ(map.getResource(context.u, context.v), 5u);
-    EXPECT_EQ(map.getCapacity(/*context.u, context.v*/), 50u);
+    EXPECT_EQ(layer.getResource({ context.cell.u, context.cell.v }), 5u);
+    EXPECT_EQ(layer.setCapacity(/*context.cell.u, context.cell.v*/), 50u);
 #endif
 }
 
 // -----------------------------------------------------------------------------
-//! \brief A map value read over a radius sums several cells, so what it is
+//! \brief A layer value read over a radius sums several cells, so what it is
 //! compared against has to be the capacity of the same cells. Comparing a whole
-//! footprint against one cell kept "map Pollution add 1" from ever validating
+//! footprint against one cell kept "layer Pollution add 1" from ever validating
 //! in a neighbourhood that already held some, and a rule is all or nothing.
-TEST(TestsValue, MapCapacityCoversTheWholeRadius)
+TEST(TestsValue, LayerCapacityCoversTheWholeRadius)
 {
     TestWorld cityWorld("Paris", 8u, 8u);
     City& city = cityWorld.city;
@@ -109,37 +109,37 @@ TEST(TestsValue, MapCapacityCoversTheWholeRadius)
     context.city = &city;
     context.locals = &locals;
     context.globals = &globals;
-    context.u = context.v = 4;
+    context.cell.u = context.cell.v = 4;
 
-    MapType type("pollution");
+    LayerType type("pollution");
     type.capacity = 10u;
-    Map& map = city.addMap(type);
+    Layer& layer = city.addLayer(type);
 
-    RuleValueMap value("pollution");
+    RuleValueLayer value("pollution");
 
     // One cell: unchanged.
     context.radius = 0u;
-    EXPECT_EQ(value.capacity(context), 10u);
+    EXPECT_EQ(value.getCapacity(context), 10u);
 
     // A cross of five cells holds five times as much.
     context.radius = 1u;
-    uint32_t const cells = map.cellsInRadius(context.u, context.v,
-                                             context.radius, city.region());
+    uint32_t const cells = layer.countCellsInRadius({ context.cell.u, context.cell.v },
+                                             context.radius, city.getRegion());
     EXPECT_EQ(cells, 5u);
-    EXPECT_EQ(value.capacity(context), 5u * 10u);
+    EXPECT_EQ(value.getCapacity(context), 5u * 10u);
 
     // Filling four of them out of five leaves room, and the rule may fire.
-    map.setResource(3, 4, 10u);
-    map.setResource(5, 4, 10u);
-    map.setResource(4, 3, 10u);
-    map.setResource(4, 5, 10u);
+    layer.setResource({ 3, 4 }, 10u);
+    layer.setResource({ 5, 4 }, 10u);
+    layer.setResource({ 4, 3 }, 10u);
+    layer.setResource({ 4, 5 }, 10u);
     EXPECT_EQ(value.get(context), 40u);
-    EXPECT_LT(value.get(context), value.capacity(context));
+    EXPECT_LT(value.get(context), value.getCapacity(context));
 
     // Full: it may not.
-    map.setResource(4, 4, 10u);
+    layer.setResource({ 4, 4 }, 10u);
     EXPECT_EQ(value.get(context), 50u);
-    EXPECT_EQ(value.get(context), value.capacity(context));
+    EXPECT_EQ(value.get(context), value.getCapacity(context));
 }
 
 // -----------------------------------------------------------------------------
@@ -153,14 +153,14 @@ TEST(TestsValue, UndeclaredGlobalIsUnbounded)
     RuleContext context;
     context.city = &city;
     context.locals = &locals;
-    context.globals = &city.globals();
+    context.globals = &city.getGlobals();
 
     RuleValueGlobal money(Resource("Money"));
     EXPECT_EQ(money.get(context), 0u);
-    EXPECT_EQ(money.capacity(context), Resource::MAX_CAPACITY);
-    EXPECT_LT(money.get(context), money.capacity(context));
+    EXPECT_EQ(money.getCapacity(context), Resource::MAX_CAPACITY);
+    EXPECT_LT(money.get(context), money.getCapacity(context));
 
     money.add(context, 3u);
     EXPECT_EQ(money.get(context), 3u);
-    EXPECT_LT(money.get(context), money.capacity(context));
+    EXPECT_LT(money.get(context), money.getCapacity(context));
 }

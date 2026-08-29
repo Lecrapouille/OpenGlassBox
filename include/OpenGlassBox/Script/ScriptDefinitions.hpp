@@ -20,48 +20,49 @@
 namespace ogb
 {
 
+//! \brief How every kind of definition is stored: by name, in a map of owning
+//! pointers. Pointers rather than values because a name is declared before its
+//! body is read, and because everything else refers to these by address:
+//! growing the map must not move them.
+template<class T>
+using Catalog = std::map<std::string, std::unique_ptr<T>, std::less<>>;
+
 //==============================================================================
 //! \brief Everything a script defines: the recipes the entities are built from,
 //! and the rules and commands they run.
 //!
-//! This is the owner of the ruleset, and the reason a script has to outlive the
-//! towns loaded from it. A building keeps a const reference to its recipe, and
-//! a rule keeps raw pointers to its commands, so nothing here may be destroyed
-//! while a City is standing: clear() is only safe once the world has been
-//! thrown away.
+//! This owns the ruleset, and it is the reason a script has to outlive the
+//! cities loaded from it. A building keeps a const reference to its recipe, and
+//! a rule keeps raw pointers to its commands. Nothing here may be destroyed
+//! while a city stands: clear() is only safe once the world is gone.
 //!
-//! Every kind of thing is stored the same way, by name, in a map of owning
-//! pointers. Pointers rather than values because a name is declared before its
-//! body is read, and because everything else refers to these by address:
-//! growing a map must not move them.
-//!
-//! Three ways in are offered for each kind, and which one to use says what the
-//! caller expects. \c get throws, and is for code that knows the ruleset
-//! declares the name. \c find answers nullptr, and is what the parser uses, an
-//! unknown name being an error it would rather report with a line number than
-//! an exception. \c add refuses to overwrite, so that a name declared twice is
-//! an error rather than a silent replacement.
+//! Each kind of definition has three ways in, and the one you pick says what
+//! you expect. \c getXxx throws, for code that knows the ruleset declares the
+//! name. \c findXxx answers nullptr, which is what the parser uses: an unknown
+//! name is an error it reports with a line number rather than an exception.
+//! \c addXxx refuses to overwrite, so a name declared twice is an error rather
+//! than a silent replacement.
 //==============================================================================
 class ScriptDefinitions
 {
 public:
 
     //--------------------------------------------------------------------------
-    //! \brief Look a recipe up by name.
-    //! \param[in] id the name the script declared.
-    //! \return the recipe, which lives as long as the ruleset does.
+    //! \brief Look up a recipe by name.
+    //! \param[in] id the name to look for.
+    //! \return the recipe.
     //! \throw std::out_of_range when the name was never declared.
     //--------------------------------------------------------------------------
-    Resource const& getResource(std::string const& id) const;
-    PathType const& getPathType(std::string const& id) const;
-    WayType const& getWayType(std::string const& id) const;
-    AgentType const& getAgentType(std::string const& id) const;
-    UnitType const& getUnitType(std::string const& id) const;
-    MapType const& getMapType(std::string const& id) const;
-    RuleMap const& getRuleMap(std::string const& id) const;
-    RuleUnit const& getRuleUnit(std::string const& id) const;
-    RuleArea const& getRuleArea(std::string const& id) const;
-    AreaType const& getAreaType(std::string const& id) const;
+    [[nodiscard]] Resource const& getResource(std::string const& id) const;
+    [[nodiscard]] PathType const& getPathType(std::string const& id) const;
+    [[nodiscard]] SegmentType const& getSegmentType(std::string const& id) const;
+    [[nodiscard]] AgentType const& getAgentType(std::string const& id) const;
+    [[nodiscard]] UnitType const& getUnitType(std::string const& id) const;
+    [[nodiscard]] LayerType const& getLayerType(std::string const& id) const;
+    [[nodiscard]] RuleLayer const& getRuleLayer(std::string const& id) const;
+    [[nodiscard]] RuleUnit const& getRuleUnit(std::string const& id) const;
+    [[nodiscard]] RuleZone const& getRuleZone(std::string const& id) const;
+    [[nodiscard]] ZoneType const& getZoneType(std::string const& id) const;
 
     //--------------------------------------------------------------------------
     //! \brief Look a recipe up by name, without throwing.
@@ -72,16 +73,35 @@ public:
     //! \param[in] id the name to look for.
     //! \return the recipe, or nullptr when the name was never declared.
     //--------------------------------------------------------------------------
-    Resource* findResource(std::string const& id);
-    PathType* findPathType(std::string const& id);
-    WayType* findWayType(std::string const& id);
-    AgentType* findAgentType(std::string const& id);
-    UnitType* findUnitType(std::string const& id);
-    MapType* findMapType(std::string const& id);
-    RuleMap* findRuleMap(std::string const& id);
-    RuleUnit* findRuleUnit(std::string const& id);
-    RuleArea* findRuleArea(std::string const& id);
-    AreaType* findAreaType(std::string const& id);
+    [[nodiscard]] Resource* findResource(std::string const& id);
+    [[nodiscard]] PathType* findPathType(std::string const& id);
+    [[nodiscard]] SegmentType* findSegmentType(std::string const& id);
+    [[nodiscard]] AgentType* findAgentType(std::string const& id);
+    [[nodiscard]] UnitType* findUnitType(std::string const& id);
+    [[nodiscard]] LayerType* findLayerType(std::string const& id);
+    [[nodiscard]] RuleLayer* findRuleLayer(std::string const& id);
+    [[nodiscard]] RuleUnit* findRuleUnit(std::string const& id);
+    [[nodiscard]] RuleZone* findRuleZone(std::string const& id);
+    [[nodiscard]] ZoneType* findZoneType(std::string const& id);
+
+    //--------------------------------------------------------------------------
+    //! \brief Look a recipe up by name, without throwing, on a catalogue held
+    //! for reading only. What a save reader uses to tell whether the ruleset it
+    //! is given declares everything the file names.
+    //!
+    //! \param[in] id the name to look for.
+    //! \return the recipe, or nullptr when the name was never declared.
+    //--------------------------------------------------------------------------
+    [[nodiscard]] Resource const* findResource(std::string const& id) const;
+    [[nodiscard]] PathType const* findPathType(std::string const& id) const;
+    [[nodiscard]] SegmentType const* findSegmentType(std::string const& id) const;
+    [[nodiscard]] AgentType const* findAgentType(std::string const& id) const;
+    [[nodiscard]] UnitType const* findUnitType(std::string const& id) const;
+    [[nodiscard]] LayerType const* findLayerType(std::string const& id) const;
+    [[nodiscard]] RuleLayer const* findRuleLayer(std::string const& id) const;
+    [[nodiscard]] RuleUnit const* findRuleUnit(std::string const& id) const;
+    [[nodiscard]] RuleZone const* findRuleZone(std::string const& id) const;
+    [[nodiscard]] ZoneType const* findZoneType(std::string const& id) const;
 
     //--------------------------------------------------------------------------
     //! \brief Declare a recipe, empty, for the parser to fill in.
@@ -95,14 +115,14 @@ public:
     //--------------------------------------------------------------------------
     Resource* addResource(std::string const& id);
     PathType* addPathType(std::string const& id);
-    WayType* addWayType(std::string const& id);
+    SegmentType* addSegmentType(std::string const& id);
     AgentType* addAgentType(std::string const& id);
     UnitType* addUnitType(std::string const& id);
-    MapType* addMapType(std::string const& id);
-    RuleMap* addRuleMap(std::string const& id);
+    LayerType* addLayerType(std::string const& id);
+    RuleLayer* addRuleLayer(std::string const& id);
     RuleUnit* addRuleUnit(std::string const& id);
-    RuleArea* addRuleArea(std::string const& id);
-    AreaType* addAreaType(std::string const& id);
+    RuleZone* addRuleZone(std::string const& id);
+    ZoneType* addZoneType(std::string const& id);
 
     //--------------------------------------------------------------------------
     //! \brief Take ownership of a command the parser built, and hand back a
@@ -129,61 +149,51 @@ public:
     //! the player as a choice of road, building or zone to place, and what the
     //! debugger walks.
     //--------------------------------------------------------------------------
-    std::map<std::string, std::unique_ptr<Resource>, std::less<>> const&
-    resources() const
+    [[nodiscard]] Catalog<Resource> const& getResources() const
     {
         return m_resources;
     }
-    std::map<std::string, std::unique_ptr<PathType>, std::less<>> const&
-    pathTypes() const
+    [[nodiscard]] Catalog<PathType> const& getPathTypes() const
     {
         return m_pathTypes;
     }
-    std::map<std::string, std::unique_ptr<WayType>, std::less<>> const&
-    wayTypes() const
+    [[nodiscard]] Catalog<SegmentType> const& getSegmentTypes() const
     {
-        return m_wayTypes;
+        return m_segmentTypes;
     }
-    std::map<std::string, std::unique_ptr<AgentType>, std::less<>> const&
-    agentTypes() const
+    [[nodiscard]] Catalog<AgentType> const& getAgentTypes() const
     {
         return m_agentTypes;
     }
-    std::map<std::string, std::unique_ptr<UnitType>, std::less<>> const&
-    unitTypes() const
+    [[nodiscard]] Catalog<UnitType> const& getUnitTypes() const
     {
         return m_unitTypes;
     }
-    std::map<std::string, std::unique_ptr<MapType>, std::less<>> const&
-    mapTypes() const
+    [[nodiscard]] Catalog<LayerType> const& getLayerTypes() const
     {
-        return m_mapTypes;
+        return m_layerTypes;
     }
-    std::map<std::string, std::unique_ptr<RuleMap>, std::less<>> const&
-    ruleMaps() const
+    [[nodiscard]] Catalog<RuleLayer> const& getRuleLayers() const
     {
-        return m_ruleMaps;
+        return m_ruleLayers;
     }
-    std::map<std::string, std::unique_ptr<RuleUnit>, std::less<>> const&
-    ruleUnits() const
+    [[nodiscard]] Catalog<RuleUnit> const& getRuleUnits() const
     {
         return m_ruleUnits;
     }
-    std::map<std::string, std::unique_ptr<RuleArea>, std::less<>> const&
-    ruleAreas() const
+    [[nodiscard]] Catalog<RuleZone> const& getRuleZones() const
     {
-        return m_ruleAreas;
+        return m_ruleZones;
     }
-    std::map<std::string, std::unique_ptr<AreaType>, std::less<>> const&
-    areaTypes() const
+    [[nodiscard]] Catalog<ZoneType> const& getZoneTypes() const
     {
-        return m_areaTypes;
+        return m_zoneTypes;
     }
 
     //--------------------------------------------------------------------------
     //! \brief Drop the whole ruleset.
     //!
-    //! \note Only safe once nothing refers to it: every town has to be gone
+    //! \note Only safe once nothing refers to it: every city has to be gone
     //! first, since its buildings hold references into this. Calling it on a
     //! live world leaves dangling references everywhere.
     //--------------------------------------------------------------------------
@@ -193,31 +203,31 @@ public:
     //! \brief \return true when the script declared nothing at all, which is
     //! what an unparsed or a failed ruleset looks like.
     //--------------------------------------------------------------------------
-    bool empty() const;
+    [[nodiscard]] bool isEmpty() const;
 
 private:
 
     //! \brief The kinds of resource, by name: what everything else is counted
     //! in.
-    std::map<std::string, std::unique_ptr<Resource>, std::less<>> m_resources;
+    Catalog<Resource> m_resources;
     //! \brief The kinds of network, by name: roads, rails, pipes.
-    std::map<std::string, std::unique_ptr<PathType>, std::less<>> m_pathTypes;
+    Catalog<PathType> m_pathTypes;
     //! \brief The kinds of segment, by name, with their speed and capacity.
-    std::map<std::string, std::unique_ptr<WayType>, std::less<>> m_wayTypes;
+    Catalog<SegmentType> m_segmentTypes;
     //! \brief The kinds of agent, by name, with their speed and colour.
-    std::map<std::string, std::unique_ptr<AgentType>, std::less<>> m_agentTypes;
+    Catalog<AgentType> m_agentTypes;
     //! \brief The kinds of building, by name, with their rules and capacities.
-    std::map<std::string, std::unique_ptr<UnitType>, std::less<>> m_unitTypes;
+    Catalog<UnitType> m_unitTypes;
     //! \brief The kinds of layer, by name, with their cap and their rules.
-    std::map<std::string, std::unique_ptr<MapType>, std::less<>> m_mapTypes;
+    Catalog<LayerType> m_layerTypes;
     //! \brief The rules a layer may run, by name.
-    std::map<std::string, std::unique_ptr<RuleMap>, std::less<>> m_ruleMaps;
+    Catalog<RuleLayer> m_ruleLayers;
     //! \brief The rules a building may run, by name.
-    std::map<std::string, std::unique_ptr<RuleUnit>, std::less<>> m_ruleUnits;
+    Catalog<RuleUnit> m_ruleUnits;
     //! \brief The rules a zone may run, by name.
-    std::map<std::string, std::unique_ptr<RuleArea>, std::less<>> m_ruleAreas;
+    Catalog<RuleZone> m_ruleZones;
     //! \brief The kinds of zone, by name, with their rules.
-    std::map<std::string, std::unique_ptr<AreaType>, std::less<>> m_areaTypes;
+    Catalog<ZoneType> m_zoneTypes;
     //! \brief The commands of every rule. Held here, and not by the rules, so
     //! that a rule may keep a raw pointer to one and two rules may share one.
     std::vector<std::unique_ptr<IRuleCommand>> m_commands;

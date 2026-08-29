@@ -17,10 +17,10 @@ public:
 
     MockIRuleValue() : IRuleValue() {}
     MOCK_METHOD(uint32_t, get,(RuleContext&), (override));
-    MOCK_METHOD(uint32_t, capacity,(RuleContext&), (override));
+    MOCK_METHOD(uint32_t, getCapacity, (RuleContext&), (override));
     MOCK_METHOD(void, add,(RuleContext&, uint32_t), (override));
     MOCK_METHOD(void, remove,(RuleContext&, uint32_t), (override));
-    MOCK_METHOD(std::string const&, type, (), (const, override));
+    MOCK_METHOD(Name const&, getTypeName, (), (const, override));
 };
 
 // -----------------------------------------------------------------------------
@@ -46,14 +46,14 @@ TEST(TestsCommand, Constructor)
     //
     Resources r; r.addResource("oil", 5u);
     RuleCommandAgent ra(keep<AgentType>("Worker", 1.0f, 2u, 0xFFFFFF), "home", r);
-    ASSERT_STREQ(ra.name.c_str(), "Worker");
-    ASSERT_EQ(ra.speed, 1.0f);
-    ASSERT_EQ(ra.radius, 2u);
-    ASSERT_EQ(ra.color, 0xFFFFFFu);
-    ASSERT_STREQ(ra.m_target.c_str(), "home");
-    ASSERT_EQ(ra.m_resources.m_bin.size(), 1u);
-    ASSERT_STREQ(ra.m_resources.m_bin[0].m_type.c_str(), "oil");
-    ASSERT_EQ(ra.m_resources.m_bin[0].m_amount, 5u);
+    ASSERT_STREQ(ra.getAgentType().name.c_str(), "Worker");
+    ASSERT_EQ(ra.getAgentType().speed, 1.0f);
+    ASSERT_EQ(ra.getAgentType().radius, 2u);
+    ASSERT_EQ(ra.getAgentType().color, 0xFFFFFFu);
+    ASSERT_STREQ(ra.getTarget().c_str(), "home");
+    ASSERT_EQ(ra.getResources().m_bin.size(), 1u);
+    ASSERT_STREQ(ra.getResources().m_bin[0].m_type.c_str(), "oil");
+    ASSERT_EQ(ra.getResources().m_bin[0].m_amount, 5u);
 }
 
 // -----------------------------------------------------------------------------
@@ -67,21 +67,21 @@ TEST(TestsCommand, RuleCommandAdd)
     EXPECT_CALL(target, add(_,_)).Times(0);
     EXPECT_CALL(target, remove(_,_)).Times(0);
     EXPECT_CALL(target, get(_)).Times(1).WillOnce(Return(5u));
-    EXPECT_CALL(target, capacity(_)).Times(1).WillOnce(Return(10u));
+    EXPECT_CALL(target, getCapacity(_)).Times(1).WillOnce(Return(10u));
     ASSERT_EQ(cmd.validate(context), true);
 
     //
     EXPECT_CALL(target, add(_,_)).Times(0);
     EXPECT_CALL(target, remove(_,_)).Times(0);
     EXPECT_CALL(target, get(_)).Times(1).WillOnce(Return(10u));
-    EXPECT_CALL(target, capacity(_)).Times(1).WillOnce(Return(5u));
+    EXPECT_CALL(target, getCapacity(_)).Times(1).WillOnce(Return(5u));
     ASSERT_EQ(cmd.validate(context), false);
 
     //
     EXPECT_CALL(target, add(_,_)).Times(1);
     EXPECT_CALL(target, remove(_,_)).Times(0);
     EXPECT_CALL(target, get(_)).Times(0);
-    EXPECT_CALL(target, capacity(_)).Times(0);
+    EXPECT_CALL(target, getCapacity(_)).Times(0);
     cmd.execute(context);
 }
 
@@ -96,21 +96,21 @@ TEST(TestsCommand, RuleCommandRemove)
     EXPECT_CALL(target, add(_,_)).Times(0);
     EXPECT_CALL(target, remove(_,_)).Times(0);
     EXPECT_CALL(target, get(_)).Times(1).WillOnce(Return(10u));
-    EXPECT_CALL(target, capacity(_)).Times(0);
+    EXPECT_CALL(target, getCapacity(_)).Times(0);
     ASSERT_EQ(cmd.validate(context), true);
 
     //
     EXPECT_CALL(target, add(_,_)).Times(0);
     EXPECT_CALL(target, remove(_,_)).Times(0);
     EXPECT_CALL(target, get(_)).Times(1).WillOnce(Return(2u));
-    EXPECT_CALL(target, capacity(_)).Times(0);
+    EXPECT_CALL(target, getCapacity(_)).Times(0);
     ASSERT_EQ(cmd.validate(context), false);
 
     //
     EXPECT_CALL(target, add(_,_)).Times(0);
     EXPECT_CALL(target, remove(_,_)).Times(1);
     EXPECT_CALL(target, get(_)).Times(0);
-    EXPECT_CALL(target, capacity(_)).Times(0);
+    EXPECT_CALL(target, getCapacity(_)).Times(0);
     cmd.execute(context);
 }
 
@@ -126,21 +126,21 @@ TEST(TestsCommand, RuleCommandTestEqual)
     EXPECT_CALL(target, add(_,_)).Times(0);
     EXPECT_CALL(target, remove(_,_)).Times(0);
     EXPECT_CALL(target, get(_)).Times(1).WillOnce(Return(5u));
-    EXPECT_CALL(target, capacity(_)).Times(0);
+    EXPECT_CALL(target, getCapacity(_)).Times(0);
     ASSERT_EQ(cmd.validate(context), true);
 
     //
     EXPECT_CALL(target, add(_,_)).Times(0);
     EXPECT_CALL(target, remove(_,_)).Times(0);
     EXPECT_CALL(target, get(_)).Times(1).WillOnce(Return(2u));
-    EXPECT_CALL(target, capacity(_)).Times(0);
+    EXPECT_CALL(target, getCapacity(_)).Times(0);
     ASSERT_EQ(cmd.validate(context), false);
 
     //
     EXPECT_CALL(target, add(_,_)).Times(0);
     EXPECT_CALL(target, remove(_,_)).Times(0);
     EXPECT_CALL(target, get(_)).Times(0);
-    EXPECT_CALL(target, capacity(_)).Times(0);
+    EXPECT_CALL(target, getCapacity(_)).Times(0);
     cmd.execute(context);
 }
 
@@ -156,21 +156,21 @@ TEST(TestsCommand, RuleCommandTestGreater)
     EXPECT_CALL(target, add(_,_)).Times(0);
     EXPECT_CALL(target, remove(_,_)).Times(0);
     EXPECT_CALL(target, get(_)).Times(1).WillOnce(Return(10u));
-    EXPECT_CALL(target, capacity(_)).Times(0);
+    EXPECT_CALL(target, getCapacity(_)).Times(0);
     ASSERT_EQ(cmd.validate(context), true);
 
     //
     EXPECT_CALL(target, add(_,_)).Times(0);
     EXPECT_CALL(target, remove(_,_)).Times(0);
     EXPECT_CALL(target, get(_)).Times(1).WillOnce(Return(2u));
-    EXPECT_CALL(target, capacity(_)).Times(0);
+    EXPECT_CALL(target, getCapacity(_)).Times(0);
     ASSERT_EQ(cmd.validate(context), false);
 
     //
     EXPECT_CALL(target, add(_,_)).Times(0);
     EXPECT_CALL(target, remove(_,_)).Times(0);
     EXPECT_CALL(target, get(_)).Times(0);
-    EXPECT_CALL(target, capacity(_)).Times(0);
+    EXPECT_CALL(target, getCapacity(_)).Times(0);
     cmd.execute(context);
 }
 
@@ -186,21 +186,21 @@ TEST(TestsCommand, RuleCommandTestLess)
     EXPECT_CALL(target, add(_,_)).Times(0);
     EXPECT_CALL(target, remove(_,_)).Times(0);
     EXPECT_CALL(target, get(_)).Times(1).WillOnce(Return(2u));
-    EXPECT_CALL(target, capacity(_)).Times(0);
+    EXPECT_CALL(target, getCapacity(_)).Times(0);
     ASSERT_EQ(cmd.validate(context), true);
 
     //
     EXPECT_CALL(target, add(_,_)).Times(0);
     EXPECT_CALL(target, remove(_,_)).Times(0);
     EXPECT_CALL(target, get(_)).Times(1).WillOnce(Return(10u));
-    EXPECT_CALL(target, capacity(_)).Times(0);
+    EXPECT_CALL(target, getCapacity(_)).Times(0);
     ASSERT_EQ(cmd.validate(context), false);
 
     //
     EXPECT_CALL(target, add(_,_)).Times(0);
     EXPECT_CALL(target, remove(_,_)).Times(0);
     EXPECT_CALL(target, get(_)).Times(0);
-    EXPECT_CALL(target, capacity(_)).Times(0);
+    EXPECT_CALL(target, getCapacity(_)).Times(0);
     cmd.execute(context);
 }
 
@@ -215,7 +215,7 @@ TEST(TestsCommand, RuleCommandAgent)
     EXPECT_CALL(target, add(_,_)).Times(0);
     EXPECT_CALL(target, remove(_,_)).Times(0);
     EXPECT_CALL(target, get(_)).Times(0);
-    EXPECT_CALL(target, capacity(_)).Times(0);
+    EXPECT_CALL(target, getCapacity(_)).Times(0);
     // An empty context carries no Unit to spawn the Agent from.
     ASSERT_EQ(cmd.validate(context), false);
 
@@ -230,7 +230,7 @@ TEST(TestsCommand, RuleCommandAgent)
     context.unit = &unit;
     context.locals = &locals;
     context.globals = &globals;
-    context.u = context.v = 0u;
+    context.cell.u = context.cell.v = 0u;
     context.radius = 1.0;
 
     // No ways linked to the node => no agent created (else ill-formed
@@ -238,23 +238,23 @@ TEST(TestsCommand, RuleCommandAgent)
     EXPECT_CALL(target, add(_,_)).Times(0);
     EXPECT_CALL(target, remove(_,_)).Times(0);
     EXPECT_CALL(target, get(_)).Times(0);
-    EXPECT_CALL(target, capacity(_)).Times(0);
-    EXPECT_EQ(city.agents().size(), 0u);
+    EXPECT_CALL(target, getCapacity(_)).Times(0);
+    EXPECT_EQ(city.getAgents().size(), 0u);
     cmd.execute(context);
-    EXPECT_EQ(city.agents().size(), 0u);
+    EXPECT_EQ(city.getAgents().size(), 0u);
     cmd.execute(context);
-    EXPECT_EQ(city.agents().size(), 0u);
+    EXPECT_EQ(city.getAgents().size(), 0u);
 
     // Add ways => can execute command => agents created
-    p1.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
+    p1.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n1, n2);
     EXPECT_CALL(target, add(_,_)).Times(0);
     EXPECT_CALL(target, remove(_,_)).Times(0);
     EXPECT_CALL(target, get(_)).Times(0);
-    EXPECT_CALL(target, capacity(_)).Times(0);
+    EXPECT_CALL(target, getCapacity(_)).Times(0);
     cmd.execute(context);
-    EXPECT_EQ(city.agents().size(), 1u);
+    EXPECT_EQ(city.getAgents().size(), 1u);
     cmd.execute(context);
-    EXPECT_EQ(city.agents().size(), 2u);
+    EXPECT_EQ(city.getAgents().size(), 2u);
 }
 
 // -----------------------------------------------------------------------------
@@ -271,7 +271,7 @@ TEST(TestsCommand, RuleCommandHour)
         clock.tick();
 
     ASSERT_TRUE(day.validate(context));
-    ASSERT_EQ(day.type(), std::string("Hour between 8 and 18"));
+    ASSERT_EQ(day.getDescription(), std::string("Hour between 8 and 18"));
 
     RuleCommandHour night(22u, 6u);
     ASSERT_FALSE(night.validate(context));

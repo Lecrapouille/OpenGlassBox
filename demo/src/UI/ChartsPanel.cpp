@@ -40,7 +40,7 @@ void ChartsPanel::clear()
 // ----------------------------------------------------------------------------
 void ChartsPanel::sample(Simulation& simulation)
 {
-    uint64_t const tick = simulation.totalTicks();
+    uint64_t const tick = simulation.getClock().getTicks();
 
     if (!m_first_sample &&
         (tick < m_last_sample_tick + uint64_t(m_sample_period)))
@@ -50,40 +50,40 @@ void ChartsPanel::sample(Simulation& simulation)
     m_last_sample_tick = tick;
 
     float const ticksPerMinute =
-        float(std::max(1u, simulation.clock().ticksPerMinute()));
+        float(std::max(1u, simulation.getClock().getTicksPerMinute()));
     float const hours = float(tick) / (ticksPerMinute * 60.0f);
 
-    // Totals per map, summed over the cities so that the curve tracks the
+    // Totals per layer, summed over the cities so that the curve tracks the
     // resource of the whole world.
-    std::map<std::string, float> mapTotals;
+    std::map<std::string, float> layerTotals;
     std::map<std::string, float> agentCounts;
     std::map<std::string, float> globals;
     float agents = 0.0f;
 
-    for (auto& it : simulation.cities())
+    for (auto& it : simulation.getCities())
     {
         City& city = *it.second;
 
-        for (auto& map : city.maps())
+        for (auto& layer : city.getLayers())
         {
-            mapTotals[map.second->type()] += float(map.second->totalResource());
+            layerTotals[layer.second->getTypeName().str()] += float(layer.second->getTotalResource());
         }
 
-        for (auto& agent : city.agents())
+        for (auto& agent : city.getAgents())
         {
-            agentCounts[agent->type()] += 1.0f;
+            agentCounts[agent->getTypeName().str()] += 1.0f;
             agents += 1.0f;
         }
 
-        for (Resource const& resource : city.globals().container())
+        for (Resource const& resource : city.getGlobals().getAll())
         {
-            globals[resource.type()] += float(resource.getAmount());
+            globals[resource.getTypeName().str()] += float(resource.getAmount());
         }
     }
 
-    for (auto const& it : mapTotals)
+    for (auto const& it : layerTotals)
     {
-        series("Maps", it.first).pushHours(hours, it.second);
+        series("Layers", it.first).pushHours(hours, it.second);
     }
     for (auto const& it : agentCounts)
     {
@@ -97,12 +97,11 @@ void ChartsPanel::sample(Simulation& simulation)
 
     series("Traffic", "Link travel time")
         .pushHours(hours, TrafficPanel::totalTravelTime(simulation));
-    series("Traffic", "TSTT")
-        .pushHours(hours, simulation.totalSystemTravelTime());
-    series("Traffic", "SPTT")
-        .pushHours(hours, simulation.shortestPathTravelTime());
+    Simulation::TrafficMetrics const traffic = simulation.getTrafficMetrics();
+    series("Traffic", "TSTT").pushHours(hours, traffic.totalTravelTime);
+    series("Traffic", "SPTT").pushHours(hours, traffic.shortestPathTime);
     series("Traffic quality", "relative gap")
-        .pushHours(hours, 100.0f * simulation.relativeGap());
+        .pushHours(hours, 100.0f * traffic.relativeGap);
 }
 
 // ----------------------------------------------------------------------------

@@ -54,7 +54,7 @@ void RuleLogPanel::draw(Simulation& simulation, game::DebugState& state,
     if (ImGui::IsItemHovered())
     {
         ImGui::SetTooltip(
-            "A rule is attempted on every cell of every map at every tick,\n"
+            "A rule is attempted on every cell of every layer at every tick,\n"
             "so recording costs something. It is off by default.");
     }
 

@@ -90,14 +90,14 @@ public:
     //! \return true when at least one rule is awake then, and true as well when
     //! no rule has been added at all: what has no timetable is never shut.
     //--------------------------------------------------------------------------
-    bool isOpen(uint32_t hourOfDay) const;
+    [[nodiscard]] bool isOpen(uint32_t hourOfDay) const;
 
     //--------------------------------------------------------------------------
     //! \brief Whether any timetable was found at all.
     //! \return false when every rule seen so far may run at any hour, in which
     //! case isOpen() is true everywhere and there is nothing to display.
     //--------------------------------------------------------------------------
-    bool bounded() const;
+    [[nodiscard]] bool isRestricted() const;
 
     //--------------------------------------------------------------------------
     //! \brief The next hour of the day the doors open.
@@ -105,7 +105,7 @@ public:
     //! \return \c hourOfDay itself when it is already open, the first open hour
     //! of the coming day otherwise, or NEVER when no hour of the day opens.
     //--------------------------------------------------------------------------
-    uint32_t nextOpening(uint32_t hourOfDay) const;
+    [[nodiscard]] uint32_t getNextOpeningHour(uint32_t hourOfDay) const;
 
     //--------------------------------------------------------------------------
     //! \brief The last hour of the day still open before the doors shut.
@@ -113,7 +113,7 @@ public:
     //! \return the last open hour of the current stretch, or NEVER when
     //! \c hourOfDay is closed or when nothing ever closes.
     //--------------------------------------------------------------------------
-    uint32_t closingAfter(uint32_t hourOfDay) const;
+    [[nodiscard]] uint32_t getClosingHour(uint32_t hourOfDay) const;
 
 private:
 

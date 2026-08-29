@@ -36,14 +36,14 @@ namespace ogb
 //! Example:
 //! \code
 //! ogb::Resources house;
-//! house.setCapacity("People", 8u);
+//! house.capacity("People", 8u);
 //! house.addResource("People", 8u);
 //!
 //! ogb::Resources load;
 //! load.addResource("People", 1u);
-//! house.removeResources(load);            // one leaves for work
+//! house.removeAll(load);            // one leaves for work
 //!
-//! if (house.getAmount("People") == 0u)
+//! if (house.amount("People") == 0u)
 //!     std::cout << "empty house\n";
 //! \endcode
 //!
@@ -68,8 +68,8 @@ public:
     //! \return the address of the resource if present. Return nullptr if not
     //! found.
     // -------------------------------------------------------------------------
-    Resource* findResource(ResourceType const& type);
-    const Resource* findResource(ResourceType const& type) const;
+    [[nodiscard]] Resource* findResource(ResourceType const& type);
+    [[nodiscard]] Resource const* findResource(ResourceType const& type) const;
 
     // -------------------------------------------------------------------------
     //! \brief Search for a resource given its name. If the resource is not
@@ -78,7 +78,7 @@ public:
     //! \return the reference of the resource already stored or the newly
     //! created.
     // -------------------------------------------------------------------------
-    Resource& findOrAddResource(ResourceType const& type);
+    [[nodiscard]] Resource& findOrAddResource(ResourceType const& type);
 
     // -------------------------------------------------------------------------
     //! \brief Find for an existing resource in the collection. If not found
@@ -113,14 +113,14 @@ public:
     //!
     //! \param[in] resourcesToAdd: what resources and what amount to increase.
     // -------------------------------------------------------------------------
-    void addResources(Resources const& resourcesToAdd);
+    void addAll(Resources const& resourcesToAdd);
 
     // -------------------------------------------------------------------------
     //! \brief Apply removeResource() for each resources.
     //!
     //! \param[in] resourcesToReduce: what resources and what amount to reduce.
     // -------------------------------------------------------------------------
-    void removeResources(Resources const& resourcesToReduce);
+    void removeAll(Resources const& resourcesToReduce);
 
     // -------------------------------------------------------------------------
     //! \brief Check if we can add at least one resource.
@@ -134,7 +134,7 @@ public:
     //! as if they had arrived. Zero asks the plain question.
     //! \return true if it possible to add at least one resource, else false.
     // -------------------------------------------------------------------------
-    bool canAddSomeResources(Resources const& resourcesToTryAdd,
+    [[nodiscard]] bool canAddAny(Resources const& resourcesToTryAdd,
                              uint32_t reserved = 0u);
 
     // -------------------------------------------------------------------------
@@ -143,13 +143,13 @@ public:
     //!
     //! \param[in] resourcesTarget: the recipient.
     // -------------------------------------------------------------------------
-    void transferResourcesTo(Resources& resourcesTarget);
+    void transferTo(Resources& resourcesTarget);
 
     // -------------------------------------------------------------------------
     //! \brief Return the amount of resource of the given type. If the resource
     //! does not exist return 0.
     // -------------------------------------------------------------------------
-    uint32_t getAmount(ResourceType const& type) const;
+    [[nodiscard]] uint32_t getAmount(ResourceType const& type) const;
 
     // -------------------------------------------------------------------------
     //! \brief Find for an existing resource in the collection and change its
@@ -165,7 +165,7 @@ public:
     void setCapacity(ResourceType const& type, uint32_t const capacity);
 
     // -------------------------------------------------------------------------
-    //! \brief Apply setCapacity() to a collection of resources.
+    //! \brief Apply capacity() to a collection of resources.
     // -------------------------------------------------------------------------
     void setCapacities(Resources const& resourcesCapacities);
 
@@ -183,18 +183,18 @@ public:
     //! \brief Return the maximal amount of resource of the given type. If the
     //! resource does not exist return 0.
     // -------------------------------------------------------------------------
-    uint32_t getCapacity(ResourceType const& type) const;
+    [[nodiscard]] uint32_t getCapacity(ResourceType const& type) const;
 
     // -------------------------------------------------------------------------
     //! \brief Return true if all resources are empty.
     // -------------------------------------------------------------------------
-    bool isEmpty() const;
+    [[nodiscard]] bool isEmpty() const;
 
     // -------------------------------------------------------------------------
     //! \brief Return true if the resource of the given type is present in the
     //! collection.
     // -------------------------------------------------------------------------
-    inline bool hasResource(ResourceType const& type)
+    [[nodiscard]] inline bool hasResource(ResourceType const& type) const
     {
         return findResource(type) != nullptr;
     }
@@ -203,7 +203,7 @@ public:
     //! \brief Every stock held, in the order they first appeared. What the
     //! inspector of the demo walks to draw its bars, and what a save writes.
     // -------------------------------------------------------------------------
-    std::vector<Resource> const& container() const
+    [[nodiscard]] std::vector<Resource> const& getAll() const
     {
         return m_bin;
     }

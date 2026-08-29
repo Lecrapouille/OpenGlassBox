@@ -3,112 +3,112 @@
 #define protected public
 #define private public
 #  include "TestWorld.hpp"
-#  include "OpenGlassBox/Area.hpp"
+#  include "OpenGlassBox/Zone.hpp"
 #  include "OpenGlassBox/City.hpp"
 #  include "OpenGlassBox/RuleCommand.hpp"
 #undef protected
 #undef private
 
-TEST(TestsArea, SpawnOnNearestWay)
+TEST(TestsZone, SpawnOnNearestSegment)
 {
     TestWorld world("Paris", 8u, 8u);
     City& city = world.city;
     Path& path = city.addPath(keep<PathType>("Road"));
     Node& n1 = path.addNode(Vector3f(30.0f, 30.0f, 0.0f));
     Node& n2 = path.addNode(Vector3f(90.0f, 30.0f, 0.0f));
-    path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
+    path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n1, n2);
 
     UnitType home("Home");
-    RuleAreaType growType("Grow");
-    RuleCommandSpawn spawn(home, RuleCommandSpawn::Placement::NearestWay);
+    RuleZoneType growType("Grow");
+    RuleCommandSpawn spawn(home, RuleCommandSpawn::Placement::NearestSegment);
     growType.commands.push_back(&spawn);
-    RuleArea grow(growType);
+    RuleZone grow(growType);
 
-    AreaType residential("Residential");
+    ZoneType residential("Residential");
     residential.rules.push_back(&grow);
-    Area& area = city.addArea(residential, city.region());
+    Zone& zone = city.addZone(residential, city.getRegion());
 
-    ASSERT_EQ(city.units().size(), 0u);
-    area.executeRules();
-    ASSERT_EQ(city.units().size(), 1u);
-    ASSERT_STREQ(city.units()[0]->type().c_str(), "Home");
-    ASSERT_NE(city.units()[0]->way(), nullptr);
-    ASSERT_EQ(path.nodes().size(), 2u);
+    ASSERT_EQ(city.getUnits().size(), 0u);
+    zone.executeRules();
+    ASSERT_EQ(city.getUnits().size(), 1u);
+    ASSERT_STREQ(city.getUnits()[0]->getTypeName().c_str(), "Home");
+    ASSERT_NE(city.getUnits()[0]->getSegment(), nullptr);
+    ASSERT_EQ(path.getNodes().size(), 2u);
 }
 
 //------------------------------------------------------------------------------
-//! \brief A building belongs beside the road that serves it: the cell the Area
+//! \brief A building belongs beside the road that serves it: the cell the Zone
 //! grows it on is one the road runs through or fronts, whatever the shape of the
 //! footprint.
 //------------------------------------------------------------------------------
-TEST(TestsArea, SpawnedUnitsStandAlongTheRoad)
+TEST(TestsZone, SpawnedUnitsStandAlongTheRoad)
 {
     TestWorld world("Paris", 8u, 8u);
     City& city = world.city;
-    float const side = city.gridCellSize();
+    float const side = city.getCellSize();
 
     Path& path = city.addPath(keep<PathType>("Road"));
     // A road along the third row of cells, crossing the whole city.
     Node& n1 = path.addNode(Vector3f(0.5f * side, 2.5f * side, 0.0f));
     Node& n2 = path.addNode(Vector3f(7.5f * side, 2.5f * side, 0.0f));
-    path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
+    path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n1, n2);
 
     UnitType home("Home");
-    RuleAreaType growType("Grow");
-    RuleCommandSpawn spawn(home, RuleCommandSpawn::Placement::NearestWay);
+    RuleZoneType growType("Grow");
+    RuleCommandSpawn spawn(home, RuleCommandSpawn::Placement::NearestSegment);
     growType.commands.push_back(&spawn);
-    RuleArea grow(growType);
+    RuleZone grow(growType);
 
-    AreaType residential("Residential");
+    ZoneType residential("Residential");
     residential.rules.push_back(&grow);
-    Area& area = city.addArea(residential, city.region());
+    Zone& zone = city.addZone(residential, city.getRegion());
 
     // More buildings than the row of cells the road runs through, so that the
     // ones that do not fit have to be refused rather than piled up.
     for (uint32_t i = 0u; i < 12u; ++i)
-        area.executeRules();
+        zone.executeRules();
 
-    ASSERT_FALSE(city.units().empty());
-    for (auto const& unit: city.units())
+    ASSERT_FALSE(city.getUnits().empty());
+    for (auto const& unit: city.getUnits())
     {
         // Two cells at most from the road, and no two buildings on one cell.
-        ASSERT_LE(std::abs(unit->mapV() - 2), 1);
-        for (auto const& other: city.units())
+        ASSERT_LE(std::abs(unit->getCell().v - 2), 1);
+        for (auto const& other: city.getUnits())
         {
             if (other.get() == unit.get())
                 continue;
-            ASSERT_FALSE((other->mapU() == unit->mapU()) &&
-                         (other->mapV() == unit->mapV()));
+            ASSERT_FALSE((other->getCell().u == unit->getCell().u) &&
+                         (other->getCell().v == unit->getCell().v));
         }
     }
 }
 
 //------------------------------------------------------------------------------
-//! \brief Without a road there is no connection to make, so the Area grows
+//! \brief Without a road there is no connection to make, so the Zone grows
 //! nothing at all instead of scattering houses in a field.
 //------------------------------------------------------------------------------
-TEST(TestsArea, NoRoadNoBuilding)
+TEST(TestsZone, NoRoadNoBuilding)
 {
     TestWorld world("Paris", 8u, 8u);
     City& city = world.city;
     city.addPath(keep<PathType>("Road"));
 
     UnitType home("Home");
-    RuleAreaType growType("Grow");
-    RuleCommandSpawn spawn(home, RuleCommandSpawn::Placement::NearestWay);
+    RuleZoneType growType("Grow");
+    RuleCommandSpawn spawn(home, RuleCommandSpawn::Placement::NearestSegment);
     growType.commands.push_back(&spawn);
-    RuleArea grow(growType);
+    RuleZone grow(growType);
 
-    AreaType residential("Residential");
+    ZoneType residential("Residential");
     residential.rules.push_back(&grow);
-    Area& area = city.addArea(residential, city.region());
+    Zone& zone = city.addZone(residential, city.getRegion());
 
-    area.executeRules();
-    area.executeRules();
-    ASSERT_TRUE(city.units().empty());
+    zone.executeRules();
+    zone.executeRules();
+    ASSERT_TRUE(city.getUnits().empty());
 }
 
-TEST(TestsArea, CountAndDestroy)
+TEST(TestsZone, CountAndDestroy)
 {
     TestWorld world("Paris", 8u, 8u);
     City& city = world.city;
@@ -116,44 +116,44 @@ TEST(TestsArea, CountAndDestroy)
     Node& n1 = path.addNode(Vector3f(30.0f, 30.0f, 0.0f));
     city.addUnit(keep<UnitType>("Home"), n1);
 
-    AreaType residential("Residential");
-    Area& area = city.addArea(residential, city.region());
-    ASSERT_EQ(area.countUnits("Home"), 1u);
+    ZoneType residential("Residential");
+    Zone& zone = city.addZone(residential, city.getRegion());
+    ASSERT_EQ(zone.countUnits("Home"), 1u);
 
     RuleCommandDestroy destroy("Home");
     RuleContext context;
-    context.area = &area;
+    context.zone = &zone;
     context.city = &city;
     ASSERT_TRUE(destroy.validate(context));
     destroy.execute(context);
-    ASSERT_EQ(city.units().size(), 0u);
+    ASSERT_EQ(city.getUnits().size(), 0u);
 }
 
-TEST(TestsArea, UpgradeKeepsAttachment)
+TEST(TestsZone, UpgradeKeepsAttachment)
 {
     TestWorld world("Paris", 8u, 8u);
     City& city = world.city;
     Path& path = city.addPath(keep<PathType>("Road"));
     Node& n1 = path.addNode(Vector3f(30.0f, 30.0f, 0.0f));
     Node& n2 = path.addNode(Vector3f(90.0f, 30.0f, 0.0f));
-    Way& way = path.addWay(keep<WayType>("Dirt", 0xAAAAAA), n1, n2);
+    Segment& segment = path.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n1, n2);
 
     UnitType home("Home");
     UnitType shop("Shop");
-    city.addUnit(home, path, way, 0.5f);
+    city.addUnit(home, path, segment, 0.5f);
 
     RuleCommandUpgrade upgrade(home, shop);
 
-    AreaType residential("Residential");
-    Area& area = city.addArea(residential, city.region());
+    ZoneType residential("Residential");
+    Zone& zone = city.addZone(residential, city.getRegion());
     RuleContext context;
-    context.area = &area;
+    context.zone = &zone;
     context.city = &city;
 
     ASSERT_TRUE(upgrade.validate(context));
     upgrade.execute(context);
-    ASSERT_EQ(city.units().size(), 1u);
-    ASSERT_STREQ(city.units()[0]->type().c_str(), "Shop");
-    ASSERT_NE(city.units()[0]->way(), nullptr);
-    ASSERT_EQ(path.nodes().size(), 2u);
+    ASSERT_EQ(city.getUnits().size(), 1u);
+    ASSERT_STREQ(city.getUnits()[0]->getTypeName().c_str(), "Shop");
+    ASSERT_NE(city.getUnits()[0]->getSegment(), nullptr);
+    ASSERT_EQ(path.getNodes().size(), 2u);
 }

@@ -40,10 +40,10 @@ rules
 end
 
 units
-	unit Start color 0x00FF00 mapRadius 1 rules [ Send ] targets [ Start ] caps [ People 200 ] resources [ People 80 ]
-	unit End color 0xFF0000 mapRadius 1 rules [ Absorb ] targets [ End ] caps [ People 200 ] resources [ ]
+	unit Start color 0x00FF00 layerRadius 1 rules [ Send ] targets [ Start ] caps [ People 200 ] resources [ People 80 ]
+	unit End color 0xFF0000 layerRadius 1 rules [ Absorb ] targets [ End ] caps [ People 200 ] resources [ ]
 end
 
-maps
-	map People color 0xFFFF00 capacity 10 rules [ ]
+layers
+	layer People color 0xFFFF00 capacity 10 rules [ ]
 end

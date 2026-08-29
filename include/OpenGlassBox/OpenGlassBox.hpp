@@ -9,6 +9,10 @@
 //!
 //! Include this header to pull in the whole engine surface, or include
 //! individual headers (e.g. \c OpenGlassBox/Simulation.hpp) for faster builds.
+//!
+//! What is not here is on purpose. The lexer, the parser of the shipped
+//! language and the cell iterators are how the engine is built, not what it
+//! offers. Include them by name if you are extending the engine itself.
 
 #ifndef OPEN_GLASSBOX_HPP
 #define OPEN_GLASSBOX_HPP
@@ -28,16 +32,15 @@
 #include "OpenGlassBox/RuleCommand.hpp"
 #include "OpenGlassBox/RuleValue.hpp"
 
-// Map, areas and placement
-#include "OpenGlassBox/Area.hpp"
+// Layers of the environment, zones and placement
+#include "OpenGlassBox/Zone.hpp"
 #include "OpenGlassBox/Entity.hpp"
-#include "OpenGlassBox/Map.hpp"
-#include "OpenGlassBox/MapCoordinatesInsideRadius.hpp"
-#include "OpenGlassBox/MapRandomCoordinates.hpp"
-#include "OpenGlassBox/MapRegion.hpp"
+#include "OpenGlassBox/Layer.hpp"
+#include "OpenGlassBox/CellRegion.hpp"
 
 // Road network and routing
 #include "OpenGlassBox/DijkstraRouter.hpp"
+#include "OpenGlassBox/InstallRouter.hpp"
 #include "OpenGlassBox/Path.hpp"
 #include "OpenGlassBox/Router.hpp"
 
@@ -45,15 +48,14 @@
 #include "OpenGlassBox/Agent.hpp"
 #include "OpenGlassBox/Unit.hpp"
 
-// Script parsing
+// Rules read from a script
+#include "OpenGlassBox/Ruleset.hpp"
 #include "OpenGlassBox/Script/IScriptParser.hpp"
-#include "OpenGlassBox/Script/Lexer.hpp"
 #include "OpenGlassBox/Script/ScriptDefinitions.hpp"
-#include "OpenGlassBox/Script/SimpleScriptParser.hpp"
-#include "OpenGlassBox/ScriptParser.hpp"
 
-// Simulation
+// The game itself
 #include "OpenGlassBox/City.hpp"
+#include "OpenGlassBox/Listener.hpp"
 #include "OpenGlassBox/Simulation.hpp"
 #include "OpenGlassBox/World.hpp"
 

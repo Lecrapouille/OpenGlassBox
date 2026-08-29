@@ -29,17 +29,17 @@ static char const* modeName(game::LayerMode mode)
 }
 
 // ----------------------------------------------------------------------------
-static void collectMapNames(Simulation& simulation, std::set<std::string>& names)
+static void collectLayerNames(Simulation& simulation, std::set<std::string>& names)
 {
-    for (auto& it: simulation.cities())
+    for (auto& it: simulation.getCities())
     {
-        for (auto& map: it.second->maps())
-            names.insert(map.second->type());
+        for (auto& layer: it.second->getLayers())
+            names.insert(layer.second->getTypeName().str());
     }
 }
 
 // ----------------------------------------------------------------------------
-//! \brief One map: visibility, colour, name, opacity and drawing mode. Each
+//! \brief One layer: visibility, colour, name, opacity and drawing mode. Each
 //! control sits in its own table column so that they line up from row to row.
 // ----------------------------------------------------------------------------
 static void drawLayerRow(Simulation& simulation, game::DebugState& state,
@@ -51,13 +51,13 @@ static void drawLayerRow(Simulation& simulation, game::DebugState& state,
 
     uint32_t color = 0xFFFFFF;
     uint64_t total = 0u;
-    for (auto& it: simulation.cities())
+    for (auto& it: simulation.getCities())
     {
-        auto const map = it.second->maps().find(name);
-        if (map != it.second->maps().end())
+        auto const layer = it.second->getLayers().find(name);
+        if (layer != it.second->getLayers().end())
         {
-            color = map->second->color();
-            total += map->second->totalResource();
+            color = layer->second->getColor();
+            total += layer->second->getTotalResource();
         }
     }
 
@@ -67,7 +67,7 @@ static void drawLayerRow(Simulation& simulation, game::DebugState& state,
     ImGui::TableNextColumn();
     ImGui::Checkbox("##visible", &settings.visible);
     if (ImGui::IsItemHovered())
-        ImGui::SetTooltip("Show or hide this map.");
+        ImGui::SetTooltip("Show or hide this layer.");
 
     ImGui::TableNextColumn();
     ImGui::ColorButton("##color",
@@ -104,7 +104,7 @@ static void drawLayerRow(Simulation& simulation, game::DebugState& state,
     {
         ImGui::SetTooltip(
             "Show %s as the main heatmap.\n"
-            "Alt+click to show only this map.\n"
+            "Alt+click to show only this layer.\n"
             "total: %llu",
             name.c_str(), (unsigned long long)total);
     }
@@ -145,14 +145,14 @@ void LayersPanel::drawColumn(Simulation& simulation, game::DebugState& state,
                              float width)
 {
     std::set<std::string> names;
-    collectMapNames(simulation, names);
+    collectLayerNames(simulation, names);
     if (names.empty())
     {
-        ImGui::TextDisabled("No map in this ruleset.");
+        ImGui::TextDisabled("No layer in this ruleset.");
         return;
     }
 
-    // Beyond a handful of maps the column would eat the canvas, so it scrolls
+    // Beyond a handful of layers the column would eat the canvas, so it scrolls
     // instead of growing.
     float const rowHeight = ImGui::GetFrameHeightWithSpacing();
     size_t const visibleRows = std::min<size_t>(names.size(), 5u);

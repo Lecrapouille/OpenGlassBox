@@ -5,11 +5,11 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
-//! \file MapRandomCoordinates.hpp
-//! \brief Draw a share of the cells of a Map, spread over the whole of it.
+//! \file RandomCells.hpp
+//! \brief Draw a share of the cells of a Layer, spread over the whole of it.
 
-#ifndef OPEN_GLASSBOX_MAPRANDOMCOORDINATES_HPP
-#define OPEN_GLASSBOX_MAPRANDOMCOORDINATES_HPP
+#ifndef OPEN_GLASSBOX_RANDOMCELLS_HPP
+#define OPEN_GLASSBOX_RANDOMCELLS_HPP
 
 #include <cstdint>
 
@@ -20,28 +20,28 @@ namespace ogb
 //! \brief Hands out a given number of cells of a rectangle, drawn at random,
 //! each at most once, in reading order.
 //!
-//! A map rule that only acts on part of its cells has to pick which ones, and
-//! taking the first ones in reading order would draw a front sweeping the map
+//! A layer rule that only acts on part of its cells has to pick which ones, and
+//! taking the first ones in reading order would draw a front sweeping the layer
 //! from one corner: grass would grow in stripes. What the rule wants is a
-//! sample spread over the whole map, and every subset of the size asked for has
+//! sample spread over the whole layer, and every subset of the size asked for has
 //! to be equally likely.
 //!
 //! What this does not have to be is a sample handed out in a random *order*.
 //! The rule is applied to each drawn cell on its own, so only the set matters,
 //! and a set handed out in reading order is a set read along the rows of the
-//! blocks the Map stores its cells in. Handing them out shuffled instead costs
+//! blocks the Layer stores its cells in. Handing them out shuffled instead costs
 //! a cache miss on every cell, on a grid that is megabytes wide.
 //!
 //! So the rectangle is scanned once, in order, and each cell is taken with the
 //! probability that makes the sample come out right: \c wanted out of the cells
 //! that are left. That is selection sampling, and it draws exactly the number
 //! asked for, uniformly, in one pass, holding nothing but a handful of
-//! integers. The previous implementation held two vectors as large as the map
+//! integers. The previous implementation held two vectors as large as the layer
 //! and copied one into the other on every run.
 //!
 //! Example:
 //! \code
-//! MapRandomCoordinates walk;
+//! RandomCells walk;
 //! walk.init(sizeU, sizeV, rule.percent(uint64_t(sizeU) * sizeV));
 //!
 //! uint32_t u, v;
@@ -51,47 +51,47 @@ namespace ogb
 //! }
 //! \endcode
 //!
-//! The matching script, where the percentage is what makes only part of the map
+//! The matching script, where the percentage is what makes only part of the layer
 //! move on each run:
 //! \code
-//! mapRule CreateGrass
+//! layerRule CreateGrass
 //!     rate 20 minutes
-//!     map Water remove 10 randomTilesPercent 90
-//!     map Grass add 1
+//!     layer Water remove 10 randomTilesPercent 90
+//!     layer Grass add 1
 //! end
 //! \endcode
 //!
 //! \note The draw is not reproducible from one run of the program to the next:
 //! the generator is seeded from the system.
 //==============================================================================
-class MapRandomCoordinates
+class RandomCells
 {
 public:
 
-    MapRandomCoordinates();
+    RandomCells();
 
     //--------------------------------------------------------------------------
     //! \brief Start a fresh draw over a rectangle of that size.
     //!
-    //! Called at the start of every run of a map rule. Allocates nothing, so a
+    //! Called at the start of every run of a layer rule. Allocates nothing, so a
     //! rule firing on every tick costs no memory traffic beyond the cells it
     //! actually visits. Whatever was left of a previous draw is forgotten.
     //!
-    //! \param[in] mapSizeU number of columns.
-    //! \param[in] mapSizeV number of rows.
+    //! \param[in] layerSizeU number of columns.
+    //! \param[in] layerSizeV number of rows.
     //! \param[in] wanted how many cells to hand out. Clamped to the number of
     //! cells the rectangle holds.
     //!
     //! \note A rectangle of more than four billion cells is scanned in part
     //! only. No grid that large fits in memory in the first place.
     //--------------------------------------------------------------------------
-    void init(uint32_t mapSizeU, uint32_t mapSizeV, uint64_t wanted);
+    void init(uint32_t layerSizeU, uint32_t layerSizeV, uint64_t wanted);
 
     // -------------------------------------------------------------------------
     //! \brief Hand out the next drawn cell.
-    //! \param[out] u column of the cell, in [0..mapSizeU[. Zero when there is
+    //! \param[out] u column of the cell, in [0..layerSizeU[. Zero when there is
     //! nothing left.
-    //! \param[out] v row of the cell, in [0..mapSizeV[. Zero when there is
+    //! \param[out] v row of the cell, in [0..layerSizeV[. Zero when there is
     //! nothing left.
     //! \return true when a cell was handed out, false once the whole sample has
     //! been handed out.

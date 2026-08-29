@@ -5,7 +5,7 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
-#include "OpenGlassBox/MapRandomCoordinates.hpp"
+#include "OpenGlassBox/RandomCells.hpp"
 
 #include <algorithm>
 #include <climits>
@@ -15,7 +15,7 @@ namespace ogb
 {
 
 // -----------------------------------------------------------------------------
-MapRandomCoordinates::MapRandomCoordinates()
+RandomCells::RandomCells()
 {
     std::random_device seed;
     m_state = (uint64_t(seed()) << 32) ^ uint64_t(seed());
@@ -26,7 +26,7 @@ MapRandomCoordinates::MapRandomCoordinates()
 }
 
 // -----------------------------------------------------------------------------
-uint32_t MapRandomCoordinates::random()
+uint32_t RandomCells::random()
 {
     // xorshift64, Marsaglia. The high half is the better mixed one.
     m_state ^= m_state << 13;
@@ -37,13 +37,13 @@ uint32_t MapRandomCoordinates::random()
 }
 
 // -----------------------------------------------------------------------------
-void MapRandomCoordinates::init(uint32_t const mapSizeU,
-                                uint32_t const mapSizeV,
+void RandomCells::init(uint32_t const layerSizeU,
+                                uint32_t const layerSizeV,
                                 uint64_t const wanted)
 {
-    uint64_t const cells = uint64_t(mapSizeU) * uint64_t(mapSizeV);
+    uint64_t const cells = uint64_t(layerSizeU) * uint64_t(layerSizeV);
 
-    m_sizeU = mapSizeU;
+    m_sizeU = layerSizeU;
     m_u = 0u;
     m_v = 0u;
     m_left = uint32_t(std::min<uint64_t>(cells, UINT32_MAX));
@@ -51,7 +51,7 @@ void MapRandomCoordinates::init(uint32_t const mapSizeU,
 }
 
 // -----------------------------------------------------------------------------
-bool MapRandomCoordinates::next(uint32_t& u, uint32_t& v)
+bool RandomCells::next(uint32_t& u, uint32_t& v)
 {
     while (m_wanted > 0u)
     {

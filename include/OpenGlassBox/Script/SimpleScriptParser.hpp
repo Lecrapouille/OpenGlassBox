@@ -52,16 +52,16 @@ namespace ogb
 //! end
 //!
 //! units                           # kinds of building
-//!     unit Home color 0xFF00FF mapRadius 1 rules [ SendPeopleToWork ]
+//!     unit Home color 0xFF00FF layerRadius 1 rules [ SendPeopleToWork ]
 //!          targets [ Home ] caps [ People 8 ] resources [ People 8 ]
 //! end
 //!
-//! maps                            # layers of the environment
-//!     map Water color 0x0000FF capacity 100 rules [ ]
+//! layers                            # layers of the environment
+//!     layer Water color 0x0000FF capacity 100 rules [ ]
 //! end
 //!
-//! areas                           # kinds of zone the player paints
-//!     area Residential color 0x44AA44 rules [ GrowHomes ]
+//! zones                           # kinds of zone the player paints
+//!     zone Residential color 0x44AA44 rules [ GrowHomes ]
 //! end
 //! \endcode
 //!
@@ -129,28 +129,28 @@ private:
     void parseResource();
     void parsePaths();
     void parsePath();
-    void parseWays();
-    void parseWay();
+    void parseSegments();
+    void parseSegment();
     void parseAgents();
     void parseAgent();
-    void parseMaps();
-    void parseMap();
+    void parseLayers();
+    void parseLayer();
     void parseUnits();
     void parseUnit();
-    void parseAreas();
-    void parseArea();
+    void parseZones();
+    void parseZone();
     void parseRules();
-    void parseRuleMap();
+    void parseRuleLayer();
     void parseRuleUnit();
-    void parseRuleArea();
+    void parseRuleZone();
     IRuleCommand* parseCommand(Token const& token);
 
     void parseResourcesArray(Resources& resources);
     void parseCapacitiesArray(Resources& resources);
     void parseStringArray(std::vector<std::string>& out);
-    void parseRuleMapArray(std::vector<RuleMap*>& rules);
+    void parseRuleLayerArray(std::vector<RuleLayer*>& rules);
     void parseRuleUnitArray(std::vector<RuleUnit*>& rules);
-    void parseRuleAreaArray(std::vector<RuleArea*>& rules);
+    void parseRuleZoneArray(std::vector<RuleZone*>& rules);
 
     //--------------------------------------------------------------------------
     //! \brief Take the next word, complaining when there is none.
@@ -187,7 +187,7 @@ private:
     //! \brief \param[in] text a word.
     //! \return true when it opens a section, such as "units" or "rules".
     //--------------------------------------------------------------------------
-    static bool isSectionKeyword(std::string const& text);
+    [[nodiscard]] static bool isSectionKeyword(std::string const& text);
 
     //--------------------------------------------------------------------------
     //! \brief Skip up to and past the next \c ], for when a bracketed list

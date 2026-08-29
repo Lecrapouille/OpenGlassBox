@@ -5,15 +5,15 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
-#include "OpenGlassBox/ScriptParser.hpp"
+#include "OpenGlassBox/Ruleset.hpp"
 
 #include <iostream>
 #include <sstream>
 
 // -----------------------------------------------------------------------------
-//! \brief Load into a scratch set of definitions and only adopt them once the
-//! parse succeeded. A script that fails to load therefore leaves the simulation
-//! that is already running exactly as it was.
+//! \brief Load into a scratch set of definitions and adopt them only once the
+//! parse succeeded. A script that fails to load therefore leaves a running
+//! simulation exactly as it was.
 // -----------------------------------------------------------------------------
 namespace ogb
 {
@@ -38,7 +38,7 @@ static bool loadInto(ScriptDefinitions& definitions,
 }
 
 // -----------------------------------------------------------------------------
-bool Script::parseFile(std::string const& filename)
+bool Ruleset::loadFile(std::string const& filename)
 {
     std::cout << "Parsing script '" << filename << "'" << std::endl;
 
@@ -63,7 +63,7 @@ bool Script::parseFile(std::string const& filename)
 }
 
 // -----------------------------------------------------------------------------
-bool Script::parseString(std::string const& source, std::string const& name)
+bool Ruleset::loadString(std::string const& source, std::string const& name)
 {
     auto parser = makeScriptParser(name);
 
@@ -75,7 +75,7 @@ bool Script::parseString(std::string const& source, std::string const& name)
 }
 
 // -----------------------------------------------------------------------------
-std::string Script::formatErrors() const
+std::string Ruleset::formatErrors() const
 {
     std::ostringstream stream;
     bool first = true;

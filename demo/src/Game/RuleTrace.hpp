@@ -29,7 +29,7 @@ struct RuleEvent
 {
     uint64_t tick = 0u;
     std::string city;
-    //! \brief "Unit Home" or "Map Water", the entity the rule ran on.
+    //! \brief "Unit Home" or "Layer Water", the entity the rule ran on.
     std::string entity;
     std::string rule;
     //! \brief Description of the command that refused to validate, empty on
@@ -44,7 +44,7 @@ struct RuleEvent
 //! \brief Records the rule executions of the engine into a bounded ring buffer.
 //!
 //! Attaching this listener has a real cost, since a rule fires on every cell of
-//! every map at every tick, so recording is opt-in and off by default.
+//! every layer at every tick, so recording is opt-in and off by default.
 // ****************************************************************************
 class RuleTrace: public IRule::Listener
 {
