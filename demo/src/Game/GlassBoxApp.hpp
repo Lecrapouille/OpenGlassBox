@@ -80,9 +80,16 @@ private:
     void watchScriptFile(float dt);
     void drawScriptPanel();
 
-    //! \brief Read the fingerprints the Script panel shows. Hashing a file is
-    //! not free, so it is done when asked rather than every frame.
+    //! \brief Read the fingerprints the Script panel shows, and which of the
+    //! saves beside the ruleset went stale. Hashing files and walking a
+    //! directory is not free, so it is done when one of them is read or
+    //! written rather than every frame.
     void computeChecksum();
+
+    //! \brief Stamp the current fingerprint of the ruleset into every save
+    //! computeChecksum() found stale, and read the fingerprints again.
+    //! \return how many saves were stamped.
+    size_t restampStaleSaves();
 
     //! \brief Whether a save may be opened against the ruleset on disk. A
     //! mismatch is normally a hard refusal; the player can waive it while

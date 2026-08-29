@@ -14,6 +14,7 @@
 
 #include <sys/stat.h>
 
+#include <algorithm>
 #include <cstdio>
 #include <exception>
 #include <fstream>
@@ -471,6 +472,7 @@ bool GlassBoxApp::loadRuleset(std::string const& filename, bool loadSiblingSave)
 
     resetView();
     m_script_mtime = modificationTime(m_ruleset_path);
+    computeChecksum();
     setTitle("OpenGlassBox - " + fileBasename(m_ruleset_path));
     return m_script_error.empty();
 }
@@ -504,14 +506,50 @@ void GlassBoxApp::computeChecksum()
                             : CitySave::hashFile(m_ruleset_path);
     m_checksum.edited = CitySave::hashString(m_script_text);
     m_checksum.save.clear();
+    m_checksum.staleSaves.clear();
 
-    if (!m_save_path.empty())
+    if (m_ruleset_path.empty())
+        return;
+
+    // The open save is usually one of those, but a city opened from elsewhere
+    // is worth reporting too.
+    std::vector<std::string> saves =
+        CitySave::savesUsingRuleset(m_ruleset_path);
+    if (!m_save_path.empty() &&
+        (std::find(saves.begin(), saves.end(), m_save_path) == saves.end()))
+    {
+        saves.push_back(m_save_path);
+    }
+
+    for (std::string const& save : saves)
     {
         CitySaveHeader header;
         std::string error;
-        if (CitySave::peekHeader(m_save_path, header, error))
+        if (!CitySave::peekHeader(save, header, error))
+            continue;
+
+        if (save == m_save_path)
             m_checksum.save = header.hash;
+        if (header.hash != m_checksum.onDisk)
+            m_checksum.staleSaves.push_back(save);
     }
+}
+
+// ----------------------------------------------------------------------------
+size_t GlassBoxApp::restampStaleSaves()
+{
+    size_t stamped = 0u;
+    for (std::string const& save : m_checksum.staleSaves)
+    {
+        std::string error;
+        if (CitySave::restamp(save, m_ruleset_path, error))
+            ++stamped;
+        else
+            m_script_error = error;
+    }
+
+    computeChecksum();
+    return stamped;
 }
 
 // ----------------------------------------------------------------------------
@@ -578,6 +616,7 @@ bool GlassBoxApp::loadCity(std::string const& filename)
     loadScriptText();
     resetView();
     m_script_mtime = modificationTime(m_ruleset_path);
+    computeChecksum();
     setTitle("OpenGlassBox - " + fileBasename(m_save_path));
     return true;
 }
@@ -611,6 +650,7 @@ bool GlassBoxApp::saveCity(std::string const& filename)
     m_save_path = filename;
     m_reload_notice = "city saved";
     m_reload_notice_timer = NOTICE_DURATION;
+    computeChecksum();
     setTitle("OpenGlassBox - " + fileBasename(m_save_path));
     return true;
 }
@@ -682,6 +722,18 @@ bool GlassBoxApp::applyScript()
     m_script_mtime = modificationTime(m_ruleset_path);
     m_editor.reset();
     m_state.selection.clear();
+
+    // Rewriting the ruleset just invalidated every save beside it, and a save
+    // that no longer opens is the whole of what the fingerprint costs while a
+    // script is being written. The saves name this ruleset, so they can be
+    // found and stamped rather than left for the player to mend one by one.
+    computeChecksum();
+    size_t const stamped = restampStaleSaves();
+    if (stamped != 0u)
+    {
+        m_script_status =
+            "applied, " + std::to_string(stamped) + " save(s) stamped";
+    }
     return true;
 }
 
@@ -986,6 +1038,11 @@ void GlassBoxApp::onDrawPanels()
 // ----------------------------------------------------------------------------
 void GlassBoxApp::drawScriptPanel()
 {
+    // Only the text being typed is hashed every frame: it is in memory, while
+    // the ruleset and the saves are on disk and only move when a file is read
+    // or written.
+    m_checksum.edited = CitySave::hashString(m_script_text);
+
     ui::ScriptPanel::Actions actions;
     m_script_panel.draw(
         m_script_text, m_script_status, m_checksum, m_ignore_hash, actions);
@@ -993,19 +1050,12 @@ void GlassBoxApp::drawScriptPanel()
     if (actions.apply)
     {
         applyScript();
-        if (m_checksum.known)
-            computeChecksum();
     }
-    if (actions.computeChecksum)
+    if (actions.restampSaves)
     {
-        computeChecksum();
-    }
-    if (actions.restampSave && !m_save_path.empty())
-    {
-        // Writing the city back is what stamps it: the writer records the
-        // fingerprint of the ruleset it is given.
-        saveCity(m_save_path);
-        computeChecksum();
+        size_t const stamped = restampStaleSaves();
+        m_reload_notice = std::to_string(stamped) + " save(s) stamped";
+        m_reload_notice_timer = NOTICE_DURATION;
     }
 }
 

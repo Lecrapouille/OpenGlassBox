@@ -14,6 +14,16 @@ namespace ui {
 
 
 // ----------------------------------------------------------------------------
+//! \brief Trailing part of a path, enough to tell two saves apart without
+//! spelling out a directory nobody needs to read.
+// ----------------------------------------------------------------------------
+static std::string fileName(std::string const& path)
+{
+    size_t const slash = path.find_last_of("/\\");
+    return (slash == std::string::npos) ? path : path.substr(slash + 1u);
+}
+
+// ----------------------------------------------------------------------------
 //! \brief One fingerprint on a line, with the button that puts it in the
 //! clipboard. Sixty-four hexadecimal characters do not fit in a narrow panel
 //! and nobody reads them: what they are good for is being pasted.
@@ -40,6 +50,51 @@ static void drawHash(char const* label, std::string const& hash)
 }
 
 // ----------------------------------------------------------------------------
+//! \brief Where the ruleset and the saves beside it stand, in one line.
+//!
+//! The panel used to print three fingerprints and leave the reader to compare
+//! them. What the answer is used for is knowing whether a save still opens, so
+//! that is what is said, and the digits moved out of the way.
+// ----------------------------------------------------------------------------
+static void drawChecksumStatus(ScriptPanel::Checksum const& checksum,
+                               ScriptPanel::Actions& actions)
+{
+    if (checksum.edited != checksum.onDisk)
+    {
+        ImGui::TextDisabled("Unapplied changes in this editor.");
+        return;
+    }
+
+    if (checksum.staleSaves.empty())
+    {
+        ImGui::TextDisabled("Saves match this ruleset.");
+        return;
+    }
+
+    std::string names;
+    for (std::string const& save : checksum.staleSaves)
+    {
+        if (!names.empty())
+            names += ", ";
+        names += fileName(save);
+    }
+
+    ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(theme::FAILURE),
+                       "Written against another version: %s",
+                       names.c_str());
+
+    if (ImGui::Button("Update them"))
+        actions.restampSaves = true;
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("Record the fingerprint of the ruleset as it is now\n"
+                          "into those saves, so that they open again. Only the\n"
+                          "header changes; a type the script dropped is still\n"
+                          "refused by name when the save is read.");
+    }
+}
+
+// ----------------------------------------------------------------------------
 void ScriptPanel::draw(std::string& text, std::string const& status,
                        Checksum const& checksum, bool& ignoreMismatch,
                        Actions& actions)
@@ -61,55 +116,26 @@ void ScriptPanel::draw(std::string& text, std::string const& status,
                            "%s", status.c_str());
     }
 
-    if (ImGui::CollapsingHeader("Checksum"))
-    {
-        if (ImGui::Button("Compute"))
-            actions.computeChecksum = true;
-        if (ImGui::IsItemHovered())
-        {
-            ImGui::SetTooltip("SHA-256 of the ruleset. A save records it and\n"
-                              "refuses to open against a ruleset that changed\n"
-                              "since it was written.");
-        }
+    if (checksum.known)
+        drawChecksumStatus(checksum, actions);
 
-        ImGui::SameLine();
+    if (ImGui::CollapsingHeader("Checksum details"))
+    {
+        ImGui::TextDisabled(
+            "A save records the SHA-256 of the ruleset it was written against\n"
+            "and refuses to open against one that changed since. Apply keeps\n"
+            "the saves beside the ruleset stamped with the current one.");
+
+        drawHash("ruleset", checksum.onDisk);
+        drawHash("this editor", checksum.edited);
+        drawHash("open save", checksum.save);
+
         ImGui::Checkbox("Open saves with a stale checksum", &ignoreMismatch);
         if (ImGui::IsItemHovered())
         {
-            ImGui::SetTooltip("While a ruleset is being written its checksum\n"
-                              "changes at every save. The geometry is still\n"
-                              "read, and a type the new script dropped is\n"
-                              "still refused by name.");
-        }
-
-        if (!checksum.known)
-        {
-            ImGui::TextDisabled("Not computed yet.");
-        }
-        else
-        {
-            drawHash("ruleset", checksum.onDisk);
-            drawHash("this editor", checksum.edited);
-            drawHash("open save", checksum.save);
-
-            if (checksum.edited != checksum.onDisk)
-            {
-                ImGui::TextDisabled("The editor holds changes that Apply has "
-                                    "not written yet.");
-            }
-            if (!checksum.save.empty() && (checksum.save != checksum.onDisk))
-            {
-                ImGui::TextColored(
-                    ImGui::ColorConvertU32ToFloat4(theme::FAILURE),
-                    "The open save was written against another version.");
-                if (ImGui::Button("Re-stamp the open save"))
-                    actions.restampSave = true;
-                if (ImGui::IsItemHovered())
-                {
-                    ImGui::SetTooltip("Write the city back with the checksum\n"
-                                      "of the ruleset as it is now.");
-                }
-            }
+            ImGui::SetTooltip("Waive the check for a save that was not\n"
+                              "stamped. The geometry is still read, and a type\n"
+                              "the script dropped is still refused by name.");
         }
         ImGui::Spacing();
     }

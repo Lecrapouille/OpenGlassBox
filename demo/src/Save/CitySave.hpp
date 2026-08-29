@@ -163,6 +163,38 @@ public:
     // -------------------------------------------------------------------------
     static bool
     read(std::string const& path, Simulation& simulation, std::string& error);
+
+    // -------------------------------------------------------------------------
+    //! \brief Every save sitting next to a ruleset that names it.
+    //!
+    //! A save names its ruleset by file name and is looked for in its own
+    //! directory first, so the saves a ruleset can invalidate are the \c .ogc
+    //! files beside it. Editing a script breaks all of them at once, and this
+    //! is what lets a host mend them without the player naming them one by one.
+    //!
+    //! \param[in] rulesetPath the script to look around.
+    //! \return the paths of those saves, whether their fingerprint is stale or
+    //! not. Empty when the directory cannot be read.
+    // -------------------------------------------------------------------------
+    static std::vector<std::string>
+    savesUsingRuleset(std::string const& rulesetPath);
+
+    // -------------------------------------------------------------------------
+    //! \brief Record the current fingerprint of a ruleset into a save.
+    //!
+    //! Only the header line is rewritten: the city is neither parsed nor
+    //! rebuilt, so a save whose types the ruleset no longer defines is left
+    //! readable enough for the loader to say so by name.
+    //!
+    //! \param[in] savePath the save to stamp.
+    //! \param[in] rulesetPath the script to fingerprint.
+    //! \param[out] error why it failed.
+    //! \return false when either file cannot be read or written, and true when
+    //! the save already carried that fingerprint.
+    // -------------------------------------------------------------------------
+    static bool restamp(std::string const& savePath,
+                        std::string const& rulesetPath,
+                        std::string& error);
 };
 
 } // namespace ogb

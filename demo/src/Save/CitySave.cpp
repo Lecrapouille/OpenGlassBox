@@ -6,8 +6,10 @@
 
 #include "Save/CitySave.hpp"
 
+#include <algorithm>
 #include <cstdint>
 #include <cstdio>
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 
@@ -340,6 +342,90 @@ bool CitySave::matchesRuleset(CitySaveHeader const& header,
         return false;
     }
     return true;
+}
+
+// -----------------------------------------------------------------------------
+std::vector<std::string>
+CitySave::savesUsingRuleset(std::string const& rulesetPath)
+{
+    namespace fs = std::filesystem;
+
+    std::vector<std::string> saves;
+    std::error_code code;
+    fs::path const ruleset(rulesetPath);
+    fs::path const directory =
+        ruleset.has_parent_path() ? ruleset.parent_path() : fs::path(".");
+
+    for (auto const& entry : fs::directory_iterator(directory, code))
+    {
+        if (!entry.is_regular_file(code) || (entry.path().extension() != ".ogc"))
+            continue;
+
+        CitySaveHeader header;
+        std::string error;
+        if (!peekHeader(entry.path().string(), header, error))
+            continue;
+        if (header.ruleset != ruleset.filename().string())
+            continue;
+
+        saves.push_back(entry.path().string());
+    }
+
+    // The order a directory hands its entries in is not defined, and a message
+    // naming the saves that were mended should not shuffle between runs.
+    std::sort(saves.begin(), saves.end());
+    return saves;
+}
+
+// -----------------------------------------------------------------------------
+bool CitySave::restamp(std::string const& savePath,
+                       std::string const& rulesetPath,
+                       std::string& error)
+{
+    std::string const hash = hashFile(rulesetPath);
+    if (hash.empty())
+    {
+        error = "Cannot read ruleset '" + rulesetPath + "'";
+        return false;
+    }
+
+    std::ifstream in(savePath);
+    if (!in)
+    {
+        error = "Cannot read '" + savePath + "'";
+        return false;
+    }
+    std::stringstream buffer;
+    buffer << in.rdbuf();
+    in.close();
+
+    // The fingerprint is one word on one line of the header, so the city below
+    // it is copied through untouched rather than parsed and written back.
+    std::string text = buffer.str();
+    size_t const key = text.find("\thash ");
+    size_t const end = (key == std::string::npos)
+                           ? std::string::npos
+                           : text.find('\n', key);
+    if (end == std::string::npos)
+    {
+        error = "'" + savePath + "' has no hash line to stamp";
+        return false;
+    }
+
+    std::string const line = "\thash " + hash;
+    if (text.compare(key, end - key, line) == 0)
+        return true;
+
+    text.replace(key, end - key, line);
+
+    std::ofstream out(savePath, std::ios::binary | std::ios::trunc);
+    if (!out)
+    {
+        error = "Cannot write '" + savePath + "'";
+        return false;
+    }
+    out << text;
+    return out.good();
 }
 
 // -----------------------------------------------------------------------------

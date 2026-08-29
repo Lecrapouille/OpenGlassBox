@@ -136,8 +136,8 @@ class ScriptPanel
 public:
 
     // ------------------------------------------------------------------------
-    //! \brief The fingerprints, computed by the host on demand rather than
-    //! every frame: hashing a file is not free.
+    //! \brief The fingerprints. Refreshed by the host when a file is read or
+    //! written rather than every frame: hashing a file is not free.
     // ------------------------------------------------------------------------
     struct Checksum
     {
@@ -150,6 +150,9 @@ public:
         std::string edited;
         //! \brief What the open save recorded, empty when no save is open.
         std::string save;
+        //! \brief Saves beside the ruleset whose fingerprint no longer matches
+        //! it, and which therefore refuse to open.
+        std::vector<std::string> staleSaves;
     };
 
     // ------------------------------------------------------------------------
@@ -158,10 +161,9 @@ public:
     struct Actions
     {
         bool apply = false;
-        bool computeChecksum = false;
-        //! \brief Rewrite the open save so that it records the checksum of the
-        //! ruleset as it is now.
-        bool restampSave = false;
+        //! \brief Record the fingerprint of the ruleset as it is now into
+        //! every stale save beside it.
+        bool restampSaves = false;
     };
 
     void draw(std::string& text,

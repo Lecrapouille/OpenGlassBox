@@ -127,3 +127,67 @@ TEST(TestsCitySave, HashMismatch)
     ASSERT_FALSE(CitySave::matchesRuleset(header, testCityRuleset(), error));
     ASSERT_NE(error.find("hash"), std::string::npos);
 }
+
+//------------------------------------------------------------------------------
+//! \brief A ruleset knows which saves it can invalidate: the ones sitting next
+//! to it that name it. This is what lets the demo mend them all at once instead
+//! of leaving the player to reopen each city and save it again.
+TEST(TestsCitySave, SavesUsingRulesetFindsTheOnesNamingIt)
+{
+    std::vector<std::string> const saves =
+        CitySave::savesUsingRuleset(testCityRuleset());
+    ASSERT_FALSE(saves.empty());
+
+    for (std::string const& save : saves)
+    {
+        CitySaveHeader header;
+        std::string error;
+        ASSERT_TRUE(CitySave::peekHeader(save, header, error)) << error;
+        ASSERT_EQ(header.ruleset, "test_city.ogs") << save;
+    }
+
+    // braess.ogc names braess.ogs, so it is not one of them.
+    for (std::string const& save : saves)
+        ASSERT_EQ(save.find("braess"), std::string::npos) << save;
+}
+
+//------------------------------------------------------------------------------
+TEST(TestsCitySave, RestampMakesAStaleSaveLoadableAgain)
+{
+    std::string const path = tempTestPath("openglassbox-restamp.ogc");
+    {
+        std::ofstream out(path);
+        out << "save\n"
+            << "\truleset test_city.ogs\n"
+            << "\thash not-the-real-hash\n"
+            << "\ttypes [ ]\n"
+            << "end\n"
+            << "clock 0\n"
+            << "city Ghost size 4 4\n";
+    }
+
+    CitySaveHeader header;
+    std::string error;
+    ASSERT_TRUE(CitySave::peekHeader(path, header, error)) << error;
+    ASSERT_FALSE(CitySave::matchesRuleset(header, testCityRuleset(), error));
+
+    ASSERT_TRUE(CitySave::restamp(path, testCityRuleset(), error)) << error;
+
+    ASSERT_TRUE(CitySave::peekHeader(path, header, error)) << error;
+    ASSERT_TRUE(CitySave::matchesRuleset(header, testCityRuleset(), error))
+        << error;
+
+    // Only the header line moved: the city below it is still there.
+    Simulation simulation;
+    ASSERT_TRUE(simulation.loadScriptFile(testCityRuleset()));
+    ASSERT_TRUE(CitySave::read(path, simulation, error)) << error;
+    ASSERT_EQ(simulation.getCities().size(), 1u);
+
+    // Stamping a save that already carries the fingerprint changes nothing.
+    ASSERT_TRUE(CitySave::restamp(path, testCityRuleset(), error)) << error;
+    ASSERT_TRUE(CitySave::peekHeader(path, header, error)) << error;
+    ASSERT_TRUE(CitySave::matchesRuleset(header, testCityRuleset(), error))
+        << error;
+
+    std::remove(path.c_str());
+}
