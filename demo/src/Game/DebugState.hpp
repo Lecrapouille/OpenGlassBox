@@ -144,6 +144,16 @@ struct DebugState
     LayerSettings& layer(std::string const& name) { return layers[name]; }
 
     //--------------------------------------------------------------------------
+    //! \brief Settings of a Layer, or the defaults when it has none yet.
+    //! Unlike layer(), inserts nothing, so the canvas can call it while drawing.
+    //--------------------------------------------------------------------------
+    LayerSettings layerSettings(std::string const& name) const
+    {
+        auto const it = layers.find(name);
+        return (it == layers.end()) ? LayerSettings() : it->second;
+    }
+
+    //--------------------------------------------------------------------------
     //! \brief Whether a Layer shall be drawn, taking the solo mode into account.
     //--------------------------------------------------------------------------
     bool isLayerVisible(std::string const& name) const

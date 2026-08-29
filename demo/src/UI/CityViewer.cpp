@@ -30,6 +30,8 @@ static constexpr float PICK_RADIUS = 12.0f;
 //! \brief Below that many pixels a grid cell is not worth a rectangle of its
 //! own, and the layers are drawn by squares of several cells instead.
 static constexpr float MIN_CELL_PIXELS = 3.0f;
+//! \brief Below that many pixels a cell is too small to print an amount in.
+static constexpr float MIN_VALUE_PIXELS = 22.0f;
 //! \brief How many squares one layer may put on screen. Past that the squares
 //! are made to cover more cells each, so that the cost of drawing a layer
 //! follows the size of the canvas rather than the size of the city.
@@ -640,20 +642,38 @@ void CityViewer::drawLayers(Simulation& simulation,
 
     int32_t const square = cellsPerSquare(pixels, visible);
 
+    // Every layer asking for its numbers gets a line of its own inside the
+    // cell, so two of them no longer print on the same spot. Counting them
+    // needs a first pass, since the row of the first layer depends on how many
+    // follow it.
+    float const lineHeight = ImGui::GetTextLineHeight();
+    int32_t valueRows = 0;
+    for (auto const& it : simulation.getLayers())
+    {
+        Layer const& layer = *it.second;
+        if (state.isLayerVisible(layer.getTypeName().str()) &&
+            (state.layerSettings(layer.getTypeName().str()).mode ==
+             game::LayerMode::Value))
+        {
+            ++valueRows;
+        }
+    }
+    int32_t valueRow = 0;
+
     for (auto const& it : simulation.getLayers())
     {
         Layer const& layer = *it.second;
         if (!state.isLayerVisible(layer.getTypeName().str()))
             continue;
 
-        auto const settings = state.layers.find(layer.getTypeName().str());
-        game::LayerSettings const options = (settings != state.layers.end())
-                                                ? settings->second
-                                                : game::LayerSettings();
+        game::LayerSettings const options =
+            state.layerSettings(layer.getTypeName().str());
 
         bool const primary = (state.primaryLayer == layer.getTypeName().str()) ||
                              (state.soloLayer == layer.getTypeName().str());
         uint32_t const capacity = std::max(1u, layer.getCellCapacity());
+        int32_t const row =
+            (options.mode == game::LayerMode::Value) ? valueRow++ : 0;
 
         // Only the cells that hold something are stored, only those that are
         // on screen are worth drawing, and past a point not even all of those:
@@ -704,17 +724,27 @@ void CityViewer::drawLayers(Simulation& simulation,
 
                     case game::LayerMode::Value:
                     {
-                        if (!primary)
-                            break;
-                        if (size < 22.0f)
+                        // Numbers need room. A cell too small for one line per
+                        // layer asking for them would stack unreadable strings
+                        // on top of each other.
+                        float const stack = float(valueRows) * lineHeight;
+                        if ((size < stack) || (size < MIN_VALUE_PIXELS))
                             break;
                         std::string const label = std::to_string(amount);
                         ImVec2 const textSize =
                             ImGui::CalcTextSize(label.c_str());
+                        if (textSize.x > size)
+                            break;
+                        // Text is thin: shading it by the opacity slider the
+                        // way a filled cell is shaded turns it into noise. It
+                        // only fades once the slider is well down.
+                        float const alpha =
+                            std::min(1.0f, 0.55f + 0.45f * options.opacity);
                         m_draw_list->AddText(
                             ImVec2(0.5f * (p0.x + p1.x) - 0.5f * textSize.x,
-                                   0.5f * (p0.y + p1.y) - 0.5f * textSize.y),
-                            theme::fromScript(layer.getColor(), options.opacity),
+                                   0.5f * (p0.y + p1.y) - 0.5f * stack +
+                                       float(row) * lineHeight),
+                            theme::fromScript(layer.getColor(), alpha),
                             label.c_str());
                         break;
                     }
