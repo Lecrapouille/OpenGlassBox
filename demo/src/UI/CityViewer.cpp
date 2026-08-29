@@ -81,15 +81,15 @@ void CityViewer::frameAll(Simulation& simulation)
     {
         City const& city = *it.second;
 
-        // The grid of the city always bounds its layers, and the nodes may stick
-        // out of it, so take the union of both.
+        // The grid of the city always bounds its layers, and the nodes may
+        // stick out of it, so take the union of both.
         float const side = city.getCellSize();
         minX = std::min(minX, city.getPosition().x);
         minY = std::min(minY, city.getPosition().y);
-        maxX =
-            std::max(maxX, city.getPosition().x + float(city.getRegion().sizeU) * side);
-        maxY =
-            std::max(maxY, city.getPosition().y + float(city.getRegion().sizeV) * side);
+        maxX = std::max(
+            maxX, city.getPosition().x + float(city.getRegion().sizeU) * side);
+        maxY = std::max(
+            maxY, city.getPosition().y + float(city.getRegion().sizeV) * side);
         found = true;
 
         for (auto const& path : city.getPaths())
@@ -171,8 +171,8 @@ void CityViewer::draw(Simulation& simulation,
 
     m_splitter.Split(m_draw_list, CHANNEL_COUNT);
 
-    // The layers belong to the world and span every city, so they are drawn once
-    // rather than once per city.
+    // The layers belong to the world and span every city, so they are drawn
+    // once rather than once per city.
     drawLayers(simulation, state);
 
     bool const zones = state.drawsZones(simulation);
@@ -325,9 +325,9 @@ static float distanceToSegment(ImVec2 const& point,
 
 // ----------------------------------------------------------------------------
 Segment* CityViewer::pickSegment(City& city,
-                         ImVec2 const& world,
-                         float pixels,
-                         float& offset) const
+                                 ImVec2 const& world,
+                                 float pixels,
+                                 float& offset) const
 {
     // Work in world units so that the tolerance stays the same on screen
     // whatever the zoom.
@@ -340,8 +340,10 @@ Segment* CityViewer::pickSegment(City& city,
         for (auto& segment : it.second->getSegments())
         {
             float candidate = 0.0f;
-            float const distance = distanceToSegment(
-                world, segment->getFromPosition(), segment->getToPosition(), candidate);
+            float const distance = distanceToSegment(world,
+                                                     segment->getFromPosition(),
+                                                     segment->getToPosition(),
+                                                     candidate);
             if (distance <= best)
             {
                 best = distance;
@@ -380,13 +382,14 @@ Node* CityViewer::pickNode(City& city, ImVec2 const& world, float pixels) const
 }
 
 // ----------------------------------------------------------------------------
-Building* CityViewer::pickBuilding(City& city, ImVec2 const& world, float pixels) const
+Building*
+CityViewer::pickBuilding(City& city, ImVec2 const& world, float pixels) const
 {
     float const tolerance = pixels / std::max(1e-3f, m_zoom);
     float best = tolerance * tolerance;
     Building* found = nullptr;
 
-    for (auto const& building: city.getBuildings())
+    for (auto const& building : city.getBuildings())
     {
         float const dx = building->getPosition().x - world.x;
         float const dy = building->getPosition().y - world.y;
@@ -455,7 +458,7 @@ game::Selection CityViewer::pickAt(Simulation& simulation,
 
         if (state.showBuildings)
         {
-            for (auto const& building: city.getBuildings())
+            for (auto const& building : city.getBuildings())
             {
                 game::Selection candidate;
                 candidate.kind = game::Selection::Kind::Building;
@@ -502,7 +505,8 @@ game::Selection CityViewer::pickAt(Simulation& simulation,
         for (auto& it : simulation.getCities())
         {
             float offset = 0.0f;
-            Segment* segment = pickSegment(*it.second, world, PICK_RADIUS, offset);
+            Segment* segment =
+                pickSegment(*it.second, world, PICK_RADIUS, offset);
             if (segment == nullptr)
                 continue;
             game::Selection selected;
@@ -587,7 +591,8 @@ void CityViewer::updateHover(Simulation& simulation,
 }
 
 // ----------------------------------------------------------------------------
-int32_t CityViewer::cellsPerSquare(float const pixels, CellRegion const& visible)
+int32_t CityViewer::cellsPerSquare(float const pixels,
+                                   CellRegion const& visible)
 {
     // Two reasons to draw a square of several cells rather than one rectangle
     // per cell, and the coarser of the two wins.
@@ -619,7 +624,7 @@ int32_t CityViewer::cellsPerSquare(float const pixels, CellRegion const& visible
 
 // ----------------------------------------------------------------------------
 void CityViewer::drawLayers(Simulation& simulation,
-                          game::DebugState const& state)
+                            game::DebugState const& state)
 {
     m_splitter.SetCurrentChannel(m_draw_list, CHANNEL_MAPS);
 
@@ -636,9 +641,9 @@ void CityViewer::drawLayers(Simulation& simulation,
     int32_t const uMax = int32_t(std::floor(bottomRight.x / side)) + 1;
     int32_t const vMax = int32_t(std::floor(bottomRight.y / side)) + 1;
     CellRegion const visible{ uMin,
-                             vMin,
-                             uint32_t(std::max(0, uMax - uMin)),
-                             uint32_t(std::max(0, vMax - vMin)) };
+                              vMin,
+                              uint32_t(std::max(0, uMax - uMin)),
+                              uint32_t(std::max(0, vMax - vMin)) };
 
     int32_t const square = cellsPerSquare(pixels, visible);
 
@@ -669,8 +674,9 @@ void CityViewer::drawLayers(Simulation& simulation,
         game::LayerSettings const options =
             state.layerSettings(layer.getTypeName().str());
 
-        bool const primary = (state.primaryLayer == layer.getTypeName().str()) ||
-                             (state.soloLayer == layer.getTypeName().str());
+        bool const primary =
+            (state.primaryLayer == layer.getTypeName().str()) ||
+            (state.soloLayer == layer.getTypeName().str());
         uint32_t const capacity = std::max(1u, layer.getCellCapacity());
         int32_t const row =
             (options.mode == game::LayerMode::Value) ? valueRow++ : 0;
@@ -695,8 +701,8 @@ void CityViewer::drawLayers(Simulation& simulation,
                 {
                     case game::LayerMode::Heatmap:
                     {
-                        // A non primary layer is drawn thinner so that several of
-                        // them stay readable when superimposed.
+                        // A non primary layer is drawn thinner so that several
+                        // of them stay readable when superimposed.
                         float const inset = primary ? 0.0f : size * 0.18f;
                         // A cell holding a tenth of the capacity would be all
                         // but invisible if the opacity were the ratio itself,
@@ -713,13 +719,13 @@ void CityViewer::drawLayers(Simulation& simulation,
                         break;
                     }
                     case game::LayerMode::Contour:
-                        m_draw_list->AddRect(
-                            p0,
-                            p1,
-                            theme::fromScript(layer.getColor(), options.opacity),
-                            0.0f,
-                            0,
-                            1.0f + 2.0f * ratio);
+                        m_draw_list->AddRect(p0,
+                                             p1,
+                                             theme::fromScript(layer.getColor(),
+                                                               options.opacity),
+                                             0.0f,
+                                             0,
+                                             1.0f + 2.0f * ratio);
                         break;
 
                     case game::LayerMode::Value:
@@ -760,9 +766,9 @@ void CityViewer::drawCityFrame(City const& city, game::DebugState const& state)
 
     float const side = city.getCellSize();
     ImVec2 const topLeft = worldToScreen(city.getPosition());
-    ImVec2 const bottomRight =
-        worldToScreen(city.getPosition().x + float(city.getRegion().sizeU) * side,
-                      city.getPosition().y + float(city.getRegion().sizeV) * side);
+    ImVec2 const bottomRight = worldToScreen(
+        city.getPosition().x + float(city.getRegion().sizeU) * side,
+        city.getPosition().y + float(city.getRegion().sizeV) * side);
 
     if (state.showGrid)
     {
@@ -824,8 +830,9 @@ void CityViewer::drawZones(City& city, game::DebugState const& state)
         m_draw_list->AddRect(p0, p1, line, 0.0f, 0, 2.0f);
         if (labels)
         {
-            m_draw_list->AddText(
-                ImVec2(p0.x + 4.0f, p0.y + 2.0f), line, zone->getTypeName().c_str());
+            m_draw_list->AddText(ImVec2(p0.x + 4.0f, p0.y + 2.0f),
+                                 line,
+                                 zone->getTypeName().c_str());
         }
     }
 }
@@ -855,7 +862,8 @@ void CityViewer::drawPaths(City& city, game::DebugState const& state)
             {
                 // The saturation is what makes the network readable at a
                 // glance: a red and fat segment is a jam.
-                float const saturation = std::min(1.5f, segment->getSaturation());
+                float const saturation =
+                    std::min(1.5f, segment->getSaturation());
                 color = theme::congestionColor(std::min(1.0f, saturation));
                 thickness = 2.0f + 4.0f * std::min(1.0f, saturation);
             }
@@ -893,7 +901,7 @@ void CityViewer::drawBuildings(City& city, game::DebugState const& state)
 
     bool const labels = state.showLabels && (m_zoom > LABEL_ZOOM_THRESHOLD);
 
-    for (auto const& building: city.getBuildings())
+    for (auto const& building : city.getBuildings())
     {
         ImVec2 const position = worldToScreen(building->getPosition());
         ImU32 const color = theme::fromScript(building->getColor());
@@ -904,20 +912,23 @@ void CityViewer::drawBuildings(City& city, game::DebugState const& state)
         Segment const* const segment = building->getSegment();
         if ((segment != nullptr) && state.showPaths)
         {
-            Vector3f const anchor = segment->getPositionAt(building->getSegmentOffset());
+            Vector3f const anchor =
+                segment->getPositionAt(building->getSegmentOffset());
             ImVec2 const onRoad = worldToScreen(anchor);
             float const dx = onRoad.x - position.x;
             float const dy = onRoad.y - position.y;
             if ((dx * dx + dy * dy) > (UNIT_RADIUS * UNIT_RADIUS))
             {
-                m_draw_list->AddLine(position,
-                                     onRoad,
-                                     theme::fromScript(building->getColor(), 0.45f),
-                                     1.5f);
+                m_draw_list->AddLine(
+                    position,
+                    onRoad,
+                    theme::fromScript(building->getColor(), 0.45f),
+                    1.5f);
             }
         }
 
-        // A square, so that a Building is never confused with a Node or an Agent.
+        // A square, so that a Building is never confused with a Node or an
+        // Agent.
         m_draw_list->AddRectFilled(
             ImVec2(position.x - UNIT_RADIUS, position.y - UNIT_RADIUS),
             ImVec2(position.x + UNIT_RADIUS, position.y + UNIT_RADIUS),
@@ -1041,8 +1052,8 @@ void CityViewer::drawInspectHover(Simulation& simulation,
             City& city = *cityIt->second;
             float const side = city.getCellSize();
             CellRegion const& footprint = hover.zone->getRegion();
-            ImVec2 const p0 = worldToScreen(
-                city.cellToWorld({ footprint.u0, footprint.v0 }));
+            ImVec2 const p0 =
+                worldToScreen(city.cellToWorld({ footprint.u0, footprint.v0 }));
             ImVec2 const p1(p0.x + float(footprint.sizeU) * side * m_zoom,
                             p0.y + float(footprint.sizeV) * side * m_zoom);
             m_draw_list->AddRect(p0, p1, highlight, 0.0f, 0, 2.5f);
@@ -1083,17 +1094,20 @@ void CityViewer::drawSelectionOverlay(Simulation& simulation,
             if (selection.building == nullptr)
                 break;
 
-            ImVec2 const position = worldToScreen(selection.building->getPosition());
+            ImVec2 const position =
+                worldToScreen(selection.building->getPosition());
             m_draw_list->AddCircle(
                 position, UNIT_RADIUS + 6.0f, highlight, 0, 2.0f);
 
             if (state.showSelectionRadius)
             {
-                // Materialize the disc the rules of this Building read and write on
-                // the layers. Seeing it is the quickest way to understand why a
-                // Building does not reach the resource next door.
-                float const radius = float(selection.building->getLayerRadius()) *
-                                     city.getCellSize() * m_zoom;
+                // Materialize the disc the rules of this Building read and
+                // write on the layers. Seeing it is the quickest way to
+                // understand why a Building does not reach the resource next
+                // door.
+                float const radius =
+                    float(selection.building->getLayerRadius()) *
+                    city.getCellSize() * m_zoom;
                 if (radius > 1.0f)
                 {
                     m_draw_list->AddCircle(position,
@@ -1147,7 +1161,7 @@ void CityViewer::drawSelectionOverlay(Simulation& simulation,
             }
             else
             {
-                for (auto const& building: city.getBuildings())
+                for (auto const& building : city.getBuildings())
                 {
                     if (building->getTypeName() != agent->getTarget())
                         continue;
@@ -1163,8 +1177,8 @@ void CityViewer::drawSelectionOverlay(Simulation& simulation,
         case game::Selection::Kind::Cell:
         {
             float const side = city.getCellSize();
-            ImVec2 const p0 = worldToScreen(
-                city.cellToWorld({ selection.u, selection.v }));
+            ImVec2 const p0 =
+                worldToScreen(city.cellToWorld({ selection.u, selection.v }));
             ImVec2 const p1(p0.x + side * m_zoom, p0.y + side * m_zoom);
             m_draw_list->AddRect(p0, p1, highlight, 0.0f, 0, 2.5f);
             break;
@@ -1175,8 +1189,8 @@ void CityViewer::drawSelectionOverlay(Simulation& simulation,
                 break;
             float const side = city.getCellSize();
             CellRegion const& footprint = selection.zone->getRegion();
-            ImVec2 const p0 = worldToScreen(
-                city.cellToWorld({ footprint.u0, footprint.v0 }));
+            ImVec2 const p0 =
+                worldToScreen(city.cellToWorld({ footprint.u0, footprint.v0 }));
             ImVec2 const p1(p0.x + float(footprint.sizeU) * side * m_zoom,
                             p0.y + float(footprint.sizeV) * side * m_zoom);
             m_draw_list->AddRect(p0, p1, highlight, 0.0f, 0, 3.0f);
@@ -1186,7 +1200,8 @@ void CityViewer::drawSelectionOverlay(Simulation& simulation,
         {
             if (selection.segment == nullptr)
                 break;
-            ImVec2 const a = worldToScreen(selection.segment->getFromPosition());
+            ImVec2 const a =
+                worldToScreen(selection.segment->getFromPosition());
             ImVec2 const b = worldToScreen(selection.segment->getToPosition());
             m_draw_list->AddLine(a, b, highlight, 5.0f);
             break;
@@ -1267,7 +1282,8 @@ void CityViewer::drawDisplayToggles(game::DebugState& state) const
 
 // ----------------------------------------------------------------------------
 void CityViewer::drawZoneDisplayCombo(
-    game::DebugState& state, std::function<void(float)> const& wrap) const
+    game::DebugState& state,
+    std::function<void(float)> const& wrap) const
 {
     static constexpr std::array<char const*, 3> ITEMS = { "Zones: auto",
                                                           "Zones: on",
@@ -1332,7 +1348,8 @@ void CityViewer::drawHoverTooltip(Simulation& simulation,
                 // reason to point at it. Without them the tooltip only repeated
                 // the label already drawn on the grid.
                 ImGui::Separator();
-                std::vector<Resource> const& bin = building.getResources().getAll();
+                std::vector<Resource> const& bin =
+                    building.getResources().getAll();
                 if (bin.empty())
                 {
                     ImGui::TextDisabled("holds nothing");
@@ -1364,7 +1381,8 @@ void CityViewer::drawHoverTooltip(Simulation& simulation,
                         hours.add(*rule);
                         if (hours.isRestricted() && !hours.isOpen(hour))
                         {
-                            uint32_t const next = hours.getNextOpeningHour(hour);
+                            uint32_t const next =
+                                hours.getNextOpeningHour(hour);
                             if (next == OpeningHours::NEVER)
                             {
                                 ImGui::BulletText("%s (inactive)",
@@ -1398,7 +1416,9 @@ void CityViewer::drawHoverTooltip(Simulation& simulation,
             Agent const* agent = hover.resolveAgent(simulation);
             if (agent != nullptr)
             {
-                ImGui::Text("Agent %s #%u", agent->getTypeName().c_str(), agent->getId());
+                ImGui::Text("Agent %s #%u",
+                            agent->getTypeName().c_str(),
+                            agent->getId());
                 ImGui::TextDisabled("looking for %s",
                                     agent->getTarget().c_str());
             }
@@ -1412,17 +1432,19 @@ void CityViewer::drawHoverTooltip(Simulation& simulation,
                     ImGui::TextDisabled("orphan");
                 for (Segment const* segment : hover.node->getSegments())
                 {
-                    ImGui::BulletText(
-                        "%s, %.1f m", segment->getTypeName().c_str(), segment->getLength());
+                    ImGui::BulletText("%s, %.1f m",
+                                      segment->getTypeName().c_str(),
+                                      segment->getLength());
                 }
 
                 for (Building const* building : hover.node->getBuildings())
                 {
-                    ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(
-                                           theme::fromScript(building->getColor())),
-                                       "%s #%u stands here",
-                                       building->getTypeName().c_str(),
-                                       building->getId());
+                    ImGui::TextColored(
+                        ImGui::ColorConvertU32ToFloat4(
+                            theme::fromScript(building->getColor())),
+                        "%s #%u stands here",
+                        building->getTypeName().c_str(),
+                        building->getId());
                 }
             }
             break;
@@ -1430,7 +1452,9 @@ void CityViewer::drawHoverTooltip(Simulation& simulation,
             if (hover.segment != nullptr)
             {
                 Segment const& segment = *hover.segment;
-                ImGui::Text("Segment %s #%u", segment.getTypeName().c_str(), segment.getId());
+                ImGui::Text("Segment %s #%u",
+                            segment.getTypeName().c_str(),
+                            segment.getId());
                 ImGui::Text("%.1f m", segment.getLength());
                 ImGui::Text("free flow %.2f s, now %.2f s",
                             segment.getFreeFlowTime(),
@@ -1524,7 +1548,7 @@ void CityViewer::drawClockHud(Simulation const& simulation)
                   clock.getHourOfDay(),
                   clock.getMinuteOfHour());
     char day[24];
-    std::snprintf(day, sizeof(day), "Jour %u", clock.getDay());
+    std::snprintf(day, sizeof(day), "Day %u", clock.getDay());
 
     ImU32 const color = theme::clockHudColor(hour);
     ImVec2 const pos(m_canvas_origin.x + 12.0f, m_canvas_origin.y + 10.0f);
