@@ -665,6 +665,21 @@ void CityViewer::drawLayers(Simulation& simulation,
     }
     int32_t valueRow = 0;
 
+    // A cell is a few pixels wide at the zoom the whole city is looked at,
+    // which leaves no room for a number: asking for the values then used to
+    // show nothing at all until the view was almost down to a district. The
+    // numbers are drawn over wider squares instead, one value for the average
+    // of the cells under it, the same way the heatmap already coarsens.
+    float const room =
+        std::max(MIN_VALUE_PIXELS, float(valueRows) * lineHeight);
+    int32_t valueSquare = square;
+    while ((valueSquare < Layer::CHUNK_SIZE) &&
+           (float(valueSquare) * pixels < room))
+    {
+        valueSquare *= 2;
+    }
+    m_value_square = (valueRows == 0) ? 1 : valueSquare;
+
     for (auto const& it : simulation.getLayers())
     {
         Layer const& layer = *it.second;
@@ -686,7 +701,7 @@ void CityViewer::drawLayers(Simulation& simulation,
         // see cellsPerSquare().
         layer.forEachBlockInRegion(
             visible,
-            square,
+            (options.mode == game::LayerMode::Value) ? valueSquare : square,
             [&](int32_t u, int32_t v, int32_t cells, uint32_t amount)
             {
                 float const ratio =
@@ -730,9 +745,10 @@ void CityViewer::drawLayers(Simulation& simulation,
 
                     case game::LayerMode::Value:
                     {
-                        // Numbers need room. A cell too small for one line per
-                        // layer asking for them would stack unreadable strings
-                        // on top of each other.
+                        // Even the widest square the layer can be walked with
+                        // is too small to write in at the far end of the zoom,
+                        // and stacking one line per layer in it would print a
+                        // mush no one can read.
                         float const stack = float(valueRows) * lineHeight;
                         if ((size < stack) || (size < MIN_VALUE_PIXELS))
                             break;
@@ -1214,15 +1230,33 @@ void CityViewer::drawSelectionOverlay(Simulation& simulation,
 // ----------------------------------------------------------------------------
 void CityViewer::drawLegend(game::DebugState const& state)
 {
-    if (!state.showTraffic)
-        return;
-
     // Anchored to the bottom right corner: the bottom left one already holds
     // the hint of the armed tool.
     float const width = 140.0f;
     float const height = 10.0f;
     ImVec2 const origin(m_canvas_origin.x + m_canvas_size.x - width - 12.0f,
                         m_canvas_origin.y + m_canvas_size.y - 34.0f);
+
+    // A number written over several cells is their average, not what any one
+    // of them holds, and nothing else on screen would say so.
+    if (m_value_square > 1)
+    {
+        char note[64];
+        std::snprintf(note,
+                      sizeof(note),
+                      "layer values: mean of %d x %d cells",
+                      m_value_square,
+                      m_value_square);
+        float const noteWidth = ImGui::CalcTextSize(note).x;
+        m_draw_list->AddText(
+            ImVec2(m_canvas_origin.x + m_canvas_size.x - noteWidth - 12.0f,
+                   origin.y - (state.showTraffic ? 38.0f : 0.0f)),
+            theme::MUTED,
+            note);
+    }
+
+    if (!state.showTraffic)
+        return;
 
     for (int i = 0; i < 32; ++i)
     {

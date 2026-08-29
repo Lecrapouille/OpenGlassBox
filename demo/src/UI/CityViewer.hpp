@@ -220,6 +220,12 @@ private:
     ImDrawList* m_draw_list = nullptr;
     ImDrawListSplitter m_splitter;
 
+    //! \brief Cells on a side of the square one layer value was printed over
+    //! on the last frame. One when every cell holds its own number, more when
+    //! the zoom left no room for them and the values had to be averaged; the
+    //! legend then says so, since a mean is not what the cell holds.
+    int32_t m_value_square = 1;
+
     //! \brief The dockspace resizes the panel over the first frames, so keep
     //! reframing for a few of them rather than settling on a size that is about
     //! to change.
