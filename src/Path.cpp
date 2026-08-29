@@ -37,26 +37,26 @@ void Node::removeUnit(Unit& unit)
 }
 
 // -----------------------------------------------------------------------------
-void Node::translate(Vector3f const direction)
+void Node::translate(Vector3f const& direction)
 {
     m_position += direction;
-    for (auto& it : m_ways)
+    for (auto& it : m_segments)
     {
-        it->updateMagnitude();
+        it->updateLength();
     }
 }
 
 // -----------------------------------------------------------------------------
 // FIXME: raw pointer from unique_ptr
-Way* Node::getWayToNode(Node const& node)
+Segment* Node::findSegmentTo(Node const& node) const
 {
-    size_t i = m_ways.size();
+    size_t i = m_segments.size();
     while (i--)
     {
-        if (((m_ways[i]->m_from == &node) && (m_ways[i]->m_to == this)) ||
-            ((m_ways[i]->m_to == &node) && (m_ways[i]->m_from == this)))
+        if (((m_segments[i]->m_from == &node) && (m_segments[i]->m_to == this)) ||
+            ((m_segments[i]->m_to == &node) && (m_segments[i]->m_from == this)))
         {
-            return m_ways[i];
+            return m_segments[i];
         }
     }
 
@@ -68,28 +68,28 @@ Way* Node::getWayToNode(Node const& node)
 // =============================================================================
 
 // -----------------------------------------------------------------------------
-Way::Way(uint32_t id, WayType const& type, Node& node1, Node& node2)
+Segment::Segment(uint32_t id, SegmentType const& type, Node& node1, Node& node2)
     : m_id(id), m_type(type), m_from(&node1), m_to(&node2)
 {
-    m_from->m_ways.push_back(this);
-    m_to->m_ways.push_back(this);
-    updateMagnitude();
+    m_from->m_segments.push_back(this);
+    m_to->m_segments.push_back(this);
+    updateLength();
 }
 
 // -----------------------------------------------------------------------------
-void Way::updateMagnitude()
+void Segment::updateLength()
 {
-    m_magnitude = ogb::magnitude(m_to->position() - m_from->position());
+    m_length = ogb::length(m_to->getPosition() - m_from->getPosition());
 
     // A type with a nonsensical speed would give an infinite or negative travel
     // time and poison the whole routing, so fall back on the length.
-    m_t0 = (m_type.speed > 0.0f) ? (m_magnitude / m_type.speed) : m_magnitude;
+    m_t0 = (m_type.speed > 0.0f) ? (m_length / m_type.speed) : m_length;
 
     updateTravelTime();
 }
 
 // -----------------------------------------------------------------------------
-void Way::updateTravelTime()
+void Segment::updateTravelTime()
 {
     if (m_type.capacity <= 0.0f)
     {
@@ -103,32 +103,33 @@ void Way::updateTravelTime()
 }
 
 // -----------------------------------------------------------------------------
-Vector3f Way::positionAt(float offset) const
+Vector3f Segment::getPositionAt(float offset) const
 {
-    return position1() + (position2() - position1()) * offset;
+    return getFromPosition() +
+           (getToPosition() - getFromPosition()) * offset;
 }
 
 // -----------------------------------------------------------------------------
-void Way::addUnit(Unit& unit)
+void Segment::addUnit(Unit& unit)
 {
     m_units.push_back(&unit);
 }
 
 // -----------------------------------------------------------------------------
-void Way::removeUnit(Unit& unit)
+void Segment::removeUnit(Unit& unit)
 {
     m_units.erase(std::remove(m_units.begin(), m_units.end(), &unit),
                   m_units.end());
 }
 
 // -----------------------------------------------------------------------------
-void Way::addAgent()
+void Segment::addAgent()
 {
     ++m_agentCount;
 }
 
 // -----------------------------------------------------------------------------
-void Way::removeAgent()
+void Segment::removeAgent()
 {
     if (m_agentCount > 0u)
     {
@@ -137,7 +138,7 @@ void Way::removeAgent()
 }
 
 // -----------------------------------------------------------------------------
-void Way::smoothFlow(float alpha)
+void Segment::smoothFlow(float alpha)
 {
     if (alpha > 1.0f)
     {
@@ -179,7 +180,7 @@ Node& Path::addNode(Vector3f const& position)
 // -----------------------------------------------------------------------------
 Node& Path::addNode(uint32_t id, Vector3f const& position)
 {
-    Node* existing = node(id);
+    Node* existing = findNode(id);
     if (existing != nullptr)
         return *existing;
 
@@ -198,11 +199,11 @@ Node& Path::addNode(uint32_t id, Vector3f const& position)
 }
 
 // -----------------------------------------------------------------------------
-Node* Path::node(uint32_t id)
+Node* Path::findNode(uint32_t id) const
 {
     for (auto const& it : m_nodes)
     {
-        if (it->id() == id)
+        if (it->getId() == id)
             return it.get();
     }
 
@@ -211,35 +212,35 @@ Node* Path::node(uint32_t id)
 
 // -----------------------------------------------------------------------------
 // TODO: replace existing segment or allow multi-graph (== speedway)
-Way& Path::addWay(WayType const& type, Node& p1, Node& p2)
+Segment& Path::addSegment(SegmentType const& type, Node& p1, Node& p2)
 {
-    return addWay(m_nextWayId, type, p1, p2);
+    return addSegment(m_nextSegmentId, type, p1, p2);
 }
 
 // -----------------------------------------------------------------------------
-Way& Path::addWay(uint32_t id, WayType const& type, Node& p1, Node& p2)
+Segment& Path::addSegment(uint32_t id, SegmentType const& type, Node& p1, Node& p2)
 {
-    Way* existing = way(id);
+    Segment* existing = findSegment(id);
     if (existing != nullptr)
         return *existing;
 
-    m_ways.push_back(std::make_unique<Way>(id, type, p1, p2 /*, *this*/));
+    m_segments.push_back(std::make_unique<Segment>(id, type, p1, p2 /*, *this*/));
     m_maxFreeFlowSpeed = std::max(m_maxFreeFlowSpeed, type.speed);
 
-    if (id >= m_nextWayId)
+    if (id >= m_nextSegmentId)
     {
-        m_nextWayId = id + 1u;
+        m_nextSegmentId = id + 1u;
     }
 
-    return *m_ways.back();
+    return *m_segments.back();
 }
 
 // -----------------------------------------------------------------------------
-Way* Path::way(uint32_t id)
+Segment* Path::findSegment(uint32_t id) const
 {
-    for (auto const& it : m_ways)
+    for (auto const& it : m_segments)
     {
-        if (it->id() == id)
+        if (it->getId() == id)
             return it.get();
     }
 
@@ -247,18 +248,18 @@ Way* Path::way(uint32_t id)
 }
 
 // -----------------------------------------------------------------------------
-void Path::removeWay(Way& way)
+void Path::removeSegment(Segment& segment)
 {
-    auto detach = [&way](std::vector<Way*>& ways)
-    { ways.erase(std::remove(ways.begin(), ways.end(), &way), ways.end()); };
-    detach(way.m_from->m_ways);
-    detach(way.m_to->m_ways);
+    auto detach = [&segment](std::vector<Segment*>& segments)
+    { segments.erase(std::remove(segments.begin(), segments.end(), &segment), segments.end()); };
+    detach(segment.m_from->m_segments);
+    detach(segment.m_to->m_segments);
 
-    m_ways.erase(std::remove_if(m_ways.begin(),
-                                m_ways.end(),
-                                [&way](WayPtr const& it)
-                                { return it.get() == &way; }),
-                 m_ways.end());
+    m_segments.erase(std::remove_if(m_segments.begin(),
+                                m_segments.end(),
+                                [&segment](SegmentPtr const& it)
+                                { return it.get() == &segment; }),
+                 m_segments.end());
 
     updateMaxFreeFlowSpeed();
 }
@@ -268,9 +269,9 @@ void Path::removeNode(Node& node)
 {
     // Removing a segment mutates the very vector being walked, so keep taking
     // the first one until none is left.
-    while (!node.m_ways.empty())
+    while (!node.m_segments.empty())
     {
-        removeWay(*node.m_ways.front());
+        removeSegment(*node.m_segments.front());
     }
 
     m_nodes.erase(std::remove_if(m_nodes.begin(),
@@ -283,7 +284,7 @@ void Path::removeNode(Node& node)
 }
 
 // -----------------------------------------------------------------------------
-void Path::reindexNodes() const
+void Path::reindexNodes()
 {
     // Linear, but demolishing a crossroads is something a player does, not
     // something a tick does, and the routers rely on the indices staying dense.
@@ -298,10 +299,10 @@ void Path::reindexNodes() const
 void Path::clear()
 {
     // Segments first: they point at the nodes.
-    m_ways.clear();
+    m_segments.clear();
     m_nodes.clear();
     m_nextNodeId = 0u;
-    m_nextWayId = 0u;
+    m_nextSegmentId = 0u;
     m_maxFreeFlowSpeed = 1.0f;
 }
 
@@ -311,7 +312,7 @@ void Path::updateMaxFreeFlowSpeed()
     // One is the floor rather than zero: the router divides a distance by this
     // speed, and an empty graph would otherwise give an infinite lower bound.
     float speed = 1.0f;
-    for (auto const& it : m_ways)
+    for (auto const& it : m_segments)
     {
         speed = std::max(speed, it->m_type.speed);
     }
@@ -320,49 +321,47 @@ void Path::updateMaxFreeFlowSpeed()
 }
 
 // -----------------------------------------------------------------------------
-void Path::smoothFlows(float alpha) const
+void Path::updateTrafficSmoothing(float alpha)
 {
-    for (auto const& way : m_ways)
+    for (auto const& segment : m_segments)
     {
-        way->smoothFlow(alpha);
+        segment->smoothFlow(alpha);
     }
 }
 
 // -----------------------------------------------------------------------------
-Node& Path::splitWay(Way& segment, float offset)
+Node& Path::splitSegment(Segment& segment, float offset)
 {
     if (offset <= 0.0f)
-        return segment.from();
+        return segment.getFrom();
     else if (offset >= 1.0f)
-        return segment.to();
+        return segment.getTo();
 
-    Vector3f wordPosition =
-        segment.position1() +
-        (segment.position2() - segment.position1()) * offset;
+    Vector3f const cut = segment.getPositionAt(offset);
 
-    Node& newNode = addNode(wordPosition);
-    addWay(segment.m_type, newNode, segment.to());
+    Node& newNode = addNode(cut);
+    addSegment(segment.m_type, newNode, segment.getTo());
 
-    auto& segs = segment.m_to->m_ways;
+    auto& segs = segment.m_to->m_segments;
     segs.erase(std::remove(segs.begin(), segs.end(), &segment));
     segment.m_to = &newNode;
-    segment.m_to->m_ways.push_back(&segment);
-    segment.updateMagnitude();
+    segment.m_to->m_segments.push_back(&segment);
+    segment.updateLength();
 
     return newNode;
 }
 
 // -----------------------------------------------------------------------------
-void Path::translate(Vector3f const direction)
+void Path::translate(Vector3f const& direction)
 {
     for (auto const& it : m_nodes)
     {
         it->m_position += direction;
     }
 
-    for (auto const& it : m_ways)
+    for (auto const& it : m_segments)
     {
-        it->updateMagnitude();
+        it->updateLength();
     }
 }
 

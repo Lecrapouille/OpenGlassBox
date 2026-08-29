@@ -4,8 +4,8 @@ This folder holds the rulesets and city saves shipped with the demo. For the `.o
 
 ## File formats
 
-- **`.ogs`**: ruleset (or mod): resources, rules, maps, paths, segments, agents, units, and areas.
-- **`.ogc`**: city save: header (ruleset name, SHA-256 of the `.ogs`, types in use), geometry, and live state (clock, globals, map cells, units, agents, way flows).
+- **`.ogs`**: ruleset (or mod): resources, rules, layers, paths, segments, agents, units, and zones.
+- **`.ogc`**: city save: header (ruleset name, SHA-256 of the `.ogs`, types in use), geometry, and live state (clock, globals, layer cells, units, agents, segment flows).
 
 A separate world file is not needed. A save identifies the ruleset it was created with. Loading fails if a required type is missing or the ruleset hash differs. During ruleset development, File → **Open saves with a stale checksum** can bypass the hash check; required types must still exist. The Script panel displays the checksum and can re-stamp the open save.
 
@@ -15,12 +15,12 @@ A separate world file is not needed. A save identifies the ruleset it was create
 
 - `test_city.ogs` + `test_city.ogc`: introductory RCI sandbox with homes, workplaces, shops, pollution, desirability, and zone growth. **Start here.**
 - `braess.ogs` + `braess.ogc`: four-node Braess paradox.
-- `regular.ogs` + `regular.ogc`: CiudadSim-style `Regular(6,6)` grid, **bidirectional** ways.
+- `regular.ogs` + `regular.ogc`: CiudadSim-style `Regular(6,6)` grid, **bidirectional** segments.
 - `chicago.ogs` + `chicago.ogc`: simplified downtown arteries (not the 546-node Scilab `chisincen.net`).
 
 ## Worked example: `test_city`
 
-`test_city.ogs` is the best starting point for understanding a complete ruleset. It combines environmental maps, homes, workplaces, shops, restaurants, several agent types, a road network, and Residential, Commercial, and Industrial zones.
+`test_city.ogs` is the best starting point for understanding a complete ruleset. It combines environmental layers, homes, workplaces, shops, restaurants, several agent types, a road network, and Residential, Commercial, and Industrial zones.
 
 The clock and `hour between` were not in the C# port; they drive the day:
 

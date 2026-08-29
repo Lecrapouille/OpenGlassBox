@@ -21,7 +21,7 @@ namespace ogb
 //!
 //! Example:
 //! \code
-//! map Grass add 1
+//! layer Grass add 1
 //! \endcode
 class RuleCommandAdd: public IRuleCommand
 {
@@ -49,7 +49,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    std::string type() override;
+    [[nodiscard]] std::string getDescription() const override;
 
 private:
 
@@ -88,7 +88,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    std::string type() override;
+    [[nodiscard]] std::string getDescription() const override;
 
 private:
 
@@ -100,7 +100,7 @@ private:
 //!
 //! Example:
 //! \code
-//! map Water greater 300
+//! layer Water greater 300
 //! \endcode
 class RuleCommandTest: public IRuleCommand
 {
@@ -134,7 +134,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief
     // -------------------------------------------------------------------------
-    std::string type() override;
+    [[nodiscard]] std::string getDescription() const override;
 
 private:
 
@@ -143,30 +143,64 @@ private:
     Comparison m_comparison;
 };
 
-//! \brief Class holding Agent information from a simulation script
+//! \brief Send an Agent out of the current Unit, carrying a load, towards any
+//! Unit that accepts it.
 //!
 //! Example:
 //! \code
-//! agent People color 0xFFFF00 speed 10
+//! agent Worker to Work add [ People 1 ]
 //! \endcode
-class RuleCommandAgent: public IRuleCommand, public AgentType
+class RuleCommandAgent: public IRuleCommand
 {
 public:
 
+    //--------------------------------------------------------------------------
+    //! \brief \param[in] type the kind of agent to send, copied.
+    //! \param[in] target what the agent looks for, such as "Work".
+    //! \param[in] resources the load it carries, copied.
+    //--------------------------------------------------------------------------
     RuleCommandAgent(AgentType const& type,
                      Name const& target,
                      Resources const& resources)
-        : AgentType(type), m_target(target), m_resources(resources)
+        : m_type(type), m_target(target), m_resources(resources)
     {
     }
 
     bool validate(RuleContext& context) override;
     void execute(RuleContext& context) override;
-    std::string type() override;
+    [[nodiscard]] std::string getDescription() const override;
 
-public:
+    //--------------------------------------------------------------------------
+    //! \brief \return the kind of agent the command sends out.
+    //--------------------------------------------------------------------------
+    [[nodiscard]] AgentType const& getAgentType() const
+    {
+        return m_type;
+    }
 
+    //--------------------------------------------------------------------------
+    //! \brief \return what the agent looks for, such as "Work".
+    //--------------------------------------------------------------------------
+    [[nodiscard]] Name const& getTarget() const
+    {
+        return m_target;
+    }
+
+    //--------------------------------------------------------------------------
+    //! \brief \return the load the agent carries.
+    //--------------------------------------------------------------------------
+    [[nodiscard]] Resources const& getResources() const
+    {
+        return m_resources;
+    }
+
+private:
+
+    //! \brief The kind of agent to send out.
+    AgentType m_type;
+    //! \brief What the agent looks for.
     Name m_target;
+    //! \brief The load it carries.
     Resources m_resources;
 };
 
@@ -206,21 +240,21 @@ public:
     //--------------------------------------------------------------------------
     //! \brief \return the window in words, for the rule log of the demo.
     //--------------------------------------------------------------------------
-    std::string type() override;
+    [[nodiscard]] std::string getDescription() const override;
 
     //--------------------------------------------------------------------------
     //! \brief First hour of the window. Read by OpeningHours to tell whether a
     //! building is open, without parsing the script again.
     //--------------------------------------------------------------------------
-    uint32_t from() const
+    [[nodiscard]] uint32_t getFrom() const
     {
         return m_from;
     }
 
     //--------------------------------------------------------------------------
-    //! \brief First hour past the window. See from().
+    //! \brief First hour past the window. See getFrom().
     //--------------------------------------------------------------------------
-    uint32_t to() const
+    [[nodiscard]] uint32_t getTo() const
     {
         return m_to;
     }
@@ -234,7 +268,7 @@ private:
     uint32_t m_to;
 };
 
-//! \brief Predicate on how many Units of a type sit inside the current Area.
+//! \brief Predicate on how many Units of a type sit inside the current Zone.
 //!
 //! Example:
 //! \code
@@ -253,7 +287,7 @@ public:
 
     bool validate(RuleContext& context) override;
     void execute(RuleContext& context) override;
-    std::string type() override;
+    [[nodiscard]] std::string getDescription() const override;
 
 private:
 
@@ -262,11 +296,11 @@ private:
     uint32_t m_amount;
 };
 
-//! \brief Create a Unit of the given type inside the current Area.
+//! \brief Create a Unit of the given type inside the current Zone.
 //!
 //! Example:
 //! \code
-//! spawn Home at nearestWay
+//! spawn Home at nearestSegment
 //! spawn Home at freeCell
 //! \endcode
 class RuleCommandSpawn: public IRuleCommand
@@ -275,7 +309,7 @@ public:
 
     enum class Placement
     {
-        NearestWay,
+        NearestSegment,
         FreeCell
     };
 
@@ -286,7 +320,7 @@ public:
 
     bool validate(RuleContext& context) override;
     void execute(RuleContext& context) override;
-    std::string type() override;
+    [[nodiscard]] std::string getDescription() const override;
 
 private:
 
@@ -312,7 +346,7 @@ public:
 
     bool validate(RuleContext& context) override;
     void execute(RuleContext& context) override;
-    std::string type() override;
+    [[nodiscard]] std::string getDescription() const override;
 
 private:
 
@@ -320,7 +354,7 @@ private:
     UnitType const& m_toType;
 };
 
-//! \brief Destroy one Unit of the given type inside the current Area.
+//! \brief Destroy one Unit of the given type inside the current Zone.
 //!
 //! Example:
 //! \code
@@ -334,7 +368,7 @@ public:
 
     bool validate(RuleContext& context) override;
     void execute(RuleContext& context) override;
-    std::string type() override;
+    [[nodiscard]] std::string getDescription() const override;
 
 private:
 

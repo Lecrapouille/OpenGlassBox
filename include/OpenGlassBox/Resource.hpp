@@ -42,7 +42,7 @@ using ResourceType = Name;
 //!
 //! Everything a city does is moving these around. A house holds People, a
 //! factory turns them into Goods, a truck carries the Goods to a shop, a cell
-//! of the Pollution map holds what the factory gave off. What a Resource is for
+//! of the Pollution layer holds what the factory gave off. What a Resource is for
 //! is entirely up to the script: the engine only ever adds, removes, transfers
 //! and compares.
 //!
@@ -55,11 +55,11 @@ using ResourceType = Name;
 //! Example:
 //! \code
 //! ogb::Resource goods("Goods");
-//! goods.setCapacity(10u);
+//! goods.capacity(10u);
 //! goods.add(4u);          // 4 of 10
 //!
 //! ogb::Resource lorry("Goods");
-//! lorry.setCapacity(3u);
+//! lorry.capacity(3u);
 //! goods.transferTo(lorry); // the lorry takes 3, one of the four stays
 //! \endcode
 class Resource
@@ -68,7 +68,7 @@ public:
 
     // -------------------------------------------------------------------------
     //! \brief An empty stock with the largest capacity allowed, which is what a
-    //! resource nothing has capped means: a Map cell or a building that was
+    //! resource nothing has capped means: a Layer cell or a building that was
     //! never given a ceiling holds as much as it is given.
     //! \param[in] type name of the thing held.
     // -------------------------------------------------------------------------
@@ -108,7 +108,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief \return the name of the thing held, such as "Water".
     // -------------------------------------------------------------------------
-    inline ResourceType const& type() const
+    [[nodiscard]] inline ResourceType const& getTypeName() const
     {
         return m_type;
     }
@@ -116,7 +116,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief \return the largest amount that fits.
     // -------------------------------------------------------------------------
-    inline uint32_t getCapacity() const
+    [[nodiscard]] inline uint32_t getCapacity() const
     {
         return m_capacity;
     }
@@ -124,7 +124,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief \return how much is held now.
     // -------------------------------------------------------------------------
-    inline uint32_t getAmount() const
+    [[nodiscard]] inline uint32_t getAmount() const
     {
         return m_amount;
     }
@@ -132,7 +132,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief \return true when the stock is not empty.
     // -------------------------------------------------------------------------
-    inline bool hasAmount() const
+    [[nodiscard]] inline bool hasAmount() const
     {
         return m_amount > 0u;
     }

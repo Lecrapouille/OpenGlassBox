@@ -3,7 +3,7 @@
 ## Prerequisites: Installing system packages
 
 - **Operating systems**: Linux, macOS. Should compile on Windows as well.
-- **Build tools**: C++14 compiler (`g++` or `clang++`), GNU Make, Git. C++14 is required for `std::make_unique`; otherwise, the code is largely C++11-compatible.
+- **Build tools**: C++17 compiler (`g++` or `clang++`), GNU Make, Git. C++17 is required by the public headers, which use `std::optional`.
 - **Debug library** (debug builds only): [backward-cpp](https://github.com/bombela/backward-cpp): automatically downloaded and built by the Makefile (not installed system-wide).
 - **Unit tests** (optional): [Google Test](https://github.com/google/googletest) (must be downloaded, built, and installed manually), plus coverage tools (see below).
 - **Makefile helper** [MyMakefile](https://github.com/Lecrapouille/MyMakefile): automatically fetched when cloning with `--recursive`.
@@ -53,7 +53,7 @@ make -j8
 
 This creates a `build` folder with executables and libraries. On macOS, a bundle application is also created inside the build folder.
 
-Adjust `-j8` to the number of cores on your machine, or pick a compiler with `make CXX=clang++ -j8`. Builds are optimized with debug symbols by default (`COMPILATION_MODE := normal` in `Makefile.common`). Use `make COMPILATION_MODE=debug -j8` to step through the code, and `make COMPILATION_MODE=release -j8` to ship. The mode matters: a map rule runs over every cell of a city, so the Chicago save with its three hundred thousand cells is an order of magnitude slower to simulate when compiled without optimizations.
+Adjust `-j8` to the number of cores on your machine, or pick a compiler with `make CXX=clang++ -j8`. Builds are optimized with debug symbols by default (`COMPILATION_MODE := normal` in `Makefile.common`). Use `make COMPILATION_MODE=debug -j8` to step through the code, and `make COMPILATION_MODE=release -j8` to ship. The mode matters: a layer rule runs over every cell of a city, so the Chicago save with its three hundred thousand cells is an order of magnitude slower to simulate when compiled without optimizations.
 
 (Optional) Install OpenGlassBox on your system:
 

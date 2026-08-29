@@ -50,10 +50,10 @@ bool SimpleScriptParser::parseString(std::string const& source,
 // -----------------------------------------------------------------------------
 bool SimpleScriptParser::run(ScriptDefinitions& definitions)
 {
-    if (m_lexer.size() == 0u)
+    if (m_lexer.getTokenCount() == 0u)
     {
         m_errors.push_back(
-            ParseError{ m_lexer.name(), 1u, 1u, "The script is empty", {} });
+            ParseError{ m_lexer.getName(), 1u, 1u, "The script is empty", {} });
         return false;
     }
 
@@ -92,22 +92,22 @@ void SimpleScriptParser::runPass(Pass pass)
             parseResources();
         else if (token.text == "rules")
             parseRules();
-        else if (token.text == "maps")
-            parseMaps();
+        else if (token.text == "layers")
+            parseLayers();
         else if (token.text == "paths")
             parsePaths();
         else if (token.text == "segments")
-            parseWays();
+            parseSegments();
         else if (token.text == "agents")
             parseAgents();
         else if (token.text == "units")
             parseUnits();
-        else if (token.text == "areas")
-            parseAreas();
+        else if (token.text == "zones")
+            parseZones();
         else
         {
-            error(token, "Expected a section (resources, rules, maps, paths, "
-                         "segments, agents, units, areas) but read '" +
+            error(token, "Expected a section (resources, rules, layers, paths, "
+                         "segments, agents, units, zones) but read '" +
                              token.text + "'");
             // Resume at the next section rather than reporting its whole body
             // one word at a time: a misspelled header should cost one error,
@@ -177,9 +177,9 @@ void SimpleScriptParser::skipToNextSection()
 // -----------------------------------------------------------------------------
 bool SimpleScriptParser::isSectionKeyword(std::string const& text)
 {
-    return (text == "resources") || (text == "rules") || (text == "maps") ||
+    return (text == "resources") || (text == "rules") || (text == "layers") ||
            (text == "paths") || (text == "segments") || (text == "agents") ||
-           (text == "units") || (text == "areas");
+           (text == "units") || (text == "zones");
 }
 
 // -----------------------------------------------------------------------------
@@ -196,8 +196,8 @@ void SimpleScriptParser::skipToCloseBracket()
 // -----------------------------------------------------------------------------
 void SimpleScriptParser::error(Token const& token, std::string const& message)
 {
-    m_errors.push_back(ParseError{ m_lexer.name(), token.line, token.column,
-                                   message, m_lexer.sourceLine(token.line) });
+    m_errors.push_back(ParseError{ m_lexer.getName(), token.line, token.column,
+                                   message, m_lexer.getSourceLine(token.line) });
 }
 
 // -----------------------------------------------------------------------------
@@ -488,7 +488,7 @@ void SimpleScriptParser::parsePath()
 }
 
 // -----------------------------------------------------------------------------
-void SimpleScriptParser::parseWays()
+void SimpleScriptParser::parseSegments()
 {
     while (!tooManyErrors())
     {
@@ -498,7 +498,7 @@ void SimpleScriptParser::parseWays()
 
         if (token.text == "segment")
         {
-            parseWay();
+            parseSegment();
         }
         else
         {
@@ -511,18 +511,18 @@ void SimpleScriptParser::parseWays()
 }
 
 // -----------------------------------------------------------------------------
-void SimpleScriptParser::parseWay()
+void SimpleScriptParser::parseSegment()
 {
     Token const name = expectToken("the name of the segment");
     if (!name.valid())
         return;
 
-    WayType* way = nullptr;
+    SegmentType* segment = nullptr;
     if (defining())
     {
-        way = m_definitions->findWayType(name.text);
+        segment = m_definitions->findSegmentType(name.text);
     }
-    else if (m_definitions->addWayType(name.text) == nullptr)
+    else if (m_definitions->addSegmentType(name.text) == nullptr)
     {
         error(name, "The segment '" + name.text + "' is defined twice");
     }
@@ -537,9 +537,9 @@ void SimpleScriptParser::parseWay()
         {
             m_lexer.next();
             uint32_t const color = nextColor("a color");
-            if (way != nullptr)
+            if (segment != nullptr)
             {
-                way->color = color;
+                segment->color = color;
             }
         }
         // The three parameters of the arc performance function. Left out, they
@@ -553,9 +553,9 @@ void SimpleScriptParser::parseWay()
             {
                 error(value, "The speed must be greater than zero");
             }
-            else if (way != nullptr)
+            else if (segment != nullptr)
             {
-                way->speed = speed;
+                segment->speed = speed;
             }
         }
         else if (token.text == "capacity")
@@ -567,18 +567,18 @@ void SimpleScriptParser::parseWay()
             {
                 error(value, "The capacity must be greater than zero");
             }
-            else if (way != nullptr)
+            else if (segment != nullptr)
             {
-                way->capacity = capacity;
+                segment->capacity = capacity;
             }
         }
         else if (token.text == "beta")
         {
             m_lexer.next();
             float const beta = nextFloat("the exponent of the BPR function");
-            if (way != nullptr)
+            if (segment != nullptr)
             {
-                way->beta = beta;
+                segment->beta = beta;
             }
         }
         else
@@ -673,26 +673,26 @@ void SimpleScriptParser::parseAgent()
 }
 
 // =============================================================================
-// MAPS
+// LAYERS
 // =============================================================================
 
 // -----------------------------------------------------------------------------
-void SimpleScriptParser::parseMaps()
+void SimpleScriptParser::parseLayers()
 {
     while (!tooManyErrors())
     {
-        Token const& token = expectToken("'map' or 'end'");
+        Token const& token = expectToken("'layer' or 'end'");
         if (!token.valid() || (token.text == "end"))
             return;
 
-        if (token.text == "map")
+        if (token.text == "layer")
         {
-            parseMap();
+            parseLayer();
         }
         else
         {
             error(token,
-                  "Expected 'map' or 'end' but read '" + token.text + "'");
+                  "Expected 'layer' or 'end' but read '" + token.text + "'");
             skipToEnd();
             return;
         }
@@ -700,20 +700,20 @@ void SimpleScriptParser::parseMaps()
 }
 
 // -----------------------------------------------------------------------------
-void SimpleScriptParser::parseMap()
+void SimpleScriptParser::parseLayer()
 {
-    Token const name = expectToken("the name of the map");
+    Token const name = expectToken("the name of the layer");
     if (!name.valid())
         return;
 
-    MapType* map = nullptr;
+    LayerType* layer = nullptr;
     if (defining())
     {
-        map = m_definitions->findMapType(name.text);
+        layer = m_definitions->findLayerType(name.text);
     }
-    else if (m_definitions->addMapType(name.text) == nullptr)
+    else if (m_definitions->addLayerType(name.text) == nullptr)
     {
-        error(name, "The map '" + name.text + "' is defined twice");
+        error(name, "The layer '" + name.text + "' is defined twice");
     }
 
     while (!tooManyErrors())
@@ -726,28 +726,28 @@ void SimpleScriptParser::parseMap()
         {
             m_lexer.next();
             uint32_t const color = nextColor("a color");
-            if (map != nullptr)
+            if (layer != nullptr)
             {
-                map->color = color;
+                layer->color = color;
             }
         }
         else if (token.text == "capacity")
         {
             m_lexer.next();
             uint32_t const capacity = nextUint("a capacity");
-            if (map != nullptr)
+            if (layer != nullptr)
             {
-                map->capacity = capacity;
+                layer->capacity = capacity;
             }
         }
         else if (token.text == "rules")
         {
             m_lexer.next();
-            std::vector<RuleMap*> rules;
-            parseRuleMapArray(rules);
-            if (map != nullptr)
+            std::vector<RuleLayer*> rules;
+            parseRuleLayerArray(rules);
+            if (layer != nullptr)
             {
-                map->rules = std::move(rules);
+                layer->rules = std::move(rules);
             }
         }
         else
@@ -816,7 +816,7 @@ void SimpleScriptParser::parseUnit()
                 unit->color = color;
             }
         }
-        else if (token.text == "mapRadius")
+        else if (token.text == "layerRadius")
         {
             m_lexer.next();
             uint32_t const radius = nextUint("a radius");
@@ -862,7 +862,7 @@ void SimpleScriptParser::parseUnit()
             parseResourcesArray(resources);
             if (unit != nullptr)
             {
-                unit->resources.addResources(resources);
+                unit->resources.addAll(resources);
             }
         }
         else
@@ -881,25 +881,25 @@ void SimpleScriptParser::parseRules()
 {
     while (!tooManyErrors())
     {
-        Token const& token = expectToken("'mapRule', 'unitRule', 'areaRule' or 'end'");
+        Token const& token = expectToken("'layerRule', 'unitRule', 'zoneRule' or 'end'");
         if (!token.valid() || (token.text == "end"))
             return;
 
-        if (token.text == "mapRule")
+        if (token.text == "layerRule")
         {
-            parseRuleMap();
+            parseRuleLayer();
         }
         else if (token.text == "unitRule")
         {
             parseRuleUnit();
         }
-        else if (token.text == "areaRule")
+        else if (token.text == "zoneRule")
         {
-            parseRuleArea();
+            parseRuleZone();
         }
         else
         {
-            error(token, "Expected 'mapRule', 'unitRule', 'areaRule' or 'end' but read '" +
+            error(token, "Expected 'layerRule', 'unitRule', 'zoneRule' or 'end' but read '" +
                              token.text + "'");
             skipToEnd();
             return;
@@ -908,7 +908,7 @@ void SimpleScriptParser::parseRules()
 }
 
 // -----------------------------------------------------------------------------
-void SimpleScriptParser::parseRuleMap()
+void SimpleScriptParser::parseRuleLayer()
 {
     Token const name = expectToken("the name of the rule");
     if (!name.valid())
@@ -916,15 +916,15 @@ void SimpleScriptParser::parseRuleMap()
 
     if (!defining())
     {
-        if (m_definitions->addRuleMap(name.text) == nullptr)
+        if (m_definitions->addRuleLayer(name.text) == nullptr)
         {
-            error(name, "The map rule '" + name.text + "' is defined twice");
+            error(name, "The layer rule '" + name.text + "' is defined twice");
         }
         skipToEnd();
         return;
     }
 
-    RuleMapType type(name.text);
+    RuleLayerType type(name.text);
 
     while (!tooManyErrors())
     {
@@ -934,7 +934,7 @@ void SimpleScriptParser::parseRuleMap()
 
         if (token.text == "end")
         {
-            RuleMap* rule = m_definitions->findRuleMap(name.text);
+            RuleLayer* rule = m_definitions->findRuleLayer(name.text);
             if (rule != nullptr)
             {
                 rule->configureFrom(type);
@@ -1044,7 +1044,7 @@ void SimpleScriptParser::parseRuleUnit()
 }
 
 // -----------------------------------------------------------------------------
-void SimpleScriptParser::parseRuleArea()
+void SimpleScriptParser::parseRuleZone()
 {
     Token const name = expectToken("the name of the rule");
     if (!name.valid())
@@ -1052,15 +1052,15 @@ void SimpleScriptParser::parseRuleArea()
 
     if (!defining())
     {
-        if (m_definitions->addRuleArea(name.text) == nullptr)
+        if (m_definitions->addRuleZone(name.text) == nullptr)
         {
-            error(name, "The area rule '" + name.text + "' is defined twice");
+            error(name, "The zone rule '" + name.text + "' is defined twice");
         }
         skipToEnd();
         return;
     }
 
-    RuleAreaType type(name.text);
+    RuleZoneType type(name.text);
 
     while (!tooManyErrors())
     {
@@ -1070,7 +1070,7 @@ void SimpleScriptParser::parseRuleArea()
 
         if (token.text == "end")
         {
-            RuleArea* rule = m_definitions->findRuleArea(name.text);
+            RuleZone* rule = m_definitions->findRuleZone(name.text);
             if (rule != nullptr)
                 rule->configureFrom(type);
             return;
@@ -1122,22 +1122,22 @@ IRuleCommand* SimpleScriptParser::parseCommand(Token const& token)
                 std::unique_ptr<IRuleValue>(new RuleValueGlobal(*resource)));
         }
     }
-    else if (token.text == "map")
+    else if (token.text == "layer")
     {
-        Token const name = expectToken("the name of a map");
+        Token const name = expectToken("the name of a layer");
         if (!name.valid())
             return nullptr;
 
-        // The map is looked up by name at run time, on the City the rule runs
-        // on, but a name no map type answers to can only ever fail.
-        if (m_definitions->findMapType(name.text) == nullptr)
+        // The layer is looked up by name at run time, on the City the rule runs
+        // on, but a name no layer type answers to can only ever fail.
+        if (m_definitions->findLayerType(name.text) == nullptr)
         {
-            error(name, "Unknown map '" + name.text + "'");
+            error(name, "Unknown layer '" + name.text + "'");
             return nullptr;
         }
 
         target = m_definitions->own(
-            std::unique_ptr<IRuleValue>(new RuleValueMap(name.text)));
+            std::unique_ptr<IRuleValue>(new RuleValueLayer(name.text)));
     }
     else if (token.text == "agent")
     {
@@ -1209,13 +1209,13 @@ IRuleCommand* SimpleScriptParser::parseCommand(Token const& token)
         }
         if (!expectWord("at"))
             return nullptr;
-        Token const where = expectToken("'nearestWay' or 'freeCell'");
-        RuleCommandSpawn::Placement placement = RuleCommandSpawn::Placement::NearestWay;
+        Token const where = expectToken("'nearestSegment' or 'freeCell'");
+        RuleCommandSpawn::Placement placement = RuleCommandSpawn::Placement::NearestSegment;
         if (where.text == "freeCell")
             placement = RuleCommandSpawn::Placement::FreeCell;
-        else if (where.text != "nearestWay")
+        else if (where.text != "nearestSegment")
         {
-            error(where, "Expected 'nearestWay' or 'freeCell' but read '" +
+            error(where, "Expected 'nearestSegment' or 'freeCell' but read '" +
                              where.text + "'");
             return nullptr;
         }
@@ -1285,7 +1285,7 @@ IRuleCommand* SimpleScriptParser::parseCommand(Token const& token)
     }
     else
     {
-        error(token, "Expected a command (local, global, map, agent, hour, spawn, "
+        error(token, "Expected a command (local, global, layer, agent, hour, spawn, "
                      "count, upgrade, destroy) but read '" +
                          token.text + "'");
         return nullptr;
@@ -1367,7 +1367,7 @@ void SimpleScriptParser::parseResourcesArray(Resources& resources)
             continue;
         }
 
-        resources.addResource(resource->type(), amount);
+        resources.addResource(resource->getTypeName(), amount);
     }
 }
 
@@ -1401,7 +1401,7 @@ void SimpleScriptParser::parseCapacitiesArray(Resources& resources)
             continue;
         }
 
-        resources.setCapacity(resource->type(), capacity);
+        resources.setCapacity(resource->getTypeName(), capacity);
     }
 }
 
@@ -1425,7 +1425,7 @@ void SimpleScriptParser::parseStringArray(std::vector<std::string>& out)
 }
 
 // -----------------------------------------------------------------------------
-void SimpleScriptParser::parseRuleMapArray(std::vector<RuleMap*>& rules)
+void SimpleScriptParser::parseRuleLayerArray(std::vector<RuleLayer*>& rules)
 {
     if (!expectWord("["))
     {
@@ -1435,7 +1435,7 @@ void SimpleScriptParser::parseRuleMapArray(std::vector<RuleMap*>& rules)
 
     while (!tooManyErrors())
     {
-        Token const name = expectToken("a map rule or ']'");
+        Token const name = expectToken("a layer rule or ']'");
         if (!name.valid() || (name.text == "]"))
             return;
 
@@ -1445,10 +1445,10 @@ void SimpleScriptParser::parseRuleMapArray(std::vector<RuleMap*>& rules)
         // This is the lookup that used to push whatever operator[] default
         // constructed, so a misspelled rule became a null pointer the engine
         // dereferenced later.
-        RuleMap* const rule = m_definitions->findRuleMap(name.text);
+        RuleLayer* const rule = m_definitions->findRuleLayer(name.text);
         if (rule == nullptr)
         {
-            error(name, "Unknown map rule '" + name.text + "'");
+            error(name, "Unknown layer rule '" + name.text + "'");
             continue;
         }
 
@@ -1486,7 +1486,7 @@ void SimpleScriptParser::parseRuleUnitArray(std::vector<RuleUnit*>& rules)
 }
 
 // -----------------------------------------------------------------------------
-void SimpleScriptParser::parseRuleAreaArray(std::vector<RuleArea*>& rules)
+void SimpleScriptParser::parseRuleZoneArray(std::vector<RuleZone*>& rules)
 {
     if (!expectWord("["))
     {
@@ -1496,17 +1496,17 @@ void SimpleScriptParser::parseRuleAreaArray(std::vector<RuleArea*>& rules)
 
     while (!tooManyErrors())
     {
-        Token const name = expectToken("an area rule or ']'");
+        Token const name = expectToken("an zone rule or ']'");
         if (!name.valid() || (name.text == "]"))
             return;
 
         if (!defining())
             continue;
 
-        RuleArea* const rule = m_definitions->findRuleArea(name.text);
+        RuleZone* const rule = m_definitions->findRuleZone(name.text);
         if (rule == nullptr)
         {
-            error(name, "Unknown area rule '" + name.text + "'");
+            error(name, "Unknown zone rule '" + name.text + "'");
             continue;
         }
 
@@ -1515,21 +1515,21 @@ void SimpleScriptParser::parseRuleAreaArray(std::vector<RuleArea*>& rules)
 }
 
 // -----------------------------------------------------------------------------
-void SimpleScriptParser::parseAreas()
+void SimpleScriptParser::parseZones()
 {
     while (!tooManyErrors())
     {
-        Token const& token = expectToken("'area' or 'end'");
+        Token const& token = expectToken("'zone' or 'end'");
         if (!token.valid() || (token.text == "end"))
             return;
 
-        if (token.text == "area")
+        if (token.text == "zone")
         {
-            parseArea();
+            parseZone();
         }
         else
         {
-            error(token, "Expected 'area' or 'end' but read '" + token.text + "'");
+            error(token, "Expected 'zone' or 'end' but read '" + token.text + "'");
             skipToEnd();
             return;
         }
@@ -1537,20 +1537,20 @@ void SimpleScriptParser::parseAreas()
 }
 
 // -----------------------------------------------------------------------------
-void SimpleScriptParser::parseArea()
+void SimpleScriptParser::parseZone()
 {
-    Token const name = expectToken("the name of the area");
+    Token const name = expectToken("the name of the zone");
     if (!name.valid())
         return;
 
-    AreaType* area = nullptr;
+    ZoneType* zone = nullptr;
     if (defining())
     {
-        area = m_definitions->findAreaType(name.text);
+        zone = m_definitions->findZoneType(name.text);
     }
-    else if (m_definitions->addAreaType(name.text) == nullptr)
+    else if (m_definitions->addZoneType(name.text) == nullptr)
     {
-        error(name, "The area '" + name.text + "' is defined twice");
+        error(name, "The zone '" + name.text + "' is defined twice");
     }
 
     while (!tooManyErrors())
@@ -1563,16 +1563,16 @@ void SimpleScriptParser::parseArea()
         {
             m_lexer.next();
             uint32_t const color = nextColor("a color");
-            if (area != nullptr)
-                area->color = color;
+            if (zone != nullptr)
+                zone->color = color;
         }
         else if (token.text == "rules")
         {
             m_lexer.next();
-            std::vector<RuleArea*> rules;
-            parseRuleAreaArray(rules);
-            if (area != nullptr)
-                area->rules = std::move(rules);
+            std::vector<RuleZone*> rules;
+            parseRuleZoneArray(rules);
+            if (zone != nullptr)
+                zone->rules = std::move(rules);
         }
         else
         {

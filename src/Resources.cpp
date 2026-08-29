@@ -19,17 +19,17 @@ Resource& Resources::addResource(ResourceType const& type, uint32_t const amount
 }
 
 // -----------------------------------------------------------------------------
-void Resources::addResources(Resources const& resourcesToAdd)
+void Resources::addAll(Resources const& resourcesToAdd)
 {
     if (this == &resourcesToAdd)
         return ;
 
     for (auto const& it: resourcesToAdd.m_bin)
-        addResource(it.type(), it.getAmount());
+        addResource(it.getTypeName(), it.getAmount());
 }
 
 // -----------------------------------------------------------------------------
-bool Resources::canAddSomeResources(Resources const& resourcesToTryAdd,
+bool Resources::canAddAny(Resources const& resourcesToTryAdd,
                                     uint32_t const reserved)
 {
     if (this == &resourcesToTryAdd)
@@ -39,7 +39,7 @@ bool Resources::canAddSomeResources(Resources const& resourcesToTryAdd,
     {
         if (it.hasAmount())
         {
-            Resource const* res = findResource(it.type());
+            Resource const* res = findResource(it.getTypeName());
             if (res == nullptr)
                 continue;
 
@@ -58,13 +58,13 @@ bool Resources::canAddSomeResources(Resources const& resourcesToTryAdd,
 }
 
 // -----------------------------------------------------------------------------
-void Resources::transferResourcesTo(Resources& resourcesTarget)
+void Resources::transferTo(Resources& resourcesTarget)
 {
     if (this == &resourcesTarget)
         return ;
 
     for (auto& it: m_bin)
-        it.transferTo(resourcesTarget.findOrAddResource(it.type()));
+        it.transferTo(resourcesTarget.findOrAddResource(it.getTypeName()));
 }
 
 // -----------------------------------------------------------------------------
@@ -79,19 +79,19 @@ bool Resources::removeResource(ResourceType const& type, uint32_t const amount)
 }
 
 // -----------------------------------------------------------------------------
-void Resources::removeResources(Resources const& resourcesToReduce)
+void Resources::removeAll(Resources const& resourcesToReduce)
 {
     if (this == &resourcesToReduce)
         return ;
 
     for (auto const& it: resourcesToReduce.m_bin)
-        removeResource(it.type(), it.getAmount());
+        removeResource(it.getTypeName(), it.getAmount());
 }
 
 // -----------------------------------------------------------------------------
 uint32_t Resources::getAmount(ResourceType const& type) const
 {
-    const Resource* res = findResource(type);
+    Resource const* res = findResource(type);
     return (res != nullptr) ? res->getAmount() : 0u;
 }
 
@@ -106,7 +106,7 @@ void Resources::setCapacity(ResourceType const& type, uint32_t const capacity)
 void Resources::setCapacities(Resources const& resourcesCapacities)
 {
     for (auto& it: resourcesCapacities.m_bin)
-        setCapacity(it.type(), it.getCapacity());
+        setCapacity(it.getTypeName(), it.getCapacity());
 }
 
 // -----------------------------------------------------------------------------
@@ -116,13 +116,13 @@ void Resources::setAmounts(Resources const& amounts)
         it.remove(it.getAmount());
 
     for (auto const& it: amounts.m_bin)
-        findOrAddResource(it.type()).add(it.getAmount());
+        findOrAddResource(it.getTypeName()).add(it.getAmount());
 }
 
 // -----------------------------------------------------------------------------
 uint32_t Resources::getCapacity(ResourceType const& type) const
 {
-    const Resource* b = findResource(type);
+    Resource const* b = findResource(type);
     return (b != nullptr) ? b->getCapacity() : 0u; // Resource::MAX_CAPACITY;
 }
 
@@ -139,11 +139,11 @@ bool Resources::isEmpty() const
 }
 
 // -----------------------------------------------------------------------------
-const Resource* Resources::findResource(ResourceType const& type) const
+Resource const* Resources::findResource(ResourceType const& type) const
 {
     for (auto& it: m_bin)
     {
-        if (it.type() == type)
+        if (it.getTypeName() == type)
             return &it;
     }
 
@@ -155,7 +155,7 @@ Resource* Resources::findResource(ResourceType const& type)
 {
     for (auto& it: m_bin)
     {
-        if (it.type() == type)
+        if (it.getTypeName() == type)
             return &it;
     }
 

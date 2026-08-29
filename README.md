@@ -2,7 +2,7 @@
 
 **Note: I am also looking for a game developer or an artist able to turn this library into a real game.**
 
-[OpenGlassBox](https://github.com/Lecrapouille/OpenGlassBox) is a C++14 city-simulation engine inspired by **GlassBox**, the engine behind Maxis's SimCity (2013). It is a port and extension of Federico D'Angelo's C#/Unity project, [MultiAgentSimulation](https://github.com/federicodangelo/MultiAgentSimulation), itself based on the [2012 GDC presentation](http://www.andrewwillmott.com/talks/inside-glassbox).
+[OpenGlassBox](https://github.com/Lecrapouille/OpenGlassBox) is a C++17 city-simulation engine inspired by **GlassBox**, the engine behind Maxis's SimCity (2013). It is a port and extension of Federico D'Angelo's C#/Unity project, [MultiAgentSimulation](https://github.com/federicodangelo/MultiAgentSimulation), itself based on the [2012 GDC presentation](http://www.andrewwillmott.com/talks/inside-glassbox).
 
 OpenGlassBox is an independent project: neither OpenGlassBox nor MultiAgentSimulation contains Maxis source code or is affiliated with Maxis.
 
@@ -27,16 +27,16 @@ The project provides:
 
 ## Simulation engine and rulesets
 
-The GlassBox approach describes a city simulation as data rather than as a tree of objects with an `Update()` method. OpenGlassBox models layers, buildings, agents, paths, areas, and the rules that connect them.
+The GlassBox approach describes a city simulation as data rather than as a tree of objects with an `Update()` method. OpenGlassBox models layers, buildings, agents, paths, zones, and the rules that connect them.
 
-- **Areas** are zones whose rules spawn, upgrade, and demolish buildings.
-- **Maps** are 2D grid layers with values, such as water, pollution,  desirability ...
+- **Zones** are zones whose rules spawn, upgrade, and demolish buildings.
+- **Layers** are 2D grid fields with values, such as water, pollution,  desirability ...
 - **Units** are buildings that hold bounded stocks of resources.
 - **Agents** carry resources from one unit to another.
 - **Resources** are money, goods, happiness ...
 - **Paths** are networks on which agents travel.
 
-Gameplay is defined in rulesets files: resources, building types, agents, maps, zones, and the rules that move resources and grow cities. The C++ engine parse them and executes those rules; therefore, scripts and their parsing are the most important part of the project.
+Gameplay is defined in rulesets files: resources, building types, agents, layers, zones, and the rules that move resources and grow cities. The C++ engine parse them and executes those rules; therefore, scripts and their parsing are the most important part of the project.
 
 ## Demo application
 
@@ -46,7 +46,7 @@ This screenshot may not match the current state of the code for the demo applica
 
 ![OpenGlassBox](doc/OpenGlassBox.png)
 
-One window shows one city. The simulation starts paused: press **Play** on the map toolbar or the space bar to start it. The **Simulation clock** panel steps the simulation tick by tick while paused and changes the speed from x0.25 to x16. Opening a ruleset (`.ogs`) starts from an empty city; a city save (`.ogc`) holds geometry, live state, and a hash of the ruleset it was built with. The **Inspector** panel shows details about any selected element; the left toolbar lets you edit the city.
+One window shows one city. The simulation starts paused: press **Play** on the city toolbar or the space bar to start it. The **Simulation clock** panel steps the simulation tick by tick while paused and changes the speed from x0.25 to x16. Opening a ruleset (`.ogs`) starts from an empty city; a city save (`.ogc`) holds geometry, live state, and a hash of the ruleset it was built with. The **Inspector** panel shows details about any selected element; the left toolbar lets you edit the city.
 
 ## References
 

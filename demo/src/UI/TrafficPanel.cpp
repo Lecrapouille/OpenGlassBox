@@ -21,7 +21,7 @@ using namespace ogb::theme;
 // ----------------------------------------------------------------------------
 //! \brief One row of the ranking of the busiest segments.
 // ----------------------------------------------------------------------------
-struct WayRow
+struct SegmentRow
 {
     std::string city;
     std::string path;
@@ -78,13 +78,13 @@ float TrafficPanel::totalTravelTime(Simulation& simulation)
 {
     float total = 0.0f;
 
-    for (auto& it : simulation.cities())
+    for (auto& it : simulation.getCities())
     {
-        for (auto const& path : it.second->paths())
+        for (auto const& path : it.second->getPaths())
         {
-            for (auto& way : path.second->ways())
+            for (auto& segment : path.second->getSegments())
             {
-                total += way->flow() * way->travelTime();
+                total += segment->getFlow() * segment->getTravelTime();
             }
         }
     }
@@ -102,7 +102,12 @@ void TrafficPanel::draw(Simulation& simulation, game::DebugState& state)
     }
 
     ImGui::SeparatorText("Routing");
-    float smoothing = simulation.config().trafficSmoothing;
+
+    // The settings are read from the simulation and written back as a whole:
+    // Simulation::getConfig() hands out a const reference on purpose.
+    Simulation::Config config = simulation.getConfig();
+
+    float smoothing = config.traffic.smoothing;
     ImGui::SetNextItemWidth(-140.0f);
     if (ImGui::SliderFloat("flow smoothing",
                            &smoothing,
@@ -111,9 +116,8 @@ void TrafficPanel::draw(Simulation& simulation, game::DebugState& state)
                            "%.3f",
                            ImGuiSliderFlags_Logarithmic))
     {
-        simulation.config().trafficSmoothing = smoothing;
-        for (auto& it : simulation.cities())
-            it.second->config().trafficSmoothing = smoothing;
+        config.traffic.smoothing = smoothing;
+        simulation.setConfig(config);
     }
     if (ImGui::IsItemHovered())
     {
@@ -122,11 +126,12 @@ void TrafficPanel::draw(Simulation& simulation, game::DebugState& state)
             "Set it to one to route on the raw instantaneous count.");
     }
 
-    auto recalc = int(simulation.config().pathRecalcTicks);
+    auto recalc = int(config.routing.pathRecalcTicks);
     ImGui::SetNextItemWidth(-140.0f);
     if (ImGui::SliderInt("path recalc", &recalc, 1, 400))
     {
-        simulation.config().pathRecalcTicks = uint32_t(recalc);
+        config.routing.pathRecalcTicks = uint32_t(recalc);
+        simulation.setConfig(config);
     }
     if (ImGui::IsItemHovered())
     {
@@ -134,11 +139,12 @@ void TrafficPanel::draw(Simulation& simulation, game::DebugState& state)
                           "remaining itinerary.");
     }
 
-    float deviation = simulation.config().pathCostDeviation;
+    float deviation = config.routing.pathCostDeviation;
     ImGui::SetNextItemWidth(-140.0f);
     if (ImGui::SliderFloat("cost deviation", &deviation, 0.0f, 1.0f, "%.2f"))
     {
-        simulation.config().pathCostDeviation = deviation;
+        config.routing.pathCostDeviation = deviation;
+        simulation.setConfig(config);
     }
     if (ImGui::IsItemHovered())
     {
@@ -147,18 +153,19 @@ void TrafficPanel::draw(Simulation& simulation, game::DebugState& state)
             "Agent to recompute immediately. Zero means always recompute.");
     }
 
-    auto check = int(simulation.config().pathCheckTicks);
+    auto check = int(config.routing.pathCheckTicks);
     ImGui::SetNextItemWidth(-140.0f);
     if (ImGui::SliderInt("deviation check", &check, 1, 100))
     {
-        simulation.config().pathCheckTicks = uint32_t(check);
+        config.routing.pathCheckTicks = uint32_t(check);
+        simulation.setConfig(config);
     }
     if (ImGui::IsItemHovered())
     {
         ImGui::SetTooltip(
             "How often, in ticks, an Agent compares its itinerary against the\n"
             "shortest one. That comparison costs a whole graph search, so\n"
-            "lowering this is the quickest way to make the simulation crawl.");
+            "lowering this is the quickest segment to make the simulation crawl.");
     }
 
     ImGui::SeparatorText("Congestion");
@@ -187,30 +194,30 @@ void TrafficPanel::draw(Simulation& simulation, game::DebugState& state)
         ImGui::TextDisabled("jammed");
     }
 
-    std::vector<WayRow> rows;
+    std::vector<SegmentRow> rows;
     float totalTime = 0.0f;
     float freeFlowTotal = 0.0f;
     uint32_t travelling = 0u;
 
-    for (auto& it : simulation.cities())
+    for (auto& it : simulation.getCities())
     {
         City& city = *it.second;
-        for (auto const& pathIt : city.paths())
+        for (auto const& pathIt : city.getPaths())
         {
             Path const& path = *pathIt.second;
-            for (auto const& way : path.ways())
+            for (auto const& segment : path.getSegments())
             {
-                WayRow row;
-                row.city = city.name();
-                row.path = path.type();
-                row.type = way->type();
-                row.saturation = way->saturation();
-                row.travelTime = way->travelTime();
-                row.freeFlowTime = way->freeFlowTime();
-                row.agents = way->agentCount();
+                SegmentRow row;
+                row.city = city.getName();
+                row.path = path.getTypeName().str();
+                row.type = segment->getTypeName().str();
+                row.saturation = segment->getSaturation();
+                row.travelTime = segment->getTravelTime();
+                row.freeFlowTime = segment->getFreeFlowTime();
+                row.agents = segment->getAgentCount();
 
-                totalTime += way->flow() * row.travelTime;
-                freeFlowTotal += way->flow() * row.freeFlowTime;
+                totalTime += segment->getFlow() * row.travelTime;
+                freeFlowTotal += segment->getFlow() * row.freeFlowTime;
                 travelling += row.agents;
 
                 rows.push_back(std::move(row));
@@ -239,9 +246,10 @@ void TrafficPanel::draw(Simulation& simulation, game::DebugState& state)
 
     ImGui::SeparatorText("Assignment (sampled agents)");
 
-    float const tstt = simulation.totalSystemTravelTime();
-    float const sptt = simulation.shortestPathTravelTime();
-    float const gap = simulation.relativeGap();
+    Simulation::TrafficMetrics const metrics = simulation.getTrafficMetrics();
+    float const tstt = metrics.totalTravelTime;
+    float const sptt = metrics.shortestPathTime;
+    float const gap = metrics.relativeGap;
     RoutingQuality const quality = routingQuality(gap);
 
     ImGui::Text("Total system travel time: %.2f s", tstt);
@@ -294,7 +302,7 @@ void TrafficPanel::draw(Simulation& simulation, game::DebugState& state)
 
     std::sort(rows.begin(),
               rows.end(),
-              [](WayRow const& a, WayRow const& b)
+              [](SegmentRow const& a, SegmentRow const& b)
               { return a.saturation > b.saturation; });
 
     ImGuiTableFlags const flags =
@@ -303,7 +311,7 @@ void TrafficPanel::draw(Simulation& simulation, game::DebugState& state)
 
     // The panel is docked on a narrow side, so the identity of the segment is
     // kept short and the full breakdown is moved to a tooltip.
-    if (ImGui::BeginTable("ways", 4, flags))
+    if (ImGui::BeginTable("segments", 4, flags))
     {
         ImGui::TableSetupScrollFreeze(0, 1);
         ImGui::TableSetupColumn("Road");
@@ -317,7 +325,7 @@ void TrafficPanel::draw(Simulation& simulation, game::DebugState& state)
         size_t const shown = std::min<size_t>(rows.size(), 40u);
         for (size_t i = 0u; i < shown; ++i)
         {
-            WayRow const& row = rows[i];
+            SegmentRow const& row = rows[i];
 
             ImGui::TableNextRow();
             ImGui::TableNextColumn();
