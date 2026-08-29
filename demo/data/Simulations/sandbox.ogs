@@ -64,6 +64,12 @@ end
 # be other paths. Two paths never meet, so an agent that starts on a road stays
 # on the road.
 #
+# A road drawn over another is cut, and the two meet at a crossroads a driver
+# can turn at. That is what "crossings" says, and it is true unless you write
+# otherwise. Add "crossings false" on a network of pipes or cables, where one
+# line passing over another means nothing, and put the junctions you do want
+# there by hand with the Nodes tool.
+#
 # A "segment" is one kind of connection between two crossroads:
 #
 #   speed      how fast an agent goes on it when it is empty.

@@ -2,12 +2,13 @@
 
 ![OpenGlassBox](OpenGlassBox.png)
 
-The city view holds a SimCity-style vertical rail on its left. From top to bottom: **Play / Pause**, then the six tools: **Inspect**, **Roads**, **Zones**, **Buildings**, **Layers**, **Demolish**: then **Undo** and **Redo**. Keys `1` to `6` select a tool; the space bar toggles pause.
+The city view holds a SimCity-style vertical rail on its left. From top to bottom: **Play / Pause**, then the seven tools: **Inspect**, **Roads**, **Nodes**, **Zones**, **Buildings**, **Layers**, **Demolish**: then **Undo** and **Redo**. Keys `1` to `7` select a tool; the space bar toggles pause.
 
 The row to the right of the rail holds the settings of the selected tool, and only those:
 
 - **Inspect** highlights whatever is under the cursor: a building, an agent, a road, a node, a zone, or the grid cell when there is nothing else: and a click sends it to the Inspector panel. A building standing on a junction hides its node, since that is what you pointed at. This is the only tool that highlights cells; the others show the footprint of what they are about to do instead.
-- **Roads** drags a segment of the chosen segment type. Both ends snap to a nearby node, and otherwise to the world grid.
+- **Roads** drags a segment of the chosen segment type. Both ends snap to a nearby node, and otherwise to the world grid. A road drawn across another cuts it and meets it at a crossroads, and so does one whose end lands in the middle of a road, which is how a T junction is made. Whether the lines of a network meet at all is written in the ruleset, `crossings` on the `path`: a water main passing under a power line is not a junction anybody can turn at.
+- **Nodes** puts a crossroads on the road under the cursor, and drags one that is already there. Cutting a road by hand is what makes a junction on a network whose lines do not cross on their own, and dragging one moves the roads meeting there rather than demolishing and drawing them again: the buildings on those roads follow, except the ones a zone placed on a cell of their own.
 - **Zones** and **Layers** paint a rectangle. Click for a single square of the brush size, or drag for a rectangle. Zones do not overlap: painting Commercial over part of a Residential rectangle re-zones exactly the cells you painted and leaves the rest residential.
 - **Layers** paints a resource on the cells, and raises the **Layers** panel, where each row toggles the visibility of a layer, sets its opacity, and picks how it is drawn: filled cells, contours, or numeric values. Clicking a name makes it the main layer; Alt+clicking shows it alone. A simulation opens with one layer shown, because half a dozen heatmaps stacked on the same cells cannot be read. Reading a heatmap needs no brush, so the panel can be left open whatever the armed tool.
 - **Buildings** drops a building on a road. The segment is cut in two and the building sits on the junction, so agents have somewhere to stop; clicking an existing node builds there instead. Buildings grown by a zone are anchored at an offset along a segment and cut nothing, which is what keeps a street of forty houses a single segment.
