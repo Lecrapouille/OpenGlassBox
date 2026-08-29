@@ -18,6 +18,8 @@
 namespace ogb
 {
 
+class Simulation;
+
 //==============================================================================
 //! \brief Search from a crossroads for the nearest building that accepts a
 //! load. "Nearest" means lowest travel time.
@@ -205,6 +207,16 @@ inline void installDijkstraRouter(City& city, Config const& config)
         router->setRandomSeed(config.randomSeed);
     city.setRouter(std::move(router));
 }
+
+// -------------------------------------------------------------------------
+//! \brief Install the default Dijkstra router on every city of a simulation.
+//!
+//! A city loaded from a save has no router, and an Agent without one never
+//! moves. Call this once every city is loaded. An application that reacts to
+//! SimulationListener::onCityAdded does not need it.
+//! \param[in,out] simulation the simulation whose cities receive a router.
+// -------------------------------------------------------------------------
+void installDijkstraRouters(Simulation const& simulation);
 
 } // namespace ogb
 

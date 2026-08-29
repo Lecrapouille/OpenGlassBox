@@ -215,7 +215,7 @@ city.update();            // one city only, at the configured tick duration
 
 ## Routing
 
-Agents need an `IRouter` on their city. The interface is in `OpenGlassBox/Router.hpp`, the default **Dijkstra** implementation in `OpenGlassBox/DijkstraRouter.hpp`, and the helper that wires up a whole simulation in `OpenGlassBox/InstallRouter.hpp`. All three come with `OpenGlassBox/OpenGlassBox.hpp`:
+Agents need an `IRouter` on their city. The interface is in `OpenGlassBox/Router.hpp`, and the default **Dijkstra** implementation, along with the two helpers that install it, in `OpenGlassBox/DijkstraRouter.hpp`. Both come with `OpenGlassBox/OpenGlassBox.hpp`:
 
 ```cpp
 ogb::installDijkstraRouter(city, simulation.getConfig());
