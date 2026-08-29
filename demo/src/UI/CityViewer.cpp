@@ -1343,6 +1343,10 @@ void CityViewer::drawHoverTooltip(Simulation& simulation,
                         opening.open ? theme::SUCCESS : theme::FAILURE),
                     "%s",
                     opening.text.c_str());
+                if (!opening.detail.empty())
+                {
+                    ImGui::TextDisabled("%s", opening.detail.c_str());
+                }
 
                 // What a building holds and what it tries to do is the whole
                 // reason to point at it. Without them the tooltip only repeated

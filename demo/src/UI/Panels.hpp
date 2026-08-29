@@ -54,6 +54,10 @@ struct OpeningStatus
 
     //! \brief "open until 18h" or "closed until 8h".
     std::string text;
+
+    //! \brief Why it reads that way, for a tooltip. A building whose rules do
+    //! not all keep hours is never shut, which is worth a sentence.
+    std::string detail;
 };
 
 // ----------------------------------------------------------------------------

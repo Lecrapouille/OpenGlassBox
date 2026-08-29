@@ -196,16 +196,50 @@ OpeningStatus openingStatus(Building const& building, uint32_t hourOfDay)
     }
 
     OpeningHours const hours = building.getOpeningHours();
+    status.known = true;
 
+    // A building is open as soon as one of its rules may run, and a rule with
+    // no "hour between" may run at any hour. That is why a factory shipping
+    // goods around the clock reads as always active while a house, all of
+    // whose rules keep hours, shuts for the night: the difference is in the
+    // ruleset, not in the reading of it. Since that answer surprises whoever
+    // expects a shop to close, the rules that do keep hours are counted, so
+    // that "always" is not read as "nothing here ever waits for the clock".
     if (!hours.isRestricted())
     {
-        status.known = true;
+        size_t timed = 0u;
+        size_t asleep = 0u;
+        for (IRule const* rule : building.getRules())
+        {
+            if (rule == nullptr)
+                continue;
+            OpeningHours const own = ruleHours(*rule);
+            if (!own.isRestricted())
+                continue;
+            ++timed;
+            if (!own.isOpen(hourOfDay))
+                ++asleep;
+        }
+
         status.open = true;
-        status.text = "Active (always)";
+        if (timed == 0u)
+        {
+            status.text = "Active (no rule keeps hours)";
+            return status;
+        }
+
+        status.text = "Active (" + std::to_string(timed) + " of " +
+                      std::to_string(building.getRules().size()) +
+                      " rules keep hours)";
+        status.detail =
+            (asleep == 0u)
+                ? "Every rule may run at this hour."
+                : (std::to_string(asleep) +
+                   " of them sleep at this hour, the others run around the "
+                   "clock, so the building never shuts.");
         return status;
     }
 
-    status.known = true;
     status.open = hours.isOpen(hourOfDay);
     if (status.open)
     {
@@ -216,6 +250,8 @@ OpeningStatus openingStatus(Building const& building, uint32_t hourOfDay)
                                 std::to_string((last + 1u) %
                                                OpeningHours::HOURS_PER_DAY) +
                                 "h";
+        status.detail = "Every rule of this building keeps hours, so it has "
+                        "nothing to do outside them.";
         return status;
     }
 
@@ -223,6 +259,8 @@ OpeningStatus openingStatus(Building const& building, uint32_t hourOfDay)
     status.text = (next == OpeningHours::NEVER)
                       ? "Inactive (never opens)"
                       : "Inactive until " + std::to_string(next) + "h";
+    status.detail = "Every rule of this building keeps hours, so it has "
+                    "nothing to do outside them.";
     return status;
 }
 
@@ -688,12 +726,17 @@ void InspectorPanel::drawBuilding(Simulation& simulation,
                                opening.open ? theme::SUCCESS : theme::FAILURE),
                            "%s",
                            opening.text.c_str());
-        if (ImGui::IsItemHovered())
+        if (ImGui::BeginItemTooltip())
         {
-            ImGui::SetTooltip(
-                "Derived from the 'hour between' conditions of its rules.\n"
-                "It is %02uh00 in the city.",
-                hour);
+            ImGui::Text("Derived from the 'hour between' conditions of its "
+                        "rules.\nIt is %02uh00 in the city.",
+                        hour);
+            if (!opening.detail.empty())
+            {
+                ImGui::Separator();
+                ImGui::TextUnformatted(opening.detail.c_str());
+            }
+            ImGui::EndTooltip();
         }
 
         field("Layer radius", std::to_string(building->getLayerRadius()));
