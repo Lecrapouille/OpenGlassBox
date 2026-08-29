@@ -109,6 +109,7 @@ private:
 
     ui::CityViewer m_viewer;
     editor::Editor m_editor;
+    ui::LayersPanel m_layers;
     ui::InspectorPanel m_inspector;
     ui::RuleLogPanel m_rule_log;
     ui::ChartsPanel m_charts;
@@ -138,6 +139,7 @@ private:
     float m_watch_timer = 0.0f;
     bool m_auto_reload = true;
 
+    bool m_show_layers = true;
     bool m_show_inspector = true;
     bool m_show_rule_log = true;
     bool m_show_charts = true;
@@ -145,6 +147,9 @@ private:
     bool m_show_traffic = true;
     bool m_show_history = false;
     bool m_show_script = true;
+    //! \brief Panel to raise on the next frame, once it has been submitted to
+    //! ImGui: focusing a window that does not exist yet does nothing.
+    char const* m_focus_panel = nullptr;
 
     uint64_t m_ticks_last_frame = 0u;
 };

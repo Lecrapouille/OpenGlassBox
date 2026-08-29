@@ -110,7 +110,7 @@ void Editor::drawPaintOptions(Simulation& simulation, game::DebugState& state,
 
         // Show what is being painted, but only when the choice changes: doing
         // it every frame would pin that one layer visible and primary, and no
-        // click in the list below could ever turn it off again.
+        // click in the Layers panel could ever turn it off again.
         if (!m_layer.empty() && (m_layer != m_shownLayer))
         {
             m_shownLayer = m_layer;
@@ -135,10 +135,6 @@ void Editor::drawPaintOptions(Simulation& simulation, game::DebugState& state,
     if (room > 0.0f)
         ImGui::SameLine();
     drawBrushSlider((room > 0.0f) ? room : -1.0f);
-
-    // Which layer to paint and which layer to look at is the same choice, so the
-    // layers hang off the Layers tool instead of a panel of their own.
-    ui::LayersPanel{}.drawColumn(simulation, state, -1.0f);
 }
 
 // ----------------------------------------------------------------------------
@@ -159,6 +155,26 @@ void Editor::setTool(EditTool tool)
 {
     m_tool = tool;
     m_dragging = false;
+
+    switch (tool)
+    {
+    case EditTool::Select:
+        m_panelRequest = PanelRequest::Inspector;
+        break;
+    case EditTool::Paint:
+        m_panelRequest = PanelRequest::Layers;
+        break;
+    default:
+        break;
+    }
+}
+
+// ----------------------------------------------------------------------------
+PanelRequest Editor::takePanelRequest()
+{
+    PanelRequest const request = m_panelRequest;
+    m_panelRequest = PanelRequest::None;
+    return request;
 }
 
 // ----------------------------------------------------------------------------

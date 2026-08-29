@@ -132,40 +132,57 @@ static void drawLayerRow(Simulation& simulation, game::DebugState& state,
     }
     if (ImGui::IsItemHovered())
     {
-        ImGui::SetTooltip(
-            "Heat = filled cells, Line = contours, Val = numeric labels "
-            "(main layer only).");
+        ImGui::SetTooltip("Heat = filled cells, Line = contours, Val = the "
+                          "amount written in the cell.");
     }
 
     ImGui::PopID();
 }
 
 // ----------------------------------------------------------------------------
-void LayersPanel::drawColumn(Simulation& simulation, game::DebugState& state,
-                             float width)
+void LayersPanel::draw(Simulation& simulation, game::DebugState& state,
+                       bool& open)
 {
+    if (!ImGui::Begin("Layers", &open))
+    {
+        ImGui::End();
+        return;
+    }
+
     std::set<std::string> names;
     collectLayerNames(simulation, names);
     if (names.empty())
     {
         ImGui::TextDisabled("No layer in this ruleset.");
+        ImGui::End();
         return;
     }
 
-    // Beyond a handful of layers the column would eat the canvas, so it scrolls
-    // instead of growing.
-    float const rowHeight = ImGui::GetFrameHeightWithSpacing();
-    size_t const visibleRows = std::min<size_t>(names.size(), 5u);
-    float const height = rowHeight * float(visibleRows + 1u);
+    if (!state.soloLayer.empty())
+    {
+        ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(theme::ACCENT),
+                           "only %s",
+                           state.soloLayer.c_str());
+        ImGui::SameLine();
+        if (ImGui::SmallButton("show all"))
+            state.soloLayer.clear();
+    }
+    else
+    {
+        ImGui::TextDisabled("click a name for the main layer, alt+click to "
+                            "solo it");
+    }
 
     ImGuiTableFlags const flags = ImGuiTableFlags_SizingFixedFit |
                                   ImGuiTableFlags_RowBg |
                                   ImGuiTableFlags_ScrollY;
 
-    // A width of zero lets the table take all the room the caller has left.
-    float const outerWidth = (width > 0.0f) ? width : 0.0f;
-    if (!ImGui::BeginTable("layers", 5, flags, ImVec2(outerWidth, height)))
+    // A size of zero lets the table take the whole panel.
+    if (!ImGui::BeginTable("layers", 5, flags, ImVec2(0.0f, 0.0f)))
+    {
+        ImGui::End();
         return;
+    }
 
     ImGui::TableSetupScrollFreeze(0, 1);
     ImGui::TableSetupColumn("##visible", ImGuiTableColumnFlags_WidthFixed,
@@ -181,6 +198,7 @@ void LayersPanel::drawColumn(Simulation& simulation, game::DebugState& state,
         drawLayerRow(simulation, state, name);
 
     ImGui::EndTable();
+    ImGui::End();
 }
 } // namespace ui
 } // namespace ogb

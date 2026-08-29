@@ -41,6 +41,20 @@ enum class EditTool
 };
 
 // ============================================================================
+//! \brief A panel a tool needs, and that the host is asked to bring up.
+//!
+//! Arming a tool whose panel is closed, or buried behind another tab, used to
+//! leave the player wondering where the controls went. The editor cannot open
+//! a window it does not own, so it names one and the host does it.
+// ============================================================================
+enum class PanelRequest
+{
+    None,
+    Inspector,
+    Layers,
+};
+
+// ============================================================================
 //! \brief The city editor: the current tool, its settings, and the undo history.
 //!
 //! Every change the editor makes goes through a command, so undo is a property
@@ -94,6 +108,11 @@ public:
 
     EditTool tool() const { return m_tool; }
     void setTool(EditTool tool);
+
+    // ------------------------------------------------------------------------
+    //! \brief The panel the last armed tool asked for, cleared by the call.
+    // ------------------------------------------------------------------------
+    PanelRequest takePanelRequest();
 
     // ------------------------------------------------------------------------
     //! \brief Drop the history and the target names. Called when the world is
@@ -161,6 +180,7 @@ private:
 private:
 
     EditTool m_tool = EditTool::Select;
+    PanelRequest m_panelRequest = PanelRequest::None;
     CommandStack m_stack;
 
     //! \brief Names of what the tools act on. Kept as names rather than

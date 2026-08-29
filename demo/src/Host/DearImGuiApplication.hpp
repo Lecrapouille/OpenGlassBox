@@ -99,6 +99,16 @@ public:
     }
 
     // ------------------------------------------------------------------------
+    //! \brief Arrange the panels again as on a first run, on the next frame.
+    //! A layout saved by an older version knows nothing of a panel added
+    //! since, which would otherwise float undocked for good.
+    // ------------------------------------------------------------------------
+    void resetLayout()
+    {
+        m_build_default_layout = true;
+    }
+
+    // ------------------------------------------------------------------------
     //! \brief Initialize the ImGui context and its backends.
     //! \param[in] iniFilename: where the dock layout is persisted. Pass an
     //! empty string to disable the persistence.

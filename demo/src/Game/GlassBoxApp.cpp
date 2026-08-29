@@ -333,8 +333,14 @@ void GlassBoxApp::buildDefaultLayout(ImGuiID dockspace)
     ImGui::DockBuilderSplitNode(
         right, ImGuiDir_Down, 0.50f, &rightBottom, &rightTop);
 
+    ImGuiID leftTop = 0u;
+    ImGuiID leftBottom = 0u;
+    ImGui::DockBuilderSplitNode(
+        left, ImGuiDir_Down, 0.60f, &leftBottom, &leftTop);
+
     ImGui::DockBuilderDockWindow("Layer", center);
-    ImGui::DockBuilderDockWindow("Simulation clock", left);
+    ImGui::DockBuilderDockWindow("Simulation clock", leftTop);
+    ImGui::DockBuilderDockWindow("Layers", leftBottom);
     ImGui::DockBuilderDockWindow("Inspector", rightTop);
     ImGui::DockBuilderDockWindow("Traffic", rightBottom);
     ImGui::DockBuilderDockWindow("History", rightBottom);
@@ -866,6 +872,7 @@ void GlassBoxApp::onDrawMenuBar()
 
     if (ImGui::BeginMenu("View"))
     {
+        ImGui::MenuItem("Layers", nullptr, &m_show_layers);
         ImGui::MenuItem("Inspector", nullptr, &m_show_inspector);
         ImGui::MenuItem("Rule Log", nullptr, &m_show_rule_log);
         ImGui::MenuItem("Charts", nullptr, &m_show_charts);
@@ -876,6 +883,8 @@ void GlassBoxApp::onDrawMenuBar()
         ImGui::Separator();
         if (ImGui::MenuItem("Recenter the layer", "Home"))
             m_viewer.requestFrameAll();
+        if (ImGui::MenuItem("Reset the panel layout"))
+            imgui().resetLayout();
         ImGui::EndMenu();
     }
 
@@ -928,6 +937,24 @@ void GlassBoxApp::onDrawPanels()
     {
         m_viewer.draw(*m_simulation, m_state, m_editor);
 
+        // Arming a tool opens the panel it works with, since the toolbar no
+        // longer carries the controls itself.
+        switch (m_editor.takePanelRequest())
+        {
+        case editor::PanelRequest::Layers:
+            m_show_layers = true;
+            m_focus_panel = "Layers";
+            break;
+        case editor::PanelRequest::Inspector:
+            m_show_inspector = true;
+            m_focus_panel = "Inspector";
+            break;
+        case editor::PanelRequest::None:
+            break;
+        }
+
+        if (m_show_layers)
+            m_layers.draw(*m_simulation, m_state, m_show_layers);
         if (m_show_history)
             m_editor.drawHistoryPanel(*m_simulation);
         if (m_show_time)
@@ -942,6 +969,14 @@ void GlassBoxApp::onDrawPanels()
             m_traffic.draw(*m_simulation, m_state);
         if (m_show_script)
             drawScriptPanel();
+    }
+
+    // Once the window has been submitted this frame, so that a panel just
+    // reopened can be raised.
+    if (m_focus_panel != nullptr)
+    {
+        ImGui::SetWindowFocus(m_focus_panel);
+        m_focus_panel = nullptr;
     }
 
     drawScriptError();

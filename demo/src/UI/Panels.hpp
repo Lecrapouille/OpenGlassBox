@@ -67,19 +67,24 @@ OpeningStatus openingStatus(Building const& building, uint32_t hourOfDay);
 
 // ****************************************************************************
 //! \brief One-click heatmap picker: click a layer name to show it as the main
-//! layer. Lives next to the Layers tool of the toolbar, since choosing which layer
-//! to look at and choosing which layer to paint is the same decision.
+//! layer.
+//!
+//! It used to hang off the Layers tool of the toolbar, on the grounds that
+//! choosing which layer to look at and which one to paint is the same
+//! decision. But the toolbar sits above the canvas, so the list pushed the
+//! city down every time the tool was armed, and reading a heatmap is worth
+//! doing without a brush in hand. It is a dockable panel of its own instead.
 // ****************************************************************************
 class LayersPanel
 {
 public:
 
     // ------------------------------------------------------------------------
-    //! \brief One layer per row, the controls of every row aligned in columns.
-    //! \param[in] width: width in pixels of the column of rows.
+    //! \brief Draw the panel. One layer per row, the controls of every row
+    //! aligned in columns.
+    //! \param[in,out] open: cleared when the player closes the window.
     // ------------------------------------------------------------------------
-    void
-    drawColumn(Simulation& simulation, game::DebugState& state, float width);
+    void draw(Simulation& simulation, game::DebugState& state, bool& open);
 };
 
 // ****************************************************************************
