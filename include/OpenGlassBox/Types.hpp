@@ -389,6 +389,7 @@ public:
 //! Example:
 //! \code
 //! path Road color 0xAAAAAA
+//! path Water color 0x0000FF crossings false
 //! \endcode
 //==============================================================================
 class PathType: public EntityType
@@ -414,6 +415,15 @@ public:
         name = name_;
         color = color_;
     }
+
+    //! \brief Whether two Segments that cross make a junction Agents can turn
+    //! at. See Path::findCrossings().
+    //!
+    //! True for a road network: two streets drawn over one another are a
+    //! crossroads, and a driver expects to be able to turn there. False for the
+    //! networks where one line passing over another means nothing, such as a
+    //! water main under a power line.
+    bool crossings = true;
 };
 
 //==============================================================================

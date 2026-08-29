@@ -290,6 +290,44 @@ TEST(TestsScript, BadNumber)
 }
 
 //------------------------------------------------------------------------------
+//! \brief Whether the lines of a network make a junction where they cross is a
+//! property of the network, and streets crossing is the case that needs no
+//! saying.
+//------------------------------------------------------------------------------
+TEST(TestsScript, PathCrossings)
+{
+    Ruleset script;
+
+    ASSERT_EQ(script.loadString("resources\n  resource Water\nend\n"
+                                "paths\n"
+                                "  path Road color 0xAAAAAA\n"
+                                "  path Pipe color 0x0000FF crossings false\n"
+                                "  path Rail color 0x888888 crossings true\n"
+                                "end\n"),
+              true)
+        << script.formatErrors();
+
+    ASSERT_EQ(script.getPathType("Road").crossings, true);
+    ASSERT_EQ(script.getPathType("Pipe").crossings, false);
+    ASSERT_EQ(script.getPathType("Rail").crossings, true);
+}
+
+//------------------------------------------------------------------------------
+//! \brief A word that is neither true nor false is an error rather than a
+//! silent false.
+//------------------------------------------------------------------------------
+TEST(TestsScript, BadPathCrossings)
+{
+    Ruleset script;
+
+    ASSERT_EQ(script.loadString("resources\n  resource Water\nend\n"
+                                "paths\n  path Road crossings maybe\nend\n"),
+              false);
+    ASSERT_EQ(script.getErrors().size(), 1u) << script.formatErrors();
+    ASSERT_EQ(script.getErrors()[0].line, 5u);
+}
+
+//------------------------------------------------------------------------------
 //! \brief A name that no section defines is reported instead of being silently
 //! turned into a null pointer the simulation would later dereference.
 //------------------------------------------------------------------------------

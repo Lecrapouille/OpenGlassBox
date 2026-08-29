@@ -488,6 +488,132 @@ TEST(TestsPath, RecreatedNodeKeepsItsIdentifier)
     ASSERT_NE(n3.getId(), n1.getId());
 }
 
+TEST(TestsPath, FindCrossingsReportsWhereTheLineCutsTheGraph)
+{
+    PathType type1("route");
+    Path p(type1);
+    SegmentType type2("Dirt", 0xAAAAAA);
+
+    // An horizontal street from (0,10) to (20,10).
+    Node& west = p.addNode(Vector3f(0.0f, 10.0f, 0.0f));
+    Node& east = p.addNode(Vector3f(20.0f, 10.0f, 0.0f));
+    Segment& street = p.addSegment(type2, west, east);
+
+    // A vertical line drawn a quarter of the way along it.
+    auto crossings = p.findCrossings(Vector3f(5.0f, 0.0f, 0.0f),
+                                     Vector3f(5.0f, 20.0f, 0.0f));
+
+    ASSERT_EQ(crossings.size(), 1u);
+    ASSERT_EQ(crossings[0].segment, &street);
+    ASSERT_FLOAT_EQ(crossings[0].segmentOffset, 0.25f);
+    ASSERT_FLOAT_EQ(crossings[0].lineOffset, 0.5f);
+}
+
+TEST(TestsPath, FindCrossingsSortsThemAlongTheLine)
+{
+    PathType type1("route");
+    Path p(type1);
+    SegmentType type2("Dirt", 0xAAAAAA);
+
+    // Two horizontal streets, the farther one declared first, so that the
+    // order of the answer cannot come from the order of the graph.
+    Node& a = p.addNode(Vector3f(0.0f, 30.0f, 0.0f));
+    Node& b = p.addNode(Vector3f(20.0f, 30.0f, 0.0f));
+    Segment& far = p.addSegment(type2, a, b);
+
+    Node& c = p.addNode(Vector3f(0.0f, 10.0f, 0.0f));
+    Node& d = p.addNode(Vector3f(20.0f, 10.0f, 0.0f));
+    Segment& near = p.addSegment(type2, c, d);
+
+    auto crossings = p.findCrossings(Vector3f(5.0f, 0.0f, 0.0f),
+                                     Vector3f(5.0f, 40.0f, 0.0f));
+
+    ASSERT_EQ(crossings.size(), 2u);
+    ASSERT_EQ(crossings[0].segment, &near);
+    ASSERT_EQ(crossings[1].segment, &far);
+    ASSERT_LT(crossings[0].lineOffset, crossings[1].lineOffset);
+}
+
+TEST(TestsPath, FindCrossingsIgnoresWhatTheLineDoesNotReach)
+{
+    PathType type1("route");
+    Path p(type1);
+    SegmentType type2("Dirt", 0xAAAAAA);
+
+    Node& west = p.addNode(Vector3f(0.0f, 10.0f, 0.0f));
+    Node& east = p.addNode(Vector3f(20.0f, 10.0f, 0.0f));
+    p.addSegment(type2, west, east);
+
+    // Stopping short of the street.
+    ASSERT_EQ(p.findCrossings(Vector3f(5.0f, 0.0f, 0.0f),
+                              Vector3f(5.0f, 9.0f, 0.0f)).size(), 0u);
+
+    // Beside it.
+    ASSERT_EQ(p.findCrossings(Vector3f(25.0f, 0.0f, 0.0f),
+                              Vector3f(25.0f, 20.0f, 0.0f)).size(), 0u);
+
+    // Along it: two streets laid over one another meet everywhere, so there is
+    // no one point to make a junction of.
+    ASSERT_EQ(p.findCrossings(Vector3f(0.0f, 10.0f, 0.0f),
+                              Vector3f(20.0f, 10.0f, 0.0f)).size(), 0u);
+}
+
+TEST(TestsPath, FindCrossingsPutsAMeetingOnANodeOnThatNode)
+{
+    PathType type1("route");
+    Path p(type1);
+    SegmentType type2("Dirt", 0xAAAAAA);
+
+    Node& west = p.addNode(Vector3f(0.0f, 10.0f, 0.0f));
+    Node& east = p.addNode(Vector3f(20.0f, 10.0f, 0.0f));
+    p.addSegment(type2, west, east);
+
+    // A line running through the eastern end. Cutting a hair short of it would
+    // leave a segment of no length beside a crossroads that is already there.
+    auto crossings = p.findCrossings(Vector3f(20.0f, 0.0f, 0.0f),
+                                     Vector3f(20.0f, 20.0f, 0.0f));
+
+    ASSERT_EQ(crossings.size(), 1u);
+    ASSERT_EQ(crossings[0].segmentOffset, 1.0f);
+}
+
+TEST(TestsPath, FindCrossingsLeavesTheEndsOfTheLineAlone)
+{
+    PathType type1("route");
+    Path p(type1);
+    SegmentType type2("Dirt", 0xAAAAAA);
+
+    Node& west = p.addNode(Vector3f(0.0f, 10.0f, 0.0f));
+    Node& east = p.addNode(Vector3f(20.0f, 10.0f, 0.0f));
+    p.addSegment(type2, west, east);
+
+    // A line that starts on the street and leaves it: whoever draws it is
+    // putting a node on that spot anyway.
+    ASSERT_EQ(p.findCrossings(Vector3f(5.0f, 10.0f, 0.0f),
+                              Vector3f(5.0f, 30.0f, 0.0f)).size(), 0u);
+
+    // And one that ends on it.
+    ASSERT_EQ(p.findCrossings(Vector3f(5.0f, 30.0f, 0.0f),
+                              Vector3f(5.0f, 10.0f, 0.0f)).size(), 0u);
+}
+
+TEST(TestsPath, FindCrossingsObeysTheNetworkType)
+{
+    // A network whose lines pass over one another without meeting: a water
+    // main under a power line is not a junction anybody can turn at.
+    PathType type1("pipes");
+    type1.crossings = false;
+    Path p(type1);
+    SegmentType type2("Duct", 0xAAAAAA);
+
+    Node& west = p.addNode(Vector3f(0.0f, 10.0f, 0.0f));
+    Node& east = p.addNode(Vector3f(20.0f, 10.0f, 0.0f));
+    p.addSegment(type2, west, east);
+
+    ASSERT_EQ(p.findCrossings(Vector3f(5.0f, 0.0f, 0.0f),
+                              Vector3f(5.0f, 20.0f, 0.0f)).size(), 0u);
+}
+
 TEST(TestsPath, RemoveSegmentLowersTheMaxFreeFlowSpeed)
 {
     PathType type1("route");

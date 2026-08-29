@@ -462,8 +462,8 @@ void SimpleScriptParser::parsePath()
         error(name, "The path '" + name.text + "' is defined twice");
     }
 
-    // A path has a single optional property, so the loop stops as soon as the
-    // next token is not one it knows: it belongs to whatever follows.
+    // The properties of a path are all optional, so the loop stops as soon as
+    // the next token is not one it knows: it belongs to whatever follows.
     while (!tooManyErrors())
     {
         Token const& token = m_lexer.peek();
@@ -477,6 +477,15 @@ void SimpleScriptParser::parsePath()
             if (path != nullptr)
             {
                 path->color = color;
+            }
+        }
+        else if (token.text == "crossings")
+        {
+            m_lexer.next();
+            bool const crossings = nextBool("true or false");
+            if (path != nullptr)
+            {
+                path->crossings = crossings;
             }
         }
         else
