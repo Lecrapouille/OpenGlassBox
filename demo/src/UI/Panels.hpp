@@ -235,9 +235,10 @@ private:
 };
 
 // ****************************************************************************
-//! \brief The in-game clock and how fast it advances: stepping while paused,
-//! time scale and tick rate. Play and Pause live on the city toolbar, next to
-//! the tools they interact with.
+//! \brief The in-game clock and how fast it advances, one section per
+//! question: which day it is and how to jump to another hour, how to step
+//! through the ticks while paused, how fast a tick follows the next, and how
+//! many of them a second is worth.
 // ****************************************************************************
 class TimeControlPanel
 {

@@ -104,24 +104,39 @@ void TimeControlPanel::draw(Simulation& simulation)
     }
 
     SimulationClock const& clock = simulation.getClock();
-    ImGui::Text("%02u:%02u", clock.getHourOfDay(), clock.getMinuteOfHour());
+    bool const paused = simulation.isPaused();
+
+    ImGui::SeparatorText("Day");
+
+    ImGui::Text("Day %u", clock.getDay());
     ImGui::SameLine();
-    ImGui::TextDisabled("Day %u  tick %llu",
-                        clock.getDay(),
-                        (unsigned long long)simulation.getClock().getTicks());
+    ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(theme::ACCENT),
+                       "%02u:%02u",
+                       clock.getHourOfDay(),
+                       clock.getMinuteOfHour());
+    ImGui::SameLine();
+    ImGui::TextDisabled("tick %llu", (unsigned long long)clock.getTicks());
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("Ticks since the city was founded. A save carries\n"
+                          "this counter, so an opened city resumes its day.");
+    }
 
     drawTimeOfDay(simulation);
 
-    bool const paused = simulation.isPaused();
-    ImGui::PushStyleColor(ImGuiCol_Text,
-                          ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
-    ImGui::TextWrapped(
-        "%s. Play and Pause sit at the top of the layer toolbar.",
-        paused ? "Paused" : "Running");
-    ImGui::PopStyleColor();
+    ImGui::SeparatorText("Step");
 
     uint32_t const perMinute =
         std::max(1u, simulation.getConfig().time.ticksPerMinute);
+
+    if (paused)
+    {
+        ImGui::TextDisabled("Paused. Run a fixed number of ticks:");
+    }
+    else
+    {
+        ImGui::TextDisabled("Running. Pause to step through the ticks.");
+    }
 
     ImGui::BeginDisabled(!paused);
     if (ImGui::Button("Step"))
@@ -148,12 +163,27 @@ void TimeControlPanel::draw(Simulation& simulation)
         m_pending_steps += perMinute * 60u;
     }
     ImGui::EndDisabled();
-    if (!paused && ImGui::IsItemHovered())
-    {
-        ImGui::SetTooltip("Pause the simulation to step through it.");
-    }
 
     ImGui::SeparatorText("Speed");
+
+    if (!paused)
+    {
+        ImGui::PushStyleColor(ImGuiCol_Button,
+                              ImGui::ColorConvertU32ToFloat4(theme::SUCCESS));
+    }
+    if (ImGui::Button(paused ? "Play" : "Pause"))
+    {
+        simulation.setPaused(!paused);
+    }
+    if (!paused)
+    {
+        ImGui::PopStyleColor();
+    }
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("Pause or resume the simulation. Shortcut: space.\n"
+                          "The same button sits on the toolbar of the city.");
+    }
 
     float const scale = simulation.getTimeScale();
     float const right =
@@ -186,25 +216,6 @@ void TimeControlPanel::draw(Simulation& simulation)
         {
             ImGui::PopStyleColor();
         }
-    }
-
-    ImGui::SameLine();
-    if (!paused)
-    {
-        ImGui::PushStyleColor(ImGuiCol_Button,
-                              ImGui::ColorConvertU32ToFloat4(theme::SUCCESS));
-    }
-    if (ImGui::Button(paused ? "Play" : "Pause"))
-    {
-        simulation.setPaused(!paused);
-    }
-    if (!paused)
-    {
-        ImGui::PopStyleColor();
-    }
-    if (ImGui::IsItemHovered())
-    {
-        ImGui::SetTooltip("Pause or resume the simulation. Shortcut: space.");
     }
 
     ImGui::SeparatorText("Tick rate");
