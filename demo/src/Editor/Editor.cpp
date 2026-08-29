@@ -279,6 +279,12 @@ Vector3f Editor::snap(Simulation& simulation, ui::CityViewer& viewer,
         }
     }
 
+    return snapToGrid(simulation, world);
+}
+
+// ----------------------------------------------------------------------------
+Vector3f Editor::snapToGrid(Simulation& simulation, ImVec2 const& world) const
+{
     if (!m_snapToGrid)
         return Vector3f(world.x, world.y, 0.0f);
 
@@ -434,7 +440,11 @@ void Editor::drawToolbar(Simulation& simulation, game::DebugState& state)
             ImGui::SetTooltip("Color roads by congestion (free to jammed).");
         break;
     case EditTool::Node:
-        ImGui::TextDisabled("Click a road to put a crossroads on it");
+        ImGui::TextDisabled("Click a road for a crossroads, drag one to move it");
+        ImGui::SameLine();
+        ImGui::Checkbox("Snap grid", &m_snapToGrid);
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Align a dragged node to the city grid.");
         break;
     case EditTool::Building:
         nameCombo("##buildingtype", 160.0f, simulation.getRuleset().getBuildingTypes(), m_buildingType);
@@ -492,10 +502,7 @@ bool Editor::onCanvas(Simulation& simulation, game::DebugState& state,
         handleRoad(simulation, viewer, hovered);
         break;
     case EditTool::Node:
-        if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
-        {
-            handleNode(simulation, viewer);
-        }
+        handleNode(simulation, viewer, hovered);
         break;
     case EditTool::Building:
         if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
@@ -550,10 +557,45 @@ void Editor::handleRoad(Simulation& simulation, ui::CityViewer& viewer, bool hov
 }
 
 // ----------------------------------------------------------------------------
-void Editor::handleNode(Simulation& simulation, ui::CityViewer& viewer)
+void Editor::handleNode(Simulation& simulation, ui::CityViewer& viewer,
+                        bool hovered)
 {
     City* city = targetCity(simulation);
+
+    // A drag under way owns the mouse: the node follows the cursor and only the
+    // release writes it down, the same way a road is drawn.
+    if (m_dragging)
+    {
+        m_dragEnd = snapToGrid(simulation, viewer.mouseWorld());
+        if (!ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+            return;
+
+        m_dragging = false;
+        m_stack.push(simulation,
+                     std::make_unique<MoveNodeCommand>(m_city, m_dragNodePath,
+                                                       m_dragNodeId, m_dragStart,
+                                                       m_dragEnd));
+        return;
+    }
+
+    if (!hovered || !ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+        return;
+
     ImVec2 const world = viewer.mouseWorld();
+
+    // Pressing on a crossroads picks it up. It takes its roads with it, so a
+    // junction put in the wrong place is dragged onto the right one rather than
+    // demolished and drawn again.
+    Node* node = viewer.pickNode(*city, world, TOOL_PICK_PIXELS);
+    if ((node != nullptr) && (node->getPath() != nullptr))
+    {
+        m_dragging = true;
+        m_dragNodeId = node->getId();
+        m_dragNodePath = node->getPath()->getTypeName().str();
+        m_dragStart = node->getPosition();
+        m_dragEnd = m_dragStart;
+        return;
+    }
 
     float offset = 0.5f;
     Segment* segment = viewer.pickSegment(*city, world, TOOL_PICK_PIXELS, offset);
@@ -889,6 +931,48 @@ void Editor::drawPreview(Simulation& simulation, game::DebugState& state,
     case EditTool::Bulldozer:
     {
         ImVec2 const world = viewer.mouseWorld();
+
+        // A node being dragged: where it would land, and the roads it would
+        // pull along with it.
+        if ((m_tool == EditTool::Node) && m_dragging)
+        {
+            Path* dragged = nullptr;
+            auto const& paths = city->getPaths();
+            auto it = paths.find(m_dragNodePath);
+            if (it != paths.end())
+                dragged = it->second.get();
+
+            Node const* node = (dragged == nullptr)
+                                   ? nullptr
+                                   : dragged->findNode(m_dragNodeId);
+            ImVec2 const target = viewer.worldToScreen(m_dragEnd);
+            if (node != nullptr)
+            {
+                for (Segment const* segment: node->getSegments())
+                {
+                    Node const& other = (&segment->getFrom() == node)
+                                            ? segment->getTo()
+                                            : segment->getFrom();
+                    drawList->AddLine(viewer.worldToScreen(other.getPosition()),
+                                      target, preview, 2.0f);
+                }
+            }
+            drawList->AddCircleFilled(target, 6.0f, preview);
+            drawList->AddCircle(target, 11.0f, preview, 0, 1.5f);
+            break;
+        }
+
+        if (m_tool == EditTool::Node)
+        {
+            Node* node = viewer.pickNode(*city, world, TOOL_PICK_PIXELS);
+            if (node != nullptr)
+            {
+                drawList->AddCircle(viewer.worldToScreen(node->getPosition()),
+                                    10.0f, preview, 0, 2.5f);
+                ImGui::SetTooltip("drag node #%u", node->getId());
+                break;
+            }
+        }
 
         if (m_tool == EditTool::Bulldozer)
         {

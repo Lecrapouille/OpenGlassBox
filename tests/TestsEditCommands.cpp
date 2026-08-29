@@ -252,6 +252,88 @@ TEST(TestsEditCommands, TheNodeToolIsWhatBranchesAPipe)
 }
 
 // -----------------------------------------------------------------------------
+TEST(TestsEditCommands, DraggingACrossroadsTakesItsRoadsWithIt)
+{
+    EditableCity world;
+
+    ASSERT_TRUE(world.lay(Vector3f(0.0f, 0.0f, 0.0f), Vector3f(10.0f, 0.0f, 0.0f)));
+    ASSERT_TRUE(world.lay(Vector3f(10.0f, 0.0f, 0.0f), Vector3f(20.0f, 0.0f, 0.0f)));
+
+    Node* middle = nullptr;
+    for (auto const& node: world.road().getNodes())
+    {
+        if (node->getSegments().size() == 2u)
+            middle = node.get();
+    }
+    ASSERT_NE(middle, nullptr);
+    uint32_t const middleId = middle->getId();
+
+    ASSERT_TRUE(world.stack.push(
+        world.simulation,
+        std::make_unique<MoveNodeCommand>("Testville", "Road", middleId,
+                                          Vector3f(10.0f, 0.0f, 0.0f),
+                                          Vector3f(10.0f, 5.0f, 0.0f))));
+
+    // Both roads keep their ends and are as long as they now look, which is
+    // what the router charges an agent for.
+    Node const* moved = world.road().findNode(middleId);
+    ASSERT_NE(moved, nullptr);
+    ASSERT_FLOAT_EQ(moved->getPosition().y, 5.0f);
+    for (Segment const* segment: moved->getSegments())
+    {
+        ASSERT_FLOAT_EQ(segment->getLength(), std::sqrt(125.0f));
+    }
+
+    world.stack.undo(world.simulation);
+    ASSERT_FLOAT_EQ(world.road().findNode(middleId)->getPosition().y, 0.0f);
+    for (Segment const* segment: world.road().findNode(middleId)->getSegments())
+    {
+        ASSERT_FLOAT_EQ(segment->getLength(), 10.0f);
+    }
+}
+
+// -----------------------------------------------------------------------------
+TEST(TestsEditCommands, ABuildingOnACrossroadsFollowsIt)
+{
+    EditableCity world;
+
+    ASSERT_TRUE(world.lay(Vector3f(0.0f, 0.0f, 0.0f), Vector3f(10.0f, 0.0f, 0.0f)));
+
+    City& city = *world.simulation.getCities().begin()->second;
+    Node& corner = *world.road().getNodes()[0];
+    uint32_t const cornerId = corner.getId();
+    Building& home = city.addBuilding(
+        world.simulation.getRuleset().getBuildingType("Home"), corner);
+
+    ASSERT_TRUE(world.stack.push(
+        world.simulation,
+        std::make_unique<MoveNodeCommand>("Testville", "Road", cornerId,
+                                          Vector3f(0.0f, 0.0f, 0.0f),
+                                          Vector3f(0.0f, 4.0f, 0.0f))));
+
+    ASSERT_FLOAT_EQ(home.getPosition().y, 4.0f);
+
+    world.stack.undo(world.simulation);
+    ASSERT_FLOAT_EQ(home.getPosition().y, 0.0f);
+}
+
+// -----------------------------------------------------------------------------
+TEST(TestsEditCommands, ANodeDraggedNowhereIsNotWorthAnUndo)
+{
+    EditableCity world;
+
+    ASSERT_TRUE(world.lay(Vector3f(0.0f, 0.0f, 0.0f), Vector3f(10.0f, 0.0f, 0.0f)));
+    uint32_t const cornerId = world.road().getNodes()[0]->getId();
+
+    ASSERT_FALSE(world.stack.push(
+        world.simulation,
+        std::make_unique<MoveNodeCommand>("Testville", "Road", cornerId,
+                                          Vector3f(0.0f, 0.0f, 0.0f),
+                                          Vector3f(0.0f, 0.0f, 0.0f))));
+    ASSERT_EQ(world.stack.history().size(), 1u);
+}
+
+// -----------------------------------------------------------------------------
 TEST(TestsEditCommands, ACutStreetCarryingABuildingIsLeftAlone)
 {
     EditableCity world;

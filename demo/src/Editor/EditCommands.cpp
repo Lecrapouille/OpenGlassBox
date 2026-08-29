@@ -523,6 +523,63 @@ std::string SplitSegmentCommand::label() const
 }
 
 // =============================================================================
+// MOVE NODE
+// =============================================================================
+
+// ----------------------------------------------------------------------------
+MoveNodeCommand::MoveNodeCommand(std::string city, std::string path,
+                                 uint32_t nodeId, Vector3f from, Vector3f to)
+    : m_city(std::move(city)),
+      m_path(std::move(path)),
+      m_nodeId(nodeId),
+      m_from(from),
+      m_to(to)
+{}
+
+// ----------------------------------------------------------------------------
+void MoveNodeCommand::place(Simulation& simulation, Vector3f const& position)
+{
+    City* city = findCity(simulation, m_city);
+    Path* path = findPath(simulation, m_city, m_path);
+    if ((city == nullptr) || (path == nullptr))
+        return;
+
+    Node* node = path->findNode(m_nodeId);
+    if (node == nullptr)
+        return;
+
+    city->moveNode(*node, position);
+}
+
+// ----------------------------------------------------------------------------
+bool MoveNodeCommand::redo(Simulation& simulation)
+{
+    Path* path = findPath(simulation, m_city, m_path);
+    if ((path == nullptr) || (path->findNode(m_nodeId) == nullptr))
+        return false;
+
+    // A move of no distance is not worth an entry in the history: a click on a
+    // node that does not drag it anywhere is how a player looks at one.
+    if (length(m_to - m_from) < 1e-3f)
+        return false;
+
+    place(simulation, m_to);
+    return true;
+}
+
+// ----------------------------------------------------------------------------
+void MoveNodeCommand::undo(Simulation& simulation)
+{
+    place(simulation, m_from);
+}
+
+// ----------------------------------------------------------------------------
+std::string MoveNodeCommand::label() const
+{
+    return "move a node";
+}
+
+// =============================================================================
 // ADD UNIT
 // =============================================================================
 

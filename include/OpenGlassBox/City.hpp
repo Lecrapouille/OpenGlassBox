@@ -300,6 +300,21 @@ public:
     void removeNode(Path& path, Node& node);
 
     // -------------------------------------------------------------------------
+    //! \brief Move a crossroads, taking with it the roads that meet there and
+    //! what stands on them.
+    //!
+    //! The roads keep their ends and become as long as they now look, which is
+    //! what the router charges an agent for. Buildings read their position back
+    //! from the road they stand on, unless a zone gave them a footprint of
+    //! their own. Agents keep going where they were going, over roads whose
+    //! cost changed, so their itineraries are computed again.
+    //!
+    //! \param[in] node Crossroads to move.
+    //! \param[in] position Where it goes, in world units.
+    // -------------------------------------------------------------------------
+    void moveNode(Node& node, Vector3f const& position);
+
+    // -------------------------------------------------------------------------
     //! \brief Split a segment and return the new junction crossroads.
     //!
     //! Path::splitSegment() only rewires the graph. This method also updates

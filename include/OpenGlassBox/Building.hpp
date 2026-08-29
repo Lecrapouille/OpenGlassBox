@@ -312,6 +312,15 @@ public:
     void translate(Vector3f const& direction);
 
     // -------------------------------------------------------------------------
+    //! \brief Read the position back from the Node or Segment the building
+    //! stands on. Called when the anchor moved under it. See City::moveNode().
+    //!
+    //! A building given a footprint of its own by a Zone stays where it was
+    //! put: it was placed on a cell, not on the road. See setPosition().
+    // -------------------------------------------------------------------------
+    void followAnchor();
+
+    // -------------------------------------------------------------------------
     //! \brief Release the Node or Segment anchor. The building then has no
     //! anchor. Called by the destructor and City::removeBuilding.
     // -------------------------------------------------------------------------

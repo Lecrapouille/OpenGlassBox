@@ -233,6 +233,39 @@ private:
 };
 
 // ============================================================================
+//! \brief Move a crossroads, and with it the roads and buildings hanging off
+//! it.
+//!
+//! The node is named by identifier and the two positions are recorded, so
+//! undoing is the same move the other way and survives the road being cut or
+//! built on in the meantime.
+// ============================================================================
+class MoveNodeCommand: public ICommand
+{
+public:
+
+    MoveNodeCommand(std::string city, std::string path, uint32_t nodeId,
+                    Vector3f from, Vector3f to);
+
+    bool redo(Simulation& simulation) override;
+    void undo(Simulation& simulation) override;
+    std::string label() const override;
+
+private:
+
+    //! \brief Put the node at that position, or do nothing when it is gone.
+    void place(Simulation& simulation, Vector3f const& position);
+
+private:
+
+    std::string m_city;
+    std::string m_path;
+    uint32_t m_nodeId;
+    Vector3f m_from;
+    Vector3f m_to;
+};
+
+// ============================================================================
 //! \brief Place a building on a road.
 //!
 //! Dropping one in the middle of a segment cuts it in two and puts the

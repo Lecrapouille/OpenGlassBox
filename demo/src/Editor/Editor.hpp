@@ -149,8 +149,16 @@ private:
     Vector3f snap(Simulation& simulation, ui::CityViewer& viewer,
                   ImVec2 const& world) const;
 
+    // ------------------------------------------------------------------------
+    //! \brief The grid part of snap(), without pulling the position onto what
+    //! is already drawn there. Dragging a node cannot use snap(): the node and
+    //! its roads are under the cursor the whole time, and it would never come
+    //! away from where it started.
+    // ------------------------------------------------------------------------
+    Vector3f snapToGrid(Simulation& simulation, ImVec2 const& world) const;
+
     void handleRoad(Simulation& simulation, ui::CityViewer& viewer, bool hovered);
-    void handleNode(Simulation& simulation, ui::CityViewer& viewer);
+    void handleNode(Simulation& simulation, ui::CityViewer& viewer, bool hovered);
     void handleBuilding(Simulation& simulation, ui::CityViewer& viewer);
     void handlePaint(Simulation& simulation, game::DebugState& state, bool hovered);
     void handleZone(Simulation& simulation, game::DebugState& state, bool hovered);
@@ -205,10 +213,15 @@ private:
     int m_brush = 4;
     bool m_snapToGrid = true;
 
-    //! \brief State of the drag in progress, for the road and the brush.
+    //! \brief State of the drag in progress, for the road, the node and the
+    //! brush.
     bool m_dragging = false;
     Vector3f m_dragStart;
     Vector3f m_dragEnd;
+    //! \brief The node the Nodes tool is dragging, and the network it belongs
+    //! to. Named rather than pointed at, as everything the editor holds on to.
+    uint32_t m_dragNodeId = 0u;
+    std::string m_dragNodePath;
     //! \brief Cell the brush started on, in world grid coordinates.
     int32_t m_dragU = 0;
     int32_t m_dragV = 0;
