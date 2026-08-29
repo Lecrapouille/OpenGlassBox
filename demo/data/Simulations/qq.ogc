@@ -1,6 +1,6 @@
 save
 	ruleset sandbox.ogs
-	hash 5d4afdce50d698927b32420bdb703c61479264ac63ea96f5ea5327d3251d7988
+	hash 616262c699d099a6cdd00458544a25b6c1dc1d36509414154d6476d955de9f77
 	types [ Road Dirt Work Shop Residential Commercial ]
 end
 
