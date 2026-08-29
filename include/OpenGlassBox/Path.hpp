@@ -694,6 +694,27 @@ public:
                                                       Vector3f const& to) const;
 
     // -------------------------------------------------------------------------
+    //! \brief The segment a point stands on, so that a street ending in the
+    //! middle of another can be made to join it there.
+    //!
+    //! A dead end drawn onto a street is a T junction, and without this it was
+    //! a node touching a street it shared nothing with: the two looked joined
+    //! and no agent could turn from one into the other. Obeys the crossings of
+    //! the network type for the same reason findCrossings() does.
+    //!
+    //! \param[in] position The point.
+    //! \param[in] tolerance How far from a segment the point may be, in world
+    //! units, and still count as standing on it.
+    //! \param[out] offset Where along the segment, from 0 at its getFrom() to 1
+    //! at its getTo(), snapped to an end when it lands near one.
+    //! \return The nearest such segment, or nullptr when the point stands on
+    //! none.
+    // -------------------------------------------------------------------------
+    [[nodiscard]] Segment* findSegmentAt(Vector3f const& position,
+                                         float tolerance,
+                                         float& offset) const;
+
+    // -------------------------------------------------------------------------
     //! \brief Move every crossroads and segment with the City.
     //! \param[in] direction How far the City moved.
     // -------------------------------------------------------------------------
