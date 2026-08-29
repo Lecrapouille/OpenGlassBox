@@ -17,6 +17,7 @@
 #include <deque>
 #include <map>
 #include <memory>
+#include <vector>
 
 namespace ogb
 {
@@ -500,6 +501,28 @@ using SegmentPtr = std::unique_ptr<Segment>;
 using Segments = std::deque<SegmentPtr>;
 
 // =============================================================================
+//! \brief A point where a street being drawn runs over one already laid.
+//!
+//! Returned by Path::findCrossings(). It says where to cut, not what to do
+//! about it: the caller splits the segment and joins the pieces, because only
+//! the caller knows which identifiers to hand out and how to take the edit
+//! back. See City::splitSegment().
+// =============================================================================
+struct Crossing
+{
+    //! \brief The segment already laid that the line runs over. Never null.
+    Segment* segment = nullptr;
+
+    //! \brief Where on that segment, from 0 at its getFrom() to 1 at its
+    //! getTo(). Exactly 0 or 1 when the line passes over one of its ends,
+    //! which is a junction that needs no cut.
+    float segmentOffset = 0.0f;
+
+    //! \brief Where on the line, from 0 at its start to 1 at its end.
+    float lineOffset = 0.0f;
+};
+
+// =============================================================================
 //! \brief One network: crossroads and segments an Agent can drive on.
 //!
 //! The player draws it, or a save file loads it. A City may hold several Paths.
@@ -647,6 +670,28 @@ public:
     //! was cut in that case.
     // -------------------------------------------------------------------------
     Node& splitSegment(Segment& segment, float offset);
+
+    // -------------------------------------------------------------------------
+    //! \brief Where a straight line from one point to another runs over the
+    //! segments already laid, in the order it meets them.
+    //!
+    //! Two streets drawn over one another are a crossroads a driver can turn
+    //! at, and this is what tells the caller where to make one. A network whose
+    //! type says its lines do not cross returns nothing, so that a water main
+    //! passing under a power line stays two separate networks.
+    //!
+    //! A meeting at an end of an existing segment is reported with a
+    //! Crossing::segmentOffset of exactly 0 or 1: the junction is that node,
+    //! and splitting there cuts nothing. A line running along a segment rather
+    //! than across it is not reported: there is no single point to cut at.
+    //!
+    //! \param[in] from Start of the line, usually a node that exists already.
+    //! \param[in] to End of the line.
+    //! \return The crossings, sorted by Crossing::lineOffset. Points at the
+    //! very ends of the line are left out: the ends are junctions already.
+    // -------------------------------------------------------------------------
+    [[nodiscard]] std::vector<Crossing> findCrossings(Vector3f const& from,
+                                                      Vector3f const& to) const;
 
     // -------------------------------------------------------------------------
     //! \brief Move every crossroads and segment with the City.

@@ -352,6 +352,85 @@ Node& Path::splitSegment(Segment& segment, float offset)
 }
 
 // -----------------------------------------------------------------------------
+std::vector<Crossing> Path::findCrossings(Vector3f const& from,
+                                          Vector3f const& to) const
+{
+    //! \brief How close to an end of a line a meeting has to be to count as
+    //! being on that end, as a share of the line. Cutting a hair away from a
+    //! node instead of on it would leave a segment of no length, which the
+    //! router turns into a free move between two crossroads at the same place.
+    static constexpr float END_TOLERANCE = 1e-3f;
+
+    //! \brief Smallest angle between two lines worth calling a crossing, as the
+    //! sine of that angle. Two nearly parallel lines do meet, but a long way
+    //! from where either of them was drawn, and the point moves by metres for
+    //! a rounding error on the ends.
+    static constexpr float MIN_SINE = 1e-4f;
+
+    std::vector<Crossing> crossings;
+
+    // What the type says about its own lines is the whole of the rule: streets
+    // drawn over one another make a crossroads, pipes and cables do not.
+    if (!m_type.crossings)
+        return crossings;
+
+    float const rx = to.x - from.x;
+    float const ry = to.y - from.y;
+    float const lineLength = std::sqrt((rx * rx) + (ry * ry));
+    if (lineLength <= 0.0f)
+        return crossings;
+
+    for (auto const& segment: m_segments)
+    {
+        Vector3f const& a = segment->getFromPosition();
+        Vector3f const& b = segment->getToPosition();
+        float const sx = b.x - a.x;
+        float const sy = b.y - a.y;
+        float const segmentLength = segment->getLength();
+        if (segmentLength <= 0.0f)
+            continue;
+
+        // Twice the area of the parallelogram the two directions span, which is
+        // zero when they point the same way. Divided by both lengths it is the
+        // sine of the angle between them, and so free of how long either is.
+        float const denominator = (rx * sy) - (ry * sx);
+        if (std::fabs(denominator) < (MIN_SINE * lineLength * segmentLength))
+            continue;
+
+        float const qpx = a.x - from.x;
+        float const qpy = a.y - from.y;
+        float lineOffset = ((qpx * sy) - (qpy * sx)) / denominator;
+        float segmentOffset = ((qpx * ry) - (qpy * rx)) / denominator;
+
+        // The ends of the line being drawn are junctions already: whoever asked
+        // is about to put a node there.
+        if ((lineOffset <= END_TOLERANCE) || (lineOffset >= 1.0f - END_TOLERANCE))
+            continue;
+
+        // Meeting a segment on one of its ends is a junction that needs no cut,
+        // and is reported as such rather than as a cut a hair away from it.
+        if (segmentOffset < -END_TOLERANCE)
+            continue;
+        if (segmentOffset > 1.0f + END_TOLERANCE)
+            continue;
+        if (segmentOffset <= END_TOLERANCE)
+            segmentOffset = 0.0f;
+        else if (segmentOffset >= 1.0f - END_TOLERANCE)
+            segmentOffset = 1.0f;
+
+        crossings.push_back({ segment.get(), segmentOffset, lineOffset });
+    }
+
+    // In the order the line meets them, so that the caller can lay one piece
+    // of street after another without sorting the graph out afterwards.
+    std::sort(crossings.begin(), crossings.end(),
+              [](Crossing const& lhs, Crossing const& rhs)
+              { return lhs.lineOffset < rhs.lineOffset; });
+
+    return crossings;
+}
+
+// -----------------------------------------------------------------------------
 void Path::translate(Vector3f const& direction)
 {
     for (auto const& it : m_nodes)
