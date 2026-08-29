@@ -108,11 +108,7 @@ static void drawResources(char const* label, std::vector<Resource> const& bin)
 }
 
 // ----------------------------------------------------------------------------
-//! \brief Spell a number of ticks out as game time. A tick means nothing to a
-//! reader who does not know how many of them make a minute, and how many that
-//! is depends on TimeConfig::ticksPerMinute.
-// ----------------------------------------------------------------------------
-static std::string gameTimeText(uint32_t ticks, uint32_t ticksPerMinute)
+std::string gameTimeText(uint32_t ticks, uint32_t ticksPerMinute)
 {
     uint32_t const perMinute = std::max(1u, ticksPerMinute);
     uint32_t const minutes = ticks / perMinute;
@@ -143,10 +139,7 @@ static std::string gameTimeText(uint32_t ticks, uint32_t ticksPerMinute)
 }
 
 // ----------------------------------------------------------------------------
-//! \brief The commands a rule runs, in the order the script wrote them. The
-//! name a script gives a rule says nothing about what it does.
-// ----------------------------------------------------------------------------
-static std::string commandsText(IRule const& rule)
+std::string commandsText(IRule const& rule)
 {
     std::string out;
     for (IRuleCommand* command : rule.getCommands())
@@ -495,179 +488,38 @@ void InspectorPanel::draw(Simulation& simulation,
         return;
     }
 
-    if (ImGui::BeginTabBar("inspector"))
+    switch (state.selection.kind)
     {
-        if (ImGui::BeginTabItem("Selection"))
-        {
+        case game::Selection::Kind::None:
+            ImGui::TextDisabled(
+                "Click a building, an agent, a road, a node, a zone\n"
+                "or a cell on the layer to inspect it.");
             ImGui::Spacing();
-            switch (state.selection.kind)
-            {
-                case game::Selection::Kind::None:
-                    ImGui::TextDisabled(
-                        "Click a building, an agent, a road, a node, a zone\n"
-                        "or a cell on the layer to inspect it.");
-                    break;
-                case game::Selection::Kind::Building:
-                    drawBuilding(simulation, state, trace);
-                    break;
-                case game::Selection::Kind::Agent:
-                    drawAgent(simulation, state);
-                    break;
-                case game::Selection::Kind::Node:
-                    drawNode(state);
-                    break;
-                case game::Selection::Kind::Segment:
-                    drawSegment(state);
-                    break;
-                case game::Selection::Kind::Zone:
-                    drawZone(simulation, state);
-                    break;
-                case game::Selection::Kind::Cell:
-                    drawCell(simulation, state);
-                    break;
-            }
-            ImGui::EndTabItem();
-        }
-
-        if (ImGui::BeginTabItem("Ruleset"))
-        {
-            ImGui::Spacing();
-            drawRuleset(simulation);
-            ImGui::EndTabItem();
-        }
-
-        ImGui::EndTabBar();
+            ImGui::TextDisabled(
+                "Every rule the ruleset defines is listed under the\n"
+                "text it comes from, in the Script panel.");
+            break;
+        case game::Selection::Kind::Building:
+            drawBuilding(simulation, state, trace);
+            break;
+        case game::Selection::Kind::Agent:
+            drawAgent(simulation, state);
+            break;
+        case game::Selection::Kind::Node:
+            drawNode(state);
+            break;
+        case game::Selection::Kind::Segment:
+            drawSegment(state);
+            break;
+        case game::Selection::Kind::Zone:
+            drawZone(simulation, state);
+            break;
+        case game::Selection::Kind::Cell:
+            drawCell(simulation, state);
+            break;
     }
 
     ImGui::End();
-}
-
-// ----------------------------------------------------------------------------
-//! \brief Every rule of the open ruleset, broken down: which kind of entity
-//! runs it, how often, and what it does. The selection only ever shows the
-//! rules of what is under the cursor, and reading a ruleset one building at a
-//! time tells nothing about the city.
-// ----------------------------------------------------------------------------
-void InspectorPanel::drawRuleset(Simulation& simulation) const
-{
-    uint32_t const perMinute = simulation.getClock().getTicksPerMinute();
-
-    ImGui::SetNextItemWidth(-1.0f);
-    ImGui::InputTextWithHint(
-        "##filter", "filter by rule name or by command", &m_filter);
-    ImGui::Spacing();
-
-    struct Row
-    {
-        char const* runBy;
-        IRule* rule;
-    };
-
-    std::vector<Row> rows;
-    Ruleset const& ruleset = simulation.getRuleset();
-    for (auto const& it : ruleset.getRuleLayers())
-        rows.push_back({ "layer", it.second.get() });
-    for (auto const& it : ruleset.getRuleBuildings())
-        rows.push_back({ "building", it.second.get() });
-    for (auto const& it : ruleset.getRuleZones())
-        rows.push_back({ "zone", it.second.get() });
-
-    if (rows.empty())
-    {
-        ImGui::TextDisabled("This ruleset defines no rule at all.");
-        return;
-    }
-
-    // Case insensitive, because a filter that only matches the exact casing of
-    // a rule name is a filter nobody uses twice.
-    auto contains = [](std::string haystack, std::string needle)
-    {
-        std::transform(haystack.begin(),
-                       haystack.end(),
-                       haystack.begin(),
-                       [](unsigned char c) { return char(std::tolower(c)); });
-        std::transform(needle.begin(),
-                       needle.end(),
-                       needle.begin(),
-                       [](unsigned char c) { return char(std::tolower(c)); });
-        return haystack.find(needle) != std::string::npos;
-    };
-
-    ImGuiTableFlags const flags =
-        ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
-        ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp;
-
-    if (!ImGui::BeginTable("ruleset", 4, flags))
-        return;
-
-    ImGui::TableSetupColumn("Rule", ImGuiTableColumnFlags_WidthStretch, 1.6f);
-    ImGui::TableSetupColumn("Run by", ImGuiTableColumnFlags_WidthStretch, 0.8f);
-    ImGui::TableSetupColumn("Every", ImGuiTableColumnFlags_WidthStretch, 0.6f);
-    ImGui::TableSetupColumn("Does", ImGuiTableColumnFlags_WidthStretch, 3.0f);
-    ImGui::TableSetupScrollFreeze(0, 1);
-    ImGui::TableHeadersRow();
-
-    std::string const& filter = m_filter;
-    for (Row const& row : rows)
-    {
-        if (row.rule == nullptr)
-            continue;
-
-        std::string const commands = commandsText(*row.rule);
-        if (!filter.empty() && !contains(row.rule->getName(), filter) &&
-            !contains(commands, filter))
-        {
-            continue;
-        }
-
-        uint32_t const period = std::max(1u, row.rule->getPeriodTicks(perMinute));
-
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        // Nothing forbids a layer rule and a building rule from sharing a name, and
-        // two rows answering to the same identifier highlight together.
-        ImGui::PushID(row.rule);
-        ImGui::Selectable(row.rule->getName().c_str(),
-                          false,
-                          ImGuiSelectableFlags_SpanAllColumns);
-        ImGui::PopID();
-        if (ImGui::BeginItemTooltip())
-        {
-            ImGui::TextUnformatted(row.rule->getName().c_str());
-            ImGui::Separator();
-            ImGui::Text("run by every %s", row.runBy);
-            ImGui::Text("every %u tick%s (%s of game time)",
-                        period,
-                        (period > 1u) ? "s" : "",
-                        gameTimeText(period, perMinute).c_str());
-            ImGui::Separator();
-            if (commands.empty())
-                ImGui::TextDisabled("does nothing");
-            else
-                ImGui::TextUnformatted(commands.c_str());
-            ImGui::EndTooltip();
-        }
-
-        ImGui::TableNextColumn();
-        ImGui::TextDisabled("%s", row.runBy);
-
-        ImGui::TableNextColumn();
-        ImGui::Text("%u", period);
-
-        ImGui::TableNextColumn();
-        if (commands.empty())
-        {
-            ImGui::TextDisabled("nothing");
-        }
-        else
-        {
-            // One command per line: a rule is a list of conditions and of
-            // effects, and running them together loses which is which.
-            ImGui::TextUnformatted(commands.c_str());
-        }
-    }
-
-    ImGui::EndTable();
 }
 
 // ----------------------------------------------------------------------------

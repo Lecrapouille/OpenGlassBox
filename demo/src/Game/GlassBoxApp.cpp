@@ -1045,8 +1045,12 @@ void GlassBoxApp::drawScriptPanel()
     m_checksum.edited = CitySave::hashString(m_script_text);
 
     ui::ScriptPanel::Actions actions;
-    m_script_panel.draw(
-        m_script_text, m_script_status, m_checksum, m_ignore_hash, actions);
+    m_script_panel.draw(*m_simulation,
+                        m_script_text,
+                        m_script_status,
+                        m_checksum,
+                        m_ignore_hash,
+                        actions);
 
     if (actions.apply)
     {

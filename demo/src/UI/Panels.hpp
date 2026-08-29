@@ -69,6 +69,19 @@ struct OpeningStatus
 // ----------------------------------------------------------------------------
 OpeningStatus openingStatus(Building const& building, uint32_t hourOfDay);
 
+// ----------------------------------------------------------------------------
+//! \brief Spell a number of ticks out as game time. A tick means nothing to a
+//! reader who does not know how many of them make a minute, and how many that
+//! is depends on TimeConfig::ticksPerMinute.
+// ----------------------------------------------------------------------------
+std::string gameTimeText(uint32_t ticks, uint32_t ticksPerMinute);
+
+// ----------------------------------------------------------------------------
+//! \brief The commands a rule runs, one per line, in the order the script
+//! wrote them. The name a script gives a rule says nothing about what it does.
+// ----------------------------------------------------------------------------
+std::string commandsText(IRule const& rule);
+
 // ****************************************************************************
 //! \brief One-click heatmap picker: click a layer name to show it as the main
 //! layer.
@@ -95,9 +108,9 @@ public:
 //! \brief Details whatever is selected: resources as progress bars, rules with
 //! their period and the number of ticks left before the next attempt.
 //!
-//! A second tab breaks the whole ruleset down, because what a rule does is a
-//! property of the script rather than of the building under the cursor, and
-//! reading it one building at a time says nothing about the city.
+//! What a rule does at large is a property of the script rather than of the
+//! building under the cursor, so the breakdown of the whole ruleset sits in
+//! the Script panel, under the text it comes from.
 // ****************************************************************************
 class InspectorPanel
 {
@@ -117,12 +130,6 @@ private:
     void drawSegment(game::DebugState& state) const;
     void drawCell(Simulation& simulation, game::DebugState& state) const;
     void drawZone(Simulation& simulation, game::DebugState& state) const;
-    void drawRuleset(Simulation& simulation) const;
-
-private:
-
-    //! \brief Substring the rule name or one of its commands must contain.
-    mutable std::string m_filter;
 };
 
 // ****************************************************************************
@@ -170,11 +177,26 @@ public:
         bool restampSaves = false;
     };
 
-    void draw(std::string& text,
+    void draw(Simulation& simulation,
+              std::string& text,
               std::string const& status,
               Checksum const& checksum,
               bool& ignoreMismatch,
               Actions& actions);
+
+private:
+
+    // ------------------------------------------------------------------------
+    //! \brief Every rule the open ruleset defines, broken down: which kind of
+    //! entity runs it, how often, and what it does. It sits under the text it
+    //! was parsed from, since that is what it answers questions about.
+    // ------------------------------------------------------------------------
+    void drawRuleset(Simulation& simulation);
+
+private:
+
+    //! \brief Substring the rule name or one of its commands must contain.
+    std::string m_filter;
 };
 
 // ****************************************************************************
