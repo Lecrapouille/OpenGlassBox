@@ -43,6 +43,7 @@ Resources are named quantities shared by the rest of the ruleset. Units, layers,
 ```text
 paths
     path Road color 0xAAAAAA
+    path Water color 0x0000FF crossings false
 end
 
 segments
@@ -51,6 +52,8 @@ end
 ```
 
 A `path` defines a network family, such as roads or rails. A `segment` (`SegmentType`) defines one kind of connection: its free-flow `speed`, `capacity` at which congestion becomes significant, and BPR exponent `beta` (4 by default). These three are the parameters of the travel time the router minimises; see the [traffic documentation](traffic.md#travel-time-on-a-road-the-bpr-function) for what they do and how to tune them.
+
+`crossings` says whether two lines of the network that cross make a junction agents can turn at. It is true unless written otherwise, which is what a road network wants: a street drawn over another is a crossroads, and both are cut so that the graph says what the picture shows. Write `crossings false` for the networks where one line running over another means nothing, such as a water main under a power line; a junction there is then made by hand, with the Nodes tool of the demo. `Path::findCrossings` is what an editor of your own would call.
 
 ### `agents`
 

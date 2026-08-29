@@ -146,6 +146,10 @@ A `Segment` knows its length, how many agents are on it, and from those two how 
 
 Both containers are `std::deque` rather than `std::vector`, and that is deliberate: everything refers to a crossroads or a street **by address**, so adding one must not move the others.
 
+Two streets that cross share a `Node` or they share nothing: the graph knows no such thing as an overpass, and an agent reaching a crossing that is only drawn carries straight on through it. `Path::findCrossings` reports where a straight line meets the streets already laid, and the caller cuts them with `City::splitSegment`. It reports and does not cut because only the caller knows which identifiers to hand out and how to take the edit back, which is what the demo needs for its undo. Whether the lines of a network meet at all is `PathType::crossings`, from the script.
+
+`City::moveNode` moves a crossroads. The streets meeting there keep their ends and measure themselves again, so the router charges for the road as it now is, and the buildings anchored to them read their position back. Agents are not moved: they are where they are, on streets that cost something else to drive, and their itineraries are computed again on the next tick.
+
 ## The actors: Building, Agent, Zone
 
 `Building` is a building. It holds resources, it runs its rules once every so many ticks, and those rules send agents out. A `Building` is **not** a graph node: a distinction worth dwelling on, because it is the one place this port departs most from the original. A building has its own position and, separately, an *anchor* on the network: a `Node`, or a `Segment` at an offset. Anchoring along a street is what keeps the graph small; a street of forty houses used to become forty crossroads and forty-one segments, and the router paid for all of them at every tick.
