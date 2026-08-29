@@ -1248,8 +1248,8 @@ void GlassBoxApp::drawAboutPopup()
         ImGui::BulletText("middle or right drag: pan");
         ImGui::BulletText("wheel: zoom");
         ImGui::BulletText("space: pause");
-        ImGui::BulletText(
-            "1-6: inspect, roads, zones, buildings, layers, demolish");
+        ImGui::BulletText("1-7: inspect, roads, nodes, zones, buildings,\n"
+                          "     layers, demolish");
         ImGui::BulletText("Ctrl+Z / Ctrl+Y: undo / redo");
         ImGui::Separator();
 
