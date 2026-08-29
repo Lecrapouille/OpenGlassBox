@@ -167,6 +167,6 @@ The header is followed by the clock, `city Name size U V`, globals, paths, nodes
 
 A save identifies the ruleset it was created with. Loading fails if a required type is missing or the ruleset hash differs.
 
-A save names its ruleset by file name and is looked for beside itself first, so the saves a ruleset can invalidate are the `.ogc` files in its own directory. Editing a script breaks all of them at once, which is why **Apply** in the demo stamps them with the new fingerprint: only that header line is rewritten, and the types a save names are still required to exist. `CitySave::savesUsingRuleset` and `CitySave::restamp` are what a tool of your own would call. Failing that, File → **Open saves with a stale checksum** waives the check.
+A save names its ruleset by file name and is looked for beside itself first, so the saves a ruleset can invalidate are the `.ogc` files in its own directory. Editing a script breaks all of them at once, which is why **Apply** in the demo stamps them with the new fingerprint: only that header line is rewritten, and the types a save names are still required to exist. `CitySave::savesUsingRuleset` and `CitySave::restamp` are what a tool of your own would call. Failing that, **Open stale saves** in the Script panel waives the check.
 
 See [engine documentation](engine.md#saving-citysave) for how the loader uses the fingerprint.
