@@ -58,7 +58,10 @@ void TimeControlPanel::drawTimeOfDay(Simulation& simulation)
         m_editing_time = true;
 
     ImGui::SameLine();
-    if (m_editing_time)
+    // Read once: the button clears the flag, and testing it again to pop the
+    // colour is testing something else than what was pushed.
+    bool const pending = m_editing_time;
+    if (pending)
     {
         ImGui::PushStyleColor(ImGuiCol_Button,
                               ImGui::ColorConvertU32ToFloat4(theme::ACCENT));
@@ -69,7 +72,7 @@ void TimeControlPanel::drawTimeOfDay(Simulation& simulation)
             clock.getDay(), uint32_t(m_hour), uint32_t(m_minute));
         m_editing_time = false;
     }
-    if (m_editing_time)
+    if (pending)
     {
         ImGui::PopStyleColor();
     }
