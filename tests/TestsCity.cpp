@@ -210,9 +210,9 @@ TEST(TestsCity, AddBuildingOnSegmentDoesNotSplitRoad)
     Building& b1 = city.addBuilding(keep<BuildingType>("house"), p1, w1, 0.5f);
     ASSERT_EQ(p1.getNodes().size(), 2u);
     ASSERT_EQ(p1.getSegments().size(), 1u);
-    ASSERT_EQ(u1.getSegment(), &w1);
-    ASSERT_EQ(u1.getNode(), nullptr);
-    ASSERT_EQ(int32_t(u1.getPosition().x), 1);
+    ASSERT_EQ(b1.getSegment(), &w1);
+    ASSERT_EQ(b1.getNode(), nullptr);
+    ASSERT_EQ(int32_t(b1.getPosition().x), 1);
     ASSERT_EQ(w1.getBuildings().size(), 1u);
 }
 
@@ -265,12 +265,12 @@ TEST(TestsCity, SplitSegmentKeepsTheBuildingsWhereTheyStand)
     }
     ASSERT_NE(second, nullptr);
 
-    ASSERT_EQ(near.getSegment(), &segment);
-    ASSERT_EQ(far.getSegment(), second);
+    ASSERT_EQ(nearBuilding.getSegment(), &segment);
+    ASSERT_EQ(farBuilding.getSegment(), second);
     ASSERT_EQ(segment.getBuildings().size(), 1u);
     ASSERT_EQ(second->getBuildings().size(), 1u);
-    ASSERT_EQ(int32_t(near.getPosition().x + 0.5f), 2);
-    ASSERT_EQ(int32_t(far.getPosition().x + 0.5f), 8);
+    ASSERT_EQ(int32_t(nearBuilding.getPosition().x + 0.5f), 2);
+    ASSERT_EQ(int32_t(farBuilding.getPosition().x + 0.5f), 8);
 }
 
 // -----------------------------------------------------------------------------
@@ -302,7 +302,7 @@ TEST(TestsCity, translate)
     float const initialMagnitude = w1.getLength();
     Building& b1 = city.addBuilding(keep<BuildingType>("house1"), n1);
     Agent& a1 = city.addAgent(keep<AgentType>("Worker", 1.0f, 2u,
-         0xFFFFFF), u1, Resources(), "target");
+         0xFFFFFF), b1, Resources(), "target");
 
     // Displace the City
     city.translate(Vector3f(1.0f, 1.0f, 1.0f));
