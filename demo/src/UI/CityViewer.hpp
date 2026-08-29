@@ -156,7 +156,7 @@ private:
     void drawBuildings(City& city, game::DebugState const& state);
     void drawAgents(City& city, game::DebugState const& state);
     void drawCityFrame(City const& city, game::DebugState const& state);
-    void drawZones(City& city);
+    void drawZones(City& city, game::DebugState const& state);
     void drawSelectionOverlay(Simulation& simulation,
                               game::DebugState const& state,
                               editor::Editor const& editor);
