@@ -134,14 +134,28 @@ void Building::translate(Vector3f const& direction)
     // A Building sitting on a Node or a Segment follows it: the City translates the
     // Path, which moves the Nodes, and the Building reads the new position. One
     // that was given a footprint of its own keeps it and shifts with the City.
-    if (m_placed)
+    if (m_placed || ((m_node == nullptr) && (m_segment == nullptr)))
+    {
         m_position += direction;
-    else if (m_node != nullptr)
+        updateCell();
+        return;
+    }
+
+    followAnchor();
+}
+
+// -----------------------------------------------------------------------------
+void Building::followAnchor()
+{
+    if (m_placed)
+        return;
+
+    if (m_node != nullptr)
         m_position = m_node->getPosition();
     else if (m_segment != nullptr)
         m_position = m_segment->getPositionAt(m_offset);
     else
-        m_position += direction;
+        return;
 
     updateCell();
 }

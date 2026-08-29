@@ -329,6 +329,36 @@ void City::removeSegment(Path& path, Segment& segment)
 }
 
 // -----------------------------------------------------------------------------
+void City::moveNode(Node& node, Vector3f const& position)
+{
+    Vector3f const direction = position - node.getPosition();
+
+    // Moving the crossroads is what makes the roads meeting there longer or
+    // shorter, and Node::translate() has them measure themselves again.
+    node.translate(direction);
+
+    for (Building* building: node.getBuildings())
+    {
+        building->followAnchor();
+    }
+    for (Segment const* segment: node.getSegments())
+    {
+        for (Building* building: segment->getBuildings())
+        {
+            building->followAnchor();
+        }
+    }
+
+    // The Agents are not moved: they are where they are, on roads that now cost
+    // something else to drive. What they were told was the fastest way there no
+    // longer is, so they are asked again on the next tick.
+    for (auto const& agent: m_agents)
+    {
+        agent->invalidateRoute();
+    }
+}
+
+// -----------------------------------------------------------------------------
 Node& City::splitSegment(Path& path, Segment& segment, float offset)
 {
     if (offset <= 0.0f)
