@@ -202,6 +202,56 @@ TEST(TestsEditCommands, APipeEndingOnAnotherIsLeftHanging)
 }
 
 // -----------------------------------------------------------------------------
+TEST(TestsEditCommands, TheNodeToolCutsAStreetAndTheUndoSewsItBack)
+{
+    EditableCity world;
+
+    ASSERT_TRUE(world.lay(Vector3f(0.0f, 10.0f, 0.0f), Vector3f(20.0f, 10.0f, 0.0f)));
+    uint32_t const streetId = world.road().getSegments()[0]->getId();
+
+    ASSERT_TRUE(world.stack.push(world.simulation,
+                                 std::make_unique<SplitSegmentCommand>(
+                                     "Testville", "Road", streetId, 0.25f)));
+
+    ASSERT_EQ(world.road().getNodes().size(), 3u);
+    ASSERT_EQ(world.road().getSegments().size(), 2u);
+    Node const* junction = nullptr;
+    for (auto const& node: world.road().getNodes())
+    {
+        if (node->getSegments().size() == 2u)
+            junction = node.get();
+    }
+    ASSERT_NE(junction, nullptr);
+    ASSERT_FLOAT_EQ(junction->getPosition().x, 5.0f);
+
+    world.stack.undo(world.simulation);
+    ASSERT_EQ(world.road().getNodes().size(), 2u);
+    ASSERT_EQ(world.road().getSegments().size(), 1u);
+    ASSERT_NE(world.road().findSegment(streetId), nullptr);
+}
+
+// -----------------------------------------------------------------------------
+TEST(TestsEditCommands, TheNodeToolIsWhatBranchesAPipe)
+{
+    EditableCity world;
+
+    ASSERT_TRUE(world.lay(Vector3f(0.0f, 10.0f, 0.0f), Vector3f(20.0f, 10.0f, 0.0f),
+                          "Pipe"));
+
+    City& city = *world.simulation.getCities().begin()->second;
+    Path& pipes = city.getPath("Pipe");
+    uint32_t const pipeId = pipes.getSegments()[0]->getId();
+
+    // A network that makes no crossing of its own still takes the junction the
+    // player asks for by hand, which is what the two settings are for.
+    ASSERT_TRUE(world.stack.push(world.simulation,
+                                 std::make_unique<SplitSegmentCommand>(
+                                     "Testville", "Pipe", pipeId, 0.5f)));
+    ASSERT_EQ(pipes.getNodes().size(), 3u);
+    ASSERT_EQ(pipes.getSegments().size(), 2u);
+}
+
+// -----------------------------------------------------------------------------
 TEST(TestsEditCommands, ACutStreetCarryingABuildingIsLeftAlone)
 {
     EditableCity world;

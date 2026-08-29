@@ -205,6 +205,34 @@ private:
 };
 
 // ============================================================================
+//! \brief Cut a road in two at a crossroads, without building anything on it.
+//!
+//! This is the crossing a player asks for by hand: on a network whose lines do
+//! not meet where they cross, and wherever a junction is wanted that no road
+//! being drawn would have made. See Path::findCrossings().
+// ============================================================================
+class SplitSegmentCommand: public ICommand
+{
+public:
+
+    SplitSegmentCommand(std::string city, std::string path, uint32_t segmentId,
+                        float offset);
+
+    bool redo(Simulation& simulation) override;
+    void undo(Simulation& simulation) override;
+    std::string label() const override;
+    void onWorldRebuilt() override { m_cut = SegmentCut(); }
+
+private:
+
+    std::string m_city;
+    std::string m_path;
+    uint32_t m_segmentId;
+    float m_offset;
+    SegmentCut m_cut;
+};
+
+// ============================================================================
 //! \brief Place a building on a road.
 //!
 //! Dropping one in the middle of a segment cuts it in two and puts the

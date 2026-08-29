@@ -905,10 +905,11 @@ void GlassBoxApp::onDrawMenuBar()
         static Entry const TOOLS[] = {
             { editor::EditTool::Select, "Inspect", "1" },
             { editor::EditTool::Road, "Roads", "2" },
-            { editor::EditTool::Zone, "Zones", "3" },
-            { editor::EditTool::Building, "Buildings", "4" },
-            { editor::EditTool::Paint, "Layers", "5" },
-            { editor::EditTool::Bulldozer, "Demolish", "6" },
+            { editor::EditTool::Node, "Nodes", "3" },
+            { editor::EditTool::Zone, "Zones", "4" },
+            { editor::EditTool::Building, "Buildings", "5" },
+            { editor::EditTool::Paint, "Layers", "6" },
+            { editor::EditTool::Bulldozer, "Demolish", "7" },
         };
         for (auto const& entry : TOOLS)
         {
@@ -974,9 +975,10 @@ void GlassBoxApp::onDrawPanels()
     if (!io.WantTextInput && !io.KeyCtrl)
     {
         static editor::EditTool const SHORTCUTS[] = {
-            editor::EditTool::Select, editor::EditTool::Road,
-            editor::EditTool::Zone,   editor::EditTool::Building,
-            editor::EditTool::Paint,  editor::EditTool::Bulldozer,
+            editor::EditTool::Select,   editor::EditTool::Road,
+            editor::EditTool::Node,     editor::EditTool::Zone,
+            editor::EditTool::Building, editor::EditTool::Paint,
+            editor::EditTool::Bulldozer,
         };
         for (int i = 0; i < IM_ARRAYSIZE(SHORTCUTS); ++i)
         {

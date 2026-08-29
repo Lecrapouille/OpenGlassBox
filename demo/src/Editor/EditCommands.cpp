@@ -474,6 +474,55 @@ void AddSegmentCommand::onWorldRebuilt()
 }
 
 // =============================================================================
+// SPLIT WAY
+// =============================================================================
+
+// ----------------------------------------------------------------------------
+SplitSegmentCommand::SplitSegmentCommand(std::string city, std::string path,
+                                         uint32_t segmentId, float offset)
+    : m_city(std::move(city)),
+      m_path(std::move(path)),
+      m_segmentId(segmentId),
+      m_offset(offset)
+{}
+
+// ----------------------------------------------------------------------------
+bool SplitSegmentCommand::redo(Simulation& simulation)
+{
+    City* city = findCity(simulation, m_city);
+    Path* path = findPath(simulation, m_city, m_path);
+    if ((city == nullptr) || (path == nullptr))
+        return false;
+
+    Segment* segment = path->findSegment(m_segmentId);
+    if (segment == nullptr)
+        return false;
+
+    cutSegment(*city, *path, *segment, m_offset, m_cut);
+
+    // An offset on an end asked for a crossroads that was already there.
+    return m_cut.junctionId != NO_ID;
+}
+
+// ----------------------------------------------------------------------------
+void SplitSegmentCommand::undo(Simulation& simulation)
+{
+    City* city = findCity(simulation, m_city);
+    Path* path = findPath(simulation, m_city, m_path);
+    if ((city == nullptr) || (path == nullptr))
+        return;
+
+    sewSegment(simulation, *city, *path, m_cut);
+    m_cut = SegmentCut();
+}
+
+// ----------------------------------------------------------------------------
+std::string SplitSegmentCommand::label() const
+{
+    return "add a node";
+}
+
+// =============================================================================
 // ADD UNIT
 // =============================================================================
 

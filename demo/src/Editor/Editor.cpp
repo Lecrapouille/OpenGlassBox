@@ -293,6 +293,8 @@ std::string Editor::hint() const
     {
     case EditTool::Road:
         return "drag to lay a " + m_segmentType;
+    case EditTool::Node:
+        return "click a road to put a crossroads on it";
     case EditTool::Building:
         return "click a road to build a " + m_buildingType;
     case EditTool::Paint:
@@ -327,7 +329,11 @@ void Editor::drawToolbar(Simulation& simulation, game::DebugState& state)
         { EditTool::Select, "Inspect",
           "Click a building, agent, road, node or cell." },
         { EditTool::Road, "Roads",
-          "Drag to lay a road. Ends snap to the world grid and to nearby nodes." },
+          "Drag to lay a road. Ends snap to the world grid and to nearby nodes.\n"
+          "A road drawn across another meets it at a crossroads." },
+        { EditTool::Node, "Nodes",
+          "Click a road to put a crossroads on it, where agents can turn and\n"
+          "a building can stand." },
         { EditTool::Zone, "Zones",
           "Click or drag to paint a zone. Its rules grow buildings inside it.\n"
           "Painting over another zone re-zones only the cells you paint." },
@@ -427,6 +433,9 @@ void Editor::drawToolbar(Simulation& simulation, game::DebugState& state)
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Color roads by congestion (free to jammed).");
         break;
+    case EditTool::Node:
+        ImGui::TextDisabled("Click a road to put a crossroads on it");
+        break;
     case EditTool::Building:
         nameCombo("##buildingtype", 160.0f, simulation.getRuleset().getBuildingTypes(), m_buildingType);
         break;
@@ -482,6 +491,12 @@ bool Editor::onCanvas(Simulation& simulation, game::DebugState& state,
     case EditTool::Road:
         handleRoad(simulation, viewer, hovered);
         break;
+    case EditTool::Node:
+        if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+        {
+            handleNode(simulation, viewer);
+        }
+        break;
     case EditTool::Building:
         if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
         {
@@ -532,6 +547,30 @@ void Editor::handleRoad(Simulation& simulation, ui::CityViewer& viewer, bool hov
                  std::make_unique<AddSegmentCommand>(m_city, m_path, m_segmentType,
                                                  m_dragStart, m_dragEnd,
                                                  SNAP_WORLD_RADIUS));
+}
+
+// ----------------------------------------------------------------------------
+void Editor::handleNode(Simulation& simulation, ui::CityViewer& viewer)
+{
+    City* city = targetCity(simulation);
+    ImVec2 const world = viewer.mouseWorld();
+
+    float offset = 0.5f;
+    Segment* segment = viewer.pickSegment(*city, world, TOOL_PICK_PIXELS, offset);
+    if (segment == nullptr)
+        return;
+
+    // A click near an end asked for a crossroads that is already there, and
+    // cutting a hair away from it would leave a road of no length.
+    offset = std::min(0.95f, std::max(0.05f, offset));
+
+    Path* path = segment->getFrom().getPath();
+    if (path == nullptr)
+        return;
+
+    m_stack.push(simulation,
+                 std::make_unique<SplitSegmentCommand>(
+                     m_city, path->getTypeName().str(), segment->getId(), offset));
 }
 
 // ----------------------------------------------------------------------------
@@ -845,6 +884,7 @@ void Editor::drawPreview(Simulation& simulation, game::DebugState& state,
         drawList->AddText(ImVec2(p0.x + 4.0f, p0.y - 18.0f), preview, label);
         break;
     }
+    case EditTool::Node:
     case EditTool::Building:
     case EditTool::Bulldozer:
     {
@@ -879,11 +919,14 @@ void Editor::drawPreview(Simulation& simulation, game::DebugState& state,
         drawList->AddLine(viewer.worldToScreen(segment->getFromPosition()),
                           viewer.worldToScreen(segment->getToPosition()), color, 5.0f);
 
-        if (m_tool == EditTool::Building)
+        if ((m_tool == EditTool::Building) || (m_tool == EditTool::Node))
         {
             Vector3f const p = segment->getFromPosition() +
                                (segment->getToPosition() - segment->getFromPosition()) * offset;
-            drawList->AddCircleFilled(viewer.worldToScreen(p), 6.0f, preview);
+            ImVec2 const centre = viewer.worldToScreen(p);
+            drawList->AddCircleFilled(centre, 6.0f, preview);
+            if (m_tool == EditTool::Node)
+                drawList->AddCircle(centre, 11.0f, preview, 0, 1.5f);
         }
         break;
     }

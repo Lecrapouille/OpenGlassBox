@@ -30,6 +30,8 @@ enum class EditTool
     Select,
     //! \brief Drag to lay a stretch of road between two points.
     Road,
+    //! \brief Click a road to put a crossroads on it.
+    Node,
     //! \brief Click on a road to drop a building on it.
     Building,
     //! \brief Drag a rectangle to paint an Zone (a zone).
@@ -148,6 +150,7 @@ private:
                   ImVec2 const& world) const;
 
     void handleRoad(Simulation& simulation, ui::CityViewer& viewer, bool hovered);
+    void handleNode(Simulation& simulation, ui::CityViewer& viewer);
     void handleBuilding(Simulation& simulation, ui::CityViewer& viewer);
     void handlePaint(Simulation& simulation, game::DebugState& state, bool hovered);
     void handleZone(Simulation& simulation, game::DebugState& state, bool hovered);
