@@ -1,6 +1,23 @@
-October 2020: version 0.1
-        * Initial portage version done.
-        * Rendering in SDL2 and debug made with DearIMgui.
+September 2026: version 1.0
+        * After four years, refresh the whole project :)
+        * Update CI: build on Linux, macOS, and Windows; publish release artifacts
+        * Implement missing GlassBox concepts: zones, zone rules, opening hours, simulation clock
+        * Rename API and script terms for clarity: Area → Zone, Unit → Building ...
+        * Buildings are no longer forced onto path nodes; they can stand at an offset along a segment
+        * Make routing pluggable (IRouter) and traffic-aware (BPR travel times, Dijkstra router)
+        * Many optimizations for large cities, many agents, and many rules (sparse grid, interned
+          names, cached travel times, flat router buffers, layer rendering at zoom-dependent
+          granularity)
+        * Make the ruleset parser more robust
+        * Add bundled demo rulesets and sample cities (work in progress)
+        * Turn the demo into a full Dear ImGui host application to edit, inspect, and play with a city
+        * Add a dedicated city save format (.ogc) with ruleset checksum
+        * Add rule logging so failed rule attempts can be inspected in the demo
+        * Add extensive documentation (engine, scripts, traffic, demo, integration guide)
 
 January 2022: version 0.2
-        * Move the code to create library
+        * Split the code into a graphics-free library and a separate demo application
+
+October 2020: version 0.1
+        * Initial port completed
+        * Rendering with SDL2; debugging UI with Dear ImGui
