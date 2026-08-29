@@ -39,6 +39,10 @@ void TimeControlPanel::drawTimeOfDay(Simulation& simulation)
 {
     SimulationClock const& clock = simulation.getClock();
 
+    // The two fields follow the running clock until the player touches one of
+    // them, and then stay where they were left until the jump is asked for or
+    // dropped. Following the clock again as soon as the drag ends is what used
+    // to make the button set the time it already was, one frame later.
     if (!m_editing_time)
     {
         m_hour = int(clock.getHourOfDay());
@@ -46,25 +50,47 @@ void TimeControlPanel::drawTimeOfDay(Simulation& simulation)
     }
 
     ImGui::SetNextItemWidth(60.0f);
-    bool edited = ImGui::DragInt("##hour", &m_hour, 0.1f, 0, 23, "%02dh");
+    if (ImGui::DragInt("##hour", &m_hour, 0.1f, 0, 23, "%02dh"))
+        m_editing_time = true;
     ImGui::SameLine();
     ImGui::SetNextItemWidth(60.0f);
-    edited =
-        ImGui::DragInt("##minute", &m_minute, 0.5f, 0, 59, "%02dm") || edited;
-    m_editing_time = edited || ImGui::IsItemActive();
+    if (ImGui::DragInt("##minute", &m_minute, 0.5f, 0, 59, "%02dm"))
+        m_editing_time = true;
 
     ImGui::SameLine();
+    if (m_editing_time)
+    {
+        ImGui::PushStyleColor(ImGuiCol_Button,
+                              ImGui::ColorConvertU32ToFloat4(theme::ACCENT));
+    }
     if (ImGui::Button("Set time"))
     {
         simulation.setTimeOfDay(
             clock.getDay(), uint32_t(m_hour), uint32_t(m_minute));
         m_editing_time = false;
     }
+    if (m_editing_time)
+    {
+        ImGui::PopStyleColor();
+    }
     if (ImGui::IsItemHovered())
     {
         ImGui::SetTooltip("Jump the calendar to that time of day, keeping the\n"
                           "current day. Rules that keep office hours only run\n"
-                          "inside their window.");
+                          "inside their window.\n"
+                          "Drag the two fields, then press this.");
+    }
+
+    ImGui::SameLine();
+    ImGui::BeginDisabled(!m_editing_time);
+    if (ImGui::Button("Cancel"))
+    {
+        m_editing_time = false;
+    }
+    ImGui::EndDisabled();
+    if (m_editing_time && ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("Drop what was typed and follow the clock again.");
     }
 }
 
@@ -80,7 +106,7 @@ void TimeControlPanel::draw(Simulation& simulation)
     SimulationClock const& clock = simulation.getClock();
     ImGui::Text("%02u:%02u", clock.getHourOfDay(), clock.getMinuteOfHour());
     ImGui::SameLine();
-    ImGui::TextDisabled("Jour %u  tick %llu",
+    ImGui::TextDisabled("Day %u  tick %llu",
                         clock.getDay(),
                         (unsigned long long)simulation.getClock().getTicks());
 
@@ -89,8 +115,9 @@ void TimeControlPanel::draw(Simulation& simulation)
     bool const paused = simulation.isPaused();
     ImGui::PushStyleColor(ImGuiCol_Text,
                           ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
-    ImGui::TextWrapped("%s. Play and Pause sit at the top of the layer toolbar.",
-                       paused ? "Paused" : "Running");
+    ImGui::TextWrapped(
+        "%s. Play and Pause sit at the top of the layer toolbar.",
+        paused ? "Paused" : "Running");
     ImGui::PopStyleColor();
 
     uint32_t const perMinute =
