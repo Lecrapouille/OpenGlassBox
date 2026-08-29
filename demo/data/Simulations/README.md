@@ -7,20 +7,24 @@ This folder holds the rulesets and city saves shipped with the demo. For the `.o
 - **`.ogs`**: ruleset (or mod): resources, rules, layers, paths, segments, agents, buildings, and zones.
 - **`.ogc`**: city save: header (ruleset name, SHA-256 of the `.ogs`, types in use), geometry, and live state (clock, globals, layer cells, buildings, agents, segment flows).
 
-A separate world file is not needed. A save identifies the ruleset it was created with. Loading fails if a required type is missing or the ruleset hash differs. During ruleset development, File → **Open saves with a stale checksum** can bypass the hash check; required types must still exist. The Script panel displays the checksum and can re-stamp the open save.
+A separate world file is not needed. A save identifies the ruleset it was created with. Loading fails if a required type is missing or the ruleset hash differs. **Apply** in the Script panel stamps the saves sitting beside the ruleset with its new fingerprint, so editing a script here does not leave the bundled cities unopenable. Failing that, File → **Open saves with a stale checksum** bypasses the check; required types must still exist.
 
 **New city** selects a `.ogs` ruleset and starts with an empty city. **Apply** in the Script panel reparses the current ruleset and keeps the geometry if every placed type remains defined.
 
 ## Bundled scenarios
 
-- `test_city.ogs` + `test_city.ogc`: introductory RCI sandbox with homes, workplaces, shops, pollution, desirability, and zone growth. **Start here.**
-- `braess.ogs` + `braess.ogc`: four-node Braess paradox.
-- `regular.ogs` + `regular.ogc`: CiudadSim-style `Regular(6,6)` grid, **bidirectional** segments.
-- `chicago.ogs` + `chicago.ogc`: simplified downtown arteries (not the 546-node Scilab `chisincen.net`).
+Two rulesets are shipped, and the saves pick one of them.
 
-## Worked example: `test_city`
+- `sandbox.ogs`: introductory RCI ruleset with homes, workplaces, shops, pollution, desirability, and zone growth. **Start here.** Four cities are built on it:
+    - `sandbox.ogc`: the small hand-drawn town the ruleset was written for.
+    - `qq.ogc` and `qq2.ogc`: two larger hand-drawn towns.
+    - `regular.ogc`: CiudadSim-style `Regular(6,6)` grid, **bidirectional** segments.
+    - `chicago.ogc`: simplified downtown arteries (not the 546-node Scilab `chisincen.net`). Two orders of magnitude larger than the others, which is what the router is measured on.
+- `braess.ogs` + `braess.ogc`: four-node Braess paradox. A ruleset of its own, since the point of it is three segment types whose speed and capacity are chosen so that the shortcut makes everybody slower.
 
-`test_city.ogs` is the best starting point for understanding a complete ruleset. It combines environmental layers, homes, workplaces, shops, restaurants, several agent types, a road network, and Residential, Commercial, and Industrial zones.
+## Worked example: `sandbox`
+
+`sandbox.ogs` is the best starting point for understanding a complete ruleset. It combines environmental layers, homes, workplaces, shops, restaurants, several agent types, a road network, and Residential, Commercial, and Industrial zones.
 
 The clock and `hour between` were not in the C# port; they drive the day:
 

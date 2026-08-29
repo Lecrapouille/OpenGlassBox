@@ -42,7 +42,7 @@ Gameplay is defined in rulesets files: resources, building types, agents, layers
 
 The engine library does not depend on the demo renderer, so it can be embedded in another application or connected to a different rendering engine.
 
-This screenshot may not match the current state of the code for the demo application; what you see also depends on the loaded ruleset and city. The demo includes several bundled simulations, from the introductory `test_city` sandbox to traffic-focused road networks.
+This screenshot may not match the current state of the code for the demo application; what you see also depends on the loaded ruleset and city. The demo includes several bundled simulations, from the introductory `sandbox` city to traffic-focused road networks.
 
 ![OpenGlassBox](doc/OpenGlassBox.png)
 

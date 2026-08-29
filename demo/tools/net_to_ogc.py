@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import struct
 import sys
 from pathlib import Path
@@ -112,12 +113,24 @@ def main() -> int:
     parser.add_argument("net", type=Path, help="CiudadSim .net file")
     parser.add_argument("-o", "--output", type=Path, required=True)
     parser.add_argument("--city", default="Chicago")
-    parser.add_argument("--ruleset", default="chicago.ogs")
+    parser.add_argument("--ruleset", default="sandbox.ogs")
     parser.add_argument(
         "--hash",
-        default="d1836433104b43d7ef49c687e0990ba9e65cd5e3ba870a40d517e26b5f4f29ea",
+        help="SHA-256 the save records for its ruleset. Read from the ruleset "
+        "sitting next to the output when not given, which is where the loader "
+        "looks for it.",
     )
     args = parser.parse_args()
+
+    ruleset_hash = args.hash
+    if ruleset_hash is None:
+        ruleset_file = args.output.parent / args.ruleset
+        if not ruleset_file.is_file():
+            parser.error(
+                f"cannot read '{ruleset_file}' to fingerprint it; "
+                f"pass --hash instead"
+            )
+        ruleset_hash = hashlib.sha256(ruleset_file.read_bytes()).hexdigest()
 
     xs, ys, tails, heads = load_chisincen(args.net)
     write_ogc(
@@ -128,7 +141,7 @@ def main() -> int:
         heads,
         city_name=args.city,
         ruleset=args.ruleset,
-        ruleset_hash=args.hash,
+        ruleset_hash=ruleset_hash,
     )
     return 0
 

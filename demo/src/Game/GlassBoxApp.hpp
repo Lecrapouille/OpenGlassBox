@@ -40,7 +40,7 @@ public:
     struct Options
     {
         //! \brief Optional .ogs or .ogc, resolved against Simulations/.
-        std::string file = "test_city.ogs";
+        std::string file = "sandbox.ogs";
         int width = 1600;
         int height = 900;
     };
