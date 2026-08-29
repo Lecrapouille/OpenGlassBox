@@ -137,12 +137,37 @@ private:
 };
 
 // ============================================================================
-//! \brief Lay a road: create the nodes that do not exist yet and the segment
-//! joining them.
+//! \brief One half of a segment that was cut in two to make a junction.
+//!
+//! Every edit that cuts a segment records this, and undoing it sews the halves
+//! back. See Path::findCrossings() for why a road being drawn cuts the ones it
+//! runs over.
+// ============================================================================
+struct SegmentCut
+{
+    //! \brief The crossroads the cut created.
+    uint32_t junctionId = NO_ID;
+    //! \brief The segment that was cut. It kept its identifier and is now the
+    //! half on the side it ran from.
+    uint32_t firstId = NO_ID;
+    //! \brief The half the cut created, running from the junction to the far
+    //! end the segment used to reach.
+    uint32_t secondId = NO_ID;
+    //! \brief Type of the segment, needed to lay it again as one.
+    std::string type;
+};
+
+// ============================================================================
+//! \brief Lay a road: create the nodes that do not exist yet, cut the roads it
+//! runs over, and lay the pieces joining all of them.
 //!
 //! The end points are given as positions, and snapping to an existing node is
 //! resolved when the command runs, so that a redo reuses the same node the
 //! original edit did.
+//!
+//! A road drawn across another comes out as several segments meeting at
+//! junctions, which is what lets an agent turn there. Undoing takes the pieces
+//! back and sews the roads that were cut.
 // ============================================================================
 class AddSegmentCommand: public ICommand
 {
@@ -167,9 +192,12 @@ private:
 
     //! \brief Identifiers handed out by the first run, replayed by the redos so
     //! that the commands stacked above keep pointing at the right things.
-    uint32_t m_segmentId = NO_ID;
+    //! One per piece the road came out in, from the first end to the other.
+    std::vector<uint32_t> m_pieceIds;
     uint32_t m_fromId = NO_ID;
     uint32_t m_toId = NO_ID;
+    //! \brief The roads this one cut on its way, in the order it met them.
+    std::vector<SegmentCut> m_cuts;
     //! \brief Whether the end points were created by this command, and so have
     //! to be taken back by the undo.
     bool m_createdFrom = false;
@@ -217,11 +245,8 @@ private:
     uint32_t m_buildingId = NO_ID;
 
     //! \brief What the cut created, so that the undo can sew the segment back.
-    //! The junction carries the building; the second half runs from it to the
-    //! far end the segment used to reach.
-    uint32_t m_junctionId = NO_ID;
-    uint32_t m_secondHalfId = NO_ID;
-    std::string m_segmentType;
+    //! Its junction is what carries the building.
+    SegmentCut m_cut;
 };
 
 // ============================================================================

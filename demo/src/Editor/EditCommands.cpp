@@ -67,6 +67,108 @@ static Node* snapToNode(Path& path, Vector3f const& position, float radius)
 }
 
 // ----------------------------------------------------------------------------
+//! \brief Cut a segment in two at the junction the caller wants there.
+//! \param[out] cut what the cut created, or nothing to undo when the offset
+//! landed on an end of the segment and the crossroads was there already.
+//! \return the junction, cut or found.
+// ----------------------------------------------------------------------------
+static Node& cutSegment(City& city, Path& path, Segment& segment, float offset,
+                        SegmentCut& cut)
+{
+    cut = SegmentCut();
+    cut.type = segment.getTypeName().str();
+
+    uint32_t const segmentId = segment.getId();
+    uint32_t const fromId = segment.getFrom().getId();
+    uint32_t const toId = segment.getTo().getId();
+
+    Node& junction = city.splitSegment(path, segment, offset);
+
+    // Landing on an end means the crossroads was already there and the graph is
+    // unchanged, which leaves an undo nothing to sew back.
+    if ((junction.getId() == fromId) || (junction.getId() == toId))
+    {
+        cut = SegmentCut();
+        return junction;
+    }
+
+    cut.junctionId = junction.getId();
+    cut.firstId = segmentId;
+    for (Segment const* incident: junction.getSegments())
+    {
+        if (incident->getId() != segmentId)
+            cut.secondId = incident->getId();
+    }
+
+    return junction;
+}
+
+// ----------------------------------------------------------------------------
+//! \brief Sew the two halves of a cut segment back into one.
+//!
+//! Every undo of an edit that cut a segment comes through here. It is only
+//! harmless while nothing came to lean on the junction in the meantime: a
+//! building, or a road drawn from it. When something did, the junction stays,
+//! which leaves the player a crossroads they did not ask for rather than
+//! taking away what they did.
+// ----------------------------------------------------------------------------
+static void sewSegment(Simulation& simulation, City& city, Path& path,
+                       SegmentCut const& cut)
+{
+    if (cut.junctionId == NO_ID)
+        return;
+
+    Node* junction = path.findNode(cut.junctionId);
+    Segment* first = path.findSegment(cut.firstId);
+    Segment* second = path.findSegment(cut.secondId);
+    if ((junction == nullptr) || (first == nullptr) || (second == nullptr))
+        return;
+
+    if (!junction->getBuildings().empty() || (junction->getSegments().size() != 2u))
+        return;
+    if (!first->getBuildings().empty() || !second->getBuildings().empty())
+        return;
+
+    SegmentType const* type = nullptr;
+    try
+    {
+        type = &simulation.getRuleset().getSegmentType(cut.type);
+    }
+    catch (...)
+    {
+        return;
+    }
+
+    Node const& a = (&first->getFrom() == junction) ? first->getTo() : first->getFrom();
+    Node const& b = (&second->getFrom() == junction) ? second->getTo() : second->getFrom();
+    uint32_t const fromId = a.getId();
+    uint32_t const toId = b.getId();
+    Vector3f const fromPosition = a.getPosition();
+    Vector3f const toPosition = b.getPosition();
+
+    // The two halves go with the junction, and either end may be left an
+    // orphan and swept away, so both are named back into existence before the
+    // segment is laid again with the identifier it had.
+    city.removeNode(path, *junction);
+    Node& from = path.addNode(fromId, fromPosition);
+    Node& to = path.addNode(toId, toPosition);
+    path.addSegment(cut.firstId, *type, from, to);
+}
+
+// ----------------------------------------------------------------------------
+//! \brief Take a node back, as long as nothing came to lean on it. Used both by
+//! the undos and by a command that gives up half way through.
+// ----------------------------------------------------------------------------
+static void dropIfOrphan(City& city, Path& path, uint32_t id)
+{
+    Node* node = path.findNode(id);
+    if ((node != nullptr) && !node->hasSegments() && node->getBuildings().empty())
+    {
+        city.removeNode(path, *node);
+    }
+}
+
+// ----------------------------------------------------------------------------
 Node* NodeRef::resolve(Simulation& simulation) const
 {
     Path* p = findPath(simulation, city, path);
@@ -169,14 +271,15 @@ AddSegmentCommand::AddSegmentCommand(std::string city, std::string path,
 // ----------------------------------------------------------------------------
 bool AddSegmentCommand::redo(Simulation& simulation)
 {
+    City* city = findCity(simulation, m_city);
+    if (city == nullptr)
+        return false;
+
     Path* path = findPath(simulation, m_city, m_path);
     if (path == nullptr)
     {
         // A city that never had a road of that kind has no graph to put one in.
         // Found it from the ruleset rather than refuse the segment.
-        City* city = findCity(simulation, m_city);
-        if (city == nullptr)
-            return false;
         try
         {
             path = &city->addPath(simulation.getRuleset().getPathType(m_path));
@@ -202,6 +305,8 @@ bool AddSegmentCommand::redo(Simulation& simulation)
     if (length(m_to - m_from) < 1e-3f)
         return false;
 
+    m_cuts.clear();
+
     // On the first run the engine picks the identifiers; the redos hand back
     // the ones it picked.
     auto reuseOrCreate = [path](uint32_t id, Vector3f const& position) -> Node& {
@@ -209,35 +314,109 @@ bool AddSegmentCommand::redo(Simulation& simulation)
                              : path->addNode(id, position);
     };
 
-    Node* from = snapToNode(*path, m_from, m_snapRadius);
-    m_createdFrom = (from == nullptr);
-    if (from == nullptr)
-    {
-        from = &reuseOrCreate(m_fromId, m_from);
-    }
-    m_fromId = from->getId();
+    // An end of the road may land on a node, in the middle of another road, or
+    // on empty ground. Landing on a road makes a T junction there: without the
+    // cut the two only looked joined, and no agent could turn from one into the
+    // other.
+    auto resolveEnd = [&](Vector3f const& position, uint32_t& id,
+                          bool& created) -> Node* {
+        Node* node = snapToNode(*path, position, m_snapRadius);
+        if (node != nullptr)
+        {
+            created = false;
+            id = node->getId();
+            return node;
+        }
 
-    Node* to = snapToNode(*path, m_to, m_snapRadius);
-    m_createdTo = (to == nullptr);
-    if (to == nullptr)
-    {
-        to = &reuseOrCreate(m_toId, m_to);
-    }
-    m_toId = to->getId();
+        float offset = 0.0f;
+        Segment* under = path->findSegmentAt(position, m_snapRadius, offset);
+        if (under != nullptr)
+        {
+            SegmentCut cut;
+            Node& junction = cutSegment(*city, *path, *under, offset, cut);
+            if (cut.junctionId != NO_ID)
+                m_cuts.push_back(cut);
+            created = false;
+            id = junction.getId();
+            return &junction;
+        }
+
+        created = true;
+        node = &reuseOrCreate(id, position);
+        id = node->getId();
+        return node;
+    };
+
+    // Resolving the ends already cut roads and made nodes, so giving up here
+    // has to leave the graph as it was found rather than a crossroads short of
+    // a road to justify it.
+    auto giveUp = [&]() {
+        for (auto it = m_cuts.rbegin(); it != m_cuts.rend(); ++it)
+        {
+            sewSegment(simulation, *city, *path, *it);
+        }
+        m_cuts.clear();
+        if (m_createdFrom)
+            dropIfOrphan(*city, *path, m_fromId);
+        if (m_createdTo)
+            dropIfOrphan(*city, *path, m_toId);
+        return false;
+    };
+
+    Node* from = resolveEnd(m_from, m_fromId, m_createdFrom);
+    Node* to = resolveEnd(m_to, m_toId, m_createdTo);
 
     if (from == to)
-        return false;
+        return giveUp();
 
     // Refuse a duplicate: the graph is simple, and a second segment between the
     // same two nodes would only split the traffic in a way nothing accounts for.
     if (from->findSegmentTo(*to) != nullptr)
-        return false;
+        return giveUp();
 
-    m_segmentId = ((m_segmentId == NO_ID) ? path->addSegment(*type, *from, *to)
-                                  : path->addSegment(m_segmentId, *type, *from, *to))
-                  .getId();
+    // A road drawn over another makes a crossroads there, so the roads it runs
+    // over are cut and it is laid one piece at a time between the junctions.
+    // Splitting keeps every segment already found: the graph holds them in a
+    // deque and a cut only shortens one and adds another.
+    std::vector<Crossing> const crossings =
+        path->findCrossings(from->getPosition(), to->getPosition());
 
-    return true;
+    std::vector<Node*> chain;
+    chain.reserve(crossings.size() + 2u);
+    chain.push_back(from);
+
+    for (Crossing const& crossing: crossings)
+    {
+        SegmentCut cut;
+        Node& junction =
+            cutSegment(*city, *path, *crossing.segment, crossing.segmentOffset, cut);
+
+        if (cut.junctionId != NO_ID)
+            m_cuts.push_back(cut);
+        chain.push_back(&junction);
+    }
+    chain.push_back(to);
+
+    std::vector<uint32_t> const reuse = m_pieceIds;
+    m_pieceIds.clear();
+    for (size_t i = 1u; i < chain.size(); ++i)
+    {
+        Node& a = *chain[i - 1u];
+        Node& b = *chain[i];
+
+        // Two crossings on the same spot, or a junction that turned out to be
+        // an end of the road being drawn, leave nothing to lay in between.
+        if ((&a == &b) || (a.findSegmentTo(b) != nullptr))
+            continue;
+
+        size_t const index = m_pieceIds.size();
+        uint32_t const id = (index < reuse.size()) ? reuse[index] : NO_ID;
+        Segment& piece = (id == NO_ID) ? path->addSegment(*type, a, b)
+                                       : path->addSegment(id, *type, a, b);
+        m_pieceIds.push_back(piece.getId());
+    }
+
+    return !m_pieceIds.empty();
 }
 
 // ----------------------------------------------------------------------------
@@ -248,26 +427,30 @@ void AddSegmentCommand::undo(Simulation& simulation)
     if ((city == nullptr) || (path == nullptr))
         return;
 
-    Segment* segment = path->findSegment(m_segmentId);
-    if (segment != nullptr)
+    for (uint32_t id: m_pieceIds)
     {
-        city->removeSegment(*path, *segment);
+        Segment* segment = path->findSegment(id);
+        if (segment != nullptr)
+        {
+            city->removeSegment(*path, *segment);
+        }
     }
+
+    // The roads that were cut come back whole, once the pieces that made the
+    // crossroads worth having are gone. Last cut sewn first, so that a road cut
+    // twice is put back one half at a time.
+    for (auto it = m_cuts.rbegin(); it != m_cuts.rend(); ++it)
+    {
+        sewSegment(simulation, *city, *path, *it);
+    }
+    m_cuts.clear();
 
     // Only take back the end points this command brought into existence, and
     // only while nothing else leans on them.
-    auto dropIfCreated = [city, path](bool created, uint32_t id) {
-        if (!created)
-            return;
-
-        Node* node = path->findNode(id);
-        if ((node != nullptr) && !node->hasSegments() && node->getBuildings().empty())
-        {
-            city->removeNode(*path, *node);
-        }
-    };
-    dropIfCreated(m_createdFrom, m_fromId);
-    dropIfCreated(m_createdTo, m_toId);
+    if (m_createdFrom)
+        dropIfOrphan(*city, *path, m_fromId);
+    if (m_createdTo)
+        dropIfOrphan(*city, *path, m_toId);
 }
 
 // ----------------------------------------------------------------------------
@@ -279,10 +462,11 @@ std::string AddSegmentCommand::label() const
 // ----------------------------------------------------------------------------
 void AddSegmentCommand::onWorldRebuilt()
 {
-    // The nodes and the segment were created by this command, so their
+    // The nodes and the segments were created by this command, so their
     // identifiers belong to a world that is gone. Reusing them would silently
     // address whatever the rebuild put at those numbers.
-    m_segmentId = NO_ID;
+    m_pieceIds.clear();
+    m_cuts.clear();
     m_fromId = NO_ID;
     m_toId = NO_ID;
     m_createdFrom = false;
@@ -348,23 +532,7 @@ bool AddBuildingCommand::redo(Simulation& simulation)
 
         // Cutting the segment turns the spot into a junction, which is what
         // makes the building an address: agents stop at nodes.
-        m_segmentType = segment->getTypeName().str();
-        uint32_t const fromId = segment->getFrom().getId();
-        uint32_t const toId = segment->getTo().getId();
-
-        Node& junction = city->splitSegment(*path, *segment, m_offset);
-
-        m_junctionId = NO_ID;
-        m_secondHalfId = NO_ID;
-        if ((junction.getId() != fromId) && (junction.getId() != toId))
-        {
-            m_junctionId = junction.getId();
-            for (Segment const* incident: junction.getSegments())
-            {
-                if (incident->getId() != m_segmentId)
-                    m_secondHalfId = incident->getId();
-            }
-        }
+        Node& junction = cutSegment(*city, *path, *segment, m_offset, m_cut);
 
         building = &city->addBuilding(*type, junction);
     }
@@ -395,54 +563,13 @@ void AddBuildingCommand::undo(Simulation& simulation)
 // ----------------------------------------------------------------------------
 void AddBuildingCommand::mergeBack(Simulation& simulation)
 {
-    if (m_junctionId == NO_ID)
-        return;
-
     City* city = findCity(simulation, m_city);
     Path* path = findPath(simulation, m_city, m_path);
     if ((city == nullptr) || (path == nullptr))
         return;
 
-    Node* junction = path->findNode(m_junctionId);
-    Segment* first = path->findSegment(m_segmentId);
-    Segment* second = path->findSegment(m_secondHalfId);
-    if ((junction == nullptr) || (first == nullptr) || (second == nullptr))
-        return;
-
-    // Sewing the halves back is only harmless while nothing else came to lean
-    // on them: another building, or a road drawn from the junction.
-    if (!junction->getBuildings().empty() || (junction->getSegments().size() != 2u))
-        return;
-    if (!first->getBuildings().empty() || !second->getBuildings().empty())
-        return;
-
-    SegmentType const* type = nullptr;
-    try
-    {
-        type = &simulation.getRuleset().getSegmentType(m_segmentType);
-    }
-    catch (...)
-    {
-        return;
-    }
-
-    Node const& a = (&first->getFrom() == junction) ? first->getTo() : first->getFrom();
-    Node const& b = (&second->getFrom() == junction) ? second->getTo() : second->getFrom();
-    uint32_t const fromId = a.getId();
-    uint32_t const toId = b.getId();
-    Vector3f const fromPosition = a.getPosition();
-    Vector3f const toPosition = b.getPosition();
-
-    // The two halves go with the junction, and either end may be left an
-    // orphan and swept away, so both are named back into existence before the
-    // segment is laid again with the identifier it had.
-    city->removeNode(*path, *junction);
-    Node& from = path->addNode(fromId, fromPosition);
-    Node& to = path->addNode(toId, toPosition);
-    path->addSegment(m_segmentId, *type, from, to);
-
-    m_junctionId = NO_ID;
-    m_secondHalfId = NO_ID;
+    sewSegment(simulation, *city, *path, m_cut);
+    m_cut = SegmentCut();
 }
 
 // ----------------------------------------------------------------------------
@@ -455,8 +582,7 @@ std::string AddBuildingCommand::label() const
 void AddBuildingCommand::onWorldRebuilt()
 {
     m_buildingId = NO_ID;
-    m_junctionId = NO_ID;
-    m_secondHalfId = NO_ID;
+    m_cut = SegmentCut();
 }
 
 // =============================================================================

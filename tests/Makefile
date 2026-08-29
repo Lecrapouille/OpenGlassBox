@@ -19,9 +19,10 @@ include $(M)/project/Makefile
 #
 SRC_FILES := $(call rwildcard,$(P)/src,*.cpp) \
     $(P)/demo/src/Save/CitySave.cpp \
+    $(P)/demo/src/Editor/EditCommands.cpp \
     $(call rwildcard,$(P)/tests,*.cpp)
 INCLUDES := $(P)/include $(P)/demo/src
-VPATH := $(P)/src $(P)/demo/src/Save
+VPATH := $(P)/src $(P)/demo/src/Save $(P)/demo/src/Editor
 USER_CXXFLAGS += -Wno-unused-function -Wno-undef \
   -Wno-keyword-macro -Wno-float-equal \
   -Wno-gnu-zero-variadic-macro-arguments -Wno-null-dereference

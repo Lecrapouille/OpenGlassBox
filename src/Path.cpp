@@ -351,15 +351,16 @@ Node& Path::splitSegment(Segment& segment, float offset)
     return newNode;
 }
 
+//! \brief How close to an end of a segment a point has to be to count as being
+//! on that end, as a share of the segment. Cutting a hair away from a node
+//! instead of on it would leave a segment of no length, which the router turns
+//! into a free move between two crossroads at the same place.
+static constexpr float END_TOLERANCE = 1e-3f;
+
 // -----------------------------------------------------------------------------
 std::vector<Crossing> Path::findCrossings(Vector3f const& from,
                                           Vector3f const& to) const
 {
-    //! \brief How close to an end of a line a meeting has to be to count as
-    //! being on that end, as a share of the line. Cutting a hair away from a
-    //! node instead of on it would leave a segment of no length, which the
-    //! router turns into a free move between two crossroads at the same place.
-    static constexpr float END_TOLERANCE = 1e-3f;
 
     //! \brief Smallest angle between two lines worth calling a crossing, as the
     //! sine of that angle. Two nearly parallel lines do meet, but a long way
@@ -428,6 +429,55 @@ std::vector<Crossing> Path::findCrossings(Vector3f const& from,
               { return lhs.lineOffset < rhs.lineOffset; });
 
     return crossings;
+}
+
+// -----------------------------------------------------------------------------
+Segment* Path::findSegmentAt(Vector3f const& position, float tolerance,
+                             float& offset) const
+{
+    offset = 0.0f;
+    if (!m_type.crossings)
+        return nullptr;
+
+    Segment* best = nullptr;
+    float bestDistance = tolerance;
+
+    for (auto const& segment: m_segments)
+    {
+        Vector3f const& a = segment->getFromPosition();
+        Vector3f const& b = segment->getToPosition();
+        float const length = segment->getLength();
+        if (length <= 0.0f)
+            continue;
+
+        float const dx = b.x - a.x;
+        float const dy = b.y - a.y;
+
+        // Where the foot of the perpendicular from the point falls, clamped so
+        // that a point beyond an end is measured from that end.
+        float along = (((position.x - a.x) * dx) + ((position.y - a.y) * dy)) /
+                      (length * length);
+        along = std::min(1.0f, std::max(0.0f, along));
+
+        float const footX = a.x + (dx * along);
+        float const footY = a.y + (dy * along);
+        float const distance = std::sqrt(((position.x - footX) * (position.x - footX)) +
+                                         ((position.y - footY) * (position.y - footY)));
+        if (distance > bestDistance)
+            continue;
+
+        bestDistance = distance;
+        best = segment.get();
+
+        if (along <= END_TOLERANCE)
+            offset = 0.0f;
+        else if (along >= 1.0f - END_TOLERANCE)
+            offset = 1.0f;
+        else
+            offset = along;
+    }
+
+    return best;
 }
 
 // -----------------------------------------------------------------------------
