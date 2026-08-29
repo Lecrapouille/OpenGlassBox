@@ -40,6 +40,23 @@ enum class LayerMode
 };
 
 // ****************************************************************************
+//! \brief When the Zones are painted over the grid.
+//!
+//! A Zone is a translucent rectangle. Drawn over a Layer heatmap it tints the
+//! cells under it, so the color read on the canvas no longer matches the one
+//! the layer would give for that amount.
+// ****************************************************************************
+enum class ZoneDisplay
+{
+    //! \brief Draw the Zones only while no Layer is drawn.
+    Auto,
+    //! \brief Always draw the Zones, whatever is under them.
+    Always,
+    //! \brief Never draw the Zones.
+    Never,
+};
+
+// ****************************************************************************
 //! \brief Per Layer display settings, keyed by layer name so that they survive the
 //! reload of a simulation script.
 // ****************************************************************************
@@ -108,7 +125,7 @@ struct DebugState
     bool showAgents = true;
     bool showNodes = true;
     bool showLabels = true;
-    bool showZones = true;
+    ZoneDisplay zoneDisplay = ZoneDisplay::Auto;
     //! \brief Color and thicken the Segments by their flow over capacity ratio.
     bool showTraffic = true;
     //! \brief Draw the layerRadius disc of the selected Building.
@@ -137,6 +154,17 @@ struct DebugState
         auto const it = layers.find(name);
         return (it == layers.end()) || it->second.visible;
     }
+
+    //--------------------------------------------------------------------------
+    //! \brief Whether at least one Layer of the simulation is drawn.
+    //--------------------------------------------------------------------------
+    bool anyLayerVisible(Simulation const& simulation) const;
+
+    //--------------------------------------------------------------------------
+    //! \brief Whether the Zones shall be drawn, resolving ZoneDisplay::Auto
+    //! against the Layers currently drawn.
+    //--------------------------------------------------------------------------
+    bool drawsZones(Simulation const& simulation) const;
 };
 } // namespace game
 } // namespace ogb

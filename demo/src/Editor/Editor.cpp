@@ -636,8 +636,10 @@ void Editor::handleZone(Simulation& simulation, game::DebugState& state, bool ho
 
     // A zone wears the colour of its type, so selecting the one just painted
     // added nothing but a highlight the player had no way to dismiss: the last
-    // rectangle drawn stayed blue for the rest of the session.
-    state.showZones = true;
+    // rectangle drawn stayed blue for the rest of the session. Showing the
+    // zones is the feedback instead, and it has to beat the automatic mode
+    // which would hide them behind whatever layer is drawn.
+    state.zoneDisplay = game::ZoneDisplay::Always;
 }
 
 // ----------------------------------------------------------------------------

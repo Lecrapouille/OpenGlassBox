@@ -173,11 +173,12 @@ void CityViewer::draw(Simulation& simulation,
     // rather than once per city.
     drawLayers(simulation, state);
 
+    bool const zones = state.drawsZones(simulation);
     for (auto& it : simulation.getCities())
     {
         City& city = *it.second;
         drawCityFrame(city, state);
-        if (state.showZones)
+        if (zones)
             drawZones(city, state);
         drawPaths(city, state);
         drawBuildings(city, state);
@@ -513,7 +514,9 @@ game::Selection CityViewer::pickAt(Simulation& simulation,
     if (!state.hasHoveredCell)
         return {};
 
-    if (state.showZones)
+    // A zone that is not drawn is not pickable either, otherwise the click
+    // selects a rectangle the player cannot see.
+    if (state.drawsZones(simulation))
     {
         auto const cityIt = simulation.getCities().find(state.hoveredCity);
         if (cityIt != simulation.getCities().end())
@@ -1202,11 +1205,10 @@ void CityViewer::drawDisplayToggles(game::DebugState& state) const
         bool* value;
     };
 
-    std::array<Toggle, 7> const toggles = { {
+    std::array<Toggle, 6> const toggles = { {
         { "Grid", &state.showGrid },
         { "Paths", &state.showPaths },
         { "Buildings", &state.showBuildings },
-        { "Zones", &state.showZones },
         { "Agents", &state.showAgents },
         { "Traffic", &state.showTraffic },
         { "Labels", &state.showLabels },
@@ -1214,18 +1216,46 @@ void CityViewer::drawDisplayToggles(game::DebugState& state) const
 
     float const right =
         ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
-    for (size_t i = 0u; i < toggles.size(); ++i)
+    auto const wrap = [right](float width)
     {
-        float const width = ImGui::CalcTextSize(toggles[i].label).x +
-                            ImGui::GetFrameHeight() +
-                            2.0f * ImGui::GetStyle().FramePadding.x +
-                            ImGui::GetStyle().ItemInnerSpacing.x;
         float const next =
             ImGui::GetItemRectMax().x + ImGui::GetStyle().ItemSpacing.x + width;
         if (next < right)
             ImGui::SameLine();
+    };
+
+    for (size_t i = 0u; i < toggles.size(); ++i)
+    {
+        wrap(ImGui::CalcTextSize(toggles[i].label).x + ImGui::GetFrameHeight() +
+             2.0f * ImGui::GetStyle().FramePadding.x +
+             ImGui::GetStyle().ItemInnerSpacing.x);
         ImGui::Checkbox(toggles[i].label, toggles[i].value);
     }
+
+    drawZoneDisplayCombo(state, wrap);
+}
+
+// ----------------------------------------------------------------------------
+void CityViewer::drawZoneDisplayCombo(
+    game::DebugState& state, std::function<void(float)> const& wrap) const
+{
+    static constexpr std::array<char const*, 3> ITEMS = { "Zones: auto",
+                                                          "Zones: on",
+                                                          "Zones: off" };
+    int current = int(state.zoneDisplay);
+
+    float width = 0.0f;
+    for (char const* item : ITEMS)
+        width = std::max(width, ImGui::CalcTextSize(item).x);
+    width += ImGui::GetFrameHeight() + 2.0f * ImGui::GetStyle().FramePadding.x;
+
+    wrap(width);
+    ImGui::SetNextItemWidth(width);
+    if (ImGui::Combo("##zones", &current, ITEMS.data(), int(ITEMS.size())))
+        state.zoneDisplay = game::ZoneDisplay(current);
+
+    ImGui::SetItemTooltip("A zone tints the layer heatmap under it, so 'auto' "
+                          "hides the zones as soon as a layer is drawn.");
 }
 
 // ----------------------------------------------------------------------------
