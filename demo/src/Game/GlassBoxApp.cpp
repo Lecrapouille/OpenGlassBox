@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <exception>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -486,7 +487,7 @@ bool GlassBoxApp::acceptRuleset(CitySaveHeader const& header,
     if (CitySave::matchesRuleset(header, rulesetPath, error))
         return true;
 
-    if (!m_ignore_hash)
+    if (!m_script_options.ignoreMismatch)
         return false;
 
     // The geometry is still read against the types the header names, and a
@@ -501,6 +502,8 @@ bool GlassBoxApp::acceptRuleset(CitySaveHeader const& header,
 // ----------------------------------------------------------------------------
 void GlassBoxApp::computeChecksum()
 {
+    listRulesets();
+
     m_checksum.known = true;
     m_checksum.onDisk = m_ruleset_path.empty()
                             ? std::string()
@@ -534,6 +537,100 @@ void GlassBoxApp::computeChecksum()
         if (header.hash != m_checksum.onDisk)
             m_checksum.staleSaves.push_back(save);
     }
+}
+
+// ----------------------------------------------------------------------------
+void GlassBoxApp::listRulesets()
+{
+    namespace fs = std::filesystem;
+
+    m_ruleset_files.current = m_ruleset_path;
+    m_ruleset_files.rulesets.clear();
+    if (m_ruleset_path.empty())
+        return;
+
+    std::error_code code;
+    fs::path const ruleset(m_ruleset_path);
+    fs::path const directory =
+        ruleset.has_parent_path() ? ruleset.parent_path() : fs::path(".");
+
+    for (auto const& entry : fs::directory_iterator(directory, code))
+    {
+        if (entry.is_regular_file(code) && (entry.path().extension() == ".ogs"))
+            m_ruleset_files.rulesets.push_back(entry.path().string());
+    }
+
+    // A directory hands its entries out in whatever order it pleases, and a
+    // list that shuffles between runs is a list nobody can point at.
+    std::sort(m_ruleset_files.rulesets.begin(),
+              m_ruleset_files.rulesets.end());
+}
+
+// ----------------------------------------------------------------------------
+void GlassBoxApp::switchRuleset(std::string const& path)
+{
+    if (path.empty() || (path == m_ruleset_path))
+        return;
+
+    // Opening a ruleset founds an empty city, so whatever is on screen is
+    // about to be dropped. Asking is only worth it when there is something to
+    // lose: a city that was never built on is not worth a modal.
+    bool built = false;
+    if (m_simulation)
+    {
+        for (auto const& it : m_simulation->getCities())
+        {
+            City const& city = *it.second;
+            built = built || !city.getBuildings().empty() ||
+                    !city.getZones().empty();
+            for (auto const& pathIt : city.getPaths())
+                built = built || !pathIt.second->getSegments().empty();
+        }
+    }
+
+    if (!built)
+    {
+        loadRuleset(path, false);
+        return;
+    }
+
+    m_pending_ruleset = path;
+}
+
+// ----------------------------------------------------------------------------
+void GlassBoxApp::drawSwitchRulesetPopup()
+{
+    if (m_pending_ruleset.empty())
+        return;
+
+    static constexpr char const* TITLE = "Open another ruleset?";
+    if (!ImGui::IsPopupOpen(TITLE))
+        ImGui::OpenPopup(TITLE);
+
+    if (!ImGui::BeginPopupModal(TITLE, nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+        return;
+
+    ImGui::Text("Open '%s'?", fileBasename(m_pending_ruleset).c_str());
+    ImGui::TextDisabled(
+        "The city on screen is replaced by an empty one. Anything\n"
+        "not saved is lost.");
+    ImGui::Separator();
+
+    if (ImGui::Button("Open"))
+    {
+        std::string const path = m_pending_ruleset;
+        m_pending_ruleset.clear();
+        ImGui::CloseCurrentPopup();
+        loadRuleset(path, false);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Cancel"))
+    {
+        m_pending_ruleset.clear();
+        ImGui::CloseCurrentPopup();
+    }
+
+    ImGui::EndPopup();
 }
 
 // ----------------------------------------------------------------------------
@@ -739,7 +836,7 @@ bool GlassBoxApp::applyScript()
 // ----------------------------------------------------------------------------
 void GlassBoxApp::watchScriptFile(float dt)
 {
-    if (!m_auto_reload || m_ruleset_path.empty())
+    if (!m_script_options.autoReload || m_ruleset_path.empty())
         return;
 
     m_watch_timer -= dt;
@@ -852,16 +949,6 @@ void GlassBoxApp::onDrawMenuBar()
                 "Save city...", "Ctrl+S", false, m_simulation != nullptr))
             saveCityDialog();
 
-        ImGui::MenuItem(
-            "Reload ruleset when the file changes", nullptr, &m_auto_reload);
-        ImGui::MenuItem(
-            "Open saves with a stale checksum", nullptr, &m_ignore_hash);
-        if (ImGui::IsItemHovered())
-        {
-            ImGui::SetTooltip("A save records the fingerprint of the ruleset\n"
-                              "it was written against. Waive it while you are\n"
-                              "writing one; the Script panel computes it.");
-        }
         ImGui::Separator();
         if (ImGui::MenuItem("Quit", "Alt+F4"))
             halt();
@@ -1049,7 +1136,8 @@ void GlassBoxApp::drawScriptPanel()
                         m_script_text,
                         m_script_status,
                         m_checksum,
-                        m_ignore_hash,
+                        m_ruleset_files,
+                        m_script_options,
                         actions);
 
     if (actions.apply)
@@ -1062,6 +1150,12 @@ void GlassBoxApp::drawScriptPanel()
         m_reload_notice = std::to_string(stamped) + " save(s) stamped";
         m_reload_notice_timer = NOTICE_DURATION;
     }
+    if (!actions.openRuleset.empty())
+    {
+        switchRuleset(actions.openRuleset);
+    }
+
+    drawSwitchRulesetPopup();
 }
 
 // ----------------------------------------------------------------------------

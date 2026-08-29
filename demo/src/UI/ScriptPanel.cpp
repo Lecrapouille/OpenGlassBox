@@ -35,29 +35,76 @@ static std::string fileName(std::string const& path)
 }
 
 // ----------------------------------------------------------------------------
-//! \brief One fingerprint on a line, with the button that puts it in the
-//! clipboard. Sixty-four hexadecimal characters do not fit in a narrow panel
-//! and nobody reads them: what they are good for is being pasted.
+//! \brief The fingerprint of what is being typed, beside the button that makes
+//! it the fingerprint of the file.
+//!
+//! Sixty-four hexadecimal characters do not fit next to a button and nobody
+//! reads them anyway: what they are good for is being compared with the header
+//! of a save, and being pasted. The first digits do the first job, the
+//! clipboard does the second.
 // ----------------------------------------------------------------------------
-static void drawHash(char const* label, std::string const& hash)
+static void drawEditorHash(std::string const& hash)
 {
-    ImGui::TextDisabled("%s", label);
-    ImGui::SameLine(110.0f);
-
     if (hash.empty())
     {
-        ImGui::TextDisabled("none");
+        ImGui::TextDisabled("no ruleset");
         return;
     }
 
-    ImGui::TextUnformatted(hash.substr(0u, 16u).c_str());
-    ImGui::SameLine();
-    ImGui::PushID(label);
-    if (ImGui::SmallButton("copy"))
-        ImGui::SetClipboardText(hash.c_str());
-    ImGui::PopID();
+    ImGui::TextDisabled("%s", hash.substr(0u, 12u).c_str());
     if (ImGui::IsItemHovered())
-        ImGui::SetTooltip("%s", hash.c_str());
+    {
+        ImGui::SetTooltip("SHA-256 of the text in this editor:\n%s\n\n"
+                          "A save records the fingerprint of the ruleset it\n"
+                          "was written against and refuses to open against a\n"
+                          "different one. Click to copy.",
+                          hash.c_str());
+    }
+    if (ImGui::IsItemClicked())
+    {
+        ImGui::SetClipboardText(hash.c_str());
+    }
+}
+
+// ----------------------------------------------------------------------------
+//! \brief The rulesets sitting beside the open one, one line each, the open
+//! one ticked. Picking another opens it.
+// ----------------------------------------------------------------------------
+static void drawRulesetList(ScriptPanel::Files const& files,
+                            ScriptPanel::Actions& actions)
+{
+    std::string const current = fileName(files.current);
+    char const* preview = current.empty() ? "none" : current.c_str();
+
+    ImGui::SetNextItemWidth(200.0f);
+    bool const unfolded = ImGui::BeginCombo("##rulesets", preview);
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("The rulesets sitting in the same directory.\n"
+                          "Opening another one starts a new city.");
+    }
+    if (!unfolded)
+        return;
+
+    for (std::string const& path : files.rulesets)
+    {
+        std::string const name = fileName(path);
+        bool const open = (path == files.current);
+        if (ImGui::Selectable(name.c_str(), open) && !open)
+        {
+            actions.openRuleset = path;
+        }
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("%s", path.c_str());
+        }
+        if (open)
+        {
+            ImGui::SetItemDefaultFocus();
+        }
+    }
+
+    ImGui::EndCombo();
 }
 
 // ----------------------------------------------------------------------------
@@ -236,9 +283,12 @@ void ScriptPanel::drawRuleset(Simulation& simulation)
 }
 
 // ----------------------------------------------------------------------------
-void ScriptPanel::draw(Simulation& simulation, std::string& text,
+void ScriptPanel::draw(Simulation& simulation,
+                       std::string& text,
                        std::string const& status,
-                       Checksum const& checksum, bool& ignoreMismatch,
+                       Checksum const& checksum,
+                       Files const& files,
+                       Options& options,
                        Actions& actions)
 {
     if (!ImGui::Begin("Script"))
@@ -247,10 +297,21 @@ void ScriptPanel::draw(Simulation& simulation, std::string& text,
         return;
     }
 
-    ImGui::TextDisabled("Ruleset (.ogs). Apply reparses and keeps the city if "
-                        "every type still placed is still defined.");
+    drawRulesetList(files, actions);
+
+    ImGui::SameLine();
     if (ImGui::Button("Apply"))
         actions.apply = true;
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("Write this text to the ruleset and parse it again.\n"
+                          "The city is kept as long as every type still\n"
+                          "standing in it is still defined.");
+    }
+
+    ImGui::SameLine();
+    drawEditorHash(checksum.edited);
+
     if (!status.empty())
     {
         ImGui::SameLine();
@@ -258,29 +319,24 @@ void ScriptPanel::draw(Simulation& simulation, std::string& text,
                            "%s", status.c_str());
     }
 
+    ImGui::Checkbox("Reload when the file changes", &options.autoReload);
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("Watch the ruleset on disk and apply it again as\n"
+                          "soon as it is written, so that a script edited in\n"
+                          "another editor is seen here without a click.");
+    }
+    ImGui::SameLine();
+    ImGui::Checkbox("Open stale saves", &options.ignoreMismatch);
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("Waive the fingerprint check for a save that was\n"
+                          "not stamped. The geometry is still read, and a\n"
+                          "type the script dropped is still refused by name.");
+    }
+
     if (checksum.known)
         drawChecksumStatus(checksum, actions);
-
-    if (ImGui::CollapsingHeader("Checksum details"))
-    {
-        ImGui::TextDisabled(
-            "A save records the SHA-256 of the ruleset it was written against\n"
-            "and refuses to open against one that changed since. Apply keeps\n"
-            "the saves beside the ruleset stamped with the current one.");
-
-        drawHash("ruleset", checksum.onDisk);
-        drawHash("this editor", checksum.edited);
-        drawHash("open save", checksum.save);
-
-        ImGui::Checkbox("Open saves with a stale checksum", &ignoreMismatch);
-        if (ImGui::IsItemHovered())
-        {
-            ImGui::SetTooltip("Waive the check for a save that was not\n"
-                              "stamped. The geometry is still read, and a type\n"
-                              "the script dropped is still refused by name.");
-        }
-        ImGui::Spacing();
-    }
 
     // The script and what it parses into share the panel: the breakdown of the
     // rules answers questions about the text right above it, and reading one

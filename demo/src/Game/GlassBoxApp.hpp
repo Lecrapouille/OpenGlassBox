@@ -86,6 +86,15 @@ private:
     //! written rather than every frame.
     void computeChecksum();
 
+    //! \brief List the rulesets sitting beside the open one, for the picker of
+    //! the Script panel. Walked with the checksums, for the same reason.
+    void listRulesets();
+
+    //! \brief Open the ruleset the player picked in the Script panel, asking
+    //! first when the city on screen holds something worth losing.
+    void switchRuleset(std::string const& path);
+    void drawSwitchRulesetPopup();
+
     //! \brief Stamp the current fingerprint of the ruleset into every save
     //! computeChecksum() found stale, and read the fingerprints again.
     //! \return how many saves were stamped.
@@ -137,14 +146,18 @@ private:
     bool m_script_error_shown = false;
 
     ui::ScriptPanel::Checksum m_checksum;
-    //! \brief Waive the fingerprint check when opening a save. Off by default:
-    //! a stale save rebuilt against a ruleset that moved is a city whose
-    //! buildings no longer mean what they meant.
-    bool m_ignore_hash = false;
+    //! \brief The rulesets the Script panel offers to switch to.
+    ui::ScriptPanel::Files m_ruleset_files;
+    //! \brief Watching the file and waiving the fingerprint of a save. Both
+    //! belong to the Script panel, which is where the fingerprint is read and
+    //! where the file is edited.
+    ui::ScriptPanel::Options m_script_options;
+    //! \brief Ruleset picked in the Script panel and waiting for the player to
+    //! confirm that the city on screen may be thrown away.
+    std::string m_pending_ruleset;
 
     int64_t m_script_mtime = 0;
     float m_watch_timer = 0.0f;
-    bool m_auto_reload = true;
 
     bool m_show_layers = true;
     bool m_show_inspector = true;

@@ -133,14 +133,14 @@ private:
 };
 
 // ****************************************************************************
-//! \brief Editable source of the open ruleset (.ogs). Apply reparses and
-//! keeps the city when every type still in use is still defined.
+//! \brief Everything about the open ruleset (.ogs): which one it is, its text,
+//! what it parses into, and whether the saves beside it still open.
 //!
-//! It also reports the checksum a save has to match. A save records the
-//! fingerprint of the ruleset it was written against, which is what stops a
-//! city from being rebuilt with types that mean something else; while a
-//! ruleset is being written that same fingerprint is in the way, hence the
-//! button that reads it and the option that waives it.
+//! Apply reparses and keeps the city when every type still in use is still
+//! defined. A save records the fingerprint of the ruleset it was written
+//! against, which is what stops a city from being rebuilt with types that mean
+//! something else; while a ruleset is being written that same fingerprint is
+//! in the way, hence the option that waives it.
 // ****************************************************************************
 class ScriptPanel
 {
@@ -167,6 +167,32 @@ public:
     };
 
     // ------------------------------------------------------------------------
+    //! \brief The rulesets the player can switch to without leaving the panel.
+    // ------------------------------------------------------------------------
+    struct Files
+    {
+        //! \brief Path of the ruleset the editor holds.
+        std::string current;
+        //! \brief Every \c .ogs sitting in the same directory, this one
+        //! included. Refreshed by the host when a file is read or written:
+        //! walking a directory every frame is not free.
+        std::vector<std::string> rulesets;
+    };
+
+    // ------------------------------------------------------------------------
+    //! \brief The two switches that decide what the demo does behind the
+    //! player's back. Owned by the host, which also offers them in its menu.
+    // ------------------------------------------------------------------------
+    struct Options
+    {
+        //! \brief Reparse the ruleset when the file changes under the editor,
+        //! so that a script written in another editor is seen at once.
+        bool autoReload = true;
+        //! \brief Open a save whose fingerprint no longer matches the ruleset.
+        bool ignoreMismatch = false;
+    };
+
+    // ------------------------------------------------------------------------
     //! \brief What the player asked for during this frame.
     // ------------------------------------------------------------------------
     struct Actions
@@ -175,13 +201,17 @@ public:
         //! \brief Record the fingerprint of the ruleset as it is now into
         //! every stale save beside it.
         bool restampSaves = false;
+        //! \brief Ruleset picked from the list, to be opened in place of the
+        //! current one. Empty when nothing was picked.
+        std::string openRuleset;
     };
 
     void draw(Simulation& simulation,
               std::string& text,
               std::string const& status,
               Checksum const& checksum,
-              bool& ignoreMismatch,
+              Files const& files,
+              Options& options,
               Actions& actions);
 
 private:
