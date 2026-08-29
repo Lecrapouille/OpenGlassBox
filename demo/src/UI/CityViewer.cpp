@@ -179,7 +179,7 @@ void CityViewer::draw(Simulation& simulation,
         City& city = *it.second;
         drawCityFrame(city, state);
         if (state.showZones)
-            drawZones(city);
+            drawZones(city, state);
         drawPaths(city, state);
         drawBuildings(city, state);
         drawAgents(city, state);
@@ -771,10 +771,11 @@ void CityViewer::drawCityFrame(City const& city, game::DebugState const& state)
 }
 
 // ----------------------------------------------------------------------------
-void CityViewer::drawZones(City& city)
+void CityViewer::drawZones(City& city, game::DebugState const& state)
 {
     m_splitter.SetCurrentChannel(m_draw_list, CHANNEL_GRID);
 
+    bool const labels = state.showLabels && (m_zoom > LABEL_ZOOM_THRESHOLD);
     float const side = city.getCellSize();
     for (auto const& zone : city.getZones())
     {
@@ -789,7 +790,7 @@ void CityViewer::drawZones(City& city)
         ImU32 const line = theme::fromScript(zone->getColor(), 0.70f);
         m_draw_list->AddRectFilled(p0, p1, fill);
         m_draw_list->AddRect(p0, p1, line, 0.0f, 0, 2.0f);
-        if (m_zoom > 0.4f)
+        if (labels)
         {
             m_draw_list->AddText(
                 ImVec2(p0.x + 4.0f, p0.y + 2.0f), line, zone->getTypeName().c_str());
