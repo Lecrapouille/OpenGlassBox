@@ -58,21 +58,21 @@ rules
 		layer Desirability add 1
 	end
 
-	unitRule SendPeopleToWork
+	buildingRule SendPeopleToWork
 		rate 20
 		hour between 8 18
 		local People remove 1
 		agent Worker to Work add [ People 1 ]
 	end
 
-	unitRule SendPeopleToHome
+	buildingRule SendPeopleToHome
 		rate 40
 		hour between 18 22
 		local People remove 1
 		agent People to Home add [ People 1 ]
 	end
 
-	unitRule ProduceGoods
+	buildingRule ProduceGoods
 		rate 10
 		hour between 8 18
 		local People greater 0
@@ -81,13 +81,13 @@ rules
 		global Money add 1
 	end
 
-	unitRule UsePeopleToWater
+	buildingRule UsePeopleToWater
 		rate 5
 		local People greater 1
 		layer Water add 30
 	end
 
-	unitRule ShopForGoods
+	buildingRule ShopForGoods
 		rate 30
 		hour between 10 20
 		local People greater 0
@@ -95,21 +95,21 @@ rules
 		agent Shopper to Shop add [ People 1 ]
 	end
 
-	unitRule SellGoods
+	buildingRule SellGoods
 		rate 8
 		local Goods remove 1
 		global Money add 2
 		local Happiness add 1
 	end
 
-	unitRule ReceiveShopper
+	buildingRule ReceiveShopper
 		rate 15
 		local People greater 0
 		local People remove 1
 		agent People to Home add [ People 1 ]
 	end
 
-	unitRule CollectTrash
+	buildingRule CollectTrash
 		rate 40
 		layer Trash remove 2
 	end
@@ -136,13 +136,13 @@ rules
 
 end
 
-units
+buildings
 
-	unit Home color 0xFF00FF layerRadius 1 rules [ SendPeopleToWork ShopForGoods ] targets [ Home ] caps [ People 4 Happiness 10 ] resources [ People 4 ]
+	building Home color 0xFF00FF layerRadius 1 rules [ SendPeopleToWork ShopForGoods ] targets [ Home ] caps [ People 4 Happiness 10 ] resources [ People 4 ]
 
-	unit Work color 0x00AAFF layerRadius 3 rules [ SendPeopleToHome ProduceGoods UsePeopleToWater ] targets [ Work ] caps [ People 4 Goods 20 ] resources [ ]
+	building Work color 0x00AAFF layerRadius 3 rules [ SendPeopleToHome ProduceGoods UsePeopleToWater ] targets [ Work ] caps [ People 4 Goods 20 ] resources [ ]
 
-	unit Shop color 0xFFAA00 layerRadius 2 rules [ SellGoods ReceiveShopper CollectTrash ] targets [ Shop ] caps [ People 6 Goods 30 Happiness 20 ] resources [ ]
+	building Shop color 0xFFAA00 layerRadius 2 rules [ SellGoods ReceiveShopper CollectTrash ] targets [ Shop ] caps [ People 6 Goods 30 Happiness 20 ] resources [ ]
 
 end
 

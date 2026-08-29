@@ -9,7 +9,7 @@ It is a companion to the [traffic documentation](traffic.md), and the parallel i
 Production is entirely scripted. A building runs its rules once every so many ticks, and a rule that produces something is a rule that adds to a stock:
 
 ```text
-unitRule ProduceGoods
+buildingRule ProduceGoods
     rate 30 minutes
     hour between 8 18
     local People greater 0
@@ -19,7 +19,7 @@ unitRule ProduceGoods
 end
 ```
 
-`Unit::executeRules` fires it on its period, and `RuleUnit::execute` applies it atomically: every command is asked to `validate()` first, and none is applied unless all agreed. So the factory either produces a good, pollutes its neighbourhood and pays the treasury, or does none of the three.
+`Building::executeRules` fires it on its period, and `RuleBuilding::execute` applies it atomically: every command is asked to `validate()` first, and none is applied unless all agreed. So the factory either produces a good, pollutes its neighbourhood and pays the treasury, or does none of the three.
 
 That is the whole economy, and its properties are worth naming:
 
@@ -52,7 +52,7 @@ $$\displaystyle Q = \min\!\left(L, \frac{K}{k_{req}}\right) \cdot \text{rate}$$
 
 where $k_{req}$ is the raw material needed per worker. The player sees immediately which input is missing, with no exponent to interpret.
 
-`ProductionModel` would be the class holding that choice, consulted by a rule command rather than replacing one: the script would keep saying what a factory turns into what, and the model would decide how much. Its inputs are the stocks the `Unit` already holds, so it needs no new data on the entity.
+`ProductionModel` would be the class holding that choice, consulted by a rule command rather than replacing one: the script would keep saying what a factory turns into what, and the model would decide how much. Its inputs are the stocks the `Building` already holds, so it needs no new data on the entity.
 
 ## Prices: local supply and demand
 
@@ -73,13 +73,13 @@ A `Layer` is the natural home for $D$ and $S$, since both are questions about a 
 
 This was the gap that mattered most, because unlike the others it degraded behaviour the player could see. It is the one thing on this page that has been fixed.
 
-An agent looking for somewhere to deliver stops at the first building that will take its load. `Dijkstra::findRoute` walks the network outwards and returns as soon as `Unit::accepts` says yes, which asks two questions: does the building answer to this name, and does it have room.
+An agent looking for somewhere to deliver stops at the first building that will take its load. `Dijkstra::findRoute` walks the network outwards and returns as soon as `Building::accepts` says yes, which asks two questions: does the building answer to this name, and does it have room.
 
 Room used to be a plain boolean on the stock. That made twenty agents dispatched on the same tick all see the same single free slot and all be sent to claim it, and nineteen of them arrive to find it taken. It is the economic twin of the all-or-nothing assignment described in the [traffic documentation](traffic.md#aon-all-or-nothing), with the same cause: a choice made without regard to how many others are making it at the same moment.
 
 ### What was done: reserving the place
 
-A `Unit` now counts the agents heading towards it, and `accepts` measures the room against the stock **plus** that count. An agent claims its place when it is routed and gives it back when it delivers, when it gives up, when it is destroyed, or when it merely recomputes its itinerary and picks somewhere else. `Agent::route` is the single point all of that goes through, which is what makes the claim impossible to leak: a building whose count never came back down would be invisible to every agent for the rest of the game, and that would be worse than the crowding it prevents. A test asserts the invariant over a whole city, that the claims outstanding equal the agents that have somewhere to go.
+A `Building` now counts the agents heading towards it, and `accepts` measures the room against the stock **plus** that count. An agent claims its place when it is routed and gives it back when it delivers, when it gives up, when it is destroyed, or when it merely recomputes its itinerary and picks somewhere else. `Agent::route` is the single point all of that goes through, which is what makes the claim impossible to leak: a building whose count never came back down would be invisible to every agent for the rest of the game, and that would be worse than the crowding it prevents. A test asserts the invariant over a whole city, that the claims outstanding equal the agents that have somewhere to go.
 
 Two details are worth knowing. The claim is against the other agents and not against oneself, so an agent lifts its own for the length of its own tick; otherwise it would find its own destination full and never be let in at the door it was sent to. And nothing of this is saved: itineraries are recomputed on loading, so the counts rebuild themselves and the `.ogc` format does not move.
 
@@ -97,7 +97,7 @@ $$\displaystyle \text{score}(u) = \frac{\text{need}(u)}{1 + d(u)^{\delta}}$$
 
 It is deliberately postponed, and the reason is the cost. The search **terminates** on the first accepting building, which is correct only because anything further out costs strictly more. A score that can rise with distance removes that guarantee: the search would have to carry on through a tolerance window, and widening the radius by a quarter is about half as many nodes again, on every itinerary of every agent. Against that, once the place is reserved what is left to arbitrate is the choice between a nearly full building close by and an empty one a little further, which is a preference rather than a defect.
 
-There is also a boundary to respect whenever it is written: `Unit::accepts` lives in the engine while `Dijkstra` lives in the demo, so the criterion has to sit on the engine side of that line to be usable by another router.
+There is also a boundary to respect whenever it is written: `Building::accepts` lives in the engine while `Dijkstra` lives in the demo, so the criterion has to sit on the engine side of that line to be usable by another router.
 
 ## Smoothing the indicators
 
@@ -119,8 +119,8 @@ The historical parallel is still worth keeping in view. The SimCity (2013) launc
 | --- | --- | --- |
 | Shortest route per tick | Local, cheap | C++, exists: `IRouter` and `Dijkstra` |
 | Congestion smoothing | Global, persistent state | C++, exists: `Segment::smoothFlow`; see [why there is no solver](traffic.md#why-there-is-no-assignment-solver) |
-| Reserving a place at the destination | Local, one counter per `Unit` | C++, exists: `Unit::reserve` and `Agent::route` |
-| Production function | Local, per `Unit` | C++, proposed: `ProductionModel` |
+| Reserving a place at the destination | Local, one counter per `Building` | C++, exists: `Building::reserve` and `Agent::route` |
+| Production function | Local, per `Building` | C++, proposed: `ProductionModel` |
 | Scoring need against distance | Widens every search | Postponed, see above |
 | Smoothing of the plotted curves | Per series, in the panel | C++, exists: `game::TimeSeries`, demo only |
 | Simple growth rules: thresholds, timers | Local, no complex state | Script: `zoneRule`, as at Maxis |

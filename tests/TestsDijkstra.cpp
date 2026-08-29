@@ -10,7 +10,7 @@
 #define protected public
 #define private public
 #include "OpenGlassBox/City.hpp"
-#include "OpenGlassBox/Unit.hpp"
+#include "OpenGlassBox/Building.hpp"
 #include "OpenGlassBox/DijkstraRouter.hpp"
 #include "TestWorld.hpp"
 #undef protected
@@ -18,9 +18,9 @@
 
 namespace
 {
-UnitType makeFactoryType()
+BuildingType makeFactoryType()
 {
-    UnitType type("Factory");
+    BuildingType type("Factory");
     type.targets.emplace_back("People");
     type.resources.setCapacity("People", 10u);
     return type;
@@ -39,8 +39,8 @@ TEST(TestsDijkstra, DirectPath)
     path.addSegment(segmentType, home, mid);
     path.addSegment(segmentType, mid, factory);
 
-    UnitType factoryType = makeFactoryType();
-    city.addUnit(factoryType, factory);
+    BuildingType factoryType = makeFactoryType();
+    city.addBuilding(factoryType, factory);
 
     Resources carried;
     carried.addResource("People", 1u);
@@ -67,8 +67,8 @@ TEST(TestsDijkstra, ShortestBranch)
     path.addSegment(segmentType, start, shortRoute);
     path.addSegment(segmentType, shortRoute, factory);
 
-    UnitType factoryType = makeFactoryType();
-    city.addUnit(factoryType, factory);
+    BuildingType factoryType = makeFactoryType();
+    city.addBuilding(factoryType, factory);
 
     Resources carried;
     carried.addResource("People", 1u);
@@ -86,8 +86,8 @@ TEST(TestsDijkstra, AlreadyAtDestination)
     City& city = cityWorld.city;
     Path& path = city.addPath(keep<PathType>("Road"));
     Node& factory = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
-    UnitType factoryType = makeFactoryType();
-    city.addUnit(factoryType, factory);
+    BuildingType factoryType = makeFactoryType();
+    city.addBuilding(factoryType, factory);
 
     Resources carried;
     carried.addResource("People", 1u);
@@ -148,10 +148,10 @@ TEST(TestsDijkstra, PathScopedRouting)
     road.addSegment(segmentType, roadMid, roadFactory);
 
     Node& railFactory = rail.addNode(Vector3f(0.0f, 1.0f, 0.0f));
-    UnitType railFactoryType = makeFactoryType();
-    UnitType roadFactoryType = makeFactoryType();
-    city.addUnit(railFactoryType, railFactory);
-    city.addUnit(roadFactoryType, roadFactory);
+    BuildingType railFactoryType = makeFactoryType();
+    BuildingType roadFactoryType = makeFactoryType();
+    city.addBuilding(railFactoryType, railFactory);
+    city.addBuilding(roadFactoryType, roadFactory);
 
     Resources carried;
     carried.addResource("People", 1u);

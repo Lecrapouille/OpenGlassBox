@@ -75,7 +75,7 @@ rules
 	# ever made was a worker. A period runs on the clock of its own building,
 	# from a random phase, so a house grown at noon starts its commute within
 	# the hour instead of waiting for the next morning.
-	unitRule SendPeopleToWork
+	buildingRule SendPeopleToWork
 		rate 45 minutes
 		hour between 8 18
 		local People greater 0
@@ -83,14 +83,14 @@ rules
 		agent Worker to Work add [ People 1 ]
 	end
 
-	unitRule SendPeopleToHome
+	buildingRule SendPeopleToHome
 		rate 20 minutes
 		hour between 18 22
 		local People remove 1
 		agent People to Home add [ People 1 ]
 	end
 
-	unitRule ProduceGoods
+	buildingRule ProduceGoods
 		rate 30 minutes
 		hour between 8 18
 		local People greater 0
@@ -102,7 +102,7 @@ rules
 	# The goods leave the factory on their own wheels. Without this the shops
 	# never had anything to sell, and the workers looked like they were carrying
 	# the stock home in the evening.
-	unitRule ShipGoods
+	buildingRule ShipGoods
 		rate 45 minutes
 		local Goods remove 1
 		agent Truck to Shop add [ Goods 1 ]
@@ -111,13 +111,13 @@ rules
 	# The restaurants are supplied by name. They used to answer to Shop as well,
 	# which is how a truck bound for a shop, and a resident going shopping,
 	# ended their trip at the nearest canteen instead.
-	unitRule ShipFood
+	buildingRule ShipFood
 		rate 2 hours
 		local Goods remove 1
 		agent Truck to Restaurant add [ Goods 1 ]
 	end
 
-	unitRule GoEating
+	buildingRule GoEating
 		rate 30 minutes
 		hour between 12 14
 		local People greater 0
@@ -125,13 +125,13 @@ rules
 		agent Diner to Restaurant add [ People 1 ]
 	end
 
-	unitRule UsePeopleToWater
+	buildingRule UsePeopleToWater
 		rate 1 hour
 		local People greater 1
 		layer Water add 30
 	end
 
-	unitRule ShopForGoods
+	buildingRule ShopForGoods
 		rate 3 hours
 		hour between 10 20
 		local People greater 0
@@ -142,7 +142,7 @@ rules
 
 	# A shop sells to the customers standing in it. Without the condition it
 	# turned its stock into money on its own, and the shoppers were decoration.
-	unitRule SellGoods
+	buildingRule SellGoods
 		rate 20 minutes
 		local People greater 0
 		local Goods remove 1
@@ -150,14 +150,14 @@ rules
 		local Happiness add 1
 	end
 
-	unitRule ServeLunch
+	buildingRule ServeLunch
 		rate 15 minutes
 		local People greater 0
 		local Goods remove 1
 		local Happiness add 1
 	end
 
-	unitRule SendDinersBack
+	buildingRule SendDinersBack
 		rate 20 minutes
 		hour between 13 15
 		local People greater 0
@@ -165,14 +165,14 @@ rules
 		agent Worker to Work add [ People 1 ]
 	end
 
-	unitRule ReceiveShopper
+	buildingRule ReceiveShopper
 		rate 30 minutes
 		local People greater 0
 		local People remove 1
 		agent People to Home add [ People 1 ]
 	end
 
-	unitRule CollectTrash
+	buildingRule CollectTrash
 		rate 1 hour
 		layer Trash remove 2
 	end
@@ -209,11 +209,11 @@ rules
 	end
 end
 
-units
-	unit Home color 0xFF00FF layerRadius 1 rules [ SendPeopleToWork ShopForGoods ] targets [ Home ] caps [ People 8 Happiness 10 ] resources [ People 8 ]
-	unit Work color 0x00AAFF layerRadius 3 rules [ SendPeopleToHome ProduceGoods ShipGoods ShipFood GoEating UsePeopleToWater ] targets [ Work ] caps [ People 12 Goods 20 ] resources [ ]
-	unit Shop color 0xFFAA00 layerRadius 2 rules [ SellGoods ReceiveShopper CollectTrash ] targets [ Shop ] caps [ People 6 Goods 30 Happiness 20 ] resources [ ]
-	unit Restaurant color 0xFF6644 layerRadius 1 rules [ ServeLunch SendDinersBack ] targets [ Restaurant ] caps [ People 8 Goods 20 Happiness 20 ] resources [ ]
+buildings
+	building Home color 0xFF00FF layerRadius 1 rules [ SendPeopleToWork ShopForGoods ] targets [ Home ] caps [ People 8 Happiness 10 ] resources [ People 8 ]
+	building Work color 0x00AAFF layerRadius 3 rules [ SendPeopleToHome ProduceGoods ShipGoods ShipFood GoEating UsePeopleToWater ] targets [ Work ] caps [ People 12 Goods 20 ] resources [ ]
+	building Shop color 0xFFAA00 layerRadius 2 rules [ SellGoods ReceiveShopper CollectTrash ] targets [ Shop ] caps [ People 6 Goods 30 Happiness 20 ] resources [ ]
+	building Restaurant color 0xFF6644 layerRadius 1 rules [ ServeLunch SendDinersBack ] targets [ Restaurant ] caps [ People 8 Goods 20 Happiness 20 ] resources [ ]
 end
 
 layers

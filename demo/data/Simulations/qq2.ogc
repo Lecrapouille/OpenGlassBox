@@ -1,6 +1,6 @@
 save
 	ruleset test_city.ogs
-	hash 1e4d63929d2bf96ed42abec8da8d3aeb604918f946799021acf39e14da2c0907
+	hash 82862f71c57b3ecd64a7ef1e1e31fcf04e688c5bc68d99dfadb313ccbf057bc8
 	types [ Road Dirt Work Home Shop Restaurant ]
 end
 
@@ -27,10 +27,10 @@ path Road
 	segment 7 Dirt 9 6 flow 0
 	segment 8 Dirt 10 7 flow 0
 end
-unit Work on segment 0 0.201932 resources [ ]
-unit Home on node 8 resources [ People 8 ]
-unit Shop on node 9 resources [ ]
-unit Restaurant on node 10 resources [ ]
+building Work on segment 0 0.201932 resources [ ]
+building Home on node 8 resources [ People 8 ]
+building Shop on node 9 resources [ ]
+building Restaurant on node 10 resources [ ]
 layer Desirability
 	cell 0 0 1
 	cell 1 0 1

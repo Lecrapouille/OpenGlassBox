@@ -131,8 +131,8 @@ int main()
 
     // Two buildings, each standing on a crossroads so that agents can reach
     // them. A building may also stand along a street, at an offset.
-    city.addUnit(rules.getUnitType("Home"), a);
-    city.addUnit(rules.getUnitType("Work"), b);
+    city.addBuilding(rules.getBuildingType("Home"), a);
+    city.addBuilding(rules.getBuildingType("Work"), b);
 
     // Open the working day. Rules may be written as "hour between 8 18", so
     // starting at midnight would mean watching a city where nothing is awake.
@@ -149,7 +149,7 @@ int main()
         simulation.update(simulation.getConfig().time.tickDuration());
     }
 
-    std::cout << city.getUnits().size() << " units, "
+    std::cout << city.getBuildings().size() << " buildings, "
               << city.getAgents().size() << " agents\n";
 
     return EXIT_SUCCESS;
@@ -185,7 +185,7 @@ if (!simulation.loadScriptFile("demo/data/Simulations/test_city.ogs"))
 
 What the script declared is read back through `simulation.getRuleset()`, which hands out a `Ruleset const&`: the recipes may be looked up but not changed, since the cities hold references into them. `getXxx()` throws when a name was never declared; `findXxx()` returns `nullptr` instead, for asking whether a name exists.
 
-The ruleset must **outlive every city** loaded from it: buildings hold references to their recipes (`UnitType`, `SegmentType`, …). `Simulation` declares its `Ruleset` before its `World`, so destruction, which runs in reverse, takes the cities away first.
+The ruleset must **outlive every city** loaded from it: buildings hold references to their recipes (`BuildingType`, `SegmentType`, …). `Simulation` declares its `Ruleset` before its `World`, so destruction, which runs in reverse, takes the cities away first.
 
 ## Creating and updating cities
 
@@ -199,7 +199,7 @@ city.addLayer(rules.getLayerType("Water"));
 
 ogb::Path& road = city.addPath(rules.getPathType("Road"));
 ogb::Node& node = road.addNode(ogb::Vector3f(0.f, 0.f, 0.f));
-city.addUnit(rules.getUnitType("Home"), node);
+city.addBuilding(rules.getBuildingType("Home"), node);
 ```
 
 The `World` behind all this has no accessor: everything it offers is on `Simulation`. Layers shared by every city are reached with `simulation.findLayer("Water")` and `simulation.getLayers()`, the grid with `simulation.worldToCell()` and `simulation.cellToWorld()`, and a road crossing a border with `simulation.addRoad()`.

@@ -4,8 +4,8 @@ This folder holds the rulesets and city saves shipped with the demo. For the `.o
 
 ## File formats
 
-- **`.ogs`**: ruleset (or mod): resources, rules, layers, paths, segments, agents, units, and zones.
-- **`.ogc`**: city save: header (ruleset name, SHA-256 of the `.ogs`, types in use), geometry, and live state (clock, globals, layer cells, units, agents, segment flows).
+- **`.ogs`**: ruleset (or mod): resources, rules, layers, paths, segments, agents, buildings, and zones.
+- **`.ogc`**: city save: header (ruleset name, SHA-256 of the `.ogs`, types in use), geometry, and live state (clock, globals, layer cells, buildings, agents, segment flows).
 
 A separate world file is not needed. A save identifies the ruleset it was created with. Loading fails if a required type is missing or the ruleset hash differs. During ruleset development, File → **Open saves with a stale checksum** can bypass the hash check; required types must still exist. The Script panel displays the checksum and can re-stamp the open save.
 

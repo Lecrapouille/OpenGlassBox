@@ -81,9 +81,9 @@ AgentType const& ScriptDefinitions::getAgentType(std::string const& id) const
     return lookup(m_agentTypes, id, "agent type");
 }
 
-UnitType const& ScriptDefinitions::getUnitType(std::string const& id) const
+BuildingType const& ScriptDefinitions::getBuildingType(std::string const& id) const
 {
-    return lookup(m_unitTypes, id, "unit type");
+    return lookup(m_buildingTypes, id, "building type");
 }
 
 LayerType const& ScriptDefinitions::getLayerType(std::string const& id) const
@@ -96,9 +96,9 @@ RuleLayer const& ScriptDefinitions::getRuleLayer(std::string const& id) const
     return lookup(m_ruleLayers, id, "layer rule");
 }
 
-RuleUnit const& ScriptDefinitions::getRuleUnit(std::string const& id) const
+RuleBuilding const& ScriptDefinitions::getRuleBuilding(std::string const& id) const
 {
-    return lookup(m_ruleUnits, id, "unit rule");
+    return lookup(m_ruleBuildings, id, "building rule");
 }
 
 RuleZone const& ScriptDefinitions::getRuleZone(std::string const& id) const
@@ -132,9 +132,9 @@ AgentType* ScriptDefinitions::findAgentType(std::string const& id)
     return search(m_agentTypes, id);
 }
 
-UnitType* ScriptDefinitions::findUnitType(std::string const& id)
+BuildingType* ScriptDefinitions::findBuildingType(std::string const& id)
 {
-    return search(m_unitTypes, id);
+    return search(m_buildingTypes, id);
 }
 
 LayerType* ScriptDefinitions::findLayerType(std::string const& id)
@@ -147,9 +147,9 @@ RuleLayer* ScriptDefinitions::findRuleLayer(std::string const& id)
     return search(m_ruleLayers, id);
 }
 
-RuleUnit* ScriptDefinitions::findRuleUnit(std::string const& id)
+RuleBuilding* ScriptDefinitions::findRuleBuilding(std::string const& id)
 {
-    return search(m_ruleUnits, id);
+    return search(m_ruleBuildings, id);
 }
 
 RuleZone* ScriptDefinitions::findRuleZone(std::string const& id)
@@ -183,9 +183,9 @@ AgentType const* ScriptDefinitions::findAgentType(std::string const& id) const
     return search(m_agentTypes, id);
 }
 
-UnitType const* ScriptDefinitions::findUnitType(std::string const& id) const
+BuildingType const* ScriptDefinitions::findBuildingType(std::string const& id) const
 {
-    return search(m_unitTypes, id);
+    return search(m_buildingTypes, id);
 }
 
 LayerType const* ScriptDefinitions::findLayerType(std::string const& id) const
@@ -198,9 +198,9 @@ RuleLayer const* ScriptDefinitions::findRuleLayer(std::string const& id) const
     return search(m_ruleLayers, id);
 }
 
-RuleUnit const* ScriptDefinitions::findRuleUnit(std::string const& id) const
+RuleBuilding const* ScriptDefinitions::findRuleBuilding(std::string const& id) const
 {
-    return search(m_ruleUnits, id);
+    return search(m_ruleBuildings, id);
 }
 
 RuleZone const* ScriptDefinitions::findRuleZone(std::string const& id) const
@@ -234,9 +234,9 @@ AgentType* ScriptDefinitions::addAgentType(std::string const& id)
     return create(m_agentTypes, id, id);
 }
 
-UnitType* ScriptDefinitions::addUnitType(std::string const& id)
+BuildingType* ScriptDefinitions::addBuildingType(std::string const& id)
 {
-    return create(m_unitTypes, id, id);
+    return create(m_buildingTypes, id, id);
 }
 
 LayerType* ScriptDefinitions::addLayerType(std::string const& id)
@@ -253,9 +253,9 @@ RuleLayer* ScriptDefinitions::addRuleLayer(std::string const& id)
 }
 
 // -----------------------------------------------------------------------------
-RuleUnit* ScriptDefinitions::addRuleUnit(std::string const& id)
+RuleBuilding* ScriptDefinitions::addRuleBuilding(std::string const& id)
 {
-    return create(m_ruleUnits, id, RuleUnitType(id));
+    return create(m_ruleBuildings, id, RuleBuildingType(id));
 }
 
 RuleZone* ScriptDefinitions::addRuleZone(std::string const& id)
@@ -290,9 +290,9 @@ void ScriptDefinitions::clear()
     // The rules point at the commands and the commands at the values, so unwind
     // in that order: rules first, then commands, then what they read.
     m_layerTypes.clear();
-    m_unitTypes.clear();
+    m_buildingTypes.clear();
     m_ruleLayers.clear();
-    m_ruleUnits.clear();
+    m_ruleBuildings.clear();
     m_ruleZones.clear();
     m_zoneTypes.clear();
     m_commands.clear();
@@ -307,8 +307,8 @@ void ScriptDefinitions::clear()
 bool ScriptDefinitions::isEmpty() const
 {
     return m_resources.empty() && m_pathTypes.empty() && m_segmentTypes.empty() &&
-           m_agentTypes.empty() && m_unitTypes.empty() && m_layerTypes.empty() &&
-           m_ruleLayers.empty() && m_ruleUnits.empty() && m_ruleZones.empty() &&
+           m_agentTypes.empty() && m_buildingTypes.empty() && m_layerTypes.empty() &&
+           m_ruleLayers.empty() && m_ruleBuildings.empty() && m_ruleZones.empty() &&
            m_zoneTypes.empty();
 }
 

@@ -9,12 +9,12 @@ A ruleset combines five concepts, connected by **rules**:
 | Concept | Role |
 | ------- | ---- |
 | **Layers** | 2D fields (water, pollution, desirability, …). |
-| **Units** | Buildings with bounded resource stocks. |
-| **Agents** | Travellers that carry resources between units. |
+| **Buildings** | Buildings with bounded resource stocks. |
+| **Agents** | Travellers that carry resources between buildings. |
 | **Paths** | Road (or rail) networks made of nodes and segments. |
 | **Zones** | Zones whose rules spawn, upgrade, and remove buildings. |
 
-Rules are atomic: every command in a rule must validate before any command runs. Buildings use `unitRule`, layers use `layerRule`, and zones use `zoneRule`.
+Rules are atomic: every command in a rule must validate before any command runs. Buildings use `buildingRule`, layers use `layerRule`, and zones use `zoneRule`.
 
 Two file formats exist:
 
@@ -60,7 +60,7 @@ agents
 end
 ```
 
-Agents are mobile entities. Their `speed` is expressed in world units per second. They carry resources and search for a unit matching a `target`.
+Agents are mobile entities. Their `speed` is expressed in world units per second. They carry resources and search for a building matching a `target`.
 
 ### `layers`
 
@@ -73,11 +73,11 @@ end
 
 Layers are shared 2D fields on the world grid. Units read and modify nearby layer cells within their `layerRadius`.
 
-### `units`
+### `buildings`
 
 ```text
-units
-    unit Home color 0xFF00FF layerRadius 1
+buildings
+    building Home color 0xFF00FF layerRadius 1
         rules [ SendPeopleToWork ]
         targets [ Home ]
         caps [ People 4 ]
@@ -107,7 +107,7 @@ rules
         layer Grass add 1
     end
 
-    unitRule SendPeopleToWork
+    buildingRule SendPeopleToWork
         rate 20
         hour between 8 18
         local People remove 1
@@ -125,7 +125,7 @@ end
 Every command in a rule must validate before any command is executed. If one refuses, the whole rule is skipped for that tick.
 
 - `layerRule` uses layer commands and can select cells with `randomTilesPercent`.
-- `unitRule` uses `local`, `global`, `layer`, `agent Type to Target add [ Res N ]`, and `hour between A B`.
+- `buildingRule` uses `local`, `global`, `layer`, `agent Type to Target add [ Res N ]`, and `hour between A B`.
 - `zoneRule` uses `count`, `spawn`, `upgrade`, and `destroy` to manage buildings in a zone.
 
 `hour between` uses the simulation clock and wraps around midnight when `A > B`.
@@ -135,7 +135,7 @@ Every command in a rule must validate before any command is executed. If one ref
 `rate` says how often a rule is attempted. A bare number counts simulation ticks; add a unit to express the period in readable game time:
 
 ```text
-    unitRule ProduceGoods
+    buildingRule ProduceGoods
         rate 30 minutes
     end
 
@@ -160,7 +160,7 @@ save
 end
 ```
 
-The header is followed by the clock, `city Name size U V`, globals, paths, nodes, segments, units, zones, layer cells, and agents. Traffic flow is also saved so a loaded city does not treat every road as empty.
+The header is followed by the clock, `city Name size U V`, globals, paths, nodes, segments, buildings, zones, layer cells, and agents. Traffic flow is also saved so a loaded city does not treat every road as empty.
 
 A save identifies the ruleset it was created with. Loading fails if a required type is missing or the ruleset hash differs. During ruleset development, the demo can open saves with a stale checksum; required types must still exist.
 

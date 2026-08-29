@@ -5,7 +5,7 @@
 - **Operating systems**: Linux, macOS. Should compile on Windows as well.
 - **Build tools**: C++17 compiler (`g++` or `clang++`), GNU Make, Git. C++17 is required by the public headers, which use `std::optional`.
 - **Debug library** (debug builds only): [backward-cpp](https://github.com/bombela/backward-cpp): automatically downloaded and built by the Makefile (not installed system-wide).
-- **Unit tests** (optional): [Google Test](https://github.com/google/googletest) (must be downloaded, built, and installed manually), plus coverage tools (see below).
+- **Building tests** (optional): [Google Test](https://github.com/google/googletest) (must be downloaded, built, and installed manually), plus coverage tools (see below).
 - **Makefile helper** [MyMakefile](https://github.com/Lecrapouille/MyMakefile): automatically fetched when cloning with `--recursive`.
 
 GLFW and Dear ImGui were chosen for the demo because they were the quickest way to see the simulation run; feel free to plug in your own renderer.
