@@ -9,6 +9,7 @@
 #include "OpenGlassBox/DijkstraRouter.hpp"
 
 #include "OpenGlassBox/Building.hpp"
+#include "OpenGlassBox/Simulation.hpp"
 #include "OpenGlassBox/Vector.hpp"
 
 #include <algorithm>
@@ -254,6 +255,14 @@ float Dijkstra::computeShortestPathCost(Node& fromNode,
 {
     Route const route = findRoute(fromNode, searchTarget, resources);
     return route.isFound() ? route.getCost() : ROUTING_INFINITY;
+}
+
+void installDijkstraRouters(Simulation const& simulation)
+{
+    for (auto const& it : simulation.getCities())
+    {
+        installDijkstraRouter(*it.second, simulation.getConfig());
+    }
 }
 
 } // namespace ogb

@@ -40,7 +40,6 @@
 
 // Road network and routing
 #include "OpenGlassBox/DijkstraRouter.hpp"
-#include "OpenGlassBox/InstallRouter.hpp"
 #include "OpenGlassBox/Path.hpp"
 #include "OpenGlassBox/Router.hpp"
 

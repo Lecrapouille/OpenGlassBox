@@ -7,7 +7,7 @@
 
 #include "main.hpp"
 
-#include "OpenGlassBox/InstallRouter.hpp"
+#include "OpenGlassBox/DijkstraRouter.hpp"
 #include "OpenGlassBox/Simulation.hpp"
 #include "Save/CitySave.hpp"
 #include "TestDataPath.hpp"
