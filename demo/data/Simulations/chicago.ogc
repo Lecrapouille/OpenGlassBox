@@ -1,7 +1,7 @@
 save
 	ruleset sandbox.ogs
-	hash 74e2c7da56feff2de07c9bd1b43504aaa2be15879ff0f2d84cbbee3571b8a6fb
-	types [ Road Dirt Home Work Shop Residential ]
+	hash d8a0a052068b671ef0a35e4e159516f09a5dfea88b7a4cfbcfc216a4d6f4d633
+	types [ Road Dirt ]
 end
 
 clock 0

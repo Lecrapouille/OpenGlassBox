@@ -20,6 +20,12 @@ static std::random_device rd;
 static std::mt19937 generator(rd());
 
 //------------------------------------------------------------------------------
+void CellsInRadius::setSeed(uint32_t seed)
+{
+    generator.seed(seed);
+}
+
+//------------------------------------------------------------------------------
 int32_t CellsInRadius::compress(int32_t u, int32_t v)
 {
     return ((u + CellsInRadius::MAX_RADIUS) << 16) |

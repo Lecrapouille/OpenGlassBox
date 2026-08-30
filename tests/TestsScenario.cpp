@@ -27,8 +27,8 @@
 static std::string dataFile(std::string const& name)
 {
     std::string const candidates[] = {
-        "../demo/data/Simulations/" + name,
-        "demo/data/Simulations/" + name,
+        "../demo/data/simulations/" + name,
+        "demo/data/simulations/" + name,
     };
     for (std::string const& path : candidates)
     {
@@ -40,11 +40,11 @@ static std::string dataFile(std::string const& name)
 }
 
 //------------------------------------------------------------------------------
-//! \brief A Building of the given type, or nullptr. The first one found is enough:
-//! the saves used here hold one of each.
+//! \brief A Building of the given type, or nullptr. The first one found is
+//! enough: the saves used here hold one of each.
 static Building* findBuilding(City& city, std::string const& type)
 {
-    for (auto const& building: city.getBuildings())
+    for (auto const& building : city.getBuildings())
     {
         if (building->getTypeName() == type)
             return building.get();
@@ -53,12 +53,44 @@ static Building* findBuilding(City& city, std::string const& type)
 }
 
 //------------------------------------------------------------------------------
-static uint32_t countBuildings(City& city, std::string const& type)
+//! \brief Whether a Building answers to the given name.
+//!
+//! The checks below look for a role and not for a type, the way an Agent does:
+//! the ruleset names its houses Shack, House and Villa according to how rich
+//! the district became, and all three answer to "Home". Asking for a type would
+//! make this file depend on which rung of the ladder the city happened to be
+//! on.
+//!
+//! This reads the targets rather than calling Building::accepts, which also
+//! asks whether there is room for a load. A full shop is still a shop.
+static bool answersTo(Building const& building, std::string const& target)
+{
+    for (Name const& name : building.getTargets())
+    {
+        if (name == target)
+            return true;
+    }
+    return false;
+}
+
+//------------------------------------------------------------------------------
+static Building* findByTarget(City& city, std::string const& target)
+{
+    for (auto const& building : city.getBuildings())
+    {
+        if (answersTo(*building, target))
+            return building.get();
+    }
+    return nullptr;
+}
+
+//------------------------------------------------------------------------------
+static uint32_t countByTarget(City& city, std::string const& target)
 {
     uint32_t count = 0u;
-    for (auto const& building: city.getBuildings())
+    for (auto const& building : city.getBuildings())
     {
-        if (building->getTypeName() == type)
+        if (answersTo(*building, target))
             ++count;
     }
     return count;
@@ -113,22 +145,22 @@ static Sightings watch(Simulation& simulation,
             onTick();
 
         uint32_t const hour = simulation.getClock().getHourOfDay();
-        Building* const work = findBuilding(city, "Work");
-        Building* const shop = findBuilding(city, "Shop");
-        Building* const restaurant = findBuilding(city, "Restaurant");
+        Building* const work = findByTarget(city, "Work");
+        Building* const shop = findByTarget(city, "Shop");
+        Building* const restaurant = findByTarget(city, "Restaurant");
 
-        seen.home = seen.home || (countBuildings(city, "Home") > 0u);
+        seen.home = seen.home || (countByTarget(city, "Home") > 0u);
         if (work != nullptr)
         {
             seen.peopleAtWork = seen.peopleAtWork ||
                                 (work->getResources().getAmount("People") > 0u);
-            seen.goodsAtWork =
-                seen.goodsAtWork || (work->getResources().getAmount("Goods") > 0u);
+            seen.goodsAtWork = seen.goodsAtWork ||
+                               (work->getResources().getAmount("Goods") > 0u);
         }
         if (shop != nullptr)
         {
-            seen.goodsAtShop =
-                seen.goodsAtShop || (shop->getResources().getAmount("Goods") > 0u);
+            seen.goodsAtShop = seen.goodsAtShop ||
+                               (shop->getResources().getAmount("Goods") > 0u);
             seen.peopleAtShop = seen.peopleAtShop ||
                                 (shop->getResources().getAmount("People") > 0u);
         }
@@ -195,9 +227,9 @@ TEST(TestsScenario, ADayInQqCity)
     Simulation simulation;
     City& city = openAtEightInTheMorning(simulation, "qq.ogc");
 
-    ASSERT_EQ(countBuildings(city, "Home"), 0u);
-    ASSERT_NE(findBuilding(city, "Work"), nullptr);
-    ASSERT_NE(findBuilding(city, "Shop"), nullptr);
+    ASSERT_EQ(countByTarget(city, "Home"), 0u);
+    ASSERT_NE(findByTarget(city, "Work"), nullptr);
+    ASSERT_NE(findByTarget(city, "Shop"), nullptr);
 
     // The Commercial zone of that save is a single cell and already holds a
     // shop, so the canteen goes next to it by hand. What is under test here is
@@ -205,13 +237,17 @@ TEST(TestsScenario, ADayInQqCity)
     Path& road = *(city.getPaths().begin()->second);
     Segment* const segment = road.findSegment(3u);
     ASSERT_NE(segment, nullptr);
-    city.addBuilding(
-        simulation.getRuleset().getBuildingType("Restaurant"), road, *segment, 0.6f);
+    city.addBuilding(simulation.getRuleset().getBuildingType("Restaurant"),
+                     road,
+                     *segment,
+                     0.6f);
     ASSERT_NE(findBuilding(city, "Restaurant"), nullptr);
 
-    // Nine game hours: the zones take four to grow the first houses, and the
+    // Nine game hours: the zone takes two to grow its first house, and the
     // chain from a new resident to a shop with something on its shelves is a
-    // commute, a half-hourly production and a delivery long.
+    // commute, a half-hourly production and a delivery long. The window has to
+    // cover the lunch hours as well, which is why it reaches five in the
+    // afternoon rather than stopping at noon.
     Sightings const seen = watch(simulation, city, 9u * 60u * 20u);
 
     ASSERT_TRUE(seen.home) << "the Residential zones grew nothing";
@@ -239,11 +275,12 @@ TEST(TestsScenario, ADayInQqCity)
 
     // Houses stand along a road, not in a field, and no two share a cell.
     std::vector<Vector3f> homes;
-    for (auto const& building: city.getBuildings())
+    for (auto const& building : city.getBuildings())
     {
-        if (building->getTypeName() != "Home")
+        if (!answersTo(*building, "Home"))
             continue;
-        ASSERT_TRUE((building->getSegment() != nullptr) || (building->getNode() != nullptr))
+        ASSERT_TRUE((building->getSegment() != nullptr) ||
+                    (building->getNode() != nullptr))
             << "a house grew with no road to reach it";
         for (Vector3f const& other : homes)
         {
@@ -274,7 +311,7 @@ TEST(TestsScenario, ClaimsOnDestinationsNeverLeak)
         simulation.stepOneTick();
 
         uint32_t claimed = 0u;
-        for (auto const& building: city.getBuildings())
+        for (auto const& building : city.getBuildings())
             claimed += building->getReservedCount();
 
         uint32_t bound = 0u;
@@ -303,14 +340,18 @@ TEST(TestsScenario, PollutionFadesAndDesirabilityMovesInDays)
     Layer const& pollution = city.getLayer("Pollution");
     Layer const& desirability = city.getLayer("Desirability");
 
-    // A cell in the corner, away from the factory and its footprint.
-    int32_t const u = 0;
-    int32_t const v = 0;
+    // A cell no polluting building reaches. The factory of that save stands at
+    // (10,4) and reads three cells around itself, and the coal plant stands at
+    // (1,5) and reads six, so the far corner is the only one outside both. The
+    // near corner used to serve, until the save gained the power plant a
+    // residential zone needs to grow at all.
+    int32_t const u = 11;
+    int32_t const v = 11;
     uint32_t const pollutionAtStart = pollution.getResource({ u, v });
     uint32_t const desirabilityAtStart = desirability.getResource({ u, v });
     ASSERT_GT(pollutionAtStart, 0u) << "this save is meant to start polluted";
 
-    uint32_t const homesAtStart = countBuildings(city, "Home");
+    uint32_t const homesAtStart = countByTarget(city, "Home");
     uint32_t homesSeen = homesAtStart;
     uint32_t pollutionPeak = pollutionAtStart;
 
@@ -319,11 +360,12 @@ TEST(TestsScenario, PollutionFadesAndDesirabilityMovesInDays)
     {
         simulation.stepOneTick();
 
-        uint32_t const homes = countBuildings(city, "Home");
+        uint32_t const homes = countByTarget(city, "Home");
         ASSERT_GE(homes, homesSeen) << "a house was demolished within the hour "
                                        "it was built";
         homesSeen = homes;
-        pollutionPeak = std::max(pollutionPeak, pollution.getResource({ u, v }));
+        pollutionPeak =
+            std::max(pollutionPeak, pollution.getResource({ u, v }));
     }
 
     // Two hourly rules at most, each moving it by two.
@@ -338,7 +380,8 @@ TEST(TestsScenario, PollutionFadesAndDesirabilityMovesInDays)
     for (uint32_t i = 0u; i < 5u * 60u * 20u; ++i)
     {
         simulation.stepOneTick();
-        pollutionPeak = std::max(pollutionPeak, pollution.getResource({ u, v }));
+        pollutionPeak =
+            std::max(pollutionPeak, pollution.getResource({ u, v }));
     }
 
     ASSERT_LT(pollution.getResource({ u, v }), pollutionAtStart)
@@ -360,7 +403,7 @@ TEST(TestsScenario, ADayInQq2City)
     // Everything the factory deals with is on the other side, so an Agent seen
     // west of its door left the building by the wrong end, which is what every
     // truck bound for the shop used to do before turning back at the corner.
-    Building* const work = findBuilding(city, "Work");
+    Building* const work = findByTarget(city, "Work");
     ASSERT_NE(work, nullptr);
     Segment* const street = work->getSegment();
     ASSERT_NE(street, nullptr);
@@ -384,9 +427,10 @@ TEST(TestsScenario, ADayInQq2City)
                       {
                           continue;
                       }
-                      wrongSegment = agent->getTypeName().str() + " looking for " +
-                                 agent->getTarget().str() +
-                                 (agent->getRoute().isFound() ? " with a route"
+                      wrongSegment =
+                          agent->getTypeName().str() + " looking for " +
+                          agent->getTarget().str() +
+                          (agent->getRoute().isFound() ? " with a route"
                                                        : " with none");
                   }
               });
@@ -405,14 +449,15 @@ TEST(TestsScenario, ADayInQq2City)
     ASSERT_FALSE(seen.restaurantBeforeLunch)
         << "somebody was served at the restaurant before noon";
 
-    ASSERT_TRUE(seen.home || (countBuildings(city, "Shop") > 0u) ||
-                (countBuildings(city, "Work") > 0u))
+    ASSERT_TRUE(seen.home || (countByTarget(city, "Shop") > 0u) ||
+                (countByTarget(city, "Work") > 0u))
         << "the zone grew nothing at all";
 
     // Whatever grew, it hangs off the network.
-    for (auto const& building: city.getBuildings())
+    for (auto const& building : city.getBuildings())
     {
-        ASSERT_TRUE((building->getSegment() != nullptr) || (building->getNode() != nullptr))
+        ASSERT_TRUE((building->getSegment() != nullptr) ||
+                    (building->getNode() != nullptr))
             << building->getTypeName() << " grew with no road to reach it";
     }
 
@@ -448,7 +493,8 @@ TEST(TestsScenario, AnHourOnTheChicagoNetwork)
     City& city = *(simulation.getCities().begin()->second);
 
     Path const& road = *(city.getPaths().begin()->second);
-    ASSERT_GT(road.getNodeCount(), 100u) << "not the large network this is about";
+    ASSERT_GT(road.getNodeCount(), 100u)
+        << "not the large network this is about";
 
     simulation.setTimeOfDay(0u, 8u, 0u);
     for (uint32_t tick = 0u; tick < 60u * 20u; ++tick)

@@ -368,6 +368,20 @@ public:
 
 private:
 
+    //--------------------------------------------------------------------------
+    //! \brief Give the new Building what the replaced one held.
+    //!
+    //! An upgrade keeps the stock: a house that becomes a better house keeps the
+    //! people who live in it. Only the Resources the new type declares are given,
+    //! and each is limited by its capacity there.
+    //!
+    //! \param[in] stock Amounts of the Building that was removed.
+    //! \param[in,out] upgraded The Building that replaces it.
+    //--------------------------------------------------------------------------
+    static void transferStock(Resources const& stock, Building& upgraded);
+
+private:
+
     BuildingType const& m_fromType;
     BuildingType const& m_toType;
 };
@@ -389,6 +403,19 @@ public:
     bool validate(RuleContext& context) override;
     void execute(RuleContext& context) override;
     [[nodiscard]] std::string getDescription() const override;
+
+private:
+
+    //--------------------------------------------------------------------------
+    //! \brief Sum everything a Building holds, whatever the Resource names are.
+    //!
+    //! The command uses this to demolish the emptiest Building of the Zone, so a
+    //! neighbourhood in decline loses its empty houses before the crowded ones.
+    //!
+    //! \param[in] building Building to weigh.
+    //! \return The total, capped at Resource::MAX_CAPACITY.
+    //--------------------------------------------------------------------------
+    static uint32_t countStock(Building const& building);
 
 private:
 

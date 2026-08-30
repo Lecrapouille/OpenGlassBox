@@ -38,7 +38,8 @@ public:
 
     struct Options
     {
-        //! \brief Optional .ogs or .ogc, resolved against Simulations/.
+        //! \brief Optional .ogs or .ogc, resolved against the simulations/
+        //! directory.
         std::string file = "sandbox.ogs";
         int width = 1600;
         int height = 900;
@@ -130,6 +131,7 @@ private:
     ui::RuleLogPanel m_rule_log;
     ui::ChartsPanel m_charts;
     ui::TimeControlPanel m_time;
+    ui::BudgetPanel m_budget;
     ui::TrafficPanel m_traffic;
     ui::ScriptPanel m_script_panel;
 
@@ -164,6 +166,7 @@ private:
     bool m_show_rule_log = true;
     bool m_show_charts = true;
     bool m_show_time = true;
+    bool m_show_budget = true;
     bool m_show_traffic = true;
     bool m_show_history = false;
     bool m_show_script = true;

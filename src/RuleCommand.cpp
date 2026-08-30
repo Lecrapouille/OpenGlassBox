@@ -121,10 +121,13 @@ bool RuleCommandAgent::validate(RuleContext& context)
         probe.addResource(resource.getTypeName(), resource.getAmount());
     }
 
+    // What an Agent looks for is a name in the targets of a Building, not the
+    // name of its type. Building::accepts is what the router and the Agent both
+    // use, so asking anything more here refuses Rules the run time would have
+    // honoured: a ruleset with tiers names its houses Shack, House and Villa and
+    // has none called Home, and every "agent Worker to Home" stopped validating.
     for (auto& building: context.city->getBuildings())
     {
-        if (building->getTypeName() != m_target)
-            continue;
         if (building->accepts(m_target, probe))
             return true;
     }
@@ -309,14 +312,45 @@ void RuleCommandUpgrade::execute(RuleContext& context)
     float const offset = building->getSegmentOffset();
     Path* path = building->getPath();
 
+    // An upgrade replaces one building by another, and a copy of the stock is
+    // the only thing that survives the removal.
+    Resources const stock = building->getResources();
+
     context.city->removeBuilding(*building);
 
+    Building* upgraded = nullptr;
     if (node != nullptr)
-        context.city->addBuilding(m_toType, *node);
+        upgraded = &(context.city->addBuilding(m_toType, *node));
     else if ((segment != nullptr) && (path != nullptr))
-        context.city->addBuilding(m_toType, *path, *segment, offset);
+        upgraded = &(context.city->addBuilding(m_toType, *path, *segment, offset));
     else
-        context.city->addBuilding(m_toType, position);
+        upgraded = &(context.city->addBuilding(m_toType, position));
+
+    transferStock(stock, *upgraded);
+}
+
+//------------------------------------------------------------------------------
+void RuleCommandUpgrade::transferStock(Resources const& stock, Building& upgraded)
+{
+    // A house that becomes a better house keeps the people who live in it. The
+    // new building used to start from the resources of its type, so every
+    // inhabitant disappeared, and a zone that upgraded its houses emptied the
+    // city it was meant to grow.
+    Resources& kept = upgraded.getResources();
+
+    for (Resource const& resource : stock.getAll())
+    {
+        // Only what the new type declares. A shop with no room for people is
+        // given none, rather than a stock its own rules never mention.
+        if (!kept.hasResource(resource.getTypeName()))
+            continue;
+
+        // Replace what the new type starts with rather than add to it, and let
+        // addResource() drop what is above the new capacity: a tower holds more
+        // people than a shack, a shack holds fewer than a tower.
+        kept.removeResource(resource.getTypeName(), Resource::MAX_CAPACITY);
+        kept.addResource(resource.getTypeName(), resource.getAmount());
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -336,8 +370,44 @@ bool RuleCommandDestroy::validate(RuleContext& context)
 void RuleCommandDestroy::execute(RuleContext& context)
 {
     auto buildings = context.zone->getBuildingsInside(m_buildingType);
-    if (!buildings.empty())
-        context.city->removeBuilding(*buildings.front());
+    if (buildings.empty())
+        return;
+
+    // A neighbourhood in decline loses its empty houses first. The command used
+    // to take the first building of the zone, which is the oldest one, so a
+    // crowded house could fall while an empty one beside it stayed: the zone lost
+    // its inhabitants faster than it lost its buildings.
+    Building* emptiest = buildings.front();
+    uint32_t fewest = countStock(*emptiest);
+
+    for (Building* candidate : buildings)
+    {
+        uint32_t const stock = countStock(*candidate);
+        if (stock < fewest)
+        {
+            fewest = stock;
+            emptiest = candidate;
+        }
+    }
+
+    context.city->removeBuilding(*emptiest);
+}
+
+//------------------------------------------------------------------------------
+uint32_t RuleCommandDestroy::countStock(Building const& building)
+{
+    // Everything the building holds, whatever its name: the command does not
+    // know which resource the script calls its inhabitants.
+    uint32_t total = 0u;
+
+    for (Resource const& resource : building.getResources().getAll())
+    {
+        if (resource.getAmount() >= Resource::MAX_CAPACITY - total)
+            return Resource::MAX_CAPACITY;
+        total += resource.getAmount();
+    }
+
+    return total;
 }
 
 //------------------------------------------------------------------------------

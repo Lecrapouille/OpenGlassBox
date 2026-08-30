@@ -13,20 +13,25 @@
 //------------------------------------------------------------------------------
 static void usage(char const* program)
 {
-    std::cout <<
-        "Usage: " << program << " [file]\n"
-        "\n"
-        "  file                    optional .ogs ruleset or .ogc city save.\n"
-        "                          Resolved as given if the path exists,\n"
-        "                          otherwise under the build-time data path\n"
-        "                          in Simulations/. Defaults to sandbox.ogs\n"
-        "                          then its sibling sandbox.ogc.\n"
-        "\n"
-        "  -h, --help              show this message\n";
+    std::cout
+        << "Usage: " << program
+        << " [file]\n"
+           "\n"
+           "  file                    optional .ogs ruleset or .ogc city "
+           "save.\n"
+           "                          Resolved as given if the path exists,\n"
+           "                          otherwise under the build-time data "
+           "path\n"
+           "                          in simulations/. Defaults to "
+           "sandbox.ogs\n"
+           "                          then its sibling sandbox.ogc.\n"
+           "\n"
+           "  -h, --help              show this message\n";
 }
 
 //------------------------------------------------------------------------------
-static bool parseArguments(int argc, char* argv[],
+static bool parseArguments(int argc,
+                           char* argv[],
                            ogb::game::GlassBoxApp::Options& options,
                            int& exitCode)
 {

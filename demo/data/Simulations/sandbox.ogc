@@ -1,13 +1,13 @@
 save
 	ruleset sandbox.ogs
-	hash 74e2c7da56feff2de07c9bd1b43504aaa2be15879ff0f2d84cbbee3571b8a6fb
-	types [ Road Dirt Home Work Shop Residential ]
+	hash d8a0a052068b671ef0a35e4e159516f09a5dfea88b7a4cfbcfc216a4d6f4d633
+	types [ Road Dirt Shack Bodega FactoryDirty Farm Restaurant WaterTower WaterTreatment CoalPlant Landfill RecyclingCenter PoliceStation FireStation School HighSchool University Clinic Park Museum BusStop TrainStation TradeDepot OreMine CityHall ResidentialLow CommercialLow Industrial ]
 end
 
 clock 0
 
 city Paris size 12 12
-globals [ ]
+globals [ Money 2000 ResidentialDemand 40 CommercialDemand 24 IndustrialDemand 16 PoliceBudget 70 FireBudget 70 HealthBudget 70 EducationBudget 70 TransitBudget 50 WasteBudget 70 TaxResidential 9 TaxCommercial 9 TaxIndustrial 9 ]
 path Road
 	node 1 1 1
 	node 2 10 1
@@ -21,10 +21,41 @@ path Road
 	segment 5 Dirt 1 5 flow 0
 	segment 6 Dirt 5 3 flow 0
 end
-building Home on segment 1 0.25 resources [ People 4 ]
-building Home on segment 1 0.60 resources [ People 4 ]
-building Home on segment 4 0.50 resources [ People 4 ]
-building Work on segment 2 0.50 resources [ ]
-building Work on segment 3 0.40 resources [ ]
-building Shop on segment 3 0.75 resources [ ]
-zone Residential 0 0 12 12
+building Shack on segment 1 0.30 resources [ People 3 ]
+building Shack on segment 1 0.50 resources [ People 3 ]
+building Shack on segment 1 0.70 resources [ People 3 ]
+building FactoryDirty on segment 3 0.35 resources [ ]
+building FactoryDirty on segment 3 0.55 resources [ ]
+building OreMine on segment 6 0.80 resources [ ]
+building Farm on segment 3 0.80 resources [ ]
+building Bodega on segment 5 0.55 resources [ ]
+building Restaurant on segment 4 0.45 resources [ ]
+building WaterTower on node 1 resources [ ]
+building WaterTower on node 2 resources [ ]
+building WaterTower on segment 4 0.50 resources [ ]
+building WaterTower on segment 2 0.50 resources [ ]
+building WaterTower on node 3 resources [ ]
+building CoalPlant on segment 4 0.35 resources [ ]
+building CoalPlant on segment 2 0.65 resources [ ]
+building WaterTreatment on node 5 resources [ ]
+building Landfill on segment 2 0.90 resources [ ]
+building RecyclingCenter on segment 6 0.35 resources [ ]
+building PoliceStation on segment 5 0.30 resources [ ]
+building PoliceStation on segment 2 0.45 resources [ ]
+building FireStation on segment 6 0.60 resources [ ]
+building School on segment 1 0.20 resources [ ]
+building School on segment 1 0.75 resources [ ]
+building HighSchool on segment 4 0.60 resources [ ]
+building School on segment 3 0.30 resources [ ]
+building University on segment 5 0.80 resources [ ]
+building Clinic on segment 4 0.20 resources [ ]
+building Park on segment 1 0.15 resources [ ]
+building Museum on node 4 resources [ ]
+building BusStop on segment 1 0.40 resources [ ]
+building BusStop on segment 3 0.50 resources [ ]
+building TrainStation on segment 4 0.85 resources [ People 8 ]
+building TradeDepot on segment 2 0.25 resources [ ]
+building CityHall on segment 4 0.70 resources [ ]
+zone ResidentialLow 0 0 12 4
+zone CommercialLow 0 4 12 3
+zone Industrial 0 7 12 5

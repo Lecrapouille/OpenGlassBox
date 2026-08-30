@@ -174,7 +174,7 @@ while (running)
 Rulesets are plain-text `.ogs` files, loaded through the simulation:
 
 ```cpp
-if (!simulation.loadScriptFile("demo/data/Simulations/sandbox.ogs"))
+if (!simulation.loadScriptFile("demo/data/simulations/sandbox.ogs"))
 {
     std::cerr << simulation.formatScriptErrors();
     return 1;

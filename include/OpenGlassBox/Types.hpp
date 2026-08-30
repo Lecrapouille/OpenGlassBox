@@ -238,6 +238,12 @@ public:
 //! layer Water color 0x0000FF capacity 100 rules [ ]
 //! layer Grass color 0x00FF00 capacity 10 rules [ CreateGrass ]
 //! \endcode
+//!
+//! A Layer may also transport and lose its amounts by itself, without a Rule.
+//! Smoke moves to the cells nearby and fades in the air:
+//! \code
+//! layer Pollution color 0x806040 capacity 100 diffusion 24 decay 8 rate 30 minutes rules [ ]
+//! \endcode
 //==============================================================================
 class LayerType: public EntityType
 {
@@ -273,8 +279,60 @@ public:
     //! \brief Maximum amount one cell may hold. Same for every cell.
     uint32_t capacity = Resource::MAX_CAPACITY;
 
+    //! \brief Percent of a cell that moves to its four neighbours each period.
+    //!
+    //! Smoke, noise and fear of crime travel: a factory fouls the street next to
+    //! it, not only its own cell. A Rule cannot express this, because a Layer
+    //! Rule reads and writes the single cell it stands on, so the engine does it.
+    //! Zero, the default, keeps every amount where a Rule put it.
+    //!
+    //! The four neighbours share the amount equally. The remainder of that
+    //! division stays in the cell, so nothing is created and nothing is lost.
+    //! Use \c decay for a loss.
+    uint32_t diffusion = 0u;
+
+    //! \brief Percent of a cell that disappears each period.
+    //!
+    //! Pollution settles and noise stops. Without a loss every source fills the
+    //! grid until every cell reaches its capacity, and the Layer says nothing
+    //! any more. Zero, the default, keeps the amount for ever.
+    uint32_t decay = 0u;
+
+    //! \brief Period of \c diffusion and \c decay in ticks, from \c rate \c 7.
+    //! One means every tick. Not used when \c rateMinutes is set.
+    uint32_t rate = 1u;
+
+    //! \brief Period of \c diffusion and \c decay in game minutes, from
+    //! \c rate \c 30 \c minutes. Zero when the script counted ticks.
+    uint32_t rateMinutes = 0u;
+
     //! \brief Rules the Layer tries. Owned by ScriptDefinitions.
     std::vector<RuleLayer*> rules;
+
+    //--------------------------------------------------------------------------
+    //! \brief Ticks between two transport passes.
+    //! Same conversion as IRule::getPeriodTicks().
+    //!
+    //! \param[in] ticksPerMinute ticks per game minute, from settings.
+    //! Zero is treated as one.
+    //! \return the period. Never zero.
+    //--------------------------------------------------------------------------
+    [[nodiscard]] uint32_t getPeriodTicks(uint32_t ticksPerMinute) const
+    {
+        if (rateMinutes == 0u)
+            return (rate == 0u) ? 1u : rate;
+
+        uint32_t const perMinute = (ticksPerMinute == 0u) ? 1u : ticksPerMinute;
+        return rateMinutes * perMinute;
+    }
+
+    //--------------------------------------------------------------------------
+    //! \return whether the Layer transports or loses its amounts by itself.
+    //--------------------------------------------------------------------------
+    [[nodiscard]] bool spreads() const
+    {
+        return (diffusion != 0u) || (decay != 0u);
+    }
 };
 
 //==============================================================================

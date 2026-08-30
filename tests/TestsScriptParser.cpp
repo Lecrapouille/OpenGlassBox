@@ -10,8 +10,8 @@
 static std::string testCityPath()
 {
     char const* candidates[] = {
-        "../demo/data/Simulations/sandbox.ogs",
-        "demo/data/Simulations/sandbox.ogs",
+        "../demo/data/simulations/sandbox.ogs",
+        "demo/data/simulations/sandbox.ogs",
     };
     for (char const* path : candidates)
     {
@@ -47,8 +47,10 @@ TEST(TestsScript, Constructor)
         Resource const& r3 = script.getResource("People");
         ASSERT_STREQ(r3.getTypeName().c_str(), "People");
 
-        ASSERT_STREQ(script.getResource("Money").getTypeName().c_str(), "Money");
-        ASSERT_STREQ(script.getResource("Goods").getTypeName().c_str(), "Goods");
+        ASSERT_STREQ(script.getResource("Money").getTypeName().c_str(),
+                     "Money");
+        ASSERT_STREQ(script.getResource("Goods").getTypeName().c_str(),
+                     "Goods");
     }
 
     // -- Path types
@@ -60,7 +62,7 @@ TEST(TestsScript, Constructor)
 
     // -- Path Segment types
     {
-        ASSERT_EQ(defs.getSegmentTypes().size(), 1u);
+        ASSERT_EQ(defs.getSegmentTypes().size(), 2u);
         SegmentType const& s1 = script.getSegmentType("Dirt");
         ASSERT_STREQ(s1.name.c_str(), "Dirt");
         ASSERT_EQ(s1.color, 0xAAAAAAu);
@@ -86,9 +88,13 @@ TEST(TestsScript, Constructor)
     // -- Layer types
     {
         ASSERT_GE(defs.getLayerTypes().size(), 2u);
+        // A cell of the water layer is the unit a tower supplies, so its
+        // capacity is small and the tower gives away many times that amount.
         LayerType const& m1 = script.getLayerType("Water");
         ASSERT_EQ(m1.color, 0x0000FFu);
-        ASSERT_EQ(m1.capacity, 100u);
+        ASSERT_EQ(m1.capacity, 20u);
+        ASSERT_EQ(m1.decay, 10u);
+        ASSERT_EQ(m1.getPeriodTicks(20u), 2u * 60u * 20u);
         ASSERT_EQ(m1.rules.size(), 0u);
 
         LayerType const& m2 = script.getLayerType("Grass");
@@ -101,7 +107,7 @@ TEST(TestsScript, Constructor)
     // -- Building types
     {
         ASSERT_GE(defs.getBuildingTypes().size(), 2u);
-        BuildingType const& u1 = script.getBuildingType("Home");
+        BuildingType const& u1 = script.getBuildingType("House");
         ASSERT_EQ(u1.color, 0xFF00FFu);
         ASSERT_EQ(u1.radius, 1u);
         ASSERT_GE(u1.rules.size(), 1u);
@@ -114,7 +120,7 @@ TEST(TestsScript, Constructor)
         ASSERT_EQ(u1.resources.getCapacity("People"), 8u);
         ASSERT_EQ(u1.resources.getAmount("People"), 8u);
 
-        BuildingType const& u2 = script.getBuildingType("Work");
+        BuildingType const& u2 = script.getBuildingType("FactoryDirty");
         ASSERT_EQ(u2.color, 0x00AAFFu);
         ASSERT_EQ(u2.radius, 3u);
         ASSERT_GE(u2.rules.size(), 2u);
@@ -131,8 +137,14 @@ TEST(TestsScript, Constructor)
         ASSERT_STREQ(u3.targets[0].c_str(), "Restaurant");
     }
 
-    ASSERT_STREQ(script.getZoneType("Residential").name.c_str(), "Residential");
-    ASSERT_GE(script.getRuleZone("GrowHomes").getRate(), 1u);
+    // Density is what the player paints and wealth is what an upgrade brings,
+    // so a residential zone carries its density in its name and grows the
+    // poorest of its three houses.
+    ASSERT_STREQ(script.getZoneType("ResidentialLow").name.c_str(),
+                 "ResidentialLow");
+    ASSERT_GE(script.getRuleZone("GrowShack").getRate(), 1u);
+    ASSERT_GE(script.getRuleZone("UpgradeShackToHouse").getRate(), 1u);
+    ASSERT_GE(script.getRuleZone("UpgradeHouseToVilla").getRate(), 1u);
 
     // -- Layer Rules
     {
@@ -152,35 +164,50 @@ TEST(TestsScript, Constructor)
         ASSERT_GE(defs.getRuleBuildings().size(), 3u);
         RuleBuilding const& ru1 = script.getRuleBuilding("SendPeopleToWork");
         ASSERT_STREQ(ru1.m_type.c_str(), "SendPeopleToWork");
-        ASSERT_EQ(ru1.getPeriodTicks(20u), 45u * 20u);
+        ASSERT_EQ(ru1.getPeriodTicks(20u), 90u * 20u);
 
         RuleBuilding const& ru2 = script.getRuleBuilding("SendPeopleToHome");
         ASSERT_STREQ(ru2.m_type.c_str(), "SendPeopleToHome");
         ASSERT_EQ(ru2.getPeriodTicks(20u), 20u * 20u);
 
-        RuleBuilding const& ru3 = script.getRuleBuilding("UsePeopleToWater");
-        ASSERT_STREQ(ru3.m_type.c_str(), "UsePeopleToWater");
+        RuleBuilding const& ru3 = script.getRuleBuilding("SupplyWater");
+        ASSERT_STREQ(ru3.m_type.c_str(), "SupplyWater");
         ASSERT_EQ(ru3.getPeriodTicks(20u), 60u * 20u);
 
         // The goods have to reach the shops on their own wheels, otherwise
         // nothing is ever for sale.
-        RuleBuilding const& ship = script.getRuleBuilding("ShipGoods");
+        RuleBuilding const& ship = script.getRuleBuilding("ShipGoodsToShop");
         ASSERT_EQ(ship.getPeriodTicks(20u), 45u * 20u);
+
+        // A graded service costs what the player grants it. The station lists
+        // only the first level and the engine walks down the chain.
+        RuleBuilding const& patrol = script.getRuleBuilding("PatrolFull");
+        RuleBuilding const* half = patrol.getOnFail();
+        ASSERT_NE(half, nullptr);
+        ASSERT_STREQ(half->getName().c_str(), "PatrolHalf");
+        RuleBuilding const* skeleton = half->getOnFail();
+        ASSERT_NE(skeleton, nullptr);
+        ASSERT_STREQ(skeleton->getName().c_str(), "PatrolSkeleton");
+        ASSERT_EQ(skeleton->getOnFail(), nullptr);
     }
 
-    // Pollution must have a rule that takes it away, not only one that adds
-    // some: it used to saturate and pin Desirability to zero for ever.
+    // Smoke travels to the street next door and fades within the hour. Neither
+    // is something a rule can say, because a rule reads the one cell it stands
+    // on: both are recipes of the layer itself.
     {
         LayerType const& pollution = script.getLayerType("Pollution");
-        bool spreads = false;
-        bool cleans = false;
-        for (auto const* rule : pollution.rules)
-        {
-            spreads = spreads || (rule->getName() == "SpreadPollution");
-            cleans = cleans || (rule->getName() == "CleanPollution");
-        }
-        ASSERT_TRUE(spreads);
-        ASSERT_TRUE(cleans);
+        ASSERT_TRUE(pollution.spreads());
+        ASSERT_GT(pollution.diffusion, 0u);
+        ASSERT_GT(pollution.decay, 0u);
+        ASSERT_LE(pollution.diffusion + pollution.decay, 100u);
+        ASSERT_EQ(pollution.getPeriodTicks(20u), 60u * 20u);
+
+        // What lands in the soil hardly moves and hardly leaves, which is what
+        // makes an industrial wasteland a lasting problem.
+        LayerType const& ground = script.getLayerType("GroundPollution");
+        ASSERT_LT(ground.diffusion, pollution.diffusion);
+        ASSERT_LT(ground.decay, pollution.decay);
+        ASSERT_GT(ground.getPeriodTicks(20u), pollution.getPeriodTicks(20u));
     }
 }
 
@@ -249,11 +276,11 @@ TEST(TestsScript, ReportsSeveralErrors)
     Ruleset script;
 
     ASSERT_EQ(script.loadString("resourcess\n"
-                                 "  resource Water\n"
-                                 "end\n"
-                                 "paths\n"
-                                 "  path Road color notanumber\n"
-                                 "end\n"),
+                                "  resource Water\n"
+                                "end\n"
+                                "paths\n"
+                                "  path Road color notanumber\n"
+                                "end\n"),
               false);
     ASSERT_EQ(script.getErrors().size(), 2u) << script.formatErrors();
     ASSERT_EQ(script.getErrors()[0].line, 1u);
@@ -283,7 +310,7 @@ TEST(TestsScript, BadNumber)
     Ruleset script;
 
     ASSERT_EQ(script.loadString("resources\n  resource Water\nend\n"
-                                 "paths\n  path Road color notanumber\nend\n"),
+                                "paths\n  path Road color notanumber\nend\n"),
               false);
     ASSERT_EQ(script.getErrors().size(), 1u) << script.formatErrors();
     ASSERT_EQ(script.getErrors()[0].line, 5u);
@@ -335,12 +362,14 @@ TEST(TestsScript, UnknownReference)
 {
     Ruleset script;
 
-    ASSERT_EQ(script.loadString("resources\n  resource Water\nend\n"
-                                 "layers\n  layer Water color 0x0000FF capacity 10 "
-                                 "rules [ NoSuchRule ]\nend\n"),
-              false);
+    ASSERT_EQ(
+        script.loadString("resources\n  resource Water\nend\n"
+                          "layers\n  layer Water color 0x0000FF capacity 10 "
+                          "rules [ NoSuchRule ]\nend\n"),
+        false);
     ASSERT_EQ(script.getErrors().size(), 1u) << script.formatErrors();
-    ASSERT_NE(script.getErrors()[0].message.find("NoSuchRule"), std::string::npos);
+    ASSERT_NE(script.getErrors()[0].message.find("NoSuchRule"),
+              std::string::npos);
 }
 
 //------------------------------------------------------------------------------
@@ -360,26 +389,26 @@ TEST(TestsScript, DuplicateDefinition)
 }
 
 //------------------------------------------------------------------------------
-//! \brief Sections may come in any order: a rule can name a layer defined further
-//! down the file. This is what the declaration pass buys.
+//! \brief Sections may come in any order: a rule can name a layer defined
+//! further down the file. This is what the declaration pass buys.
 //------------------------------------------------------------------------------
 TEST(TestsScript, ForwardReference)
 {
     Ruleset script;
 
     ASSERT_EQ(script.loadString("layers\n"
-                                 "  layer Grass color 0x00FF00 capacity 10 "
-                                 "rules [ CreateGrass ]\n"
-                                 "end\n"
-                                 "rules\n"
-                                 "  layerRule CreateGrass\n"
-                                 "    rate 7\n"
-                                 "    layer Grass add 1\n"
-                                 "  end\n"
-                                 "end\n"
-                                 "resources\n"
-                                 "  resource Grass\n"
-                                 "end\n"),
+                                "  layer Grass color 0x00FF00 capacity 10 "
+                                "rules [ CreateGrass ]\n"
+                                "end\n"
+                                "rules\n"
+                                "  layerRule CreateGrass\n"
+                                "    rate 7\n"
+                                "    layer Grass add 1\n"
+                                "  end\n"
+                                "end\n"
+                                "resources\n"
+                                "  resource Grass\n"
+                                "end\n"),
               true)
         << script.formatErrors();
 
@@ -461,8 +490,10 @@ TEST(TestsScript, HourAndZone)
     RuleZone const& grow = script.getRuleZone("Grow");
     ASSERT_EQ(grow.getRate(), 2u);
     ASSERT_EQ(grow.getCommands().size(), 2u);
-    ASSERT_EQ(grow.getCommands()[0]->getDescription(), std::string("Count Home"));
-    ASSERT_EQ(grow.getCommands()[1]->getDescription(), std::string("Spawn Home"));
+    ASSERT_EQ(grow.getCommands()[0]->getDescription(),
+              std::string("Count Home"));
+    ASSERT_EQ(grow.getCommands()[1]->getDescription(),
+              std::string("Spawn Home"));
 
     RuleZone const& replace = script.getRuleZone("Replace");
     ASSERT_EQ(replace.getCommands()[0]->getDescription(),
@@ -479,29 +510,29 @@ TEST(TestsScript, RatesInGameTime)
 {
     Ruleset script;
 
-    ASSERT_EQ(
-        script.loadString(
-            "resources\n  resource People\nend\n"
-            "rules\n"
-            "  buildingRule EveryTick\n    rate 7\n"
-            "    local People remove 1\n  end\n"
-            "  buildingRule Spelled\n    rate 7 ticks\n"
-            "    local People remove 1\n  end\n"
-            "  buildingRule HalfHour\n    rate 30 minutes\n"
-            "    local People remove 1\n  end\n"
-            "  buildingRule OneMinute\n    rate 1 minute\n"
-            "    local People remove 1\n  end\n"
-            "  layerRule TwoHours\n    rate 2 hours\n"
-            "    layer People add 1\n  end\n"
-            "  zoneRule Daily\n    rate 1 day\n"
-            "    count Home less 3\n  end\n"
-            "end\n"
-            "buildings\n"
-            "  building Home color 0xFF00FF layerRadius 1 rules [ ] "
-            "targets [ Home ] caps [ People 4 ] resources [ ]\n"
-            "end\n"
-            "layers\n  layer People color 0xFFFF00 capacity 10 rules [ ]\nend\n"),
-        true)
+    ASSERT_EQ(script.loadString(
+                  "resources\n  resource People\nend\n"
+                  "rules\n"
+                  "  buildingRule EveryTick\n    rate 7\n"
+                  "    local People remove 1\n  end\n"
+                  "  buildingRule Spelled\n    rate 7 ticks\n"
+                  "    local People remove 1\n  end\n"
+                  "  buildingRule HalfHour\n    rate 30 minutes\n"
+                  "    local People remove 1\n  end\n"
+                  "  buildingRule OneMinute\n    rate 1 minute\n"
+                  "    local People remove 1\n  end\n"
+                  "  layerRule TwoHours\n    rate 2 hours\n"
+                  "    layer People add 1\n  end\n"
+                  "  zoneRule Daily\n    rate 1 day\n"
+                  "    count Home less 3\n  end\n"
+                  "end\n"
+                  "buildings\n"
+                  "  building Home color 0xFF00FF layerRadius 1 rules [ ] "
+                  "targets [ Home ] caps [ People 4 ] resources [ ]\n"
+                  "end\n"
+                  "layers\n  layer People color 0xFFFF00 capacity 10 rules [ "
+                  "]\nend\n"),
+              true)
         << script.formatErrors();
 
     // Counted in ticks: unchanged, whatever the length of a minute.
@@ -528,10 +559,114 @@ TEST(TestsScript, RateOfZeroIsRefused)
     Ruleset script;
 
     ASSERT_EQ(script.loadString("resources\n  resource People\nend\n"
-                                 "rules\n"
-                                 "  buildingRule Never\n    rate 0\n"
-                                 "    local People remove 1\n  end\n"
-                                 "end\n"),
+                                "rules\n"
+                                "  buildingRule Never\n    rate 0\n"
+                                "    local People remove 1\n  end\n"
+                                "end\n"),
               false);
     ASSERT_NE(script.formatErrors().find("period of zero"), std::string::npos);
+}
+
+//------------------------------------------------------------------------------
+//! \brief A layer rule runs on a cell of the map, and a cell owns no resources,
+//! so 'local' has nothing to name there. The engine used to read a null
+//! pointer.
+//------------------------------------------------------------------------------
+TEST(TestsScript, LocalInALayerRuleIsRefused)
+{
+    Ruleset script;
+
+    ASSERT_EQ(script.loadString("resources\n  resource People\nend\n"
+                                "rules\n"
+                                "  layerRule Wrong\n    rate 1\n"
+                                "    local People remove 1\n  end\n"
+                                "end\n"),
+              false);
+    ASSERT_NE(script.formatErrors().find("cannot read 'local'"),
+              std::string::npos);
+
+    // The same command inside a building rule or a zone rule is fine, and a
+    // layer rule still reaches the city with 'global'.
+    Ruleset good;
+    ASSERT_EQ(good.loadString("resources\n  resource People\nend\n"
+                              "rules\n"
+                              "  buildingRule Fine\n    rate 1\n"
+                              "    local People remove 1\n  end\n"
+                              "  layerRule AlsoFine\n    rate 1\n"
+                              "    global People remove 1\n  end\n"
+                              "end\n"),
+              true)
+        << good.formatErrors();
+}
+
+//------------------------------------------------------------------------------
+//! \brief A layer may transport and lose its amounts by itself. Smoke moves to
+//! the cells nearby and fades, and no rule can say that: a layer rule reads and
+//! writes the single cell it stands on.
+//------------------------------------------------------------------------------
+TEST(TestsScript, LayerDiffusionAndDecay)
+{
+    Ruleset script;
+
+    ASSERT_EQ(script.loadString(
+                  "resources\n  resource Water\nend\n"
+                  "layers\n"
+                  "  layer Water color 0x0000FF capacity 100 rules [ ]\n"
+                  "  layer Pollution color 0x806040 capacity 100 "
+                  "diffusion 24 decay 8 rate 30 minutes rules [ ]\n"
+                  "  layer Noise color 0x888888 capacity 100 "
+                  "diffusion 40 rate 5 rules [ ]\n"
+                  "end\n"),
+              true)
+        << script.formatErrors();
+
+    // A layer that says nothing keeps every amount where a rule put it, which
+    // is what every layer written before this existed expects.
+    ASSERT_EQ(script.getLayerType("Water").diffusion, 0u);
+    ASSERT_EQ(script.getLayerType("Water").decay, 0u);
+    ASSERT_FALSE(script.getLayerType("Water").spreads());
+
+    ASSERT_EQ(script.getLayerType("Pollution").diffusion, 24u);
+    ASSERT_EQ(script.getLayerType("Pollution").decay, 8u);
+    ASSERT_TRUE(script.getLayerType("Pollution").spreads());
+    ASSERT_EQ(script.getLayerType("Pollution").getPeriodTicks(20u), 600u);
+
+    ASSERT_EQ(script.getLayerType("Noise").diffusion, 40u);
+    ASSERT_EQ(script.getLayerType("Noise").decay, 0u);
+    ASSERT_EQ(script.getLayerType("Noise").getPeriodTicks(20u), 5u);
+}
+
+//------------------------------------------------------------------------------
+//! \brief The engine takes both shares from the same amount, so a cell cannot
+//! give away more than it holds.
+//------------------------------------------------------------------------------
+TEST(TestsScript, LayerGivingAwayMoreThanACellHoldsIsRefused)
+{
+    Ruleset script;
+
+    ASSERT_EQ(script.loadString("resources\n  resource Water\nend\n"
+                                "layers\n"
+                                "  layer Pollution color 0x806040 capacity 100 "
+                                "diffusion 80 decay 40 rules [ ]\n"
+                                "end\n"),
+              false);
+    ASSERT_NE(script.formatErrors().find("add up to 100 at most"),
+              std::string::npos);
+}
+
+//------------------------------------------------------------------------------
+//! \brief A share above one hundred has no meaning and is reported.
+//------------------------------------------------------------------------------
+TEST(TestsScript, LayerShareAboveOneHundredIsRefused)
+{
+    Ruleset script;
+
+    ASSERT_EQ(script.loadString("resources\n  resource Water\nend\n"
+                                "layers\n"
+                                "  layer Pollution color 0x806040 capacity 100 "
+                                "decay 140 rules [ ]\n"
+                                "end\n"),
+              false);
+    ASSERT_NE(script.formatErrors().find("between 0 and 100"),
+              std::string::npos);
 }

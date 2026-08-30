@@ -71,6 +71,20 @@ public:
     CellsInRadius() = default;
 
     //--------------------------------------------------------------------------
+    //! \brief Fix the random walk to a known sequence.
+    //!
+    //! Where a walk starts in the diamond decides which cell a Rule fills
+    //! first, so it decides the state of the map. Without a fixed seed the
+    //! sequence comes from the operating system and no run repeats another: a
+    //! measurement of the ground after a few game hours then holds for one run
+    //! only, which is a test that fails one time in ten and cannot be
+    //! reproduced. Call this before a run that has to be reproducible.
+    //!
+    //! \param[in] seed the sequence to use.
+    //--------------------------------------------------------------------------
+    static void setSeed(uint32_t seed);
+
+    //--------------------------------------------------------------------------
     //! \brief Start a walk around a cell.
     //!
     //! \param[in] radius reach in cells, as taxicab distance. Zero walks only

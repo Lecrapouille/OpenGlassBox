@@ -223,3 +223,189 @@ TEST(TestsLayer, executeRulesNonRandom)
     layer.executeRules(cityWorld.world.getCities());
     ASSERT_EQ(layer.m_ticks, 2u);
 }
+
+//------------------------------------------------------------------------------
+//! \brief A layer that only diffuses moves its amounts and keeps their total.
+//! Smoke travels to the streets nearby, and nothing is created on the way.
+//------------------------------------------------------------------------------
+TEST(TestsLayer, DiffusionMovesTheAmountAndKeepsTheTotal)
+{
+    TestWorld cityWorld("Paris", 32u, 32u);
+    LayerType type("Pollution");
+    type.capacity = 1000u;
+    type.diffusion = 100u;
+    Layer layer(type, cityWorld.world);
+
+    Cell const source{ 5, 5 };
+    layer.setResource(source, 400u);
+    ASSERT_EQ(layer.getTotalResource(), 400u);
+
+    layer.spreadAndFade();
+
+    // The whole amount left, and the four neighbours took an equal share.
+    ASSERT_EQ(layer.getResource(source), 0u);
+    ASSERT_EQ(layer.getResource(Cell{ 4, 5 }), 100u);
+    ASSERT_EQ(layer.getResource(Cell{ 6, 5 }), 100u);
+    ASSERT_EQ(layer.getResource(Cell{ 5, 4 }), 100u);
+    ASSERT_EQ(layer.getResource(Cell{ 5, 6 }), 100u);
+    ASSERT_EQ(layer.getTotalResource(), 400u);
+
+    // A diagonal cell is reached on the second pass, not on the first: an amount
+    // travels one cell per period, whatever the order the grid is written in.
+    ASSERT_EQ(layer.getResource(Cell{ 4, 4 }), 0u);
+    layer.spreadAndFade();
+    // Two of the four cells filled above are next to this one, and each gives it
+    // a quarter of what it holds.
+    ASSERT_EQ(layer.getResource(Cell{ 4, 4 }), 50u);
+    ASSERT_EQ(layer.getTotalResource(), 400u);
+}
+
+//------------------------------------------------------------------------------
+//! \brief The remainder of the division by four stays in the cell, so an amount
+//! that four neighbours cannot share equally is still not lost.
+//------------------------------------------------------------------------------
+TEST(TestsLayer, DiffusionLosesNothingToRounding)
+{
+    TestWorld cityWorld("Paris", 32u, 32u);
+    LayerType type("Noise");
+    type.capacity = 1000u;
+    type.diffusion = 50u;
+    Layer layer(type, cityWorld.world);
+
+    layer.setResource(Cell{ 8, 8 }, 999u);
+
+    for (uint32_t i = 0u; i < 20u; ++i)
+    {
+        layer.spreadAndFade();
+        ASSERT_EQ(layer.getTotalResource(), 999u);
+    }
+}
+
+//------------------------------------------------------------------------------
+//! \brief Decay makes an amount fade where it stands. Without it every source
+//! would fill the grid to its capacity and the layer would say nothing.
+//------------------------------------------------------------------------------
+TEST(TestsLayer, DecayFadesTheAmountToNothing)
+{
+    TestWorld cityWorld("Paris", 32u, 32u);
+    LayerType type("FireHazard");
+    type.capacity = 100u;
+    type.decay = 50u;
+    Layer layer(type, cityWorld.world);
+
+    Cell const cell{ 3, 7 };
+    layer.setResource(cell, 100u);
+
+    layer.spreadAndFade();
+    ASSERT_EQ(layer.getResource(cell), 50u);
+    layer.spreadAndFade();
+    ASSERT_EQ(layer.getResource(cell), 25u);
+    layer.spreadAndFade();
+    ASSERT_EQ(layer.getResource(cell), 13u);
+
+    // A share of a small amount rounds down to nothing, so the fade would stop
+    // at one. Removing at least one unit is what empties the cell in the end.
+    for (uint32_t i = 0u; i < 20u; ++i)
+        layer.spreadAndFade();
+    ASSERT_EQ(layer.getResource(cell), 0u);
+    ASSERT_EQ(layer.getTotalResource(), 0u);
+}
+
+//------------------------------------------------------------------------------
+//! \brief Diffusion crosses the border of a storage block, which means the pass
+//! has to allocate the block next to it.
+//------------------------------------------------------------------------------
+TEST(TestsLayer, DiffusionCrossesABlockBorder)
+{
+    TestWorld cityWorld("Paris", 64u, 64u);
+    LayerType type("Pollution");
+    type.capacity = 1000u;
+    type.diffusion = 100u;
+    Layer layer(type, cityWorld.world);
+
+    // The last column of the first block. Its right neighbour is in the next one.
+    Cell const border{ Layer::CHUNK_SIZE - 1, 4 };
+    layer.setResource(border, 400u);
+    ASSERT_EQ(layer.getBlockCount(), 1u);
+
+    layer.spreadAndFade();
+
+    ASSERT_EQ(layer.getResource(Cell{ Layer::CHUNK_SIZE, 4 }), 100u);
+    ASSERT_EQ(layer.getBlockCount(), 2u);
+    ASSERT_EQ(layer.getTotalResource(), 400u);
+}
+
+//------------------------------------------------------------------------------
+//! \brief A cell already full refuses what its neighbours push, so a layer with
+//! a low capacity saturates instead of counting past it.
+//------------------------------------------------------------------------------
+TEST(TestsLayer, DiffusionStopsAtTheCapacityOfACell)
+{
+    TestWorld cityWorld("Paris", 32u, 32u);
+    LayerType type("Pollution");
+    type.capacity = 10u;
+    type.diffusion = 100u;
+    Layer layer(type, cityWorld.world);
+
+    layer.setResource(Cell{ 6, 6 }, 10u);
+    layer.setResource(Cell{ 7, 6 }, 10u);
+    layer.setResource(Cell{ 5, 6 }, 10u);
+    layer.setResource(Cell{ 6, 5 }, 10u);
+    layer.setResource(Cell{ 6, 7 }, 10u);
+
+    layer.spreadAndFade();
+
+    // Every cell stays at or below the capacity of the layer.
+    for (int32_t v = 4; v < 9; ++v)
+    {
+        for (int32_t u = 4; u < 9; ++u)
+            ASSERT_LE(layer.getResource(Cell{ u, v }), 10u);
+    }
+}
+
+//------------------------------------------------------------------------------
+//! \brief Transport follows the period of the layer, not the tick.
+//------------------------------------------------------------------------------
+TEST(TestsLayer, TransportFollowsTheLayerPeriod)
+{
+    TestWorld cityWorld("Paris", 32u, 32u);
+    LayerType type("Pollution");
+    type.capacity = 100u;
+    type.decay = 50u;
+    type.rate = 3u;
+    Layer layer(type, cityWorld.world);
+
+    Cell const cell{ 2, 2 };
+    layer.setResource(cell, 100u);
+
+    layer.executeRules(cityWorld.world.getCities());
+    ASSERT_EQ(layer.getResource(cell), 100u);
+    layer.executeRules(cityWorld.world.getCities());
+    ASSERT_EQ(layer.getResource(cell), 100u);
+    layer.executeRules(cityWorld.world.getCities());
+    ASSERT_EQ(layer.getResource(cell), 50u);
+}
+
+//------------------------------------------------------------------------------
+//! \brief A layer with neither diffusion nor decay keeps every amount where a
+//! rule put it, which is what every layer written so far expects.
+//------------------------------------------------------------------------------
+TEST(TestsLayer, WithoutDiffusionNorDecayNothingMoves)
+{
+    TestWorld cityWorld("Paris", 32u, 32u);
+    LayerType type("Water");
+    type.capacity = 100u;
+    Layer layer(type, cityWorld.world);
+
+    ASSERT_FALSE(type.spreads());
+
+    Cell const cell{ 9, 9 };
+    layer.setResource(cell, 42u);
+
+    for (uint32_t i = 0u; i < 10u; ++i)
+        layer.executeRules(cityWorld.world.getCities());
+
+    ASSERT_EQ(layer.getResource(cell), 42u);
+    ASSERT_EQ(layer.getTotalResource(), 42u);
+    ASSERT_EQ(layer.getBlockCount(), 1u);
+}

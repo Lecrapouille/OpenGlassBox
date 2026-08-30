@@ -208,6 +208,15 @@ private:
     uint32_t nextColor(char const* what);
     bool nextBool(char const* what);
 
+    // -------------------------------------------------------------------------
+    //! \brief Take the next word as a share from zero to one hundred.
+    //! A value above one hundred is an error, and reads as one hundred so that
+    //! the rest of the file still parses.
+    //! \param[in] what names what is expected, for the error message.
+    //! \return the share, from 0 to 100.
+    // -------------------------------------------------------------------------
+    uint32_t nextPercent(char const* what);
+
     //--------------------------------------------------------------------------
     //! \brief Read a rule period as ticks or game time: "rate 7", "rate 30
     //! minutes", "rate 2 hours", "rate 1 day". The unit word is optional; ticks
@@ -242,6 +251,15 @@ private:
 
 private:
 
+    //! \brief Which of the three kinds of rule the parser is reading.
+    //! Each kind runs on a different thing, so each accepts other commands.
+    enum class RuleKind
+    {
+        Layer,
+        Building,
+        Zone,
+    };
+
     //! \brief Stop parsing after this many errors. Later errors usually repeat
     //! the first ones.
     static constexpr size_t MAX_ERRORS = 25u;
@@ -251,6 +269,10 @@ private:
 
     //! \brief Current pass purpose.
     Pass m_pass = Pass::Declare;
+
+    //! \brief Kind of the rule being read. Set by parseRuleLayer(),
+    //! parseRuleBuilding() and parseRuleZone(), read by parseCommand().
+    RuleKind m_ruleKind = RuleKind::Building;
 
     //! \brief Output catalogue. Not owned; valid only during parse().
     ScriptDefinitions* m_definitions = nullptr;

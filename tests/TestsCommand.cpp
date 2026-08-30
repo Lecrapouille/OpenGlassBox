@@ -258,6 +258,57 @@ TEST(TestsCommand, RuleCommandAgent)
 }
 
 // -----------------------------------------------------------------------------
+// A Rule may send an Agent to a Building whose type has another name, as long as
+// that name is in its targets. This is what lets a ruleset give a house several
+// tiers: Shack, House and Villa all answer to "Home", and none of them is called
+// "Home". The command used to compare the name of the type first and refused
+// every such delivery, while the router accepted it.
+TEST(TestsCommand, RuleCommandAgentTargetIsNotTheTypeName)
+{
+    // Declared before the world so that they outlive every Building using them.
+    BuildingType senderType("Factory");
+    BuildingType receiverType("Villa");
+    receiverType.targets.emplace_back("Home");
+    receiverType.resources.setCapacity("People", 4u);
+
+    TestWorld cityWorld("Paris", 4u, 4u);
+    City& city = cityWorld.city;
+    Path& road = city.addPath(keep<PathType>("Road"));
+    Node& n1 = road.addNode(Vector3f(0.0f, 0.0f, 0.0f));
+    Node& n2 = road.addNode(Vector3f(2.0f, 0.0f, 0.0f));
+    road.addSegment(keep<SegmentType>("Dirt", 0xAAAAAA), n1, n2);
+
+    Building& sender = city.addBuilding(senderType, n1);
+    sender.getResources().setCapacity("People", 8u);
+    sender.getResources().addResource("People", 4u);
+
+    Resources load;
+    load.addResource("People", 1u);
+    RuleCommandAgent cmd(
+        keep<AgentType>("Worker", 1.0f, 1u, 0xFFFFFF), "Home", load);
+
+    Resources globals;
+    RuleContext context;
+    context.city = &city;
+    context.building = &sender;
+    context.locals = &(sender.getResources());
+    context.globals = &globals;
+
+    // Nothing answers to "Home" yet.
+    ASSERT_FALSE(cmd.validate(context));
+
+    // A Villa is not called Home, but it accepts Home.
+    Building& villa = city.addBuilding(receiverType, n2);
+    ASSERT_TRUE(villa.accepts("Home", load));
+    ASSERT_TRUE(cmd.validate(context));
+
+    // A full Villa refuses the load again, which is the only reason left to say
+    // no: the room, not the name.
+    villa.getResources().addResource("People", 4u);
+    ASSERT_FALSE(cmd.validate(context));
+}
+
+// -----------------------------------------------------------------------------
 TEST(TestsCommand, RuleCommandHour)
 {
     SimulationClock clock(20u);

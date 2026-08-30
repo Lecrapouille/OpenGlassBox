@@ -15,8 +15,8 @@
 inline std::string testDataPath(std::string const& name)
 {
     std::vector<std::string> const candidates = {
-        "../demo/data/Simulations/" + name,
-        "demo/data/Simulations/" + name,
+        "../demo/data/simulations/" + name,
+        "demo/data/simulations/" + name,
     };
     for (std::string const& path : candidates)
     {

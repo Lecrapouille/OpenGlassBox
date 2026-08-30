@@ -218,6 +218,116 @@ void Layer::executeRules(Cities const& cities)
             executeRule(*rule, *(it.second));
         }
     }
+
+    // Transport comes after the rules, so that what a factory produced this
+    // period is carried by the next one. The other order would let one amount
+    // cross several cells in a single tick.
+    if (m_type.spreads() &&
+        (m_ticks % m_type.getPeriodTicks(perMinute) == 0u))
+    {
+        spreadAndFade();
+    }
+}
+
+// -----------------------------------------------------------------------------
+void Layer::spreadAndFade()
+{
+    // Copy the amounts this pass reads. Empty blocks are left out: they read as
+    // zero anyway, and a large grid holds many of them.
+    m_previous.clear();
+    m_spreadBlocks.clear();
+
+    for (auto const& it : m_chunks)
+    {
+        if (it.second.total == 0u)
+            continue;
+
+        m_previous[it.first] = it.second.cells;
+
+        // A cell on the border of a block gives to a cell of the next block,
+        // which may not exist yet: the pass has to write there too, and a write
+        // of a non-zero amount allocates the block on its own.
+        Cell const origin{ it.second.u0, it.second.v0 };
+        m_spreadBlocks.push_back(origin);
+        m_spreadBlocks.push_back(Cell{ origin.u - CHUNK_SIZE, origin.v });
+        m_spreadBlocks.push_back(Cell{ origin.u + CHUNK_SIZE, origin.v });
+        m_spreadBlocks.push_back(Cell{ origin.u, origin.v - CHUNK_SIZE });
+        m_spreadBlocks.push_back(Cell{ origin.u, origin.v + CHUNK_SIZE });
+    }
+
+    if (m_previous.empty())
+        return;
+
+    // Two blocks side by side each name the other, so the list repeats itself.
+    std::sort(m_spreadBlocks.begin(),
+              m_spreadBlocks.end(),
+              [](Cell const& a, Cell const& b)
+              { return (a.v != b.v) ? (a.v < b.v) : (a.u < b.u); });
+    m_spreadBlocks.erase(std::unique(m_spreadBlocks.begin(),
+                                     m_spreadBlocks.end(),
+                                     [](Cell const& a, Cell const& b)
+                                     { return (a.u == b.u) && (a.v == b.v); }),
+                         m_spreadBlocks.end());
+
+    for (Cell const& origin : m_spreadBlocks)
+    {
+        for (int32_t dv = 0; dv < CHUNK_SIZE; ++dv)
+        {
+            for (int32_t du = 0; du < CHUNK_SIZE; ++du)
+            {
+                Cell const cell{ origin.u + du, origin.v + dv };
+                setResource(cell, nextAmount(cell));
+            }
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+uint32_t Layer::nextAmount(Cell const cell) const
+{
+    uint32_t const before = previousAmount(cell);
+
+    // What the cell gives away, and what it loses on the way. The parser refuses
+    // a sum above one hundred, so the two shares never exceed the amount.
+    uint64_t const leaving = uint64_t(before) * m_type.diffusion / 100u;
+    uint64_t const share = leaving / 4u;
+    uint64_t fading = uint64_t(before) * m_type.decay / 100u;
+
+    // A share of a small amount rounds down to nothing, so a cell holding one or
+    // two units would keep them for ever and the whole grid would settle just
+    // above zero. A layer that loses always loses at least one unit, which is
+    // what lets a threshold such as "layer Pollution less 1" ever pass again.
+    if ((m_type.decay != 0u) && (before != 0u) && (fading == 0u))
+        fading = 1u;
+
+    uint64_t const gone = (share * 4u) + fading;
+
+    // The remainder of the division by four stays where it is, so a layer that
+    // only diffuses neither creates nor loses anything.
+    uint64_t amount = (before > gone) ? (uint64_t(before) - gone) : 0u;
+
+    // What the four neighbours give this cell, each by the same rule.
+    amount += uint64_t(previousAmount(Cell{ cell.u - 1, cell.v })) *
+              m_type.diffusion / 100u / 4u;
+    amount += uint64_t(previousAmount(Cell{ cell.u + 1, cell.v })) *
+              m_type.diffusion / 100u / 4u;
+    amount += uint64_t(previousAmount(Cell{ cell.u, cell.v - 1 })) *
+              m_type.diffusion / 100u / 4u;
+    amount += uint64_t(previousAmount(Cell{ cell.u, cell.v + 1 })) *
+              m_type.diffusion / 100u / 4u;
+
+    // setResource() clamps to the capacity of a cell. A cell already full simply
+    // refuses what its neighbours push, which is what a saturated Layer means.
+    return (amount > uint64_t(Resource::MAX_CAPACITY))
+               ? Resource::MAX_CAPACITY
+               : uint32_t(amount);
+}
+
+// -----------------------------------------------------------------------------
+uint32_t Layer::previousAmount(Cell const cell) const
+{
+    auto const it = m_previous.find(chunkKey(cell));
+    return (it == m_previous.end()) ? 0u : it->second[cellIndex(cell)];
 }
 
 // -----------------------------------------------------------------------------

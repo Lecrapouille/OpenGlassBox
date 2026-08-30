@@ -707,6 +707,36 @@ private:
     //--------------------------------------------------------------------------
     void executeRule(RuleLayer& rule, City& city);
 
+    //--------------------------------------------------------------------------
+    //! \brief Move a share of every cell to its neighbours and lose another share.
+    //!
+    //! See LayerType::diffusion and LayerType::decay. Called by executeRules()
+    //! on the layer period, and only when LayerType::spreads() is true.
+    //!
+    //! The pass reads the state before it and writes the state after it, which
+    //! is why it copies the amounts first. Reading the grid it is writing would
+    //! carry an amount several blocks in one pass, in the direction the sweep
+    //! happens to run.
+    //!
+    //! The pass ignores the City regions. Smoke crosses a city border, and the
+    //! grid belongs to the World, not to a City.
+    //--------------------------------------------------------------------------
+    void spreadAndFade();
+
+    //--------------------------------------------------------------------------
+    //! \brief The amount one cell holds once the current spreadAndFade() pass ends.
+    //! \param[in] cell Cell to compute.
+    //! \return What the cell keeps plus what its four neighbours give it.
+    //--------------------------------------------------------------------------
+    [[nodiscard]] uint32_t nextAmount(Cell const cell) const;
+
+    //--------------------------------------------------------------------------
+    //! \brief The amount one cell held before the current spreadAndFade() pass.
+    //! \param[in] cell Cell to read.
+    //! \return The copied amount. Zero outside the copied blocks.
+    //--------------------------------------------------------------------------
+    [[nodiscard]] uint32_t previousAmount(Cell const cell) const;
+
 private:
 
     //! \brief Layer type recipe. Shared by all layers of this kind.
@@ -742,6 +772,18 @@ private:
 
     //! \brief Reusable random-order footprint walker for uneven distribution.
     RandomCells m_randomCoordinates;
+
+    //! \brief Cells as they stood before the current spreadAndFade() pass.
+    //!     Holds the non-empty blocks only. Kept between passes so that a layer
+    //!     which diffuses does not allocate on every period. Empty on a layer
+    //!     that does not diffuse.
+    std::unordered_map<int64_t, std::array<uint32_t, size_t(CHUNK_SIZE* CHUNK_SIZE)>>
+        m_previous;
+
+    //! \brief Blocks one spreadAndFade() pass has to write: the non-empty ones
+    //!     and the neighbours an amount may reach. Kept between passes to reuse
+    //!     its memory.
+    std::vector<Cell> m_spreadBlocks;
 };
 
 //! \brief Map of layers in a World, keyed by name. The World owns them.

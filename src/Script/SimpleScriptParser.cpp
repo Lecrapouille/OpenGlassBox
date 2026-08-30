@@ -328,6 +328,22 @@ bool SimpleScriptParser::nextBool(char const* what)
     return toBool(expectToken(what));
 }
 
+uint32_t SimpleScriptParser::nextPercent(char const* what)
+{
+    Token const token = expectToken(what);
+    uint32_t const value = toUint(token);
+
+    if (value > 100u)
+    {
+        error(token,
+              "A share is a percentage, so it stays between 0 and 100, but read '" +
+                  token.text + "'");
+        return 100u;
+    }
+
+    return value;
+}
+
 // -----------------------------------------------------------------------------
 void SimpleScriptParser::parseRate(uint32_t& rate, uint32_t& rateMinutes)
 {
@@ -748,6 +764,37 @@ void SimpleScriptParser::parseLayer()
                 layer->capacity = capacity;
             }
         }
+        else if (token.text == "diffusion")
+        {
+            m_lexer.next();
+            uint32_t const diffusion =
+                nextPercent("a diffusion, in percent per period");
+            if (layer != nullptr)
+            {
+                layer->diffusion = diffusion;
+            }
+        }
+        else if (token.text == "decay")
+        {
+            m_lexer.next();
+            uint32_t const decay = nextPercent("a decay, in percent per period");
+            if (layer != nullptr)
+            {
+                layer->decay = decay;
+            }
+        }
+        else if (token.text == "rate")
+        {
+            m_lexer.next();
+            uint32_t rate = 1u;
+            uint32_t rateMinutes = 0u;
+            parseRate(rate, rateMinutes);
+            if (layer != nullptr)
+            {
+                layer->rate = rate;
+                layer->rateMinutes = rateMinutes;
+            }
+        }
         else if (token.text == "rules")
         {
             m_lexer.next();
@@ -760,6 +807,17 @@ void SimpleScriptParser::parseLayer()
         }
         else
         {
+            // A cell cannot give away more than it holds, and the engine
+            // subtracts both shares from the same amount.
+            if ((layer != nullptr) && (layer->diffusion + layer->decay > 100u))
+            {
+                error(name,
+                      "The layer '" + name.text + "' gives away " +
+                          std::to_string(layer->diffusion) +
+                          "% and loses " + std::to_string(layer->decay) +
+                          "% of a cell per period, which is more than the cell "
+                          "holds: the two have to add up to 100 at most");
+            }
             return;
         }
     }
@@ -933,6 +991,7 @@ void SimpleScriptParser::parseRuleLayer()
     }
 
     RuleLayerType type(name.text);
+    m_ruleKind = RuleKind::Layer;
 
     while (!tooManyErrors())
     {
@@ -994,6 +1053,7 @@ void SimpleScriptParser::parseRuleBuilding()
     }
 
     RuleBuildingType type(name.text);
+    m_ruleKind = RuleKind::Building;
 
     while (!tooManyErrors())
     {
@@ -1069,6 +1129,7 @@ void SimpleScriptParser::parseRuleZone()
     }
 
     RuleZoneType type(name.text);
+    m_ruleKind = RuleKind::Zone;
 
     while (!tooManyErrors())
     {
@@ -1108,6 +1169,18 @@ IRuleCommand* SimpleScriptParser::parseCommand(Token const& token)
 
     if ((token.text == "local") || (token.text == "global"))
     {
+        // A layer rule runs on a cell of the grid, and a cell owns no resources:
+        // "local" names the stock of the building or of the agent the rule runs
+        // on, and there is neither. The engine used to read a null pointer here.
+        if ((token.text == "local") && (m_ruleKind == RuleKind::Layer))
+        {
+            error(token,
+                  "A layer rule runs on a cell of the map, which owns no "
+                  "resources, so it cannot read 'local': write 'layer' to reach "
+                  "the cell, or 'global' to reach the city");
+            return nullptr;
+        }
+
         Token const name = expectToken("the name of a resource");
         if (!name.valid())
             return nullptr;

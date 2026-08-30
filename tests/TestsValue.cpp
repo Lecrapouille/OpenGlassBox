@@ -164,3 +164,31 @@ TEST(TestsValue, UndeclaredGlobalIsUnbounded)
     EXPECT_EQ(money.get(context), 3u);
     EXPECT_LT(money.get(context), money.getCapacity(context));
 }
+
+// -----------------------------------------------------------------------------
+//! \brief A local stock belongs to the Building or the Agent the rule runs on. A
+//! Layer runs its rules on cells of the map, and a cell owns nothing, so it
+//! leaves RuleContext::locals empty. Reading it read a null pointer.
+//!
+//! The parser refuses "local" inside a layerRule, which closes the door for
+//! scripts. This keeps it closed for a Rule built from C++.
+TEST(TestsValue, LocalWithoutAnEntityReadsZero)
+{
+    TestWorld cityWorld("Paris", 8u, 8u);
+    Resources globals;
+    RuleContext context;
+    context.city = &cityWorld.city;
+    context.globals = &globals;
+    context.locals = nullptr;
+
+    RuleValueLocal people(Resource("People"));
+
+    EXPECT_EQ(people.get(context), 0u);
+    EXPECT_EQ(people.getCapacity(context), 0u);
+
+    // Writing does nothing rather than crash, and reading still says zero.
+    people.add(context, 5u);
+    EXPECT_EQ(people.get(context), 0u);
+    people.remove(context, 5u);
+    EXPECT_EQ(people.get(context), 0u);
+}

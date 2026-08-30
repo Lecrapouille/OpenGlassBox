@@ -199,6 +199,22 @@ public:
                         float maxDistance = -1.0f) const;
 
     // -------------------------------------------------------------------------
+    //! \brief The cell the zone rules read their layers on.
+    //!
+    //! A zone rule asks whether a place has water, power or clean air. The place
+    //! that answers is the plot the next building would stand on, so this returns
+    //! findFreeCellNearRoad() when the zone still has room. A full zone returns
+    //! the centre of its footprint, since what is left to decide there is which
+    //! building to upgrade or to demolish.
+    //!
+    //! The reach stays at zero cells, so a threshold written in a script means
+    //! the same amount whatever the size of the rectangle the player painted.
+    //!
+    //! \return The cell to read. Always inside the footprint.
+    // -------------------------------------------------------------------------
+    [[nodiscard]] Cell getRuleCell() const;
+
+    // -------------------------------------------------------------------------
     //! \brief Find an empty footprint cell. Each cell holds at most one building.
     //! \return The cell, or nothing if the zone is full.
     // -------------------------------------------------------------------------

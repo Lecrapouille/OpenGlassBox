@@ -28,6 +28,26 @@ Zone::Zone(uint32_t id, ZoneType const& type, CellRegion const& footprint, City&
 }
 
 // -----------------------------------------------------------------------------
+Cell Zone::getRuleCell() const
+{
+    // A zone rule asks questions about a place: is there water here, is the air
+    // clean enough for a better house. The place that answers them is the plot
+    // the next building would stand on, so the rules read the layers there.
+    //
+    // The corner of the footprint used to answer instead, which is an arbitrary
+    // cell: a zone of twelve by twelve decided whether it could grow from what
+    // its cell (0,0) held, however far that was from any road.
+    std::optional<Cell> const plot = findFreeCellNearRoad();
+    if (plot.has_value())
+        return *plot;
+
+    // A full zone has no plot left. Its rules are the ones that upgrade and
+    // demolish, and the centre is the cell that best represents the whole.
+    return Cell{ m_footprint.u0 + int32_t(m_footprint.sizeU / 2u),
+                 m_footprint.v0 + int32_t(m_footprint.sizeV / 2u) };
+}
+
+// -----------------------------------------------------------------------------
 void Zone::executeRules()
 {
     m_ticks += 1u;
@@ -35,11 +55,24 @@ void Zone::executeRules()
 
     uint32_t const perMinute = m_city.getClock().getTicksPerMinute();
 
+    // Locating the plot walks the road network, so it happens once for the whole
+    // zone and only on the ticks where a rule actually runs. Periods are written
+    // in hours or in days, so that is rare.
+    bool located = false;
+
     size_t i = m_type.rules.size();
     while (i--)
     {
-        if (m_ticks % m_type.rules[i]->getPeriodTicks(perMinute) == 0u)
-            m_type.rules[i]->execute(m_context);
+        if (m_ticks % m_type.rules[i]->getPeriodTicks(perMinute) != 0u)
+            continue;
+
+        if (!located)
+        {
+            m_context.cell = getRuleCell();
+            located = true;
+        }
+
+        m_type.rules[i]->execute(m_context);
     }
 }
 

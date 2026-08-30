@@ -5,7 +5,8 @@
 //-----------------------------------------------------------------------------
 
 //! \file Panels.hpp
-//! \brief Dockable debug panels: layers, inspector, charts, traffic and time.
+//! \brief Dockable debug panels: layers, inspector, charts, budget, traffic and
+//! time.
 
 #ifndef OPEN_GLASSBOX_DEMO_PANELS_HPP
 #define OPEN_GLASSBOX_DEMO_PANELS_HPP
@@ -319,6 +320,59 @@ private:
     int m_hour = 8;
     int m_minute = 0;
     bool m_editing_time = false;
+};
+
+// ****************************************************************************
+//! \brief The dials the player turns: what share of its asking price each
+//! service is granted, and what rate each kind of building is taxed at.
+//!
+//! What a city owns and what it grants are two different things, and a city
+//! needs to be able to tell them apart: a rich city that grants its police a
+//! tenth of what it asks for has a thin patrol and money left in the bank. The
+//! treasury is a stock the rules move; a dial is a setting only the player
+//! moves, which is why it needs a panel at all. A rule can add and remove,
+//! never set, so no rule could hold a setting at its value.
+//!
+//! The list of dials is not written here. A ruleset is the game, so hard coding
+//! the services would tie the demo to one of them. The panel reads the resources
+//! the script declared and keeps them by their name: a name ending in "Budget"
+//! is a share of an asking price, from nothing to everything, and a name
+//! starting with "Tax" is a rate. The convention is documented in
+//! doc/script.md.
+// ****************************************************************************
+class BudgetPanel
+{
+public:
+
+    void draw(Simulation& simulation);
+
+    // ------------------------------------------------------------------------
+    //! \brief Whether a resource is a share granted to a service.
+    // ------------------------------------------------------------------------
+    static bool isBudget(std::string const& name);
+
+    // ------------------------------------------------------------------------
+    //! \brief Whether a resource is a rate of taxation.
+    // ------------------------------------------------------------------------
+    static bool isTax(std::string const& name);
+
+private:
+
+    void drawCity(City& city, Simulation& simulation);
+
+    //! \brief The treasury at the start of the game day being played, per city
+    //! name, so that the panel can report what the day cost. The engine does
+    //! not attribute a payment to a service, so this is the whole balance and
+    //! not a breakdown.
+    struct Ledger
+    {
+        uint32_t moneyAtDawn = 0u;
+        uint32_t lastDay = 0u;
+        int64_t previousDay = 0;
+        bool seen = false;
+    };
+
+    std::map<std::string, Ledger> m_ledgers;
 };
 
 // ****************************************************************************

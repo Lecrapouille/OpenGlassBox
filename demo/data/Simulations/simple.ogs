@@ -1,0 +1,466 @@
+# =============================================================================
+# sandbox.ogs - a small city, explained line by line.
+#
+# This file is a ruleset. It holds no map and no building: it says what a
+# building *is*, what it can hold, and what it does. The map lives next to it,
+# in sandbox.ogc. Open one and you get the other.
+#
+# Read this file from top to bottom. Each block is explained before it starts.
+#
+# HOW TO READ THE SYNTAX
+#
+#   - A block has a name and is closed by the word "end".
+#   - A "#" starts a comment. The rest of the line is ignored.
+#   - Words are bare: no quotes, no commas, no semicolon.
+#   - The order of the blocks does not matter to the engine. The order here is
+#     the order that is easiest to read.
+#   - Names are yours to choose. "People" and "Home" mean nothing to the
+#     engine; it only checks that the same word is used everywhere.
+#
+# WHAT THE CITY DOES, IN ONE PARAGRAPH
+#
+#   Houses hold people. In the morning they send them to the factories, which
+#   turn people into goods and into pollution. Trucks carry the goods to the
+#   shops and to the restaurants. At noon the workers go for lunch. In the
+#   afternoon the residents left at home go shopping, which is what makes
+#   money. In the evening everybody goes home. Pollution lowers the value of a
+#   district, and a district of low value loses its houses.
+#
+# IF YOU EDIT THIS FILE
+#
+#   A save records a fingerprint of the ruleset it was written against, and
+#   refuses to open against a ruleset that changed since. Use Apply in the
+#   Script panel of the demo: it reloads the rules and stamps the saves next
+#   to this file with the new fingerprint.
+# =============================================================================
+
+
+# =============================================================================
+# RESOURCES - the quantities the city counts.
+#
+# A resource is only a name. Nothing here says who holds it or how much.
+# Buildings hold some, layers hold some, agents carry some, and the city holds
+# some. Everything below refers to these names, so this block comes first.
+#
+# Think of them as the units of the game: not "twelve" but "twelve People".
+# =============================================================================
+resources
+	resource Water
+	resource Grass
+	resource People
+	resource Money
+	resource Goods
+	resource Power
+	resource Pollution
+	resource Trash
+	resource Happiness
+end
+
+
+# =============================================================================
+# PATHS AND SEGMENTS - the network the agents travel on.
+#
+# A "path" is a family of networks: roads here, but rails or water pipes would
+# be other paths. Two paths never meet, so an agent that starts on a road stays
+# on the road.
+#
+# A road drawn over another is cut, and the two meet at a crossroads a driver
+# can turn at. That is what "crossings" says, and it is true unless you write
+# otherwise. Add "crossings false" on a network of pipes or cables, where one
+# line passing over another means nothing, and put the junctions you do want
+# there by hand with the Nodes tool.
+#
+# A "segment" is one kind of connection between two crossroads:
+#
+#   speed      how fast an agent goes on it when it is empty.
+#   capacity   how much traffic it takes before it slows down.
+#   beta       how sharply it slows down once it is above that capacity.
+#
+# These three numbers are what the router uses to choose an itinerary. It does
+# not look for the shortest road, but for the fastest one *now*: a short busy
+# street can cost more than a long empty one.
+# =============================================================================
+paths
+	path Road color 0xAAAAAA
+end
+
+segments
+	segment Dirt color 0xAAAAAA speed 30 capacity 20 beta 4
+end
+
+
+# =============================================================================
+# AGENTS - who travels, and how fast.
+#
+# An agent is sent by a building, with a load of resources. It looks for a
+# building that answers to the name it was given, goes there, and gives the
+# load away. Then it disappears.
+#
+# The engine does not know what a "Worker" is. The five agents below differ
+# only by their colour and their speed. What makes one a worker and another a
+# truck is the rule that sends it and the load it carries.
+# =============================================================================
+agents
+	agent People color 0xFFFF00 speed 10
+	agent Worker color 0xFFFFFF speed 10
+	agent Shopper color 0xFFAA00 speed 12
+	agent Diner color 0xFF6644 speed 12
+	agent Truck color 0x8888FF speed 8
+end
+
+
+# =============================================================================
+# RULES - everything the city does.
+#
+# This is the long block, and the interesting one. A rule is a list of
+# conditions and of changes, all on the same footing.
+#
+# THE ONE THING TO REMEMBER: a rule is all or nothing. The engine reads every
+# line first. If a single one refuses, nothing happens at all, and the rule is
+# tried again later. So a house cannot send a worker it does not have, and a
+# shop cannot sell goods it never received.
+#
+# There are three kinds of rule, and each one runs on a different thing:
+#
+#   buildingRule   runs on one building.
+#   layerRule      runs on the cells of one layer.
+#   zoneRule       runs on one rectangle painted by the player.
+#
+# A rule written here does nothing yet. It has to be listed in the "rules [ ]"
+# of a building, of a layer or of a zone, further down the file. That is what
+# attaches it to something.
+#
+# THE LINES YOU WILL SEE
+#
+#   rate 30 minutes        how often the rule is tried. Game time, not real
+#                          time. A bare number would count engine ticks, and
+#                          twenty ticks make one game minute, which says
+#                          nothing to a reader. Write the unit on the same
+#                          line as the number.
+#
+#   hour between 8 18      only between 8:00 and 18:00 on the city clock. If
+#                          the first hour is the larger one, the range crosses
+#                          midnight.
+#
+#   local People greater 0    a condition on the stock of *this* building.
+#   local People remove 1     take one from it.
+#   global Money add 1        the purse of the whole city.
+#   layer Pollution add 1     the ground around the building. How far around
+#                             is the "layerRadius" of the building.
+#
+#   agent Worker to Work add [ People 1 ]
+#                          send a Worker carrying one People, looking for a
+#                          building that answers to the name "Work".
+#
+# Note that "add" and "remove" are changes, while "greater" and "less" are
+# conditions. Both are checked before anything runs.
+# =============================================================================
+rules
+
+	# -------------------------------------------------------------------------
+	# The ground. Layer rules run on cells, not on buildings.
+	# -------------------------------------------------------------------------
+
+	# Water slowly becomes grass. The interesting word is randomTilesPercent:
+	# the rule visits only nine cells out of ten, drawn at random, instead of
+	# every cell. Over time the result is the same as visiting all of them, and
+	# it costs less on a large map. It also looks better: the grass does not
+	# appear everywhere at once.
+	layerRule CreateGrass
+		rate 20 minutes
+		layer Water remove 10 randomTilesPercent 90
+		layer Grass add 1
+	end
+
+	# Pollution fades faster than it spreads on its own: what fouls a
+	# neighbourhood is the factories, not the passing of time. Compare the two
+	# periods below: 30 minutes to gain one, 15 minutes to lose one.
+	layerRule SpreadPollution
+		rate 30 minutes
+		layer Pollution add 1
+	end
+
+	layerRule CleanPollution
+		rate 15 minutes
+		layer Pollution remove 1
+	end
+
+	# Desirability says how good an address is. It is the slow variable of the
+	# city. It used to move every ten ticks, half a game minute, so a district
+	# was built and abandoned within the hour. It now takes days to turn a good
+	# address into a bad one, which is the speed a player can follow.
+	layerRule DropDesirability
+		rate 2 hours
+		layer Pollution greater 20
+		layer Desirability remove 2
+	end
+
+	layerRule RaiseDesirability
+		rate 2 hours
+		layer Pollution less 5
+		layer Desirability add 1
+	end
+
+	# -------------------------------------------------------------------------
+	# The day of a house.
+	# -------------------------------------------------------------------------
+
+	# What shares a household between the factories and the shops is the period
+	# of the rules and the number of residents, not a condition on the house:
+	# one leaves for work every three quarters of an hour here, against one
+	# every three hours in ShopForGoods. Sending one out every twenty minutes
+	# emptied the houses long before the shops opened, and every agent the city
+	# ever made was a worker.
+	#
+	# A period runs on the clock of its own building, from a random phase, so a
+	# house grown at noon starts its commute within the hour instead of waiting
+	# for the next morning.
+	buildingRule SendPeopleToWork
+		rate 45 minutes
+		hour between 8 18
+		local People greater 0
+		local People remove 1
+		agent Worker to Work add [ People 1 ]
+	end
+
+	buildingRule SendPeopleToHome
+		rate 20 minutes
+		hour between 18 22
+		local People remove 1
+		agent People to Home add [ People 1 ]
+	end
+
+	# -------------------------------------------------------------------------
+	# The day of a factory.
+	# -------------------------------------------------------------------------
+
+	# One worker present, one more item of goods, and some dirt on the ground
+	# around. This single rule is where money enters the city.
+	buildingRule ProduceGoods
+		rate 30 minutes
+		hour between 8 18
+		local People greater 0
+		local Goods add 1
+		layer Pollution add 1
+		global Money add 1
+	end
+
+	# The goods leave the factory on their own wheels. Without this the shops
+	# never had anything to sell, and the workers looked like they were carrying
+	# the stock home in the evening.
+	buildingRule ShipGoods
+		rate 45 minutes
+		local Goods remove 1
+		agent Truck to Shop add [ Goods 1 ]
+	end
+
+	# The restaurants are supplied by name. They used to answer to Shop as well,
+	# which is how a truck bound for a shop, and a resident going shopping,
+	# ended their trip at the nearest canteen instead. Two rules, two names, and
+	# each truck knows where it is going.
+	buildingRule ShipFood
+		rate 2 hours
+		local Goods remove 1
+		agent Truck to Restaurant add [ Goods 1 ]
+	end
+
+	buildingRule GoEating
+		rate 30 minutes
+		hour between 12 14
+		local People greater 0
+		local People remove 1
+		agent Diner to Restaurant add [ People 1 ]
+	end
+
+	# An example of a building writing on the ground rather than trading: the
+	# factory waters the cells around it. Change layerRadius on the building and
+	# you change how wide the effect is.
+	buildingRule UsePeopleToWater
+		rate 1 hour
+		local People greater 1
+		layer Water add 30
+	end
+
+	# -------------------------------------------------------------------------
+	# The day of a shop.
+	# -------------------------------------------------------------------------
+
+	buildingRule ShopForGoods
+		rate 3 hours
+		hour between 10 20
+		local People greater 0
+		global Money greater 0
+		local People remove 1
+		agent Shopper to Shop add [ People 1 ]
+	end
+
+	# A shop sells to the customers standing in it. Without the first line it
+	# turned its stock into money on its own, and the shoppers were decoration.
+	# This is the line that makes money follow traffic.
+	buildingRule SellGoods
+		rate 20 minutes
+		local People greater 0
+		local Goods remove 1
+		global Money add 2
+		local Happiness add 1
+	end
+
+	buildingRule ServeLunch
+		rate 15 minutes
+		local People greater 0
+		local Goods remove 1
+		local Happiness add 1
+	end
+
+	# Nobody stays where they arrived. Each building that receives people sends
+	# them on: the restaurant back to work, the shop back home. Remove these two
+	# rules and the city fills up with people stuck in a shop.
+	buildingRule SendDinersBack
+		rate 20 minutes
+		hour between 13 15
+		local People greater 0
+		local People remove 1
+		agent Worker to Work add [ People 1 ]
+	end
+
+	buildingRule ReceiveShopper
+		rate 30 minutes
+		local People greater 0
+		local People remove 1
+		agent People to Home add [ People 1 ]
+	end
+
+	# Nothing adds Trash yet. The rule is here so that you have something to
+	# start from: add "layer Trash add 1" to SellGoods and the shops will begin
+	# to dirty their street.
+	buildingRule CollectTrash
+		rate 1 hour
+		layer Trash remove 2
+	end
+
+	# -------------------------------------------------------------------------
+	# Growth. Zone rules run on the rectangle the player painted.
+	#
+	#   count Home less 10          how many Home buildings the rectangle
+	#                               already holds.
+	#   spawn Home at nearestSegment    build one against the closest road.
+	#   destroy Home                remove one.
+	#
+	# A zone with no road in reach grows nothing: a building needs a street to
+	# stand on, or no agent could ever reach it.
+	# -------------------------------------------------------------------------
+
+	zoneRule GrowHomes
+		rate 4 hours
+		count Home less 10
+		spawn Home at nearestSegment
+	end
+
+	zoneRule GrowShops
+		rate 6 hours
+		count Shop less 3
+		spawn Shop at nearestSegment
+	end
+
+	zoneRule GrowRestaurants
+		rate 12 hours
+		count Restaurant less 2
+		spawn Restaurant at nearestSegment
+	end
+
+	zoneRule GrowWorks
+		rate 8 hours
+		count Work less 3
+		spawn Work at nearestSegment
+	end
+
+	# The only rule that takes something down. Note the second condition: the
+	# zone keeps two houses whatever happens, so a district never disappears
+	# completely and can come back once the air is clean again.
+	zoneRule AbandonHomes
+		rate 1 day
+		layer Desirability less 2
+		count Home greater 2
+		destroy Home
+	end
+end
+
+
+# =============================================================================
+# BUILDINGS - the four kinds of building, and what each one is able to do.
+#
+# One line per kind. The parts of a line:
+#
+#   layerRadius 3      how far, in cells, its rules read and write the ground.
+#                      The shape is a diamond around the building. A radius of
+#                      1 is the cell itself and its four neighbours.
+#
+#   rules [ ... ]      the rules it runs. A rule missing from this list never
+#                      runs on this building, however well it is written.
+#
+#   targets [ Work ]   the name agents look for. "agent Worker to Work" ends
+#                      its trip in a building whose targets hold "Work". A
+#                      building can answer to several names.
+#
+#   caps [ People 8 ]  how much it can hold. An agent carrying one more People
+#                      to a full house is refused and keeps looking.
+#
+#   resources [ ... ]  what it holds when it is built. Houses start with eight
+#                      residents; everything else starts empty and has to be
+#                      supplied.
+#
+# Compare Work and Home below: the factory has a radius of 3 because it fouls a
+# whole neighbourhood, the house has a radius of 1 because it does almost
+# nothing to the ground.
+# =============================================================================
+buildings
+	building Home color 0xFF00FF layerRadius 1 rules [ SendPeopleToWork ShopForGoods ] targets [ Home ] caps [ People 8 Happiness 10 ] resources [ People 8 ]
+	building Work color 0x00AAFF layerRadius 3 rules [ SendPeopleToHome ProduceGoods ShipGoods ShipFood GoEating UsePeopleToWater ] targets [ Work ] caps [ People 12 Goods 20 ] resources [ ]
+	building Shop color 0xFFAA00 layerRadius 2 rules [ SellGoods ReceiveShopper CollectTrash ] targets [ Shop ] caps [ People 6 Goods 30 Happiness 20 ] resources [ ]
+	building Restaurant color 0xFF6644 layerRadius 1 rules [ ServeLunch SendDinersBack ] targets [ Restaurant ] caps [ People 8 Goods 20 Happiness 20 ] resources [ ]
+end
+
+
+# =============================================================================
+# LAYERS - the ground under the city.
+#
+# A layer is one number per cell of the map, over the whole world. "capacity"
+# is the most one cell can hold: what a rule adds above it is dropped, so
+# raising the capacity of Pollution makes a dirty district dirtier and slower
+# to clean. The demo draws each layer as a heatmap in the colour given here,
+# and a cell at capacity is a cell drawn full.
+#
+# Water and Grass are the landscape. Pollution and Desirability are the two
+# that drive the game: the factories raise the first, and the first lowers the
+# second, which in the end empties the houses.
+#
+# Trash and Power hold no rule at all. They are drawn, they can be painted by
+# hand with the Layers tool, and nothing reads them yet. They are there for you
+# to use.
+# =============================================================================
+layers
+	layer Water color 0x0000FF capacity 100 rules [  ]
+	layer Grass color 0x00FF00 capacity 10 rules [ CreateGrass ]
+	layer Pollution color 0x555555 capacity 80 rules [ SpreadPollution CleanPollution ]
+	layer Desirability color 0x88FF88 capacity 50 rules [ DropDesirability RaiseDesirability ]
+	layer Trash color 0x886644 capacity 40 rules [  ]
+	layer Power color 0xFFFF66 capacity 100 rules [  ]
+end
+
+
+# =============================================================================
+# ZONES - what the player paints on the map.
+#
+# A zone holds no building of its own. It is a rectangle plus a list of rules,
+# and those rules are what build and remove things inside it. This is the whole
+# of the RCI game: paint Residential next to a road, wait, and houses appear.
+#
+# Only Residential can lose its buildings, through AbandonHomes. Give the other
+# two a rule of the same shape and a badly placed district will empty as well.
+# =============================================================================
+zones
+	zone Residential color 0x44AA44 rules [ GrowHomes AbandonHomes ]
+	zone Commercial color 0xDDAA44 rules [ GrowShops GrowRestaurants ]
+	zone Industrial color 0xAA6644 rules [ GrowWorks ]
+end
+
