@@ -142,7 +142,7 @@ std::string dataDirectory()
 }
 
 //! \brief As given if the path exists, otherwise looked up by name in the data
-//! directories and in their Simulations/ subdirectory.
+//! directories and in their simulations/ subdirectory.
 std::string resolveDataFile(std::string const& name)
 {
     if (fileExists(name))
@@ -151,7 +151,7 @@ std::string resolveDataFile(std::string const& name)
     std::string const base = fileBasename(name);
     for (std::string const& data : dataDirectories())
     {
-        std::string const simulations = data + "Simulations/";
+        std::string const simulations = data + "simulations/";
         if (fileExists(simulations + base))
             return simulations + base;
         if (fileExists(data + name))
@@ -346,6 +346,7 @@ void GlassBoxApp::buildDefaultLayout(ImGuiID dockspace)
     ImGui::DockBuilderDockWindow("Layers", leftBottom);
     ImGui::DockBuilderDockWindow("Inspector", rightTop);
     ImGui::DockBuilderDockWindow("Traffic", rightBottom);
+    ImGui::DockBuilderDockWindow("Budget", rightBottom);
     ImGui::DockBuilderDockWindow("History", rightBottom);
     ImGui::DockBuilderDockWindow("Rule Log", bottom);
     ImGui::DockBuilderDockWindow("Charts", bottom);
@@ -563,8 +564,7 @@ void GlassBoxApp::listRulesets()
 
     // A directory hands its entries out in whatever order it pleases, and a
     // list that shuffles between runs is a list nobody can point at.
-    std::sort(m_ruleset_files.rulesets.begin(),
-              m_ruleset_files.rulesets.end());
+    std::sort(m_ruleset_files.rulesets.begin(), m_ruleset_files.rulesets.end());
 }
 
 // ----------------------------------------------------------------------------
@@ -608,7 +608,8 @@ void GlassBoxApp::drawSwitchRulesetPopup()
     if (!ImGui::IsPopupOpen(TITLE))
         ImGui::OpenPopup(TITLE);
 
-    if (!ImGui::BeginPopupModal(TITLE, nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+    if (!ImGui::BeginPopupModal(
+            TITLE, nullptr, ImGuiWindowFlags_AlwaysAutoResize))
         return;
 
     ImGui::Text("Open '%s'?", fileBasename(m_pending_ruleset).c_str());
@@ -1018,6 +1019,7 @@ void GlassBoxApp::onDrawMenuBar()
         ImGui::MenuItem("Charts", nullptr, &m_show_charts);
         ImGui::MenuItem("Script", nullptr, &m_show_script);
         ImGui::MenuItem("Simulation clock", nullptr, &m_show_time);
+        ImGui::MenuItem("Budget", nullptr, &m_show_budget);
         ImGui::MenuItem("Traffic", nullptr, &m_show_traffic);
         ImGui::MenuItem("History", nullptr, &m_show_history);
         ImGui::Separator();
@@ -1106,6 +1108,8 @@ void GlassBoxApp::onDrawPanels()
             m_rule_log.draw(*m_simulation, m_state, m_trace);
         if (m_show_charts)
             m_charts.draw(*m_simulation, m_state);
+        if (m_show_budget)
+            m_budget.draw(*m_simulation);
         if (m_show_traffic)
             m_traffic.draw(*m_simulation, m_state);
         if (m_show_script)

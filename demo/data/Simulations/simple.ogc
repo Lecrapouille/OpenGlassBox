@@ -1,0 +1,30 @@
+save
+	ruleset simple.ogs
+	hash 0c8cfec988260e57c2e70e1206c950261b6bf59621491ff0139098f95dc07a55
+	types [ Road Dirt Home Work Shop Residential ]
+end
+
+clock 0
+
+city Paris size 12 12
+globals [ ]
+path Road
+	node 1 1 1
+	node 2 10 1
+	node 3 10 10
+	node 4 1 10
+	node 5 6 6
+	segment 1 Dirt 1 2 flow 0
+	segment 2 Dirt 2 3 flow 0
+	segment 3 Dirt 3 4 flow 0
+	segment 4 Dirt 4 1 flow 0
+	segment 5 Dirt 1 5 flow 0
+	segment 6 Dirt 5 3 flow 0
+end
+building Home on segment 1 0.25 resources [ People 4 ]
+building Home on segment 1 0.60 resources [ People 4 ]
+building Home on segment 4 0.50 resources [ People 4 ]
+building Work on segment 2 0.50 resources [ ]
+building Work on segment 3 0.40 resources [ ]
+building Shop on segment 3 0.75 resources [ ]
+zone Residential 0 0 12 12

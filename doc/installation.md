@@ -74,7 +74,7 @@ Run the demo:
 
 ```sh
 ./build/OpenGlassBox-demo
-./build/OpenGlassBox-demo demo/data/Simulations/chicago.ogc
+./build/OpenGlassBox-demo demo/data/simulations/chicago.ogc
 ```
 
 ## Simulation Engine Libraries

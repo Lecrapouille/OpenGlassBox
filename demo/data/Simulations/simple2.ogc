@@ -1,13 +1,13 @@
 save
 	ruleset sandbox.ogs
-	hash 74e2c7da56feff2de07c9bd1b43504aaa2be15879ff0f2d84cbbee3571b8a6fb
-	types [ Road Dirt Work Home Shop Restaurant ]
+	hash d8a0a052068b671ef0a35e4e159516f09a5dfea88b7a4cfbcfc216a4d6f4d633
+	types [ Road Dirt FactoryDirty House Shop Restaurant WaterTower CoalPlant Landfill CityHall ]
 end
 
 clock 6988
 
 city Paris size 12 12
-globals [ ]
+globals [ Money 2000 ResidentialDemand 40 CommercialDemand 24 IndustrialDemand 16 PoliceBudget 70 FireBudget 70 HealthBudget 70 EducationBudget 70 TransitBudget 50 WasteBudget 70 TaxResidential 9 TaxCommercial 9 TaxIndustrial 9 ]
 path Road
 	node 0 1 4
 	node 1 6 4
@@ -27,8 +27,12 @@ path Road
 	segment 7 Dirt 9 6 flow 0
 	segment 8 Dirt 10 7 flow 0
 end
-building Work on segment 0 0.201932 resources [ ]
-building Home on node 8 resources [ People 8 ]
+building FactoryDirty on segment 0 0.201932 resources [ ]
+building House on node 8 resources [ People 8 ]
+building WaterTower on node 6 resources [ ]
+building CoalPlant on node 5 resources [ ]
+building Landfill on node 2 resources [ ]
+building CityHall on node 7 resources [ ]
 building Shop on node 9 resources [ ]
 building Restaurant on node 10 resources [ ]
 layer Desirability

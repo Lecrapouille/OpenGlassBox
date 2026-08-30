@@ -22,7 +22,7 @@ The project provides:
 | [Economy](doc/economy.md) | What the ruleset does, and what a real economic model would add. |
 | [Scripts](doc/script.md) | The `.ogs` language: the core of the project. |
 | [Demo application](doc/demo.md) | Tools, panels, and keyboard shortcuts. |
-| [Bundled simulations](demo/data/Simulations/README.md) | Sample rulesets and the test city walk through. |
+| [Bundled simulations](demo/data/simulations/README.md) | Sample rulesets and the test city walk through. |
 | [Integration guide](doc/integration.md) | Link the library and drive a simulation from your own code. |
 
 ## Simulation engine and rulesets

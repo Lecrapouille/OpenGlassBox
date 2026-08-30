@@ -1,11 +1,52 @@
-# Braess paradox network.
+# =============================================================================
+# braess.ogs - Braess's paradox, explained.
 #
-# Four nodes, two routes of equal cost, plus a tempting shortcut in the
-# middle. With enough Agents the shortcut raises the average travel time,
-# which is the classic counter-example of adding a road that makes everyone
-# worse off. Watch the Traffic panel: the relative gap and the total travel
-# time tell whether the assignment has settled, and the heatmap shows the
-# shortcut filling first.
+# This file is a ruleset. It holds no city of its own: it says what the roads
+# and agents are. The map lives next to it, in braess.ogc. Open one and you
+# get the other.
+#
+# WHAT BRAESS'S PARADOX IS
+#
+#   In 1968 Dietrich Braess proved something that feels wrong. If every driver
+#   picks the fastest route for himself, adding a new road can make *everyone*
+#   slower. The new link looks like a shortcut, so too many drivers take it,
+#   it jams, and the average trip takes longer than before the road was built.
+#
+#   This ruleset exists to show that effect. It is not a city builder. There
+#   are no zones, no budget, no growth: only a small road network and agents
+#   that cross it.
+#
+# THE NETWORK IN braess.ogc
+#
+#   Four nodes, two main routes from Start to End, and one extra link in the
+#   middle:
+#
+#        Start ---- Fast ---- node 2 ---- Slow ---- End
+#                     \                    /
+#                      \    Shortcut     /
+#                       \                /
+#        Start ---- Slow ---- node 3 ---- Fast ---- End
+#
+#   Without the shortcut the two routes are equal. With it, the router sends
+#   agents on what looks fastest *right now* - the same selfish choice Braess
+#   described. Raise the traffic until the shortcut fills up: total travel
+#   time goes up even though a "better" road exists.
+#
+# WHAT TO WATCH
+#
+#   Open braess.ogc and look at the Traffic panel. At low traffic both main
+#   routes share the load. As more agents leave Start, the shortcut turns red
+#   on the heatmap first. The relative gap and the total travel time tell you
+#   when the assignment has settled.
+#
+# IF YOU EDIT THIS FILE
+#
+#   A save records a fingerprint of the ruleset it was written against, and
+#   refuses to open against a ruleset that changed since. Use Apply in the
+#   Script panel of the demo: it reloads the rules and stamps the saves next
+#   to this file with the new fingerprint.
+# =============================================================================
+
 
 resources
 	resource People
@@ -15,6 +56,17 @@ paths
 	path Road color 0xAAAAAA
 end
 
+# =============================================================================
+# SEGMENTS - three kinds of road, chosen so the paradox is easy to see.
+#
+#   Fast      high speed, low capacity  - good when empty, bad when full
+#   Slow      low speed, high capacity  - never fast, but it absorbs a crowd
+#   Shortcut  very high speed, very low capacity - the link that should help
+#               and ends up hurting once enough agents use it
+#
+# speed, capacity and beta are what the router uses to pick an itinerary. It
+# does not look for the shortest road, but for the fastest one *now*.
+# =============================================================================
 segments
 	segment Fast color 0x55CC55 speed 80 capacity 8 beta 4
 	segment Slow color 0xCC5555 speed 20 capacity 40 beta 4
@@ -26,12 +78,18 @@ agents
 end
 
 rules
+
+	# Start releases one agent every four ticks. Each one is a Worker looking
+	# for End and carrying one People. Turn the rate down to send fewer agents
+	# and watch the paradox appear only at higher traffic.
 	buildingRule Send
 		rate 4
 		local People remove 1
 		agent Worker to End add [ People 1 ]
 	end
 
+	# End removes each traveller once they arrive. Without this rule agents
+	# would pile up at the destination and the network would stop moving.
 	buildingRule Absorb
 		rate 1
 		local People greater 0
@@ -39,6 +97,10 @@ rules
 	end
 end
 
+# =============================================================================
+# BUILDINGS - Start sends agents out, End absorbs them. Nothing else happens
+# on the map: the whole point is to watch traffic on the roads between them.
+# =============================================================================
 buildings
 	building Start color 0x00FF00 layerRadius 1 rules [ Send ] targets [ Start ] caps [ People 200 ] resources [ People 80 ]
 	building End color 0xFF0000 layerRadius 1 rules [ Absorb ] targets [ End ] caps [ People 200 ] resources [ ]

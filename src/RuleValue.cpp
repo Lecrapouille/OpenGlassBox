@@ -44,23 +44,41 @@ Name const& RuleValueGlobal::getTypeName() const
 
 // ----
 
+// A local stock belongs to the Building or the Agent the rule runs on. A Layer
+// runs its rules on cells of the map, and a cell owns nothing, so it leaves
+// RuleContext::locals empty. The parser refuses "local" in a layer rule, and
+// these tests are the second line of defence: a Rule built from C++ rather than
+// from a script reads zero and writes nothing instead of a null pointer.
+
 uint32_t RuleValueLocal::get(RuleContext& context)
 {
+    if (context.locals == nullptr)
+        return 0u;
+
     return context.locals->getAmount(m_resource.getTypeName());
 }
 
 uint32_t RuleValueLocal::getCapacity(RuleContext& context)
 {
+    if (context.locals == nullptr)
+        return 0u;
+
     return context.locals->getCapacity(m_resource.getTypeName());
 }
 
 void RuleValueLocal::add(RuleContext& context, uint32_t toAdd)
 {
+    if (context.locals == nullptr)
+        return;
+
     context.locals->addResource(m_resource.getTypeName(), toAdd);
 }
 
 void RuleValueLocal::remove(RuleContext& context, uint32_t toRemove)
 {
+    if (context.locals == nullptr)
+        return;
+
     context.locals->removeResource(m_resource.getTypeName(), toRemove);
 }
 
