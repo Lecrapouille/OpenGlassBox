@@ -1,4 +1,9 @@
-September 2026: version 1.0
+September 2026: version 1.1.0
+        * Add a more complete rulesets SimCity like
+        * Manage buget
+        * Cleaning code
+
+August 2026: version 1.0.0
         * After four years, refresh the whole project :)
         * Update CI: build on Linux, macOS, and Windows; publish release artifacts
         * Implement missing GlassBox concepts: zones, zone rules, opening hours, simulation clock
