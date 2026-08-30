@@ -7,19 +7,21 @@
 //! \file Editor.hpp
 //! \brief Interactive city editor: tools, previews and command history.
 
-
 #ifndef OPEN_GLASSBOX_DEMO_EDITOR_HPP
-#  define OPEN_GLASSBOX_DEMO_EDITOR_HPP
+#define OPEN_GLASSBOX_DEMO_EDITOR_HPP
 
-#  include "Host/OpenGL.hpp"
-#  include "Editor/EditCommands.hpp"
-#  include "Game/DebugState.hpp"
-#  include "OpenGlassBox/Simulation.hpp"
+#include "Editor/EditCommands.hpp"
+#include "Game/DebugState.hpp"
+#include "Host/OpenGL.hpp"
+#include "OpenGlassBox/Simulation.hpp"
 
-namespace ogb {
-namespace ui { class CityViewer; }
+namespace ogb::ui
+{
+class CityViewer;
+}
 
-namespace editor {
+namespace ogb::editor
+{
 
 // ============================================================================
 //! \brief What a click on the city view does.
@@ -57,7 +59,8 @@ enum class PanelRequest
 };
 
 // ============================================================================
-//! \brief The city editor: the current tool, its settings, and the undo history.
+//! \brief The city editor: the current tool, its settings, and the undo
+//! history.
 //!
 //! Every change the editor makes goes through a command, so undo is a property
 //! of the editor rather than something each tool reimplements. The tools do the
@@ -83,32 +86,51 @@ public:
     //! took the click, so the viewer knows not to also treat it as a selection.
     //! \param[in] hovered: whether the mouse is over the canvas.
     // ------------------------------------------------------------------------
-    bool onCanvas(Simulation& simulation, game::DebugState& state, ui::CityViewer& viewer,
+    bool onCanvas(Simulation& simulation,
+                  game::DebugState& state,
+                  ui::CityViewer const& viewer,
                   bool hovered);
 
     // ------------------------------------------------------------------------
     //! \brief Draw what the current tool is about to do: the rubber band of a
     //! road, the rectangle of the brush, the target of the bulldozer.
     // ------------------------------------------------------------------------
-    void drawPreview(Simulation& simulation, game::DebugState& state,
-                     ui::CityViewer& viewer, ImDrawList* drawList);
+    void drawPreview(Simulation const& simulation,
+                     game::DebugState const& state,
+                     ui::CityViewer const& viewer,
+                     ImDrawList* drawList);
 
     // ------------------------------------------------------------------------
     //! \brief Empty the target city. Cannot be undone.
     // ------------------------------------------------------------------------
-    void clearCity(Simulation& simulation, game::DebugState& state);
+    void clearCity(Simulation const& simulation, game::DebugState& state);
 
-    void undo(Simulation& simulation) { m_stack.undo(simulation); }
-    void redo(Simulation& simulation) { m_stack.redo(simulation); }
-    CommandStack& stack() { return m_stack; }
+    void undo(Simulation& simulation)
+    {
+        m_stack.undo(simulation);
+    }
+    void redo(Simulation& simulation)
+    {
+        m_stack.redo(simulation);
+    }
+    CommandStack& stack()
+    {
+        return m_stack;
+    }
 
     // ------------------------------------------------------------------------
     //! \brief Whether a tool other than the selector is armed. The viewer uses
     //! this to change the cursor feedback and to stop picking entities.
     // ------------------------------------------------------------------------
-    bool armed() const { return m_tool != EditTool::Select; }
+    bool armed() const
+    {
+        return m_tool != EditTool::Select;
+    }
 
-    EditTool tool() const { return m_tool; }
+    EditTool tool() const
+    {
+        return m_tool;
+    }
     void setTool(EditTool tool);
 
     // ------------------------------------------------------------------------
@@ -131,22 +153,23 @@ public:
 private:
 
     // ------------------------------------------------------------------------
-    //! \brief Make sure the target city, path, way type, building type and layer name
-    //! still exist, and pick sensible ones when they do not. Called every frame
-    //! because a script reload can replace all of them.
+    //! \brief Make sure the target city, path, way type, building type and
+    //! layer name still exist, and pick sensible ones when they do not. Called
+    //! every frame because a script reload can replace all of them.
     // ------------------------------------------------------------------------
-    void refreshTargets(Simulation& simulation);
+    void refreshTargets(Simulation const& simulation);
 
     // ------------------------------------------------------------------------
     //! \brief The city the tools act on, or nullptr when there is none.
     // ------------------------------------------------------------------------
-    City* targetCity(Simulation& simulation) const;
+    City* targetCity(Simulation const& simulation) const;
 
     // ------------------------------------------------------------------------
     //! \brief Round a world position to the grid of the target city, so that
     //! roads drawn by hand stay aligned.
     // ------------------------------------------------------------------------
-    Vector3f snap(Simulation& simulation, ui::CityViewer& viewer,
+    Vector3f snap(Simulation const& simulation,
+                  ui::CityViewer const& viewer,
                   ImVec2 const& world) const;
 
     // ------------------------------------------------------------------------
@@ -155,38 +178,47 @@ private:
     //! its roads are under the cursor the whole time, and it would never come
     //! away from where it started.
     // ------------------------------------------------------------------------
-    Vector3f snapToGrid(Simulation& simulation, ImVec2 const& world) const;
+    Vector3f snapToGrid(Simulation const& simulation,
+                        ImVec2 const& world) const;
 
-    void handleRoad(Simulation& simulation, ui::CityViewer& viewer, bool hovered);
-    void handleNode(Simulation& simulation, ui::CityViewer& viewer, bool hovered);
-    void handleBuilding(Simulation& simulation, ui::CityViewer& viewer);
-    void handlePaint(Simulation& simulation, game::DebugState& state, bool hovered);
-    void handleZone(Simulation& simulation, game::DebugState& state, bool hovered);
-    void handleBulldozer(Simulation& simulation, ui::CityViewer& viewer);
+    void handleRoad(Simulation& simulation,
+                    ui::CityViewer const& viewer,
+                    bool hovered);
+    void handleNode(Simulation& simulation,
+                    ui::CityViewer const& viewer,
+                    bool hovered);
+    void handleBuilding(Simulation& simulation, ui::CityViewer const& viewer);
+    void
+    handlePaint(Simulation& simulation, game::DebugState& state, bool hovered);
+    void
+    handleZone(Simulation& simulation, game::DebugState& state, bool hovered);
+    void handleBulldozer(Simulation& simulation, ui::CityViewer const& viewer);
 
     // ------------------------------------------------------------------------
     //! \brief Follow the rectangular drag shared by the zone and the layer
     //! brushes.
     //! \return true on the frame the stroke is finished and has to be applied.
     // ------------------------------------------------------------------------
-    bool trackBrushDrag(game::DebugState& state, bool hovered);
+    bool trackBrushDrag(game::DebugState const& state, bool hovered);
 
     // ------------------------------------------------------------------------
     //! \brief Rectangle of cells the current stroke covers, the brush size
     //! included. A click with a brush of one cell gives a single cell.
     // ------------------------------------------------------------------------
-    void brushRectangle(int32_t& u0, int32_t& v0, int32_t& u1, int32_t& v1) const;
+    void
+    brushRectangle(int32_t& u0, int32_t& v0, int32_t& u1, int32_t& v1) const;
 
     void drawBrushSlider(float width);
 
     // ------------------------------------------------------------------------
-    //! \brief Options of the zone and layer brushes. They are laid out on one row
-    //! when the canvas is wide enough and stacked otherwise, because the layer
-    //! panel can be docked in a column narrower than the controls.
+    //! \brief Options of the zone and layer brushes. They are laid out on one
+    //! row when the canvas is wide enough and stacked otherwise, because the
+    //! layer panel can be docked in a column narrower than the controls.
     // ------------------------------------------------------------------------
-    void drawZoneOptions(Simulation& simulation);
-    void drawPaintOptions(Simulation& simulation, game::DebugState& state,
-                          City* city);
+    void drawZoneOptions(Simulation const& simulation);
+    void drawPaintOptions(Simulation const& /*simulation*/,
+                          game::DebugState& state,
+                          City const* city);
 
 private:
 
@@ -202,8 +234,8 @@ private:
     std::string m_buildingType;
     std::string m_layer;
     std::string m_zoneType;
-    //! \brief Layer the layer list was last switched to, so that arming the paint
-    //! tool shows it once instead of forcing it on at every frame.
+    //! \brief Layer the layer list was last switched to, so that arming the
+    //! paint tool shows it once instead of forcing it on at every frame.
     std::string m_shownLayer;
 
     int m_paintAmount = 10;
@@ -229,7 +261,6 @@ private:
     int32_t m_dragV2 = 0;
     bool m_dragValid = false;
 };
-} // namespace editor
-} // namespace ogb
+} // namespace ogb::editor
 
 #endif

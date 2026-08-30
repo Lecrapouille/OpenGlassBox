@@ -4,37 +4,40 @@
 // Distributed under MIT License.
 //-----------------------------------------------------------------------------
 
+#include "OpenGlassBox/Simulation.hpp"
 #include "UI/Panels.hpp"
 #include "UI/Theme.hpp"
-#include "OpenGlassBox/Simulation.hpp"
 
 #include <algorithm>
 #include <set>
 
-namespace ogb {
-namespace ui {
+namespace ogb::ui
+{
 using namespace ogb::theme;
-
 
 // ----------------------------------------------------------------------------
 static char const* modeName(game::LayerMode mode)
 {
     switch (mode)
     {
-    case game::LayerMode::Heatmap: return "Heat";
-    case game::LayerMode::Contour: return "Line";
-    case game::LayerMode::Value: return "Val";
+        case game::LayerMode::Heatmap:
+            return "Heat";
+        case game::LayerMode::Contour:
+            return "Line";
+        case game::LayerMode::Value:
+            return "Val";
     }
     return "?";
 }
 
 // ----------------------------------------------------------------------------
-static void collectLayerNames(Simulation& simulation, std::set<std::string>& names)
+static void collectLayerNames(Simulation const& simulation,
+                              std::set<std::string>& names)
 {
-    for (auto& it: simulation.getCities())
+    for (auto const& [_, city] : simulation.getCities())
     {
-        for (auto& layer: it.second->getLayers())
-            names.insert(layer.second->getTypeName().str());
+        for (auto const& [layerName, layer] : city->getLayers())
+            names.insert(layer->getTypeName().str());
     }
 }
 
@@ -42,7 +45,8 @@ static void collectLayerNames(Simulation& simulation, std::set<std::string>& nam
 //! \brief One layer: visibility, colour, name, opacity and drawing mode. Each
 //! control sits in its own table column so that they line up from row to row.
 // ----------------------------------------------------------------------------
-static void drawLayerRow(Simulation& simulation, game::DebugState& state,
+static void drawLayerRow(Simulation const& simulation,
+                         game::DebugState& state,
                          std::string const& name)
 {
     ImGui::PushID(name.c_str());
@@ -51,10 +55,10 @@ static void drawLayerRow(Simulation& simulation, game::DebugState& state,
 
     uint32_t color = 0xFFFFFF;
     uint64_t total = 0u;
-    for (auto& it: simulation.getCities())
+    for (auto const& [_, city] : simulation.getCities())
     {
-        auto const layer = it.second->getLayers().find(name);
-        if (layer != it.second->getLayers().end())
+        auto const layer = city->getLayers().find(name);
+        if (layer != city->getLayers().end())
         {
             color = layer->second->getColor();
             total += layer->second->getTotalResource();
@@ -87,8 +91,7 @@ static void drawLayerRow(Simulation& simulation, game::DebugState& state,
     {
         if (ImGui::GetIO().KeyAlt)
         {
-            state.soloLayer =
-                (state.soloLayer == name) ? std::string() : name;
+            state.soloLayer = (state.soloLayer == name) ? std::string() : name;
         }
         else
         {
@@ -102,11 +105,11 @@ static void drawLayerRow(Simulation& simulation, game::DebugState& state,
         ImGui::PopStyleColor();
     if (ImGui::IsItemHovered())
     {
-        ImGui::SetTooltip(
-            "Show %s as the main heatmap.\n"
-            "Alt+click to show only this layer.\n"
-            "total: %llu",
-            name.c_str(), (unsigned long long)total);
+        ImGui::SetTooltip("Show %s as the main heatmap.\n"
+                          "Alt+click to show only this layer.\n"
+                          "total: %llu",
+                          name.c_str(),
+                          (unsigned long long)total);
     }
 
     ImGui::TableNextColumn();
@@ -119,11 +122,10 @@ static void drawLayerRow(Simulation& simulation, game::DebugState& state,
     ImGui::SetNextItemWidth(-1.0f);
     if (ImGui::BeginCombo("##mode", modeName(settings.mode)))
     {
-        game::LayerMode const modes[] = {
-            game::LayerMode::Heatmap, game::LayerMode::Contour,
-            game::LayerMode::Value
-        };
-        for (game::LayerMode mode: modes)
+        game::LayerMode const modes[] = { game::LayerMode::Heatmap,
+                                          game::LayerMode::Contour,
+                                          game::LayerMode::Value };
+        for (game::LayerMode mode : modes)
         {
             if (ImGui::Selectable(modeName(mode), settings.mode == mode))
                 settings.mode = mode;
@@ -140,7 +142,8 @@ static void drawLayerRow(Simulation& simulation, game::DebugState& state,
 }
 
 // ----------------------------------------------------------------------------
-void LayersPanel::draw(Simulation& simulation, game::DebugState& state,
+void LayersPanel::draw(Simulation& simulation,
+                       game::DebugState& state,
                        bool& open)
 {
     if (!ImGui::Begin("Layers", &open))
@@ -185,20 +188,19 @@ void LayersPanel::draw(Simulation& simulation, game::DebugState& state,
     }
 
     ImGui::TableSetupScrollFreeze(0, 1);
-    ImGui::TableSetupColumn("##visible", ImGuiTableColumnFlags_WidthFixed,
-                            ImGui::GetFrameHeight());
-    ImGui::TableSetupColumn("##color", ImGuiTableColumnFlags_WidthFixed,
-                            ImGui::GetFrameHeight());
+    ImGui::TableSetupColumn(
+        "##visible", ImGuiTableColumnFlags_WidthFixed, ImGui::GetFrameHeight());
+    ImGui::TableSetupColumn(
+        "##color", ImGuiTableColumnFlags_WidthFixed, ImGui::GetFrameHeight());
     ImGui::TableSetupColumn("layer", ImGuiTableColumnFlags_WidthStretch);
     ImGui::TableSetupColumn("opacity", ImGuiTableColumnFlags_WidthFixed, 72.0f);
     ImGui::TableSetupColumn("mode", ImGuiTableColumnFlags_WidthFixed, 62.0f);
     ImGui::TableHeadersRow();
 
-    for (std::string const& name: names)
+    for (std::string const& name : names)
         drawLayerRow(simulation, state, name);
 
     ImGui::EndTable();
     ImGui::End();
 }
-} // namespace ui
-} // namespace ogb
+} // namespace ogb::ui

@@ -21,9 +21,9 @@ namespace ogb
 //! \brief Base grid for every city: one grid, one layer per resource type.
 //!
 //! The grid is shared. Layers like pollution or land value live on the World,
-//! not in each city. Neighbouring cities share layers at their border. Each city
-//! has its own name, roads, and buildings. It owns one rectangle of cells. Its
-//! rules run inside that rectangle.
+//! not in each city. Neighbouring cities share layers at their border. Each
+//! city has its own name, roads, and buildings. It owns one rectangle of cells.
+//! Its rules run inside that rectangle.
 //!
 //! World sets tick order: cities first, then layers. Agents move and buildings
 //! update in cities first. Layers run last so each cell sees the full tick.
@@ -238,9 +238,60 @@ public:
                  std::string const& pathType,
                  SegmentType const& segmentType,
                  Vector3f const& from,
-                 Vector3f const& to);
+                 Vector3f const& to) const;
 
 private:
+
+    //==========================================================================
+    //! \brief The part of a road that falls inside one city.
+    //!
+    //! A road drawn across a border is laid as one segment per city rather than
+    //! as a single one straddling both, so that each city owns the streets on
+    //! its own ground.
+    //==========================================================================
+    struct RoadPiece
+    {
+        //! \brief City the piece is laid in. Not owned.
+        City* city;
+        //! \brief Where the piece starts, in world coordinates.
+        Vector3f a;
+        //! \brief Where it ends.
+        Vector3f b;
+    };
+
+    // -------------------------------------------------------------------------
+    //! \brief Cut a road into the parts that fall inside each city, and ask the
+    //! neighbours whether they accept theirs.
+    //!
+    //! \param[in] owner the city that asked for the road.
+    //! \param[in] from, to the ends of the road in world coordinates.
+    //! \param[in] proposal what the neighbours are asked about.
+    //! \param[out] pieces the parts to lay, in no particular order. Left empty
+    //! when the road falls outside every city.
+    //! \return false when a neighbour refused. Nothing should then be laid.
+    // -------------------------------------------------------------------------
+    bool cutRoadPerCity(City& owner,
+                        Vector3f const& from,
+                        Vector3f const& to,
+                        Listener::SegmentProposal const& proposal,
+                        std::vector<RoadPiece>& pieces) const;
+
+    // -------------------------------------------------------------------------
+    //! \brief Lay one part of a road in the city it falls inside.
+    //!
+    //! The city may not have the network yet, in which case one of the same
+    //! kind as the requester's is created for it.
+    //!
+    //! \param[in] piece the part to lay.
+    //! \param[in] owner the city that asked for the road, read for its network
+    //! kind.
+    //! \param[in] pathType network name, such as "Road".
+    //! \param[in] segmentType street recipe.
+    // -------------------------------------------------------------------------
+    static void layRoadPiece(RoadPiece const& piece,
+                             City const& owner,
+                             std::string const& pathType,
+                             SegmentType const& segmentType);
 
     //! \brief Runtime settings shared by the whole world.
     Config m_config;

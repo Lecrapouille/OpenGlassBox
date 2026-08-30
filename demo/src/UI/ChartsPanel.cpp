@@ -13,9 +13,7 @@
 #include <algorithm>
 #include <map>
 
-namespace ogb
-{
-namespace ui
+namespace ogb::ui
 {
 
 // ----------------------------------------------------------------------------
@@ -38,7 +36,7 @@ void ChartsPanel::clear()
 }
 
 // ----------------------------------------------------------------------------
-void ChartsPanel::sample(Simulation& simulation)
+void ChartsPanel::sample(Simulation const& simulation)
 {
     uint64_t const tick = simulation.getClock().getTicks();
 
@@ -60,16 +58,17 @@ void ChartsPanel::sample(Simulation& simulation)
     std::map<std::string, float> globals;
     float agents = 0.0f;
 
-    for (auto& it : simulation.getCities())
+    for (auto const& [_, cityPtr] : simulation.getCities())
     {
-        City& city = *it.second;
+        City const& city = *cityPtr;
 
-        for (auto& layer : city.getLayers())
+        for (auto const& [_, layer] : city.getLayers())
         {
-            layerTotals[layer.second->getTypeName().str()] += float(layer.second->getTotalResource());
+            layerTotals[layer->getTypeName().str()] +=
+                float(layer->getTotalResource());
         }
 
-        for (auto& agent : city.getAgents())
+        for (auto const& agent : city.getAgents())
         {
             agentCounts[agent->getTypeName().str()] += 1.0f;
             agents += 1.0f;
@@ -77,21 +76,22 @@ void ChartsPanel::sample(Simulation& simulation)
 
         for (Resource const& resource : city.getGlobals().getAll())
         {
-            globals[resource.getTypeName().str()] += float(resource.getAmount());
+            globals[resource.getTypeName().str()] +=
+                float(resource.getAmount());
         }
     }
 
-    for (auto const& it : layerTotals)
+    for (auto const& [name, total] : layerTotals)
     {
-        series("Layers", it.first).pushHours(hours, it.second);
+        series("Layers", name).pushHours(hours, total);
     }
-    for (auto const& it : agentCounts)
+    for (auto const& [name, count] : agentCounts)
     {
-        series("Agents", it.first).pushHours(hours, it.second);
+        series("Agents", name).pushHours(hours, count);
     }
-    for (auto const& it : globals)
+    for (auto const& [name, amount] : globals)
     {
-        series("Globals", it.first).pushHours(hours, it.second);
+        series("Globals", name).pushHours(hours, amount);
     }
     series("Agents", "Total").pushHours(hours, agents);
 
@@ -148,26 +148,26 @@ void ChartsPanel::draw(Simulation& simulation, game::DebugState& state)
         return;
     }
 
-    for (auto& group : m_series)
+    for (auto const& [groupName, groupSeries] : m_series)
     {
-        if (!ImGui::CollapsingHeader(group.first.c_str(),
+        if (!ImGui::CollapsingHeader(groupName.c_str(),
                                      ImGuiTreeNodeFlags_DefaultOpen))
             continue;
 
-        ImGui::PushID(group.first.c_str());
+        ImGui::PushID(groupName.c_str());
         if (ImPlot::BeginPlot("##plot", ImVec2(-1.0f, 190.0f)))
         {
             char const* yLabel =
-                (group.first == "Traffic quality") ? "percent" : nullptr;
+                (groupName == "Traffic quality") ? "percent" : nullptr;
             ImPlot::SetupAxes("hours",
                               yLabel,
                               ImPlotAxisFlags_AutoFit,
                               ImPlotAxisFlags_AutoFit);
 
-            for (auto& entry : group.second)
+            for (auto const& [_, serie] : groupSeries)
             {
-                game::TimeSeries const& serie = entry.second;
-                if (serie.empty())
+                game::TimeSeries const& series = serie;
+                if (series.empty())
                     continue;
 
                 if (!m_show_raw && !m_show_smoothed)
@@ -175,10 +175,10 @@ void ChartsPanel::draw(Simulation& simulation, game::DebugState& state)
 
                 if (m_show_raw)
                 {
-                    ImPlot::PlotLine(serie.name().c_str(),
-                                     serie.hours(),
-                                     serie.values(),
-                                     int(serie.size()));
+                    ImPlot::PlotLine(series.name().c_str(),
+                                     series.hours(),
+                                     series.values(),
+                                     int(series.size()));
                 }
 
                 if (!m_show_smoothed)
@@ -193,11 +193,11 @@ void ChartsPanel::draw(Simulation& simulation, game::DebugState& state)
                 }
                 spec.LineWeight = 2.0f;
 
-                std::string const trend = serie.name() + " (trend)";
+                std::string const trend = series.name() + " (trend)";
                 ImPlot::PlotLine(trend.c_str(),
-                                 serie.hours(),
-                                 serie.smoothed(),
-                                 int(serie.size()),
+                                 series.hours(),
+                                 series.smoothed(),
+                                 int(series.size()),
                                  spec);
             }
 
@@ -208,5 +208,4 @@ void ChartsPanel::draw(Simulation& simulation, game::DebugState& state)
 
     ImGui::End();
 }
-} // namespace ui
-} // namespace ogb
+} // namespace ogb::ui

@@ -23,9 +23,7 @@
 #include <memory>
 #include <string>
 
-namespace ogb
-{
-namespace game
+namespace ogb::game
 {
 
 // ****************************************************************************
@@ -176,7 +174,6 @@ private:
 
     uint64_t m_ticks_last_frame = 0u;
 };
-} // namespace game
-} // namespace ogb
+} // namespace ogb::game
 
 #endif

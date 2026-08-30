@@ -34,16 +34,14 @@
     "clang-format.executable": "/usr/bin/clang-format",
     "clang-format.style": "file",
     "clang-format.fallbackStyle": "Google",
-    // Configuration pour l'extension C/C++ (alternative si clang-format dédié n'est pas installé)
-    "C_Cpp.formatting": "clangFormat",
-    "C_Cpp.clang_format_path": "/usr/bin/clang-format",
-    "C_Cpp.clang_format_style": "file",
-    "C_Cpp.formattingEngine": "clangFormat",
-    // Alternative : utiliser ms-vscode.cpptools si xaver.clang-format n'est pas disponible
-    // Décommentez les lignes suivantes et changez "xaver.clang-format" en "ms-vscode.cpptools" ci-dessus
-    // "C_Cpp.default.browse.limitSymbolsToIncludedHeaders": true,
-    // Error squiggles
-    "C_Cpp.errorSquiggles": "enabled",
+    // clangd (navigation, autocomplétion) — ms-vscode.cpptools indisponible dans Cursor
+    "clangd.path": "/usr/bin/clangd-21",
+    "clangd.arguments": [
+        "--background-index",
+        "--query-driver=/usr/bin/g++*,/usr/bin/gcc*"
+    ],
+    // Désactive l'IntelliSense Microsoft si l'extension est quand même présente
+    "C_Cpp.intelliSenseEngine": "disabled",
     // Remove trailing whitespace
     "files.trimTrailingWhitespace": true,
     // SonarLint

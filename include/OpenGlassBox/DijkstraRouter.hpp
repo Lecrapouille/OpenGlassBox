@@ -58,18 +58,19 @@ public:
 
     //! \copydoc IRouter::findRoute
     [[nodiscard]] Route findRoute(Node& fromNode,
-                    Name const& searchTarget,
-                    Resources const& resources) override;
+                                  Name const& searchTarget,
+                                  Resources const& resources) override;
 
     //! \copydoc IRouter::findNextNode
     [[nodiscard]] Node* findNextNode(Node& fromNode,
-                       Name& searchTarget,
-                       Resources& resources) override;
+                                     Name& searchTarget,
+                                     Resources& resources) override;
 
     //! \copydoc IRouter::computeShortestPathCost
-    [[nodiscard]] float computeShortestPathCost(Node& fromNode,
-                                  Name const& searchTarget,
-                                  Resources const& resources) override;
+    [[nodiscard]] float
+    computeShortestPathCost(Node& fromNode,
+                            Name const& searchTarget,
+                            Resources const& resources) override;
 
     //! \copydoc IRouter::setRandomSeed
     void setRandomSeed(unsigned seed) override;
@@ -82,7 +83,7 @@ public:
     //! \param[in] fromNode the crossroads to leave.
     //! \return a neighbour, or nullptr when no road leads out.
     // -------------------------------------------------------------------------
-    [[nodiscard]] Node* findRandomNeighbor(Node& fromNode);
+    [[nodiscard]] Node* findRandomNeighbor(Node const& fromNode);
 
 private:
 
@@ -141,10 +142,60 @@ private:
     void beginSearch(size_t nodeCount);
 
     // -------------------------------------------------------------------------
+    //! \brief Whether an entry taken off the queue is worth expanding.
+    //!
+    //! The queue is never rewritten: a cheaper way to a crossroads is pushed as
+    //! a new entry and leaves the old one behind. Those leftovers, the
+    //! crossroads already expanded, and everything that cannot beat the best
+    //! destination in hand are all dropped here.
+    //!
+    //! \param[in] index crossroads index from Node::getIndex().
+    //! \param[in] g travel time this entry reached the crossroads with.
+    //! \param[in] bestCost cost of the best destination found so far.
+    //! \return true when the entry can be skipped.
+    // -------------------------------------------------------------------------
+    [[nodiscard]] bool isStaleEntry(size_t index, float g, float bestCost) const;
+
+    // -------------------------------------------------------------------------
+    //! \brief Look at the buildings standing along the streets of a crossroads
+    //! and keep the cheapest one that accepts the load.
+    //!
+    //! Unlike a building on the crossroads itself, one of these does not end
+    //! the search: a crossroads one hop further may hold a cheaper one.
+    //!
+    //! \param[in] fromNode the crossroads where the search started.
+    //! \param[in] currentNode the crossroads being expanded.
+    //! \param[in] g travel time from the start to \p currentNode.
+    //! \param[in] searchTarget the name the load is looking for.
+    //! \param[in] resources the load to deliver.
+    //! \param[in,out] best the best route found so far.
+    //! \param[in,out] bestCost the cost of \p best.
+    // -------------------------------------------------------------------------
+    void considerBuildingsAlongStreets(Node const& fromNode,
+                                       Node& currentNode,
+                                       float g,
+                                       Name const& searchTarget,
+                                       Resources const& resources,
+                                       Route& best,
+                                       float& bestCost);
+
+    // -------------------------------------------------------------------------
+    //! \brief Queue the crossroads one street away, when going through this one
+    //! reaches them sooner than anything seen so far.
+    //!
+    //! \param[in] currentNode the crossroads being expanded.
+    //! \param[in] g travel time from the start to \p currentNode.
+    //! \param[in] scope the network the trip stays on. A road and a railway may
+    //! share a crossroads without a trip being allowed to change from one to
+    //! the other.
+    // -------------------------------------------------------------------------
+    void relaxStreetsFrom(Node& currentNode, float g, Path const& scope);
+
+    // -------------------------------------------------------------------------
     //! \param[in] index crossroads index from Node::index().
     //! \return true when the current search already reached it.
     // -------------------------------------------------------------------------
-    [[nodiscard]] bool isVisited(uint32_t const index) const
+    [[nodiscard]] bool isVisited(size_t const index) const
     {
         return m_stamp[index] == m_generation;
     }
@@ -158,7 +209,7 @@ private:
     //! \param[in] score travel time from the search start.
     //! \param[in] from the crossroads reached from, or nullptr for the start.
     // -------------------------------------------------------------------------
-    void setScore(uint32_t const index, float const score, Node* const from)
+    void setScore(size_t const index, float const score, Node* const from)
     {
         m_stamp[index] = m_generation;
         m_scoreFromStart[index] = score;

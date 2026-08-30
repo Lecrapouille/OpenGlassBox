@@ -13,9 +13,7 @@
 #include <string>
 #include <vector>
 
-namespace ogb
-{
-namespace ui
+namespace ogb::ui
 {
 
 //! \brief Ending that marks a share granted to a service, and the largest value
@@ -31,7 +29,7 @@ static constexpr int TAX_MAX = 20;
 static constexpr int TAX_DEFAULT = 9;
 
 // ----------------------------------------------------------------------------
-bool BudgetPanel::isBudget(std::string const& name)
+bool BudgetPanel::isBudget(std::string_view const& name)
 {
     std::string const suffix(BUDGET_SUFFIX);
     // The name has to be longer than the ending itself: a resource simply
@@ -43,7 +41,7 @@ bool BudgetPanel::isBudget(std::string const& name)
 }
 
 // ----------------------------------------------------------------------------
-bool BudgetPanel::isTax(std::string const& name)
+bool BudgetPanel::isTax(std::string_view const& name)
 {
     std::string const prefix(TAX_PREFIX);
     if (name.size() <= prefix.size())
@@ -77,7 +75,7 @@ static std::string dialLabel(std::string const& name)
 static void setGlobal(Resources& globals, std::string const& name, int value)
 {
     Resource& resource = globals.findOrAddResource(name);
-    uint32_t const wanted = uint32_t(std::max(0, value));
+    auto const wanted = uint32_t(std::max(0, value));
     uint32_t const held = resource.getAmount();
     if (wanted > held)
         resource.add(wanted - held);
@@ -98,13 +96,13 @@ static void drawDial(Resources& globals,
     // A new city seeds nothing, and a save written before a service existed
     // knows nothing of it either. Both read zero, which would switch the
     // service off without saying so, hence the value the dial starts at.
-    Resource* const held = globals.findResource(name);
+    Resource const* held = globals.findResource(name);
     if (held == nullptr)
     {
         setGlobal(globals, name, fallback);
     }
 
-    int value = int(globals.getAmount(name));
+    auto value = int(globals.getAmount(name));
     std::string const label = dialLabel(name);
 
     ImGui::SetNextItemWidth(-140.0f);
@@ -119,7 +117,7 @@ static void drawDial(Resources& globals,
 }
 
 // ----------------------------------------------------------------------------
-void BudgetPanel::drawCity(City& city, Simulation& simulation)
+void BudgetPanel::drawCity(City& city, Simulation const& simulation)
 {
     Resources& globals = city.getGlobals();
 
@@ -127,12 +125,13 @@ void BudgetPanel::drawCity(City& city, Simulation& simulation)
     // because that is the order the author of the ruleset grouped them in.
     std::vector<std::string> budgets;
     std::vector<std::string> taxes;
-    for (auto const& it : simulation.getRuleset().getDefinitions().getResources())
+    for (auto const& [name, _] :
+         simulation.getRuleset().getDefinitions().getResources())
     {
-        if (isBudget(it.first))
-            budgets.push_back(it.first);
-        else if (isTax(it.first))
-            taxes.push_back(it.first);
+        if (isBudget(name))
+            budgets.push_back(name);
+        else if (isTax(name))
+            taxes.push_back(name);
     }
 
     if (budgets.empty() && taxes.empty())
@@ -180,10 +179,12 @@ void BudgetPanel::drawCity(City& city, Simulation& simulation)
     int64_t const yesterday = ledger.previousDay;
     ImGui::SameLine();
     if (yesterday > 0)
-        ImGui::TextColored(ImVec4(0.4f, 0.9f, 0.4f, 1.0f), "(+%lld / day)",
+        ImGui::TextColored(ImVec4(0.4f, 0.9f, 0.4f, 1.0f),
+                           "(+%lld / day)",
                            static_cast<long long>(yesterday));
     else if (yesterday < 0)
-        ImGui::TextColored(ImVec4(0.9f, 0.4f, 0.4f, 1.0f), "(%lld / day)",
+        ImGui::TextColored(ImVec4(0.9f, 0.4f, 0.4f, 1.0f),
+                           "(%lld / day)",
                            static_cast<long long>(yesterday));
     else
         ImGui::TextDisabled("(balanced)");
@@ -233,7 +234,7 @@ void BudgetPanel::drawCity(City& city, Simulation& simulation)
 }
 
 // ----------------------------------------------------------------------------
-void BudgetPanel::draw(Simulation& simulation)
+void BudgetPanel::draw(Simulation const& simulation)
 {
     if (!ImGui::Begin("Budget"))
     {
@@ -249,9 +250,9 @@ void BudgetPanel::draw(Simulation& simulation)
     }
 
     bool first = true;
-    for (auto& it : simulation.getCities())
+    for (auto const& [_, cityPtr] : simulation.getCities())
     {
-        City& city = *it.second;
+        City& city = *cityPtr;
         // One city is the usual case, and naming it then only adds noise.
         if (!first || (simulation.getCities().size() > 1u))
             ImGui::SeparatorText(city.getName().c_str());
@@ -261,5 +262,4 @@ void BudgetPanel::draw(Simulation& simulation)
 
     ImGui::End();
 }
-} // namespace ui
-} // namespace ogb
+} // namespace ogb::ui

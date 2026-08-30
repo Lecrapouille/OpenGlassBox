@@ -8,7 +8,8 @@
 #include "OpenGlassBox/RuleValue.hpp"
 #include "OpenGlassBox/City.hpp"
 
-namespace ogb {
+namespace ogb
+{
 
 uint32_t RuleValueGlobal::get(RuleContext& context)
 {
@@ -102,13 +103,13 @@ Layer& RuleValueLayer::layer(RuleContext& context)
 
 uint32_t RuleValueLayer::get(RuleContext& context)
 {
-    return layer(context).getResource(context.cell, context.radius,
-                                    context.city->getRegion());
+    return layer(context).getResource(
+        context.cell, context.radius, context.city->getRegion());
 }
 
 uint32_t RuleValueLayer::getCapacity(RuleContext& context)
 {
-    Layer& field = layer(context);
+    Layer const& field = layer(context);
     uint32_t const perCell = field.getCellCapacity();
 
     // get() sums every cell the radius covers, so the capacity has to be the
@@ -129,14 +130,14 @@ uint32_t RuleValueLayer::getCapacity(RuleContext& context)
 
 void RuleValueLayer::add(RuleContext& context, uint32_t toAdd)
 {
-    layer(context).addResource(context.cell, context.radius,
-                             context.city->getRegion(), toAdd);
+    layer(context).addResource(
+        context.cell, context.radius, context.city->getRegion(), toAdd);
 }
 
 void RuleValueLayer::remove(RuleContext& context, uint32_t toRemove)
 {
-    layer(context).removeResource(context.cell, context.radius,
-                                context.city->getRegion(), toRemove);
+    layer(context).removeResource(
+        context.cell, context.radius, context.city->getRegion(), toRemove);
 }
 
 Name const& RuleValueLayer::getTypeName() const

@@ -168,14 +168,15 @@ private:
 
 private:
 
-    //! \brief Layer name from the script.
-    Name m_layerId;
     //! \brief City used for the cached lookup.
     //! A Rule outlives a City. The Ruleset owns the Rule.
     //! The cache must reset when another City runs it.
     City const* m_city = nullptr;
     //! \brief Cached Layer. Valid while m_city is the running City.
     Layer* m_layer = nullptr;
+    //! \brief Layer name from the script. Declared last so that it sits in the
+    //! gap the class ends on rather than opening one in front of the pointers.
+    Name m_layerId;
 };
 
 } // namespace ogb

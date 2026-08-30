@@ -84,17 +84,16 @@ void City::update(float dt)
 {
     // Advance the time averaged traffic before the Agents move, so that they
     // all route on the same picture of the network during this tick.
-    for (auto const& it : m_paths)
+    for (auto const& [_, path] : m_paths)
     {
-        it.second->updateTrafficSmoothing(getConfig().traffic.smoothing);
+        path->updateTrafficSmoothing(getConfig().traffic.smoothing);
     }
 
     // Start from the last element for easy removing of the Agent
     size_t i = m_agents.size();
     while (i--)
     {
-        if (m_router &&
-            m_agents[i]->update(*m_router, getConfig().routing, dt))
+        if (m_router && m_agents[i]->update(*m_router, getConfig().routing, dt))
         {
             std::swap(m_agents[i], m_agents[m_agents.size() - 1u]);
             m_agents.pop_back();
@@ -128,9 +127,9 @@ void City::translate(Vector3f const& direction)
     m_position += direction;
     updateRegion();
 
-    for (auto& it : m_paths)
+    for (auto const& [_, path] : m_paths)
     {
-        it.second->translate(direction);
+        path->translate(direction);
     }
 
     for (auto const& it : m_agents)
@@ -147,9 +146,9 @@ void City::translate(Vector3f const& direction)
 // -----------------------------------------------------------------------------
 Cell City::worldToCell(Vector3f const& position) const
 {
-    // A Building built just outside the region still has to act on cells this City
-    // administers, so bring it back inside rather than let it write into the
-    // territory of a neighbour.
+    // A Building built just outside the region still has to act on cells this
+    // City administers, so bring it back inside rather than let it write into
+    // the territory of a neighbour.
     return m_region.clamp(m_world.worldToCell(position));
 }
 
@@ -203,11 +202,12 @@ Building& City::addBuilding(BuildingType const& type, Node& node)
 
 // -----------------------------------------------------------------------------
 Building& City::addBuilding(BuildingType const& type,
-                    Path& /*path*/,
-                    Segment& segment,
-                    float offset)
+                            Path& /*path*/,
+                            Segment& segment,
+                            float offset)
 {
-    m_buildings.push_back(std::make_unique<Building>(type, segment, offset, *this));
+    m_buildings.push_back(
+        std::make_unique<Building>(type, segment, offset, *this));
     Building& building = *(m_buildings.back());
     building.setId(m_nextBuildingId++);
     building.spreadRuleStart();
@@ -262,11 +262,12 @@ void City::removeBuilding(Building& building)
     m_listener->onBuildingRemoved(building);
     building.detach();
 
-    m_buildings.erase(std::remove_if(m_buildings.begin(),
-                                 m_buildings.end(),
-                                 [&building](std::unique_ptr<Building> const& it)
-                                 { return it.get() == &building; }),
-                  m_buildings.end());
+    m_buildings.erase(
+        std::remove_if(m_buildings.begin(),
+                       m_buildings.end(),
+                       [&building](std::unique_ptr<Building> const& it)
+                       { return it.get() == &building; }),
+        m_buildings.end());
 }
 
 // -----------------------------------------------------------------------------
@@ -287,7 +288,9 @@ void City::removeStuckAgents()
     while (i--)
     {
         if (!m_agents[i]->isStuck())
+        {
             continue;
+        }
 
         m_listener->onAgentRemoved(*m_agents[i]);
         std::swap(m_agents[i], m_agents[m_agents.size() - 1u]);
@@ -300,7 +303,9 @@ void City::removeSegment(Path& path, Segment& segment)
 {
     City* neighbor = m_world.findCityAt(segment.getFrom().getPosition());
     if ((neighbor == nullptr) || (neighbor == this))
+    {
         neighbor = m_world.findCityAt(segment.getTo().getPosition());
+    }
     if ((neighbor != nullptr) && (neighbor != this) &&
         !m_world.getListener().allowSegmentRemoved(*this, *neighbor, segment))
     {
@@ -329,7 +334,7 @@ void City::removeSegment(Path& path, Segment& segment)
 }
 
 // -----------------------------------------------------------------------------
-void City::moveNode(Node& node, Vector3f const& position)
+void City::moveNode(Node& node, Vector3f const& position) const
 {
     Vector3f const direction = position - node.getPosition();
 
@@ -337,13 +342,13 @@ void City::moveNode(Node& node, Vector3f const& position)
     // shorter, and Node::translate() has them measure themselves again.
     node.translate(direction);
 
-    for (Building* building: node.getBuildings())
+    for (Building* building : node.getBuildings())
     {
         building->followAnchor();
     }
-    for (Segment const* segment: node.getSegments())
+    for (Segment const* segment : node.getSegments())
     {
-        for (Building* building: segment->getBuildings())
+        for (Building* building : segment->getBuildings())
         {
             building->followAnchor();
         }
@@ -352,7 +357,7 @@ void City::moveNode(Node& node, Vector3f const& position)
     // The Agents are not moved: they are where they are, on roads that now cost
     // something else to drive. What they were told was the fastest way there no
     // longer is, so they are asked again on the next tick.
-    for (auto const& agent: m_agents)
+    for (auto const& agent : m_agents)
     {
         agent->invalidateRoute();
     }
@@ -362,16 +367,22 @@ void City::moveNode(Node& node, Vector3f const& position)
 Node& City::splitSegment(Path& path, Segment& segment, float offset)
 {
     if (offset <= 0.0f)
+    {
         return segment.getFrom();
+    }
     if (offset >= 1.0f)
+    {
         return segment.getTo();
+    }
 
     // Where the buildings stand has to be read before the segment is shortened,
     // and moveOntoSegment() mutates the very list being walked.
     std::vector<std::pair<Building*, float>> anchored;
     anchored.reserve(segment.getBuildings().size());
     for (Building* building : segment.getBuildings())
+    {
         anchored.emplace_back(building, building->getSegmentOffset());
+    }
 
     // The Agents hold the segment and an offset along it, both of which mean
     // something else once it is half as long. They keep their position and the
@@ -389,15 +400,22 @@ Node& City::splitSegment(Path& path, Segment& segment, float offset)
     for (Segment* incident : junction.getSegments())
     {
         if (incident != &segment)
+        {
             second = incident;
+        }
     }
 
-    for (auto const& it : anchored)
+    for (auto const& [building, buildingOffset] : anchored)
     {
-        if (it.second <= offset)
-            it.first->moveOntoSegment(segment, it.second / offset);
+        if (buildingOffset <= offset)
+        {
+            building->moveOntoSegment(segment, buildingOffset / offset);
+        }
         else if (second != nullptr)
-            it.first->moveOntoSegment(*second, (it.second - offset) / (1.0f - offset));
+        {
+            building->moveOntoSegment(
+                *second, (buildingOffset - offset) / (1.0f - offset));
+        }
     }
 
     return junction;
@@ -411,12 +429,17 @@ void City::removeIsolatedNodes(Path& path) const
     {
         Node& node = *path.getNodes()[i];
         if (node.hasSegments())
+        {
             continue;
+        }
         if (!node.getBuildings().empty())
+        {
             continue;
-
+        }
         for (auto const& agent : m_agents)
+        {
             agent->forget(node);
+        }
 
         path.removeNode(node);
     }
@@ -431,15 +454,19 @@ void City::clear()
         m_agents.pop_back();
     }
     while (!m_buildings.empty())
+    {
         removeBuilding(*m_buildings.back());
+    }
     while (!m_zones.empty())
+    {
         removeZone(*m_zones.back());
+    }
 
     // The graphs are emptied but kept: which kinds of network exist comes from
     // the ruleset, not from what the player drew. Dropping them would leave the
     // City with no road type to lay a road with.
-    for (auto& it : m_paths)
-        it.second->clear();
+    for (auto const& [_, path] : m_paths)
+        path->clear();
 
     m_globals = Resources();
 }
@@ -454,7 +481,9 @@ void City::removeNode(Path& path, Node& node)
     for (auto const& agent : m_agents)
     {
         for (Segment const* segment : incident)
+        {
             agent->forget(*segment);
+        }
         agent->forget(node);
         agent->invalidateRoute();
     }

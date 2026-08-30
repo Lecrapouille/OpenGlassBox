@@ -12,11 +12,11 @@
 #define OPEN_GLASSBOX_CITY_HPP
 
 #include "OpenGlassBox/Agent.hpp"
-#include "OpenGlassBox/Zone.hpp"
-#include "OpenGlassBox/Layer.hpp"
-#include "OpenGlassBox/CellRegion.hpp"
-#include "OpenGlassBox/Router.hpp"
 #include "OpenGlassBox/Building.hpp"
+#include "OpenGlassBox/CellRegion.hpp"
+#include "OpenGlassBox/Layer.hpp"
+#include "OpenGlassBox/Router.hpp"
+#include "OpenGlassBox/Zone.hpp"
 
 namespace ogb
 {
@@ -215,11 +215,14 @@ public:
     //! \param[in] type Building type from the ruleset.
     //! \param[in] path Network that owns the segment.
     //! \param[in] segment Segment where the building stands.
-    //! \param[in] offset Position along the segment, from 0 at segment.getFrom()
-    //! to 1 at segment.getTo().
+    //! \param[in] offset Position along the segment, from 0 at
+    //! segment.getFrom() to 1 at segment.getTo().
     //! \return The new building.
     // -------------------------------------------------------------------------
-    Building& addBuilding(BuildingType const& type, Path& path, Segment& segment, float offset);
+    Building& addBuilding(BuildingType const& type,
+                          Path& path,
+                          Segment& segment,
+                          float offset);
 
     // -------------------------------------------------------------------------
     //! \brief Place a building with no road attachment.
@@ -264,8 +267,8 @@ public:
     //! not this building. They find another or are removed with nowhere to
     //! unload.
     //!
-    //! \param[in] building Building to remove. Nothing may refer to it after this
-    //! call.
+    //! \param[in] building Building to remove. Nothing may refer to it after
+    //! this call.
     // -------------------------------------------------------------------------
     void removeBuilding(Building& building);
 
@@ -312,7 +315,7 @@ public:
     //! \param[in] node Crossroads to move.
     //! \param[in] position Where it goes, in world units.
     // -------------------------------------------------------------------------
-    void moveNode(Node& node, Vector3f const& position);
+    void moveNode(Node& node, Vector3f const& position) const;
 
     // -------------------------------------------------------------------------
     //! \brief Split a segment and return the new junction crossroads.
@@ -517,20 +520,12 @@ private:
     std::string m_name;
     //! \brief World that holds the grid and layers. Not owned.
     World& m_world;
-    //! \brief World position of the top-left corner of owned cells.
-    Vector3f m_position;
-    //! \brief Number of owned cells along U.
-    uint32_t m_gridSizeU;
-    //! \brief Number of owned cells along V.
-    uint32_t m_gridSizeV;
-    //! \brief Owned cells. updateRegion() keeps this in sync.
-    CellRegion m_region;
     //! \brief Next agent id. Never reused.
-    uint32_t m_nextAgentId = 0u;
+    size_t m_nextAgentId = 0u;
     //! \brief Next building id.
-    uint32_t m_nextBuildingId = 0u;
+    size_t m_nextBuildingId = 0u;
     //! \brief Next zone id.
-    uint32_t m_nextZoneId = 0u;
+    size_t m_nextZoneId = 0u;
     //! \brief City-wide resources: money, oil, electricity.
     Resources m_globals;
     //! \brief Owned networks: roads, power lines, water pipes.
@@ -547,6 +542,14 @@ private:
     City::Listener m_defaultListener;
     //! \brief Registered callbacks. Not owned.
     City::Listener* m_listener = &m_defaultListener;
+    //! \brief World position of the top-left corner of owned cells.
+    Vector3f m_position;
+    //! \brief Number of owned cells along U.
+    uint32_t m_gridSizeU;
+    //! \brief Number of owned cells along V.
+    uint32_t m_gridSizeV;
+    //! \brief Owned cells. updateRegion() keeps this in sync.
+    CellRegion m_region;
 };
 
 } // namespace ogb

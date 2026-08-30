@@ -14,8 +14,8 @@
 #include <string>
 #include <vector>
 
-namespace ogb {
-namespace ui {
+namespace ogb::ui
+{
 
 //! \brief Heights, in pixels, the two halves of the panel are shared by.
 //! Docked in a short slot, the editor keeps a few lines to type in and the
@@ -24,7 +24,6 @@ namespace ui {
 static constexpr float MIN_EDITOR_HEIGHT = 120.0f;
 static constexpr float MIN_RULES_HEIGHT = 90.0f;
 static constexpr float SQUEEZED_EDITOR_HEIGHT = 60.0f;
-
 
 // ----------------------------------------------------------------------------
 //! \brief Trailing part of a path, enough to tell two saves apart without
@@ -147,10 +146,11 @@ static void drawChecksumStatus(ScriptPanel::Checksum const& checksum,
         actions.restampSaves = true;
     if (ImGui::IsItemHovered())
     {
-        ImGui::SetTooltip("Record the fingerprint of the ruleset as it is now\n"
-                          "into those saves, so that they open again. Only the\n"
-                          "header changes; a type the script dropped is still\n"
-                          "refused by name when the save is read.");
+        ImGui::SetTooltip(
+            "Record the fingerprint of the ruleset as it is now\n"
+            "into those saves, so that they open again. Only the\n"
+            "header changes; a type the script dropped is still\n"
+            "refused by name when the save is read.");
     }
 }
 
@@ -162,7 +162,7 @@ static void drawChecksumStatus(ScriptPanel::Checksum const& checksum,
 //! one paragraph per rule, which is the form the question "what does this
 //! ruleset actually do" is asked in.
 // ----------------------------------------------------------------------------
-void ScriptPanel::drawRuleset(Simulation& simulation)
+void ScriptPanel::drawRuleset(Simulation const& simulation)
 {
     uint32_t const perMinute = simulation.getClock().getTicksPerMinute();
 
@@ -178,12 +178,18 @@ void ScriptPanel::drawRuleset(Simulation& simulation)
 
     std::vector<Row> rows;
     Ruleset const& ruleset = simulation.getRuleset();
-    for (auto const& it : ruleset.getRuleLayers())
-        rows.push_back({ "layer", it.second.get() });
-    for (auto const& it : ruleset.getRuleBuildings())
-        rows.push_back({ "building", it.second.get() });
-    for (auto const& it : ruleset.getRuleZones())
-        rows.push_back({ "zone", it.second.get() });
+    for (auto const& [_, rule] : ruleset.getRuleLayers())
+    {
+        rows.push_back({ "layer", rule.get() });
+    }
+    for (auto const& [_, rule] : ruleset.getRuleBuildings())
+    {
+        rows.push_back({ "building", rule.get() });
+    }
+    for (auto const& [_, rule] : ruleset.getRuleZones())
+    {
+        rows.push_back({ "zone", rule.get() });
+    }
 
     if (rows.empty())
     {
@@ -285,7 +291,7 @@ void ScriptPanel::drawRuleset(Simulation& simulation)
 }
 
 // ----------------------------------------------------------------------------
-void ScriptPanel::draw(Simulation& simulation,
+void ScriptPanel::draw(Simulation const& simulation,
                        std::string& text,
                        std::string const& status,
                        Checksum const& checksum,
@@ -318,7 +324,8 @@ void ScriptPanel::draw(Simulation& simulation,
     {
         ImGui::SameLine();
         ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(theme::ACCENT),
-                           "%s", status.c_str());
+                           "%s",
+                           status.c_str());
     }
 
     ImGui::Checkbox("Reload when the file changes", &options.autoReload);
@@ -346,11 +353,13 @@ void ScriptPanel::draw(Simulation& simulation,
     // text takes the larger share, and gives way down to a few lines rather
     // than leaving the rules nothing at all.
     float const available = ImGui::GetContentRegionAvail().y;
-    float const editor =
-        std::min(std::max(0.55f * available, MIN_EDITOR_HEIGHT),
-                 std::max(SQUEEZED_EDITOR_HEIGHT, available - MIN_RULES_HEIGHT));
+    float const editor = std::min(
+        std::max(0.55f * available, MIN_EDITOR_HEIGHT),
+        std::max(SQUEEZED_EDITOR_HEIGHT, available - MIN_RULES_HEIGHT));
 
-    ImGui::InputTextMultiline("##script", &text, ImVec2(-1.0f, editor),
+    ImGui::InputTextMultiline("##script",
+                              &text,
+                              ImVec2(-1.0f, editor),
                               ImGuiInputTextFlags_AllowTabInput);
 
     ImGui::SeparatorText("Rules of this ruleset");
@@ -358,5 +367,4 @@ void ScriptPanel::draw(Simulation& simulation,
 
     ImGui::End();
 }
-} // namespace ui
-} // namespace ogb
+} // namespace ogb::ui

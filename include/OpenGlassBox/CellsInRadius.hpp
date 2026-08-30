@@ -33,13 +33,14 @@ namespace ogb
 //! translation to the centre run per call.
 //!
 //! The walk can start at a random offset instead of the first one. A rule that
-//! adds one building's effect to a few cells needs this, or it would always hit the same
-//! corner of the neighbourhood.
+//! adds one building's effect to a few cells needs this, or it would always hit
+//! the same corner of the neighbourhood.
 //!
 //! Example:
 //! \code
 //! CellsInRadius around;
-//! around.init(building.getLayerRadius(), building.getCell().u, building.getCell().v,
+//! around.init(building.getLayerRadius(), building.getCell().u,
+//! building.getCell().v,
 //!             region.u0, region.getMaxU(), region.v0, region.getMaxV(),
 //!             false);
 //!
@@ -124,7 +125,8 @@ private:
     //! \param[in] radius reach as taxicab distance.
     //! \param[out] coord the offsets, packed by compress().
     //--------------------------------------------------------------------------
-    void createRelativeCoordinates(int32_t radius, RelativeCoordinates& coord);
+    void createRelativeCoordinates(int32_t radius,
+                                   RelativeCoordinates& coord) const;
 
     //--------------------------------------------------------------------------
     //! \brief Shared cache of offsets by radius.

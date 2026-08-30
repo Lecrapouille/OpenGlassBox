@@ -740,6 +740,9 @@ void SimpleScriptParser::parseLayer()
         error(name, "The layer '" + name.text + "' is defined twice");
     }
 
+    // Each keyword below sets one property, in any order and none of them
+    // required. Anything else belongs to whatever comes after the declaration,
+    // and is left in the stream for the caller to read.
     while (!tooManyErrors())
     {
         Token const& token = m_lexer.peek();
@@ -807,20 +810,28 @@ void SimpleScriptParser::parseLayer()
         }
         else
         {
-            // A cell cannot give away more than it holds, and the engine
-            // subtracts both shares from the same amount.
-            if ((layer != nullptr) && (layer->diffusion + layer->decay > 100u))
-            {
-                error(name,
-                      "The layer '" + name.text + "' gives away " +
-                          std::to_string(layer->diffusion) +
-                          "% and loses " + std::to_string(layer->decay) +
-                          "% of a cell per period, which is more than the cell "
-                          "holds: the two have to add up to 100 at most");
-            }
+            checkLayerShares(name, layer);
             return;
         }
     }
+}
+
+// -----------------------------------------------------------------------------
+void SimpleScriptParser::checkLayerShares(Token const& name,
+                                          LayerType const* layer)
+{
+    // A cell cannot give away more than it holds, and the engine subtracts both
+    // shares from the same amount. Only checkable once the whole declaration
+    // has been read, since the two keywords may come in either order.
+    if ((layer == nullptr) || (layer->diffusion + layer->decay <= 100u))
+        return;
+
+    error(name,
+          "The layer '" + name.text + "' gives away " +
+              std::to_string(layer->diffusion) + "% and loses " +
+              std::to_string(layer->decay) +
+              "% of a cell per period, which is more than the cell "
+              "holds: the two have to add up to 100 at most");
 }
 
 // =============================================================================
@@ -867,6 +878,9 @@ void SimpleScriptParser::parseBuilding()
         error(name, "The building '" + name.text + "' is defined twice");
     }
 
+    // Each keyword below sets one property, in any order and none of them
+    // required. Anything else belongs to whatever comes after the declaration,
+    // and is left in the stream for the caller to read.
     while (!tooManyErrors())
     {
         Token const& token = m_lexer.peek();
@@ -1165,45 +1179,35 @@ void SimpleScriptParser::parseRuleZone()
 // -----------------------------------------------------------------------------
 IRuleCommand* SimpleScriptParser::parseCommand(Token const& token)
 {
-    IRuleValue* target = nullptr;
+    // Some words are a whole command on their own. They read the rest of their
+    // line themselves and hand back the command.
+    if (token.text == "agent")
+        return parseAgentCommand();
+    if (token.text == "hour")
+        return parseHourCommand();
+    if (token.text == "spawn")
+        return parseSpawnCommand();
+    if (token.text == "count")
+        return parseCountCommand();
+    if (token.text == "upgrade")
+        return parseUpgradeCommand();
+    if (token.text == "destroy")
+        return parseDestroyCommand();
 
-    if ((token.text == "local") || (token.text == "global"))
-    {
-        // A layer rule runs on a cell of the grid, and a cell owns no resources:
-        // "local" names the stock of the building or of the agent the rule runs
-        // on, and there is neither. The engine used to read a null pointer here.
-        if ((token.text == "local") && (m_ruleKind == RuleKind::Layer))
-        {
-            error(token,
-                  "A layer rule runs on a cell of the map, which owns no "
-                  "resources, so it cannot read 'local': write 'layer' to reach "
-                  "the cell, or 'global' to reach the city");
-            return nullptr;
-        }
+    // Every other word names a number: a resource of the entity the rule runs
+    // on, a resource of the city, or a value on the ground. The word that
+    // follows says what to do with it.
+    IRuleValue* const target = parseValueTarget(token);
+    if (target == nullptr)
+        return nullptr;
 
-        Token const name = expectToken("the name of a resource");
-        if (!name.valid())
-            return nullptr;
+    return parseValueAction(*target);
+}
 
-        Resource const* const resource = m_definitions->findResource(name.text);
-        if (resource == nullptr)
-        {
-            error(name, "Unknown resource '" + name.text + "'");
-            return nullptr;
-        }
-
-        if (token.text == "local")
-        {
-            target = m_definitions->own(
-                std::unique_ptr<IRuleValue>(new RuleValueLocal(*resource)));
-        }
-        else
-        {
-            target = m_definitions->own(
-                std::unique_ptr<IRuleValue>(new RuleValueGlobal(*resource)));
-        }
-    }
-    else if (token.text == "layer")
+// -----------------------------------------------------------------------------
+IRuleValue* SimpleScriptParser::parseValueTarget(Token const& token)
+{
+    if (token.text == "layer")
     {
         Token const name = expectToken("the name of a layer");
         if (!name.valid())
@@ -1217,199 +1221,292 @@ IRuleCommand* SimpleScriptParser::parseCommand(Token const& token)
             return nullptr;
         }
 
-        target = m_definitions->own(
+        return m_definitions->own(
             std::unique_ptr<IRuleValue>(new RuleValueLayer(name.text)));
     }
-    else if (token.text == "agent")
-    {
-        Token const name = expectToken("the name of an agent");
-        if (!name.valid())
-            return nullptr;
 
-        AgentType const* const agent = m_definitions->findAgentType(name.text);
-        if (agent == nullptr)
-        {
-            error(name, "Unknown agent '" + name.text + "'");
-            return nullptr;
-        }
-
-        std::string searchTarget;
-        Resources resources;
-        bool loaded = false;
-
-        while (!tooManyErrors() && !loaded)
-        {
-            Token const cmd = expectToken("'to' or 'add'");
-            if (!cmd.valid())
-                return nullptr;
-
-            if (cmd.text == "to")
-            {
-                Token const buildingToken = expectToken("the type of building to look for");
-                if (!buildingToken.valid())
-                    return nullptr;
-                searchTarget = buildingToken.text;
-            }
-            else if (cmd.text == "add")
-            {
-                parseResourcesArray(resources);
-                loaded = true;
-            }
-            else
-            {
-                error(cmd, "Expected 'to' or 'add' but read '" + cmd.text + "'");
-                return nullptr;
-            }
-        }
-
-        if (!loaded)
-            return nullptr;
-
-        return m_definitions->own(std::unique_ptr<IRuleCommand>(
-            new RuleCommandAgent(*agent, searchTarget, resources)));
-    }
-    else if (token.text == "hour")
+    if ((token.text != "local") && (token.text != "global"))
     {
-        if (!expectWord("between"))
-            return nullptr;
-        uint32_t const from = nextUint("the start hour");
-        uint32_t const to = nextUint("the end hour");
-        return m_definitions->own(std::unique_ptr<IRuleCommand>(
-            new RuleCommandHour(from, to)));
-    }
-    else if (token.text == "spawn")
-    {
-        Token const name = expectToken("the name of a building");
-        if (!name.valid())
-            return nullptr;
-        BuildingType* const buildingType = m_definitions->findBuildingType(name.text);
-        if (defining() && (buildingType == nullptr))
-        {
-            error(name, "Unknown building '" + name.text + "'");
-            return nullptr;
-        }
-        if (!expectWord("at"))
-            return nullptr;
-        Token const where = expectToken("'nearestSegment' or 'freeCell'");
-        RuleCommandSpawn::Placement placement = RuleCommandSpawn::Placement::NearestSegment;
-        if (where.text == "freeCell")
-            placement = RuleCommandSpawn::Placement::FreeCell;
-        else if (where.text != "nearestSegment")
-        {
-            error(where, "Expected 'nearestSegment' or 'freeCell' but read '" +
-                             where.text + "'");
-            return nullptr;
-        }
-        if (buildingType == nullptr)
-            return nullptr;
-        return m_definitions->own(std::unique_ptr<IRuleCommand>(
-            new RuleCommandSpawn(*buildingType, placement)));
-    }
-    else if (token.text == "count")
-    {
-        Token const name = expectToken("the name of a building");
-        if (!name.valid())
-            return nullptr;
-        Token const cmp = expectToken("'greater', 'less' or 'equals'");
-        RuleCommandTest::Comparison comparison = RuleCommandTest::Comparison::LESS;
-        if (cmp.text == "greater")
-            comparison = RuleCommandTest::Comparison::GREATER;
-        else if (cmp.text == "equals")
-            comparison = RuleCommandTest::Comparison::EQUALS;
-        else if (cmp.text != "less")
-        {
-            error(cmp, "Expected 'greater', 'less' or 'equals' but read '" +
-                           cmp.text + "'");
-            return nullptr;
-        }
-        uint32_t const amount = nextUint("a count");
-        return m_definitions->own(std::unique_ptr<IRuleCommand>(
-            new RuleCommandCount(name.text, comparison, amount)));
-    }
-    else if (token.text == "upgrade")
-    {
-        Token const from = expectToken("the building to replace");
-        if (!from.valid())
-            return nullptr;
-        if (!expectWord("to"))
-            return nullptr;
-        Token const to = expectToken("the building to replace it with");
-        if (!to.valid())
-            return nullptr;
-        BuildingType* const fromType = m_definitions->findBuildingType(from.text);
-        BuildingType* const toType = m_definitions->findBuildingType(to.text);
-        if (defining())
-        {
-            if (fromType == nullptr)
-            {
-                error(from, "Unknown building '" + from.text + "'");
-                return nullptr;
-            }
-            if (toType == nullptr)
-            {
-                error(to, "Unknown building '" + to.text + "'");
-                return nullptr;
-            }
-        }
-        if ((fromType == nullptr) || (toType == nullptr))
-            return nullptr;
-        return m_definitions->own(std::unique_ptr<IRuleCommand>(
-            new RuleCommandUpgrade(*fromType, *toType)));
-    }
-    else if (token.text == "destroy")
-    {
-        Token const name = expectToken("the name of a building");
-        if (!name.valid())
-            return nullptr;
-        return m_definitions->own(std::unique_ptr<IRuleCommand>(
-            new RuleCommandDestroy(name.text)));
-    }
-    else
-    {
-        error(token, "Expected a command (local, global, layer, agent, hour, spawn, "
-                     "count, upgrade, destroy) but read '" +
-                         token.text + "'");
+        error(token,
+              "Expected a command (local, global, layer, agent, hour, spawn, "
+              "count, upgrade, destroy) but read '" +
+                  token.text + "'");
         return nullptr;
     }
 
-    Token const cmd = expectToken("'add', 'remove', 'greater', 'less' or 'equals'");
+    // A layer rule runs on a cell of the grid, and a cell owns no resources:
+    // "local" names the stock of the building or of the agent the rule runs
+    // on, and there is neither. The engine used to read a null pointer here.
+    if ((token.text == "local") && (m_ruleKind == RuleKind::Layer))
+    {
+        error(token,
+              "A layer rule runs on a cell of the map, which owns no "
+              "resources, so it cannot read 'local': write 'layer' to reach "
+              "the cell, or 'global' to reach the city");
+        return nullptr;
+    }
+
+    Token const name = expectToken("the name of a resource");
+    if (!name.valid())
+        return nullptr;
+
+    Resource const* const resource = m_definitions->findResource(name.text);
+    if (resource == nullptr)
+    {
+        error(name, "Unknown resource '" + name.text + "'");
+        return nullptr;
+    }
+
+    // "local" reads the stock of the thing the rule runs on, "global" the purse
+    // of the whole city.
+    if (token.text == "local")
+    {
+        return m_definitions->own(
+            std::unique_ptr<IRuleValue>(new RuleValueLocal(*resource)));
+    }
+
+    return m_definitions->own(
+        std::unique_ptr<IRuleValue>(new RuleValueGlobal(*resource)));
+}
+
+// -----------------------------------------------------------------------------
+IRuleCommand* SimpleScriptParser::parseValueAction(IRuleValue& target)
+{
+    Token const cmd =
+        expectToken("'add', 'remove', 'greater', 'less' or 'equals'");
     if (!cmd.valid())
         return nullptr;
 
     std::unique_ptr<IRuleCommand> command;
 
+    // "add" and "remove" write the number.
     if (cmd.text == "add")
     {
-        command.reset(new RuleCommandAdd(*target, nextUint("an amount")));
+        command.reset(new RuleCommandAdd(target, nextUint("an amount")));
     }
     else if (cmd.text == "remove")
     {
-        command.reset(new RuleCommandRemove(*target, nextUint("an amount")));
+        command.reset(new RuleCommandRemove(target, nextUint("an amount")));
     }
+    // The three others only read it. A rule stops on the first test that fails.
     else if (cmd.text == "greater")
     {
         command.reset(new RuleCommandTest(
-            *target, RuleCommandTest::Comparison::GREATER, nextUint("a value")));
+            target, RuleCommandTest::Comparison::GREATER, nextUint("a value")));
     }
     else if (cmd.text == "less")
     {
         command.reset(new RuleCommandTest(
-            *target, RuleCommandTest::Comparison::LESS, nextUint("a value")));
+            target, RuleCommandTest::Comparison::LESS, nextUint("a value")));
     }
     else if (cmd.text == "equals")
     {
         command.reset(new RuleCommandTest(
-            *target, RuleCommandTest::Comparison::EQUALS, nextUint("a value")));
+            target, RuleCommandTest::Comparison::EQUALS, nextUint("a value")));
     }
     else
     {
-        error(cmd, "Expected 'add', 'remove', 'greater', 'less' or 'equals' "
-                   "but read '" +
-                       cmd.text + "'");
+        error(cmd,
+              "Expected 'add', 'remove', 'greater', 'less' or 'equals' "
+              "but read '" +
+                  cmd.text + "'");
         return nullptr;
     }
 
     return m_definitions->own(std::move(command));
+}
+
+// -----------------------------------------------------------------------------
+IRuleCommand* SimpleScriptParser::parseAgentCommand()
+{
+    Token const name = expectToken("the name of an agent");
+    if (!name.valid())
+        return nullptr;
+
+    AgentType const* const agent = m_definitions->findAgentType(name.text);
+    if (agent == nullptr)
+    {
+        error(name, "Unknown agent '" + name.text + "'");
+        return nullptr;
+    }
+
+    // "to" names what the traveller looks for, "add" what it carries. The load
+    // closes the command, so "to" may come before it or not at all.
+    std::string searchTarget;
+    Resources resources;
+    bool loaded = false;
+
+    while (!tooManyErrors() && !loaded)
+    {
+        Token const cmd = expectToken("'to' or 'add'");
+        if (!cmd.valid())
+            return nullptr;
+
+        if (cmd.text == "to")
+        {
+            Token const buildingToken =
+                expectToken("the type of building to look for");
+            if (!buildingToken.valid())
+                return nullptr;
+            searchTarget = buildingToken.text;
+        }
+        else if (cmd.text == "add")
+        {
+            parseResourcesArray(resources);
+            loaded = true;
+        }
+        else
+        {
+            error(cmd, "Expected 'to' or 'add' but read '" + cmd.text + "'");
+            return nullptr;
+        }
+    }
+
+    if (!loaded)
+        return nullptr;
+
+    return m_definitions->own(std::unique_ptr<IRuleCommand>(
+        new RuleCommandAgent(*agent, searchTarget, resources)));
+}
+
+// -----------------------------------------------------------------------------
+IRuleCommand* SimpleScriptParser::parseHourCommand()
+{
+    if (!expectWord("between"))
+        return nullptr;
+
+    uint32_t const from = nextUint("the start hour");
+    uint32_t const to = nextUint("the end hour");
+    return m_definitions->own(
+        std::unique_ptr<IRuleCommand>(new RuleCommandHour(from, to)));
+}
+
+// -----------------------------------------------------------------------------
+IRuleCommand* SimpleScriptParser::parseSpawnCommand()
+{
+    Token const name = expectToken("the name of a building");
+    if (!name.valid())
+        return nullptr;
+
+    // On the first pass the building may not be declared yet, so an unknown
+    // name is only an error once every section has been read.
+    BuildingType* const buildingType =
+        m_definitions->findBuildingType(name.text);
+    if (defining() && (buildingType == nullptr))
+    {
+        error(name, "Unknown building '" + name.text + "'");
+        return nullptr;
+    }
+
+    if (!expectWord("at"))
+        return nullptr;
+
+    // Where the building goes: along the nearest street, or on any free cell
+    // of the zone.
+    Token const where = expectToken("'nearestSegment' or 'freeCell'");
+    RuleCommandSpawn::Placement placement =
+        RuleCommandSpawn::Placement::NearestSegment;
+    if (where.text == "freeCell")
+    {
+        placement = RuleCommandSpawn::Placement::FreeCell;
+    }
+    else if (where.text != "nearestSegment")
+    {
+        error(where,
+              "Expected 'nearestSegment' or 'freeCell' but read '" +
+                  where.text + "'");
+        return nullptr;
+    }
+
+    if (buildingType == nullptr)
+        return nullptr;
+
+    return m_definitions->own(std::unique_ptr<IRuleCommand>(
+        new RuleCommandSpawn(*buildingType, placement)));
+}
+
+// -----------------------------------------------------------------------------
+IRuleCommand* SimpleScriptParser::parseCountCommand()
+{
+    Token const name = expectToken("the name of a building");
+    if (!name.valid())
+        return nullptr;
+
+    // The building is counted by name at run time, so the type does not have to
+    // be known here.
+    Token const cmp = expectToken("'greater', 'less' or 'equals'");
+    RuleCommandTest::Comparison comparison = RuleCommandTest::Comparison::LESS;
+    if (cmp.text == "greater")
+    {
+        comparison = RuleCommandTest::Comparison::GREATER;
+    }
+    else if (cmp.text == "equals")
+    {
+        comparison = RuleCommandTest::Comparison::EQUALS;
+    }
+    else if (cmp.text != "less")
+    {
+        error(cmp,
+              "Expected 'greater', 'less' or 'equals' but read '" + cmp.text +
+                  "'");
+        return nullptr;
+    }
+
+    uint32_t const amount = nextUint("a count");
+    return m_definitions->own(std::unique_ptr<IRuleCommand>(
+        new RuleCommandCount(name.text, comparison, amount)));
+}
+
+// -----------------------------------------------------------------------------
+IRuleCommand* SimpleScriptParser::parseUpgradeCommand()
+{
+    Token const from = expectToken("the building to replace");
+    if (!from.valid())
+        return nullptr;
+
+    if (!expectWord("to"))
+        return nullptr;
+
+    Token const to = expectToken("the building to replace it with");
+    if (!to.valid())
+        return nullptr;
+
+    // Both buildings are held by reference, so both must exist. As with spawn,
+    // that can only be checked once every section has been read.
+    BuildingType* const fromType = m_definitions->findBuildingType(from.text);
+    BuildingType* const toType = m_definitions->findBuildingType(to.text);
+    if (defining())
+    {
+        if (fromType == nullptr)
+        {
+            error(from, "Unknown building '" + from.text + "'");
+            return nullptr;
+        }
+        if (toType == nullptr)
+        {
+            error(to, "Unknown building '" + to.text + "'");
+            return nullptr;
+        }
+    }
+
+    if ((fromType == nullptr) || (toType == nullptr))
+        return nullptr;
+
+    return m_definitions->own(std::unique_ptr<IRuleCommand>(
+        new RuleCommandUpgrade(*fromType, *toType)));
+}
+
+// -----------------------------------------------------------------------------
+IRuleCommand* SimpleScriptParser::parseDestroyCommand()
+{
+    Token const name = expectToken("the name of a building");
+    if (!name.valid())
+        return nullptr;
+
+    // Demolition finds its target by name at run time, so an unknown name is
+    // simply a rule that never fires.
+    return m_definitions->own(
+        std::unique_ptr<IRuleCommand>(new RuleCommandDestroy(name.text)));
 }
 
 // =============================================================================

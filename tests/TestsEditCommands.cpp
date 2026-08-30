@@ -97,7 +97,7 @@ TEST(TestsEditCommands, UndoingACrossingStreetSewsTheOtherBackTogether)
     EditableCity world;
 
     ASSERT_TRUE(world.lay(Vector3f(0.0f, 10.0f, 0.0f), Vector3f(20.0f, 10.0f, 0.0f)));
-    uint32_t const streetId = world.road().getSegments()[0]->getId();
+    size_t const streetId = world.road().getSegments()[0]->getId();
 
     ASSERT_TRUE(world.lay(Vector3f(10.0f, 0.0f, 0.0f), Vector3f(10.0f, 20.0f, 0.0f)));
     ASSERT_EQ(world.road().getSegments().size(), 4u);
@@ -207,7 +207,7 @@ TEST(TestsEditCommands, TheNodeToolCutsAStreetAndTheUndoSewsItBack)
     EditableCity world;
 
     ASSERT_TRUE(world.lay(Vector3f(0.0f, 10.0f, 0.0f), Vector3f(20.0f, 10.0f, 0.0f)));
-    uint32_t const streetId = world.road().getSegments()[0]->getId();
+    size_t const streetId = world.road().getSegments()[0]->getId();
 
     ASSERT_TRUE(world.stack.push(world.simulation,
                                  std::make_unique<SplitSegmentCommand>(
@@ -240,7 +240,7 @@ TEST(TestsEditCommands, TheNodeToolIsWhatBranchesAPipe)
 
     City& city = *world.simulation.getCities().begin()->second;
     Path& pipes = city.getPath("Pipe");
-    uint32_t const pipeId = pipes.getSegments()[0]->getId();
+    size_t const pipeId = pipes.getSegments()[0]->getId();
 
     // A network that makes no crossing of its own still takes the junction the
     // player asks for by hand, which is what the two settings are for.
@@ -266,7 +266,7 @@ TEST(TestsEditCommands, DraggingACrossroadsTakesItsRoadsWithIt)
             middle = node.get();
     }
     ASSERT_NE(middle, nullptr);
-    uint32_t const middleId = middle->getId();
+    size_t const middleId = middle->getId();
 
     ASSERT_TRUE(world.stack.push(
         world.simulation,
@@ -301,7 +301,7 @@ TEST(TestsEditCommands, ABuildingOnACrossroadsFollowsIt)
 
     City& city = *world.simulation.getCities().begin()->second;
     Node& corner = *world.road().getNodes()[0];
-    uint32_t const cornerId = corner.getId();
+    size_t const cornerId = corner.getId();
     Building& home = city.addBuilding(
         world.simulation.getRuleset().getBuildingType("Home"), corner);
 
@@ -323,7 +323,7 @@ TEST(TestsEditCommands, ANodeDraggedNowhereIsNotWorthAnUndo)
     EditableCity world;
 
     ASSERT_TRUE(world.lay(Vector3f(0.0f, 0.0f, 0.0f), Vector3f(10.0f, 0.0f, 0.0f)));
-    uint32_t const cornerId = world.road().getNodes()[0]->getId();
+    size_t const cornerId = world.road().getNodes()[0]->getId();
 
     ASSERT_FALSE(world.stack.push(
         world.simulation,

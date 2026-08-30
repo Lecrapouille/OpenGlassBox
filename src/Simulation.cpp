@@ -72,50 +72,23 @@ void Simulation::updateTrafficMetrics() const
     if (m_trafficMetricsTick == m_clock.getTicks())
         return;
 
+    // What everyone on the road is about to spend, and what they would spend if
+    // each of them took the shortest way. Traffic is at equilibrium when the
+    // two meet.
     float tstt = 0.0f;
     float sptt = 0.0f;
 
     uint32_t const budget = getConfig().traffic.relativeGapSamples;
 
-    for (auto const& cityIt : m_world.getCities())
+    for (auto const& [cityName, cityPtr] : m_world.getCities())
     {
-        City const& city = *cityIt.second;
-        auto const& agents = city.getAgents();
-
-        // Walking one agent in every stride samples the whole population
-        // instead of whichever end of the vector the loop starts at. Both
-        // sums are scaled the same way, and the gap being their ratio, the
-        // estimate needs no correction factor.
-        size_t stride = 1u;
-        if ((budget != 0u) && (agents.size() > size_t(budget)))
-        {
-            stride = agents.size() / size_t(budget);
-        }
-
-        IRouter& router = city.getRouter();
-
-        for (size_t i = 0u; i < agents.size(); i += stride)
-        {
-            Agent& agent = *agents[i];
-
-            // The two sums have to run over the same agents, or their ratio
-            // measures the difference in populations rather than the distance
-            // to equilibrium. An agent with no itinerary has no remaining cost
-            // to put in TSTT, so it must not put an alternative in SPTT
-            // either; one whose reroute is unreachable has no alternative, so
-            // it must not put its remaining cost in TSTT.
-            if (!agent.getRoute().isFound())
-                continue;
-
-            float const alternative = agent.computeRerouteCost(router);
-            if (routingCostUnreachable(alternative))
-                continue;
-
-            tstt += agent.getRemainingCost();
-            sptt += alternative;
-        }
+        (void)cityName;
+        sampleCityTravelTimes(*cityPtr, budget, tstt, sptt);
     }
 
+    // How far the two sums stand apart, as a share of the first. A negative
+    // value would mean the shortest ways cost more than what is being driven,
+    // which only sampling noise can produce.
     float gap = 0.0f;
     if (tstt > 1e-6f)
     {
@@ -128,6 +101,44 @@ void Simulation::updateTrafficMetrics() const
     m_trafficMetrics.shortestPathTime = sptt;
     m_trafficMetrics.relativeGap = gap;
     m_trafficMetricsTick = m_clock.getTicks();
+}
+
+//------------------------------------------------------------------------------
+void Simulation::sampleCityTravelTimes(City const& city,
+                                       uint32_t const budget,
+                                       float& tstt,
+                                       float& sptt)
+{
+    auto const& agents = city.getAgents();
+
+    size_t stride = 1u;
+    if ((budget != 0u) && (agents.size() > size_t(budget)))
+    {
+        stride = agents.size() / size_t(budget);
+    }
+
+    IRouter& router = city.getRouter();
+
+    for (size_t i = 0u; i < agents.size(); i += stride)
+    {
+        Agent& agent = *agents[i];
+
+        // The two sums have to run over the same agents, or their ratio
+        // measures the difference in populations rather than the distance
+        // to equilibrium. An agent with no itinerary has no remaining cost
+        // to put in TSTT, so it must not put an alternative in SPTT
+        // either; one whose reroute is unreachable has no alternative, so
+        // it must not put its remaining cost in TSTT.
+        if (!agent.getRoute().isFound())
+            continue;
+
+        float const alternative = agent.computeRerouteCost(router);
+        if (routingCostUnreachable(alternative))
+            continue;
+
+        tstt += agent.getRemainingCost();
+        sptt += alternative;
+    }
 }
 
 //------------------------------------------------------------------------------

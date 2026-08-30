@@ -13,7 +13,8 @@
 //------------------------------------------------------------------------------
 
 // Will be used to obtain a seed for the random number engine
-namespace ogb {
+namespace ogb
+{
 
 static std::random_device rd;
 // Standard mersenne_twister_engine seeded with rd()
@@ -29,7 +30,7 @@ void CellsInRadius::setSeed(uint32_t seed)
 int32_t CellsInRadius::compress(int32_t u, int32_t v)
 {
     return ((u + CellsInRadius::MAX_RADIUS) << 16) |
-            (v + CellsInRadius::MAX_RADIUS);
+           (v + CellsInRadius::MAX_RADIUS);
 }
 
 //------------------------------------------------------------------------------
@@ -41,10 +42,13 @@ void CellsInRadius::uncompress(int32_t val, int32_t& u, int32_t& v)
 
 //------------------------------------------------------------------------------
 void CellsInRadius::init(uint32_t radius,
-                                      int32_t centerU, int32_t centerV,
-                                      int32_t minU, int32_t maxU,
-                                      int32_t minV, int32_t maxV,
-                                      bool random)
+                         int32_t centerU,
+                         int32_t centerV,
+                         int32_t minU,
+                         int32_t maxU,
+                         int32_t minV,
+                         int32_t maxV,
+                         bool random)
 {
     m_centerU = centerU;
     m_centerV = centerV;
@@ -65,7 +69,8 @@ void CellsInRadius::init(uint32_t radius,
 
     if (random)
     {
-        std::uniform_int_distribution<uint32_t> randomIndex(0u, uint32_t(relativeCoord.size() - 1u));
+        std::uniform_int_distribution<uint32_t> randomIndex(
+            0u, uint32_t(relativeCoord.size() - 1u));
         m_startingIndex = randomIndex(generator);
     }
     else
@@ -75,7 +80,8 @@ void CellsInRadius::init(uint32_t radius,
 }
 
 //------------------------------------------------------------------------------
-void CellsInRadius::createRelativeCoordinates(int32_t radius, RelativeCoordinates &res)
+void CellsInRadius::createRelativeCoordinates(int32_t radius,
+                                              RelativeCoordinates& res) const
 {
     res.clear();
     for (int32_t u = -radius; u <= radius; ++u)
@@ -97,7 +103,8 @@ bool CellsInRadius::next(int32_t& u, int32_t& v)
     size_t const size = coord.size();
     while (m_offset < size)
     {
-        int32_t iu; int32_t iv;
+        int32_t iu;
+        int32_t iv;
         uncompress(coord[(m_startingIndex + m_offset++) % size], iu, iv);
         u = iu + m_centerU;
         v = iv + m_centerV;
@@ -106,7 +113,8 @@ bool CellsInRadius::next(int32_t& u, int32_t& v)
             return true;
     }
 
-    u = v = 0;
+    u = 0;
+    v = 0;
     return false;
 }
 

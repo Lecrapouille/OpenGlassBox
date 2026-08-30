@@ -10,8 +10,8 @@
 #include "OpenGlassBox/Layer.hpp"
 #include "OpenGlassBox/Building.hpp"
 
-namespace ogb {
-namespace game {
+namespace ogb::game
+{
 
 
 // ----------------------------------------------------------------------------
@@ -96,5 +96,4 @@ void RuleTrace::onRuleExecuted(IRule::Trace const& trace)
         m_head = (m_head + 1u) % CAPACITY;
     }
 }
-} // namespace game
-} // namespace ogb
+} // namespace ogb::game

@@ -11,9 +11,9 @@
 #ifndef OPEN_GLASSBOX_LAYER_HPP
 #define OPEN_GLASSBOX_LAYER_HPP
 
+#include "OpenGlassBox/CellRegion.hpp"
 #include "OpenGlassBox/CellsInRadius.hpp"
 #include "OpenGlassBox/RandomCells.hpp"
-#include "OpenGlassBox/CellRegion.hpp"
 #include "OpenGlassBox/Rule.hpp"
 #include "OpenGlassBox/Vector.hpp"
 
@@ -153,8 +153,8 @@ public:
     //! \return Sum, capped at UINT32_MAX.
     // -------------------------------------------------------------------------
     [[nodiscard]] uint32_t getResource(Cell const centre,
-                         uint32_t radius,
-                         CellRegion const& region) const
+                                       uint32_t radius,
+                                       CellRegion const& region) const
     {
         // A rule of a layer stands on the cell it reads, and does so on every
         // cell of the region: worth not walking a one element diamond, and
@@ -220,11 +220,13 @@ public:
     //! \param[in] radius Footprint reach.
     //! \param[in] region Cells owned by the calling City.
     //!     Cells outside get nothing.
-    //! \param[in] toAdd When \c distributed is true, total amount for the footprint.
+    //! \param[in] toAdd When \c distributed is true, total amount for the
+    //! footprint.
     //!     When false, amount for each cell.
-    //! \param[in] distributed If true, walk cells in random order and take from \c toAdd.
-    //!     The footprint receives \c toAdd in total. Last cells may get nothing.
-    //!     If false, give \c toAdd to every cell.
+    //! \param[in] distributed If true, walk cells in random order and take from
+    //! \c toAdd.
+    //!     The footprint receives \c toAdd in total. Last cells may get
+    //!     nothing. If false, give \c toAdd to every cell.
     //! \note Each cell is capped at getCellCapacity().
     //!     A full footprint absorbs nothing. The rest is dropped.
     // -------------------------------------------------------------------------
@@ -258,8 +260,8 @@ public:
 
     // -------------------------------------------------------------------------
     //! \brief Remove resources from cells in a footprint.
-    //! Mirror of addResource(Cell, uint32_t, CellRegion const&, uint32_t, bool).
-    //! Removes down to zero instead of adding up to capacity.
+    //! Mirror of addResource(Cell, uint32_t, CellRegion const&, uint32_t,
+    //! bool). Removes down to zero instead of adding up to capacity.
     //!
     //! \param[in] centre Cell at the footprint center.
     //! \param[in] radius Footprint reach.
@@ -293,7 +295,8 @@ public:
     Vector3f cellToWorld(Cell cell) const;
 
     // -------------------------------------------------------------------------
-    //! \brief Run the layer's rules over every City's region. Increment the tick count.
+    //! \brief Run the layer's rules over every City's region. Increment the
+    //! tick count.
     //!
     //! A cell shared by two Cities is walked once per City.
     //! Rules read and write on behalf of each city.
@@ -312,7 +315,8 @@ public:
 
     // -------------------------------------------------------------------------
     //! \return The layer type recipe.
-    //!     Use it to add the same layer kind to another City without a name lookup.
+    //!     Use it to add the same layer kind to another City without a name
+    //!     lookup.
     // -------------------------------------------------------------------------
     [[nodiscard]] LayerType const& getType() const
     {
@@ -386,7 +390,8 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief Call \c function(u, v, side, mean) for each non-empty square in a region.
+    //! \brief Call \c function(u, v, side, mean) for each non-empty square in a
+    //! region.
     //! \c mean is the average amount over \c side x \c side cells.
     //!
     //! The renderer uses this to draw a layer.
@@ -436,7 +441,8 @@ public:
 private:
 
     //==========================================================================
-    //! \brief Square block of cells. The sparse layer allocates these as blocks.
+    //! \brief Square block of cells. The sparse layer allocates these as
+    //! blocks.
     //==========================================================================
     struct Chunk
     {
@@ -447,7 +453,8 @@ private:
         int32_t v0 = 0;
 
         //! \brief Sum of all cells. Updated on every write.
-        //!     Panels request this every frame. Recomputing would walk the grid.
+        //!     Panels request this every frame. Recomputing would walk the
+        //!     grid.
         uint64_t total = 0u;
 
         //! \brief Cells in row-major order.
@@ -464,7 +471,8 @@ private:
     //--------------------------------------------------------------------------
     //! \brief Walk one block for forEachBlockInRegion(), after overlap check.
     //! \param[in] chunk Block to walk.
-    //! \param[in] region Cells to keep. Block cells outside are excluded from the average.
+    //! \param[in] region Cells to keep. Block cells outside are excluded from
+    //! the average.
     //! \param[in] side Square size in cells. A divisor of CHUNK_SIZE.
     //! \param[in] function Callable as f(int32_t, int32_t, int32_t, uint32_t).
     //--------------------------------------------------------------------------
@@ -561,7 +569,8 @@ private:
     //!
     //! Rounds toward negative infinity, not zero.
     //! Cells at -1 and 0 land in different blocks.
-    //! Clearing low bits of a two's complement integer does this without a branch.
+    //! Clearing low bits of a two's complement integer does this without a
+    //! branch.
     //!
     //! \param[in] coordinate Column or row.
     //! \return Nearest multiple of CHUNK_SIZE at or below the coordinate.
@@ -619,7 +628,8 @@ private:
     }
 
     //--------------------------------------------------------------------------
-    //! \brief Writable findChunk() for callers that clear cells without creating blocks.
+    //! \brief Writable findChunk() for callers that clear cells without
+    //! creating blocks.
     //! \param[in] cell Cell to locate.
     //! \return Block pointer, or nullptr.
     //--------------------------------------------------------------------------
@@ -663,25 +673,26 @@ private:
     Chunk& createChunk(int64_t const key, Cell const cell);
 
     //--------------------------------------------------------------------------
-    //! \brief Sum resources over a multi-cell footprint. Called by getResource().
-    //! Same parameters and result.
-    //! \note Const but uses mutable CellsInRadius to avoid allocation per rule call.
+    //! \brief Sum resources over a multi-cell footprint. Called by
+    //! getResource(). Same parameters and result.
+    //! \note Const but uses mutable CellsInRadius to avoid allocation per rule
+    //! call.
     //--------------------------------------------------------------------------
     uint32_t sumInRadius(Cell const centre,
                          uint32_t const radius,
                          CellRegion const& region) const;
 
     //--------------------------------------------------------------------------
-    //! \brief Count cells over a multi-cell footprint. Called by countCellsInRadius().
-    //! Same parameters and result.
+    //! \brief Count cells over a multi-cell footprint. Called by
+    //! countCellsInRadius(). Same parameters and result.
     //--------------------------------------------------------------------------
     uint32_t walkCellsInRadius(Cell const centre,
                                uint32_t const radius,
                                CellRegion const& region) const;
 
     //--------------------------------------------------------------------------
-    //! \brief Add resources over a multi-cell footprint. Called by addResource().
-    //! Same parameters.
+    //! \brief Add resources over a multi-cell footprint. Called by
+    //! addResource(). Same parameters.
     //--------------------------------------------------------------------------
     void addResourceInRadius(Cell const centre,
                              uint32_t const radius,
@@ -690,8 +701,8 @@ private:
                              bool const distributed);
 
     //--------------------------------------------------------------------------
-    //! \brief Remove resources over a multi-cell footprint. Called by removeResource().
-    //! Same parameters.
+    //! \brief Remove resources over a multi-cell footprint. Called by
+    //! removeResource(). Same parameters.
     //--------------------------------------------------------------------------
     void removeResourceInRadius(Cell const centre,
                                 uint32_t const radius,
@@ -708,7 +719,8 @@ private:
     void executeRule(RuleLayer& rule, City& city);
 
     //--------------------------------------------------------------------------
-    //! \brief Move a share of every cell to its neighbours and lose another share.
+    //! \brief Move a share of every cell to its neighbours and lose another
+    //! share.
     //!
     //! See LayerType::diffusion and LayerType::decay. Called by executeRules()
     //! on the layer period, and only when LayerType::spreads() is true.
@@ -724,7 +736,21 @@ private:
     void spreadAndFade();
 
     //--------------------------------------------------------------------------
-    //! \brief The amount one cell holds once the current spreadAndFade() pass ends.
+    //! \brief Copy the amounts spreadAndFade() reads, and list the blocks it
+    //! writes to.
+    //!
+    //! Empty blocks are left out of the copy: they read as zero anyway, and a
+    //! large grid holds many of them. The blocks around a used one are listed
+    //! all the same, because a cell on a border gives to a cell of the next
+    //! block, which may not exist yet.
+    //!
+    //! Fills m_previous and m_spreadBlocks.
+    //--------------------------------------------------------------------------
+    void collectBlocksToSpread();
+
+    //--------------------------------------------------------------------------
+    //! \brief The amount one cell holds once the current spreadAndFade() pass
+    //! ends.
     //! \param[in] cell Cell to compute.
     //! \return What the cell keeps plus what its four neighbours give it.
     //--------------------------------------------------------------------------
@@ -749,22 +775,30 @@ private:
     //!     Reused across thousands of cells per tick.
     RuleContext m_context;
 
-    //! \brief Tick count. Rule rates compare against this value.
-    uint32_t m_ticks = 0u;
-
-    //! \brief Sparse cell storage. Blocks allocate on demand. Keyed by chunkKey().
+    //! \brief Sparse cell storage. Blocks allocate on demand. Keyed by
+    //! chunkKey().
     std::unordered_map<int64_t, Chunk> m_chunks;
+
+    //! \brief Cells as they stood before the current spreadAndFade() pass.
+    //!     Holds the non-empty blocks only. Kept between passes so that a layer
+    //!     which diffuses does not allocate on every period. Empty on a layer
+    //!     that does not diffuse.
+    std::unordered_map<int64_t,
+                       std::array<uint32_t, size_t(CHUNK_SIZE* CHUNK_SIZE)>>
+        m_previous;
+
+    //! \brief Blocks one spreadAndFade() pass has to write: the non-empty ones
+    //!     and the neighbours an amount may reach. Kept between passes to reuse
+    //!     its memory.
+    std::vector<Cell> m_spreadBlocks;
 
     //! \brief Key from the last block lookup. Valid when m_cacheFilled is true.
     mutable int64_t m_cachedKey = 0;
 
     //! \brief Block from the last lookup, or nullptr.
-    //!     Blocks are never removed. Map pointers stay valid for the Layer lifetime.
+    //!     Blocks are never removed. Map pointers stay valid for the Layer
+    //!     lifetime.
     mutable Chunk const* m_cachedChunk = nullptr;
-
-    //! \brief True when the cache holds a valid entry.
-    //!     Grid sweeps reuse the same block for many consecutive cells.
-    mutable bool m_cacheFilled = false;
 
     //! \brief Reusable footprint walker. Avoids allocation on reads.
     //!     Mutable so reads stay const.
@@ -773,17 +807,15 @@ private:
     //! \brief Reusable random-order footprint walker for uneven distribution.
     RandomCells m_randomCoordinates;
 
-    //! \brief Cells as they stood before the current spreadAndFade() pass.
-    //!     Holds the non-empty blocks only. Kept between passes so that a layer
-    //!     which diffuses does not allocate on every period. Empty on a layer
-    //!     that does not diffuse.
-    std::unordered_map<int64_t, std::array<uint32_t, size_t(CHUNK_SIZE* CHUNK_SIZE)>>
-        m_previous;
+    // The two small members come last, together, so that neither leaves a gap
+    // in front of the eight-byte members above.
 
-    //! \brief Blocks one spreadAndFade() pass has to write: the non-empty ones
-    //!     and the neighbours an amount may reach. Kept between passes to reuse
-    //!     its memory.
-    std::vector<Cell> m_spreadBlocks;
+    //! \brief Tick count. Rule rates compare against this value.
+    uint32_t m_ticks = 0u;
+
+    //! \brief True when the cache holds a valid entry.
+    //!     Grid sweeps reuse the same block for many consecutive cells.
+    mutable bool m_cacheFilled = false;
 };
 
 //! \brief Map of layers in a World, keyed by name. The World owns them.

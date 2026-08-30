@@ -25,9 +25,7 @@
 
 #include "project_info.hpp"
 
-namespace ogb
-{
-namespace game
+namespace ogb::game
 {
 using namespace ogb::theme;
 
@@ -84,11 +82,12 @@ std::string fileStem(std::string const& path)
     return (dot == std::string::npos) ? name : name.substr(0u, dot);
 }
 
-std::string joinPath(std::string dir, std::string const& name)
+std::string joinPath(std::string const& dir, std::string const& name)
 {
-    if (!dir.empty() && (dir.back() != '/') && (dir.back() != '\\'))
-        dir += '/';
-    return dir + name;
+    std::string path = dir;
+    if (!path.empty() && (path.back() != '/') && (path.back() != '\\'))
+        path += '/';
+    return path + name;
 }
 
 //! \brief Every directory a data file may sit in.
@@ -101,13 +100,14 @@ std::vector<std::string> dataDirectories()
 {
     std::vector<std::string> directories;
 
-    auto push = [&directories](std::string dir)
+    auto push = [&directories](std::string const& dir)
     {
         if (dir.empty())
             return;
-        if ((dir.back() != '/') && (dir.back() != '\\'))
-            dir += '/';
-        directories.push_back(std::move(dir));
+        std::string path = dir;
+        if ((path.back() != '/') && (path.back() != '\\'))
+            path += '/';
+        directories.push_back(std::move(path));
     };
 
     std::string const search = project::info::paths::data;
@@ -134,7 +134,7 @@ std::string dataDirectory()
     std::vector<std::string> const directories = dataDirectories();
     for (std::string const& dir : directories)
     {
-        if (fileExists(dir + "Simulations"))
+        if (fileExists(dir + "simulations"))
             return dir;
     }
     return directories.empty() ? std::string() : directories.front();
@@ -262,13 +262,13 @@ std::vector<std::string> placedTypes(Simulation const& simulation)
         names.push_back(name.str());
     };
 
-    for (auto const& cityIt : simulation.getCities())
+    for (auto const& [_, cityPtr] : simulation.getCities())
     {
-        City const& city = *cityIt.second;
-        for (auto const& pathIt : city.getPaths())
+        City const& city = *cityPtr;
+        for (auto const& [_, pathPtr] : city.getPaths())
         {
-            add(pathIt.second->getTypeName());
-            for (auto const& segment : pathIt.second->getSegments())
+            add(pathPtr->getTypeName());
+            for (auto const& segment : pathPtr->getSegments())
                 add(segment->getTypeName());
         }
         for (auto const& building : city.getBuildings())
@@ -370,13 +370,17 @@ void GlassBoxApp::createEmptyCity(Simulation& simulation,
 {
     City& city = simulation.addCity(
         name, Vector3f(0.0f, 0.0f, 0.0f), DEFAULT_CITY_SIZE, DEFAULT_CITY_SIZE);
-    for (auto const& it : simulation.getRuleset().getLayerTypes())
-        city.addLayer(*it.second);
+    for (auto const& [_, layerType] : simulation.getRuleset().getLayerTypes())
+    {
+        city.addLayer(*layerType);
+    }
 
     // The city starts with no road, but it has to start with the graphs the
     // ruleset declares: an empty Path is what the road tool lays segments into.
-    for (auto const& it : simulation.getRuleset().getPathTypes())
-        city.addPath(*it.second);
+    for (auto const& [_, pathType] : simulation.getRuleset().getPathTypes())
+    {
+        city.addPath(*pathType);
+    }
 }
 
 // ----------------------------------------------------------------------------
@@ -398,10 +402,10 @@ void GlassBoxApp::resetView()
             m_state.primaryLayer = layers.begin()->second->getTypeName().str();
 
         m_state.soloLayer.clear();
-        for (auto const& it : layers)
+        for (auto const& [layerName, layerType] : layers)
         {
-            m_state.layer(it.first).visible =
-                (it.first == m_state.primaryLayer);
+            m_state.layer(layerName).visible =
+                (layerName == m_state.primaryLayer);
         }
     }
 
@@ -578,13 +582,15 @@ void GlassBoxApp::switchRuleset(std::string const& path)
     bool built = false;
     if (m_simulation)
     {
-        for (auto const& it : m_simulation->getCities())
+        for (auto const& [_, cityPtr] : m_simulation->getCities())
         {
-            City const& city = *it.second;
+            City const& city = *cityPtr;
             built = built || !city.getBuildings().empty() ||
                     !city.getZones().empty();
-            for (auto const& pathIt : city.getPaths())
-                built = built || !pathIt.second->getSegments().empty();
+            for (auto const& [_, pathPtr] : city.getPaths())
+            {
+                built = built || !pathPtr->getSegments().empty();
+            }
         }
     }
 
@@ -870,7 +876,7 @@ void GlassBoxApp::openRulesetDialog()
     request.key = OPEN_RULESET_DIALOG;
     request.title = "Open a ruleset";
     request.filters = ".ogs,.txt,.*";
-    request.startPath = dataDirectory() + "Simulations";
+    request.startPath = dataDirectory() + "simulations";
     request.onAccepted = [this](std::string const& path)
     { loadRuleset(path, false); };
     imgui().requestFileDialog(std::move(request));
@@ -883,7 +889,7 @@ void GlassBoxApp::openCityDialog()
     request.key = OPEN_CITY_DIALOG;
     request.title = "Open a city save";
     request.filters = ".ogc,.*";
-    request.startPath = dataDirectory() + "Simulations";
+    request.startPath = dataDirectory() + "simulations";
     request.onAccepted = [this](std::string const& path) { loadCity(path); };
     imgui().requestFileDialog(std::move(request));
 }
@@ -896,7 +902,7 @@ void GlassBoxApp::saveCityDialog()
     request.title = "Save the city";
     request.filters = ".ogc,.*";
     request.startPath =
-        m_save_path.empty() ? dataDirectory() + "Simulations" : m_save_path;
+        m_save_path.empty() ? dataDirectory() + "simulations" : m_save_path;
     request.onAccepted = [this](std::string const& path) { saveCity(path); };
     imgui().requestFileDialog(std::move(request));
 }
@@ -958,7 +964,7 @@ void GlassBoxApp::onDrawMenuBar()
 
     if (ImGui::BeginMenu("Edit"))
     {
-        editor::CommandStack& stack = m_editor.stack();
+        editor::CommandStack const& stack = m_editor.stack();
 
         if (ImGui::MenuItem(stack.canUndo()
                                 ? ("Undo " + stack.undoLabel()).c_str()
@@ -1297,10 +1303,10 @@ void GlassBoxApp::onDrawStatusBar()
 
     size_t buildings = 0u;
     size_t agents = 0u;
-    for (auto const& it : m_simulation->getCities())
+    for (auto const& [_, cityPtr] : m_simulation->getCities())
     {
-        buildings += it.second->getBuildings().size();
-        agents += it.second->getAgents().size();
+        buildings += cityPtr->getBuildings().size();
+        agents += cityPtr->getAgents().size();
     }
 
     ImGui::SameLine(0.0f, 20.0f);
@@ -1325,5 +1331,4 @@ void GlassBoxApp::onDrawStatusBar()
         ImGui::TextDisabled("%s", m_ruleset_path.c_str());
     }
 }
-} // namespace game
-} // namespace ogb
+} // namespace ogb::game

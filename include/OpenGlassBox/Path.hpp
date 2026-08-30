@@ -27,15 +27,18 @@ class Path;
 class Building;
 
 // =============================================================================
-//! \brief A crossroads. An Agent can change street here. A building can sit here.
+//! \brief A crossroads. An Agent can change street here. A building can sit
+//! here.
 //!
 //! This is a graph vertex. It stores its position, the segments that meet here,
 //! and the buildings here. The router uses the segments to walk the network.
 //! An Agent uses the buildings to know it has arrived. A Node with no segment
-//! is an orphan from a demolished street. City::removeIsolatedNodes removes them.
+//! is an orphan from a demolished street. City::removeIsolatedNodes removes
+//! them.
 //!
-//! Agents stop only at Nodes and at addresses on a Segment. A building on a street
-//! cuts the street in two. The junction becomes an address. See City::splitSegment.
+//! Agents stop only at Nodes and at addresses on a Segment. A building on a
+//! street cuts the street in two. The junction becomes an address. See
+//! City::splitSegment.
 //!
 //! Example:
 //! \code
@@ -66,11 +69,11 @@ public:
     //! \param[in] id Unique id inside the Path.
     //! \param[in] position World position.
     // -------------------------------------------------------------------------
-    Node(uint32_t id, Vector3f const& position);
+    Node(size_t id, Vector3f const& position);
 
     // -------------------------------------------------------------------------
-    //! \brief Copies segment and building lists as-is. Neither side knows the copy.
-    //! The save loader uses this.
+    //! \brief Copies segment and building lists as-is. Neither side knows the
+    //! copy. The save loader uses this.
     // -------------------------------------------------------------------------
     Node(Node const&) = default;
 
@@ -104,14 +107,15 @@ public:
     //! \brief Segment between this crossroads and a neighbor.
     //! \param[in] node The neighbor.
     //! \return First segment with both as ends, or nullptr if not neighbors.
-    //! Two crossroads may share more than one segment. Use getSegments() for all.
+    //! Two crossroads may share more than one segment. Use getSegments() for
+    //! all.
     // -------------------------------------------------------------------------
     [[nodiscard]] Segment* findSegmentTo(Node const& node) const;
 
     // -------------------------------------------------------------------------
     //! \return Unique id inside the Path. Saves and undo use this id.
     // -------------------------------------------------------------------------
-    [[nodiscard]] uint32_t getId() const
+    [[nodiscard]] size_t getId() const
     {
         return m_id;
     }
@@ -120,12 +124,12 @@ public:
     //! \return Index in the Path node list, in [0..Path::getNodeCount()[.
     //!
     //! Not the same as getId(). Ids are assigned once and survive demolition.
-    //! The index is renumbered to stay dense. Routers can use plain arrays indexed
-    //! by node.
+    //! The index is renumbered to stay dense. Routers can use plain arrays
+    //! indexed by node.
     //!
     //! Meaningless for a Node built outside a Path, as in unit tests.
     // -------------------------------------------------------------------------
-    [[nodiscard]] uint32_t getIndex() const
+    [[nodiscard]] size_t getIndex() const
     {
         return m_index;
     }
@@ -173,13 +177,10 @@ public:
 private:
 
     //! \brief Unique id inside the Path.
-    uint32_t m_id = 0u;
+    size_t m_id = 0u;
 
     //! \brief Dense index in the Path list. See getIndex().
-    uint32_t m_index = 0u;
-
-    //! \brief World position.
-    Vector3f m_position;
+    size_t m_index = 0u;
 
     //! \brief Segments at this crossroads. Not owned. The Path owns them.
     std::vector<Segment*> m_segments;
@@ -189,12 +190,17 @@ private:
 
     //! \brief Owning Path, or nullptr for a standalone Node.
     Path* m_path = nullptr;
+
+    //! \brief World position. Three floats, so it sits last where the gap it
+    //! leaves is the one the struct would end on anyway.
+    Vector3f m_position;
 };
 
 //! \brief Owns a crossroads.
 using NodePtr = std::unique_ptr<Node>;
 
-//! \brief Crossroads in a Path. A deque keeps addresses stable when you add one.
+//! \brief Crossroads in a Path. A deque keeps addresses stable when you add
+//! one.
 using Nodes = std::deque<NodePtr>;
 
 // =============================================================================
@@ -202,8 +208,8 @@ using Nodes = std::deque<NodePtr>;
 //!
 //! This is an undirected graph edge. One-way traffic is not modeled. It stores
 //! its length, how many Agents are on it, and the drive time from both. See
-//! getTravelTime(). The router minimizes travel time, not length. Traffic spreads
-//! across streets instead of queuing on the shortest one.
+//! getTravelTime(). The router minimizes travel time, not length. Traffic
+//! spreads across streets instead of queuing on the shortest one.
 //!
 //! A Segment also stores buildings along it. One street with forty houses stays
 //! one segment instead of forty.
@@ -241,12 +247,12 @@ public:
     //! \param[in] to The other end. Traffic is undirected. Building offsets
     //! count from \c from.
     // -------------------------------------------------------------------------
-    Segment(uint32_t id, SegmentType const& type, Node& from, Node& to);
+    Segment(size_t id, SegmentType const& type, Node& from, Node& to);
 
     // -------------------------------------------------------------------------
     //! \return Unique id inside the Path.
     // -------------------------------------------------------------------------
-    [[nodiscard]] uint32_t getId() const
+    [[nodiscard]] size_t getId() const
     {
         return m_id;
     }
@@ -452,8 +458,8 @@ public:
 private:
 
     // -------------------------------------------------------------------------
-    //! \brief Recompute length and free-flow travel time. Called at construction
-    //! and when an end moves.
+    //! \brief Recompute length and free-flow travel time. Called at
+    //! construction and when an end moves.
     // -------------------------------------------------------------------------
     void updateLength();
 
@@ -467,19 +473,21 @@ private:
 private:
 
     //! \brief Smallest flow change worth recomputing travel time, in vehicles.
-    //! Smoothing never reaches the instant count exactly. An equality test would
-    //! keep evaluating BPR on every quiet street forever. It is also unsafe for
-    //! float comparison.
+    //! Smoothing never reaches the instant count exactly. An equality test
+    //! would keep evaluating BPR on every quiet street forever. It is also
+    //! unsafe for float comparison.
     static constexpr float FLOW_EPSILON = 1e-3f;
 
     //! \brief Unique id inside the Path.
-    uint32_t m_id;
+    size_t m_id;
     //! \brief Segment recipe, shared by every segment of that type.
     SegmentType const& m_type;
     //! \brief End that building offsets count from. Not owned.
     Node* m_from = nullptr;
     //! \brief Other end. Not owned.
     Node* m_to = nullptr;
+    //! \brief Buildings along the segment. Not owned.
+    std::vector<Building*> m_buildings;
     //! \brief Cached length in world units.
     float m_length = 0.0f;
     //! \brief Cached free-flow travel time in game seconds.
@@ -490,8 +498,6 @@ private:
     float m_flow = 0.0f;
     //! \brief Cached BPR result for current m_flow. See getTravelTime().
     float m_travelTime = 0.0f;
-    //! \brief Buildings along the segment. Not owned.
-    std::vector<Building*> m_buildings;
 };
 
 //! \brief Owns a segment.
@@ -527,11 +533,12 @@ struct Crossing
 //!
 //! The player draws it, or a save file loads it. A City may hold several Paths.
 //! They never meet. A road network and a rail network are two Paths. An Agent
-//! on one cannot hop to the other. The router never leaves the Path it started on.
+//! on one cannot hop to the other. The router never leaves the Path it started
+//! on.
 //!
 //! The Path owns its crossroads and segments. It returns references to them.
-//! Those references stay valid while the object lives. That is why both containers
-//! are deques.
+//! Those references stay valid while the object lives. That is why both
+//! containers are deques.
 //!
 //! Example:
 //! \code
@@ -541,7 +548,8 @@ struct Crossing
 //! Segment& street = road.addSegment(dirtType, a, b);
 //!
 //! // Putting a building halfway down the street: cut it in two, and the
-//! // junction becomes the address. City::splitSegment does this and takes care of
+//! // junction becomes the address. City::splitSegment does this and takes care
+//! of
 //! // the buildings and the Agents already there.
 //! Node& junction = city.splitSegment(road, street, 0.5f);
 //! city.addBuilding(homeType, junction);
@@ -564,7 +572,8 @@ public:
 
     // -------------------------------------------------------------------------
     //! \brief Empty network: no crossroads, no segments.
-    //! \param[in] type Network recipe. Kept by reference. Must outlive the Path.
+    //! \param[in] type Network recipe. Kept by reference. Must outlive the
+    //! Path.
     // -------------------------------------------------------------------------
     explicit Path(PathType const& type);
 
@@ -589,13 +598,13 @@ public:
     //! \param[in] position World position.
     //! \return The new crossroads, or the existing one if that id is in use.
     // -------------------------------------------------------------------------
-    Node& addNode(uint32_t id, Vector3f const& position);
+    Node& addNode(size_t id, Vector3f const& position);
 
     // -------------------------------------------------------------------------
     //! \param[in] id Id to look up.
     //! \return The crossroads, or nullptr if it no longer exists.
     // -------------------------------------------------------------------------
-    [[nodiscard]] Node* findNode(uint32_t id) const;
+    [[nodiscard]] Node* findNode(size_t id) const;
 
     // -------------------------------------------------------------------------
     //! \brief Destroy a crossroads and every segment attached to it.
@@ -629,27 +638,27 @@ public:
 
     // -------------------------------------------------------------------------
     //! \brief Add a segment with a saved id.
-    //! See addNode(uint32_t, Vector3f const&) for why that matters.
+    //! See addNode(size_t, Vector3f const&) for why that matters.
     //! \param[in] id Id to assign.
     //! \param[in] type Segment recipe.
     //! \param[in] p1, p2 Its two ends.
     //! \return The new segment, or the existing one if that id is in use.
     // -------------------------------------------------------------------------
-    Segment& addSegment(uint32_t id, SegmentType const& type, Node& p1, Node& p2);
+    Segment& addSegment(size_t id, SegmentType const& type, Node& p1, Node& p2);
 
     // -------------------------------------------------------------------------
     //! \param[in] id Id to look up.
     //! \return The segment, or nullptr if it no longer exists.
     // -------------------------------------------------------------------------
-    [[nodiscard]] Segment* findSegment(uint32_t id) const;
+    [[nodiscard]] Segment* findSegment(size_t id) const;
 
     // -------------------------------------------------------------------------
     //! \brief Destroy a segment and remove it from both ends.
     //!
     //! Both crossroads stay, even as orphans. The player may reconnect them.
     //!
-    //! \note Agents on the segment may still refer to it. The caller must handle
-    //! them first. Use City::removeSegment.
+    //! \note Agents on the segment may still refer to it. The caller must
+    //! handle them first. Use City::removeSegment.
     //!
     //! \param[in] segment The segment to destroy.
     // -------------------------------------------------------------------------
@@ -718,7 +727,7 @@ public:
     //! \brief Move every crossroads and segment with the City.
     //! \param[in] direction How far the City moved.
     // -------------------------------------------------------------------------
-    void translate(Vector3f const& direction);
+    void translate(Vector3f const& direction) const;
 
     // -------------------------------------------------------------------------
     //! \return Type name, such as "Road".
@@ -776,7 +785,7 @@ public:
     //! The City calls this once per tick. See Segment::smoothFlow().
     //! \param[in] alpha Step size in ]0..1].
     // -------------------------------------------------------------------------
-    void updateTrafficSmoothing(float alpha);
+    void updateTrafficSmoothing(float alpha) const;
 
 private:
 
@@ -789,20 +798,21 @@ private:
     // -------------------------------------------------------------------------
     //! \brief Renumber Node::getIndex() to stay dense after a removal.
     // -------------------------------------------------------------------------
-    void reindexNodes();
+    void reindexNodes() const;
 
 private:
 
     //! \brief Network recipe, shared by every network of that kind.
     PathType const& m_type;
-    //! \brief Owned crossroads. A deque keeps references valid when you add one.
+    //! \brief Owned crossroads. A deque keeps references valid when you add
+    //! one.
     Nodes m_nodes;
     //! \brief Owned segments. Same reason as m_nodes.
     Segments m_segments;
     //! \brief Id for the next crossroads.
-    uint32_t m_nextNodeId = 0u;
+    size_t m_nextNodeId = 0u;
     //! \brief Id for the next segment.
-    uint32_t m_nextSegmentId = 0u;
+    size_t m_nextSegmentId = 0u;
     //! \brief Cache of the highest free-flow speed in m_segments.
     float m_maxFreeFlowSpeed = 1.0f;
 };

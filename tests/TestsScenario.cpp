@@ -18,25 +18,17 @@
 #include "OpenGlassBox/DijkstraRouter.hpp"
 #include "OpenGlassBox/Simulation.hpp"
 #include "Save/CitySave.hpp"
+#include "TestDataPath.hpp"
 
-#include <fstream>
 #include <functional>
 #include <stdexcept>
 
 //------------------------------------------------------------------------------
+//! \brief Where the shipped simulations live. Kept as a short local name
+//! because every check below spells out a file.
 static std::string dataFile(std::string const& name)
 {
-    std::string const candidates[] = {
-        "../demo/data/simulations/" + name,
-        "demo/data/simulations/" + name,
-    };
-    for (std::string const& path : candidates)
-    {
-        std::ifstream file(path);
-        if (file.good())
-            return path;
-    }
-    return candidates[0];
+    return testDataPath(name);
 }
 
 //------------------------------------------------------------------------------
@@ -190,22 +182,25 @@ static Sightings watch(Simulation& simulation,
 
 //------------------------------------------------------------------------------
 //! \brief Load a save against the ruleset it was written for, and open the
-//! working day. A save carries the tick it was written at, and qq.ogc was
-//! written at half past midnight, when no rule of the commute is awake.
+//! working day. A save carries the tick it was written at, and most of the
+//! shipped ones were written at night, when no rule of the commute is awake.
 static City& openAtEightInTheMorning(Simulation& simulation,
                                      std::string const& save)
 {
-    EXPECT_TRUE(simulation.loadScriptFile(dataFile("sandbox.ogs")))
-        << simulation.getRuleset().formatErrors();
-
+    // Which ruleset to open comes from the save itself. The shipped cities are
+    // not all built on the same one, and naming a ruleset here made this helper
+    // load rules that did not define the types of the save.
     CitySaveHeader header;
     std::string error;
     EXPECT_TRUE(CitySave::peekHeader(dataFile(save), header, error)) << error;
+
+    std::string const ruleset = dataFile(header.ruleset);
+    EXPECT_TRUE(simulation.loadScriptFile(ruleset))
+        << simulation.getRuleset().formatErrors();
+
     // The saves carry the fingerprint of the ruleset. Changing the rules means
     // refreshing it, and a stale one is exactly what this catches.
-    EXPECT_TRUE(
-        CitySave::matchesRuleset(header, dataFile("sandbox.ogs"), error))
-        << error;
+    EXPECT_TRUE(CitySave::matchesRuleset(header, ruleset, error)) << error;
     EXPECT_TRUE(CitySave::read(dataFile(save), simulation, error)) << error;
     installDijkstraRouters(simulation);
 
@@ -220,27 +215,21 @@ static City& openAtEightInTheMorning(Simulation& simulation,
 }
 
 //------------------------------------------------------------------------------
-//! \brief From eight in the morning to three in the afternoon on the two-zone
+//! \brief From eight in the morning to five in the afternoon on the zoned
 //! save: the whole chain from an empty plot to a shop with something to sell.
-TEST(TestsScenario, ADayInQqCity)
+TEST(TestsScenario, ADayInTheZonedCity)
 {
     Simulation simulation;
-    City& city = openAtEightInTheMorning(simulation, "qq.ogc");
+    City& city = openAtEightInTheMorning(simulation, "sandbox.ogc");
 
-    ASSERT_EQ(countByTarget(city, "Home"), 0u);
+    uint32_t const homesAtStart = countByTarget(city, "Home");
     ASSERT_NE(findByTarget(city, "Work"), nullptr);
     ASSERT_NE(findByTarget(city, "Shop"), nullptr);
 
-    // The Commercial zone of that save is a single cell and already holds a
-    // shop, so the canteen goes next to it by hand. What is under test here is
-    // the lunch rules, not where a zone puts a building.
-    Path& road = *(city.getPaths().begin()->second);
-    Segment* const segment = road.findSegment(3u);
-    ASSERT_NE(segment, nullptr);
-    city.addBuilding(simulation.getRuleset().getBuildingType("Restaurant"),
-                     road,
-                     *segment,
-                     0.6f);
+    // The canteen comes with the save. A second one added here would only
+    // split the lunch crowd between two doors, and the checks below follow a
+    // single restaurant: what is under test is the lunch rules, not where a
+    // zone puts a building.
     ASSERT_NE(findBuilding(city, "Restaurant"), nullptr);
 
     // Nine game hours: the zone takes two to grow its first house, and the
@@ -248,9 +237,19 @@ TEST(TestsScenario, ADayInQqCity)
     // commute, a half-hourly production and a delivery long. The window has to
     // cover the lunch hours as well, which is why it reaches five in the
     // afternoon rather than stopping at noon.
-    Sightings const seen = watch(simulation, city, 9u * 60u * 20u);
+    //
+    // The save opens with a few houses already standing, so growth is the peak
+    // count over the day and not the count at the end: a district that grew and
+    // was then abandoned still grew.
+    uint32_t homesPeak = homesAtStart;
+    Sightings const seen =
+        watch(simulation,
+              city,
+              9u * 60u * 20u,
+              [&]()
+              { homesPeak = std::max(homesPeak, countByTarget(city, "Home")); });
 
-    ASSERT_TRUE(seen.home) << "the Residential zones grew nothing";
+    ASSERT_GT(homesPeak, homesAtStart) << "the Residential zones grew nothing";
     ASSERT_TRUE(seen.peopleAtWork) << "nobody ever reached the factory";
     ASSERT_TRUE(seen.goodsAtWork) << "the factory produced nothing";
     ASSERT_TRUE(seen.goodsAtShop) << "no freight ever reached a shop";
@@ -302,7 +301,7 @@ TEST(TestsScenario, ADayInQqCity)
 TEST(TestsScenario, ClaimsOnDestinationsNeverLeak)
 {
     Simulation simulation;
-    City& city = openAtEightInTheMorning(simulation, "qq.ogc");
+    City& city = openAtEightInTheMorning(simulation, "simple.ogc");
 
     // Long enough for houses to grow, commutes to run, buildings to be
     // demolished and Agents to give up: every way a trip can end.
@@ -335,16 +334,16 @@ TEST(TestsScenario, ClaimsOnDestinationsNeverLeak)
 TEST(TestsScenario, PollutionFadesAndDesirabilityMovesInDays)
 {
     Simulation simulation;
-    City& city = openAtEightInTheMorning(simulation, "qq.ogc");
+    City& city = openAtEightInTheMorning(simulation, "simple2.ogc");
 
     Layer const& pollution = city.getLayer("Pollution");
     Layer const& desirability = city.getLayer("Desirability");
 
-    // A cell no polluting building reaches. The factory of that save stands at
-    // (10,4) and reads three cells around itself, and the coal plant stands at
-    // (1,5) and reads six, so the far corner is the only one outside both. The
-    // near corner used to serve, until the save gained the power plant a
-    // residential zone needs to grow at all.
+    // A cell no polluting building reaches. The factory and the coal plant of
+    // that save both stand on the west side of the map and only read a few
+    // cells around themselves, so the far south-east corner is outside the
+    // reach of both. A corner nearer to them would measure what they add rather
+    // than what fades.
     int32_t const u = 11;
     int32_t const v = 11;
     uint32_t const pollutionAtStart = pollution.getResource({ u, v });
@@ -391,12 +390,13 @@ TEST(TestsScenario, PollutionFadesAndDesirabilityMovesInDays)
 }
 
 //------------------------------------------------------------------------------
-//! \brief The other save has a single zone. Growth and production still have to
-//! start, and nothing may crash for want of a second one.
-TEST(TestsScenario, ADayInQq2City)
+//! \brief The other save is laid out entirely by hand and carries no zone at
+//! all. Commutes and production still have to run, and nothing may crash for
+//! want of a zone to grow from.
+TEST(TestsScenario, ADayInTheHandDrawnCity)
 {
     Simulation simulation;
-    City& city = openAtEightInTheMorning(simulation, "qq2.ogc");
+    City& city = openAtEightInTheMorning(simulation, "simple2.ogc");
 
     // The factory of that save stands at a fifth of the first street, and the
     // west end of it is a dead end: nothing stands there and no road goes on.
@@ -451,7 +451,7 @@ TEST(TestsScenario, ADayInQq2City)
 
     ASSERT_TRUE(seen.home || (countByTarget(city, "Shop") > 0u) ||
                 (countByTarget(city, "Work") > 0u))
-        << "the zone grew nothing at all";
+        << "the city lost every building it opened with";
 
     // Whatever grew, it hangs off the network.
     for (auto const& building : city.getBuildings())

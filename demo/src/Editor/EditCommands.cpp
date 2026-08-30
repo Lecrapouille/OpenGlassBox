@@ -5,21 +5,21 @@
 //-----------------------------------------------------------------------------
 
 #include "Editor/EditCommands.hpp"
-#include "OpenGlassBox/Zone.hpp"
 #include "OpenGlassBox/Simulation.hpp"
+#include "OpenGlassBox/Zone.hpp"
 
 #include <algorithm>
 #include <cstdio>
 
-namespace ogb {
-namespace editor {
-
+namespace ogb::editor
+{
 
 // ----------------------------------------------------------------------------
 //! \brief Look up a Path, returning nullptr rather than throwing: a command can
 //! be replayed after the world was rebuilt, and the name may be gone.
 // ----------------------------------------------------------------------------
-static Path* findPath(Simulation& simulation, std::string const& cityName,
+static Path* findPath(Simulation const& simulation,
+                      std::string const& cityName,
                       std::string const& pathName)
 {
     auto const& cities = simulation.getCities();
@@ -36,7 +36,7 @@ static Path* findPath(Simulation& simulation, std::string const& cityName,
 }
 
 // ----------------------------------------------------------------------------
-static City* findCity(Simulation& simulation, std::string const& cityName)
+static City* findCity(Simulation const& simulation, std::string const& cityName)
 {
     auto const& cities = simulation.getCities();
     auto it = cities.find(cityName);
@@ -48,12 +48,13 @@ static City* findCity(Simulation& simulation, std::string const& cityName)
 //! makes a road drawn by hand connect to the network instead of laying a
 //! parallel graph a couple of pixels away.
 // ----------------------------------------------------------------------------
-static Node* snapToNode(Path& path, Vector3f const& position, float radius)
+static Node*
+snapToNode(Path const& path, Vector3f const& position, float radius)
 {
     Node* best = nullptr;
     float bestDistance = radius;
 
-    for (auto const& node: path.getNodes())
+    for (auto const& node : path.getNodes())
     {
         float const distance = length(node->getPosition() - position);
         if (distance <= bestDistance)
@@ -72,15 +73,18 @@ static Node* snapToNode(Path& path, Vector3f const& position, float radius)
 //! landed on an end of the segment and the crossroads was there already.
 //! \return the junction, cut or found.
 // ----------------------------------------------------------------------------
-static Node& cutSegment(City& city, Path& path, Segment& segment, float offset,
+static Node& cutSegment(City& city,
+                        Path& path,
+                        Segment& segment,
+                        float offset,
                         SegmentCut& cut)
 {
     cut = SegmentCut();
     cut.type = segment.getTypeName().str();
 
-    uint32_t const segmentId = segment.getId();
-    uint32_t const fromId = segment.getFrom().getId();
-    uint32_t const toId = segment.getTo().getId();
+    size_t const segmentId = segment.getId();
+    size_t const fromId = segment.getFrom().getId();
+    size_t const toId = segment.getTo().getId();
 
     Node& junction = city.splitSegment(path, segment, offset);
 
@@ -94,7 +98,7 @@ static Node& cutSegment(City& city, Path& path, Segment& segment, float offset,
 
     cut.junctionId = junction.getId();
     cut.firstId = segmentId;
-    for (Segment const* incident: junction.getSegments())
+    for (Segment const* incident : junction.getSegments())
     {
         if (incident->getId() != segmentId)
             cut.secondId = incident->getId();
@@ -112,19 +116,22 @@ static Node& cutSegment(City& city, Path& path, Segment& segment, float offset,
 //! which leaves the player a crossroads they did not ask for rather than
 //! taking away what they did.
 // ----------------------------------------------------------------------------
-static void sewSegment(Simulation& simulation, City& city, Path& path,
+static void sewSegment(Simulation const& simulation,
+                       City& city,
+                       Path& path,
                        SegmentCut const& cut)
 {
     if (cut.junctionId == NO_ID)
         return;
 
     Node* junction = path.findNode(cut.junctionId);
-    Segment* first = path.findSegment(cut.firstId);
-    Segment* second = path.findSegment(cut.secondId);
+    Segment const* first = path.findSegment(cut.firstId);
+    Segment const* second = path.findSegment(cut.secondId);
     if ((junction == nullptr) || (first == nullptr) || (second == nullptr))
         return;
 
-    if (!junction->getBuildings().empty() || (junction->getSegments().size() != 2u))
+    if (!junction->getBuildings().empty() ||
+        (junction->getSegments().size() != 2u))
         return;
     if (!first->getBuildings().empty() || !second->getBuildings().empty())
         return;
@@ -139,10 +146,12 @@ static void sewSegment(Simulation& simulation, City& city, Path& path,
         return;
     }
 
-    Node const& a = (&first->getFrom() == junction) ? first->getTo() : first->getFrom();
-    Node const& b = (&second->getFrom() == junction) ? second->getTo() : second->getFrom();
-    uint32_t const fromId = a.getId();
-    uint32_t const toId = b.getId();
+    Node const& a =
+        (&first->getFrom() == junction) ? first->getTo() : first->getFrom();
+    Node const& b =
+        (&second->getFrom() == junction) ? second->getTo() : second->getFrom();
+    size_t const fromId = a.getId();
+    size_t const toId = b.getId();
     Vector3f const fromPosition = a.getPosition();
     Vector3f const toPosition = b.getPosition();
 
@@ -159,19 +168,20 @@ static void sewSegment(Simulation& simulation, City& city, Path& path,
 //! \brief Take a node back, as long as nothing came to lean on it. Used both by
 //! the undos and by a command that gives up half way through.
 // ----------------------------------------------------------------------------
-static void dropIfOrphan(City& city, Path& path, uint32_t id)
+static void dropIfOrphan(City& city, Path& path, size_t id)
 {
     Node* node = path.findNode(id);
-    if ((node != nullptr) && !node->hasSegments() && node->getBuildings().empty())
+    if ((node != nullptr) && !node->hasSegments() &&
+        node->getBuildings().empty())
     {
         city.removeNode(path, *node);
     }
 }
 
 // ----------------------------------------------------------------------------
-Node* NodeRef::resolve(Simulation& simulation) const
+Node* NodeRef::resolve(Simulation const& simulation) const
 {
-    Path* p = findPath(simulation, city, path);
+    Path const* p = findPath(simulation, city, path);
     return (p == nullptr) ? nullptr : p->findNode(id);
 }
 
@@ -257,16 +267,20 @@ void CommandStack::takeHistory(std::deque<CommandPtr>& out)
 // =============================================================================
 
 // ----------------------------------------------------------------------------
-AddSegmentCommand::AddSegmentCommand(std::string city, std::string path,
-                             std::string segmentType, Vector3f from, Vector3f to,
-                             float snapRadius)
+AddSegmentCommand::AddSegmentCommand(std::string city,
+                                     std::string path,
+                                     std::string segmentType,
+                                     Vector3f from,
+                                     Vector3f to,
+                                     float snapRadius)
     : m_city(std::move(city)),
       m_path(std::move(path)),
       m_segmentType(std::move(segmentType)),
       m_from(from),
       m_to(to),
       m_snapRadius(snapRadius)
-{}
+{
+}
 
 // ----------------------------------------------------------------------------
 bool AddSegmentCommand::redo(Simulation& simulation)
@@ -309,7 +323,8 @@ bool AddSegmentCommand::redo(Simulation& simulation)
 
     // On the first run the engine picks the identifiers; the redos hand back
     // the ones it picked.
-    auto reuseOrCreate = [path](uint32_t id, Vector3f const& position) -> Node& {
+    auto reuseOrCreate = [path](size_t id, Vector3f const& position) -> Node&
+    {
         return (id == NO_ID) ? path->addNode(position)
                              : path->addNode(id, position);
     };
@@ -318,8 +333,9 @@ bool AddSegmentCommand::redo(Simulation& simulation)
     // on empty ground. Landing on a road makes a T junction there: without the
     // cut the two only looked joined, and no agent could turn from one into the
     // other.
-    auto resolveEnd = [&](Vector3f const& position, uint32_t& id,
-                          bool& created) -> Node* {
+    auto resolveEnd =
+        [&](Vector3f const& position, size_t& id, bool& created) -> Node*
+    {
         Node* node = snapToNode(*path, position, m_snapRadius);
         if (node != nullptr)
         {
@@ -350,7 +366,8 @@ bool AddSegmentCommand::redo(Simulation& simulation)
     // Resolving the ends already cut roads and made nodes, so giving up here
     // has to leave the graph as it was found rather than a crossroads short of
     // a road to justify it.
-    auto giveUp = [&]() {
+    auto giveUp = [&]()
+    {
         for (auto it = m_cuts.rbegin(); it != m_cuts.rend(); ++it)
         {
             sewSegment(simulation, *city, *path, *it);
@@ -370,7 +387,8 @@ bool AddSegmentCommand::redo(Simulation& simulation)
         return giveUp();
 
     // Refuse a duplicate: the graph is simple, and a second segment between the
-    // same two nodes would only split the traffic in a way nothing accounts for.
+    // same two nodes would only split the traffic in a way nothing accounts
+    // for.
     if (from->findSegmentTo(*to) != nullptr)
         return giveUp();
 
@@ -385,11 +403,11 @@ bool AddSegmentCommand::redo(Simulation& simulation)
     chain.reserve(crossings.size() + 2u);
     chain.push_back(from);
 
-    for (Crossing const& crossing: crossings)
+    for (Crossing const& crossing : crossings)
     {
         SegmentCut cut;
-        Node& junction =
-            cutSegment(*city, *path, *crossing.segment, crossing.segmentOffset, cut);
+        Node& junction = cutSegment(
+            *city, *path, *crossing.segment, crossing.segmentOffset, cut);
 
         if (cut.junctionId != NO_ID)
             m_cuts.push_back(cut);
@@ -397,7 +415,7 @@ bool AddSegmentCommand::redo(Simulation& simulation)
     }
     chain.push_back(to);
 
-    std::vector<uint32_t> const reuse = m_pieceIds;
+    std::vector<size_t> const reuse = m_pieceIds;
     m_pieceIds.clear();
     for (size_t i = 1u; i < chain.size(); ++i)
     {
@@ -410,9 +428,10 @@ bool AddSegmentCommand::redo(Simulation& simulation)
             continue;
 
         size_t const index = m_pieceIds.size();
-        uint32_t const id = (index < reuse.size()) ? reuse[index] : NO_ID;
-        Segment& piece = (id == NO_ID) ? path->addSegment(*type, a, b)
-                                       : path->addSegment(id, *type, a, b);
+        size_t const id = (index < reuse.size()) ? reuse[index] : NO_ID;
+        Segment const& piece = (id == NO_ID)
+                                   ? path->addSegment(*type, a, b)
+                                   : path->addSegment(id, *type, a, b);
         m_pieceIds.push_back(piece.getId());
     }
 
@@ -427,7 +446,7 @@ void AddSegmentCommand::undo(Simulation& simulation)
     if ((city == nullptr) || (path == nullptr))
         return;
 
-    for (uint32_t id: m_pieceIds)
+    for (size_t id : m_pieceIds)
     {
         Segment* segment = path->findSegment(id);
         if (segment != nullptr)
@@ -478,13 +497,16 @@ void AddSegmentCommand::onWorldRebuilt()
 // =============================================================================
 
 // ----------------------------------------------------------------------------
-SplitSegmentCommand::SplitSegmentCommand(std::string city, std::string path,
-                                         uint32_t segmentId, float offset)
+SplitSegmentCommand::SplitSegmentCommand(std::string city,
+                                         std::string path,
+                                         size_t segmentId,
+                                         float offset)
     : m_city(std::move(city)),
       m_path(std::move(path)),
       m_segmentId(segmentId),
       m_offset(offset)
-{}
+{
+}
 
 // ----------------------------------------------------------------------------
 bool SplitSegmentCommand::redo(Simulation& simulation)
@@ -527,20 +549,25 @@ std::string SplitSegmentCommand::label() const
 // =============================================================================
 
 // ----------------------------------------------------------------------------
-MoveNodeCommand::MoveNodeCommand(std::string city, std::string path,
-                                 uint32_t nodeId, Vector3f from, Vector3f to)
+MoveNodeCommand::MoveNodeCommand(std::string city,
+                                 std::string path,
+                                 size_t nodeId,
+                                 Vector3f from,
+                                 Vector3f to)
     : m_city(std::move(city)),
       m_path(std::move(path)),
       m_nodeId(nodeId),
       m_from(from),
       m_to(to)
-{}
+{
+}
 
 // ----------------------------------------------------------------------------
-void MoveNodeCommand::place(Simulation& simulation, Vector3f const& position)
+void MoveNodeCommand::place(Simulation const& simulation,
+                            Vector3f const& position) const
 {
     City* city = findCity(simulation, m_city);
-    Path* path = findPath(simulation, m_city, m_path);
+    Path const* path = findPath(simulation, m_city, m_path);
     if ((city == nullptr) || (path == nullptr))
         return;
 
@@ -554,7 +581,7 @@ void MoveNodeCommand::place(Simulation& simulation, Vector3f const& position)
 // ----------------------------------------------------------------------------
 bool MoveNodeCommand::redo(Simulation& simulation)
 {
-    Path* path = findPath(simulation, m_city, m_path);
+    Path const* path = findPath(simulation, m_city, m_path);
     if ((path == nullptr) || (path->findNode(m_nodeId) == nullptr))
         return false;
 
@@ -584,24 +611,30 @@ std::string MoveNodeCommand::label() const
 // =============================================================================
 
 // ----------------------------------------------------------------------------
-AddBuildingCommand::AddBuildingCommand(std::string city, std::string path,
-                               std::string buildingType, uint32_t segmentId,
-                               float offset)
+AddBuildingCommand::AddBuildingCommand(std::string city,
+                                       std::string path,
+                                       std::string buildingType,
+                                       size_t segmentId,
+                                       float offset)
     : m_city(std::move(city)),
       m_path(std::move(path)),
       m_buildingType(std::move(buildingType)),
       m_segmentId(segmentId),
       m_offset(offset)
-{}
+{
+}
 
 // ----------------------------------------------------------------------------
-AddBuildingCommand::AddBuildingCommand(std::string city, std::string path,
-                               std::string buildingType, uint32_t nodeId)
+AddBuildingCommand::AddBuildingCommand(std::string city,
+                                       std::string path,
+                                       std::string buildingType,
+                                       size_t nodeId)
     : m_city(std::move(city)),
       m_path(std::move(path)),
       m_buildingType(std::move(buildingType)),
       m_nodeId(nodeId)
-{}
+{
+}
 
 // ----------------------------------------------------------------------------
 bool AddBuildingCommand::redo(Simulation& simulation)
@@ -621,7 +654,7 @@ bool AddBuildingCommand::redo(Simulation& simulation)
         return false;
     }
 
-    Building* building = nullptr;
+    Building const* building = nullptr;
 
     if (m_segmentId == NO_ID)
     {
@@ -654,11 +687,11 @@ void AddBuildingCommand::undo(Simulation& simulation)
     if (city == nullptr)
         return;
 
-    for (auto& it: city->getBuildings())
+    for (auto const& building : city->getBuildings())
     {
-        if (it->getId() == m_buildingId)
+        if (building->getId() == m_buildingId)
         {
-            city->removeBuilding(*it);
+            city->removeBuilding(*building);
             break;
         }
     }
@@ -667,7 +700,7 @@ void AddBuildingCommand::undo(Simulation& simulation)
 }
 
 // ----------------------------------------------------------------------------
-void AddBuildingCommand::mergeBack(Simulation& simulation)
+void AddBuildingCommand::mergeBack(Simulation const& simulation)
 {
     City* city = findCity(simulation, m_city);
     Path* path = findPath(simulation, m_city, m_path);
@@ -696,15 +729,18 @@ void AddBuildingCommand::onWorldRebuilt()
 // =============================================================================
 
 // ----------------------------------------------------------------------------
-RemoveBuildingCommand::RemoveBuildingCommand(std::string city, std::string path,
-                                     uint32_t id, std::string buildingType,
-                                     bool byBuildingId)
+RemoveBuildingCommand::RemoveBuildingCommand(std::string city,
+                                             std::string path,
+                                             size_t id,
+                                             std::string buildingType,
+                                             bool byBuildingId)
     : m_city(std::move(city)),
       m_path(std::move(path)),
       m_id(id),
       m_buildingType(std::move(buildingType)),
       m_byBuildingId(byBuildingId)
-{}
+{
+}
 
 // ----------------------------------------------------------------------------
 bool RemoveBuildingCommand::redo(Simulation& simulation)
@@ -716,24 +752,24 @@ bool RemoveBuildingCommand::redo(Simulation& simulation)
     Building* target = nullptr;
     if (m_byBuildingId)
     {
-        for (auto& it: city->getBuildings())
+        for (auto const& building : city->getBuildings())
         {
-            if (it->getId() == m_id)
+            if (building->getId() == m_id)
             {
-                target = it.get();
+                target = building.get();
                 break;
             }
         }
     }
     else
     {
-        Path* path = findPath(simulation, m_city, m_path);
+        Path const* path = findPath(simulation, m_city, m_path);
         if (path == nullptr)
             return false;
-        Node* node = path->findNode(m_id);
+        Node const* node = path->findNode(m_id);
         if (node == nullptr)
             return false;
-        for (auto* building: node->getBuildings())
+        for (auto* building : node->getBuildings())
         {
             if (building->getTypeName() == m_buildingType)
             {
@@ -752,7 +788,7 @@ bool RemoveBuildingCommand::redo(Simulation& simulation)
     {
         m_segmentId = target->getSegment()->getId();
         m_offset = target->getSegmentOffset();
-        Path* path = target->getPath();
+        Path const* path = target->getPath();
         if (path != nullptr)
             m_path = path->getTypeName().str();
     }
@@ -775,10 +811,11 @@ void RemoveBuildingCommand::undo(Simulation& simulation)
 
     try
     {
-        BuildingType const& type = simulation.getRuleset().getBuildingType(m_buildingType);
+        BuildingType const& type =
+            simulation.getRuleset().getBuildingType(m_buildingType);
         if (m_onNode)
         {
-            Path* path = findPath(simulation, m_city, m_path);
+            Path const* path = findPath(simulation, m_city, m_path);
             if (path == nullptr)
                 return;
             Node* node = path->findNode(m_id);
@@ -802,7 +839,9 @@ void RemoveBuildingCommand::undo(Simulation& simulation)
         }
     }
     catch (...)
-    {}
+    {
+        // do nothing
+    }
 }
 
 // ----------------------------------------------------------------------------
@@ -816,12 +855,12 @@ std::string RemoveBuildingCommand::label() const
 // =============================================================================
 
 // ----------------------------------------------------------------------------
-RemoveSegmentCommand::RemoveSegmentCommand(std::string city, std::string path,
-                                   uint32_t segmentId)
-    : m_city(std::move(city)),
-      m_path(std::move(path)),
-      m_segmentId(segmentId)
-{}
+RemoveSegmentCommand::RemoveSegmentCommand(std::string city,
+                                           std::string path,
+                                           size_t segmentId)
+    : m_city(std::move(city)), m_path(std::move(path)), m_segmentId(segmentId)
+{
+}
 
 // ----------------------------------------------------------------------------
 bool RemoveSegmentCommand::redo(Simulation& simulation)
@@ -875,7 +914,8 @@ void RemoveSegmentCommand::undo(Simulation& simulation)
 // ----------------------------------------------------------------------------
 std::string RemoveSegmentCommand::label() const
 {
-    return m_captured ? ("bulldoze " + m_segmentType) : std::string("bulldoze road");
+    return m_captured ? ("bulldoze " + m_segmentType)
+                      : std::string("bulldoze road");
 }
 
 // =============================================================================
@@ -883,12 +923,12 @@ std::string RemoveSegmentCommand::label() const
 // =============================================================================
 
 // ----------------------------------------------------------------------------
-RemoveNodeCommand::RemoveNodeCommand(std::string city, std::string path,
-                                     uint32_t nodeId)
-    : m_city(std::move(city)),
-      m_path(std::move(path)),
-      m_nodeId(nodeId)
-{}
+RemoveNodeCommand::RemoveNodeCommand(std::string city,
+                                     std::string path,
+                                     size_t nodeId)
+    : m_city(std::move(city)), m_path(std::move(path)), m_nodeId(nodeId)
+{
+}
 
 // ----------------------------------------------------------------------------
 bool RemoveNodeCommand::redo(Simulation& simulation)
@@ -904,7 +944,7 @@ bool RemoveNodeCommand::redo(Simulation& simulation)
 
     m_position = node->getPosition();
     m_segments.clear();
-    for (Segment* segment: node->getSegments())
+    for (Segment const* segment : node->getSegments())
     {
         SegmentSnapshot snapshot;
         snapshot.id = segment->getId();
@@ -928,7 +968,7 @@ void RemoveNodeCommand::undo(Simulation& simulation)
         return;
 
     path->addNode(m_nodeId, m_position);
-    for (SegmentSnapshot const& snapshot: m_segments)
+    for (SegmentSnapshot const& snapshot : m_segments)
     {
         SegmentType const* type = nullptr;
         try
@@ -957,9 +997,12 @@ std::string RemoveNodeCommand::label() const
 // =============================================================================
 
 // ----------------------------------------------------------------------------
-PaintResourceCommand::PaintResourceCommand(std::string city, std::string layer,
-                                           int32_t u0, int32_t v0,
-                                           int32_t u1, int32_t v1,
+PaintResourceCommand::PaintResourceCommand(std::string city,
+                                           std::string layer,
+                                           int32_t u0,
+                                           int32_t v0,
+                                           int32_t u1,
+                                           int32_t v1,
                                            uint32_t amount)
     : m_city(std::move(city)),
       m_layer(std::move(layer)),
@@ -968,10 +1011,13 @@ PaintResourceCommand::PaintResourceCommand(std::string city, std::string layer,
       m_u1(std::max(u0, u1)),
       m_v1(std::max(v0, v1)),
       m_amount(amount)
-{}
+{
+}
 
 // ----------------------------------------------------------------------------
-bool PaintResourceCommand::sameRectangle(int32_t u0, int32_t v0, int32_t u1,
+bool PaintResourceCommand::sameRectangle(int32_t u0,
+                                         int32_t v0,
+                                         int32_t u1,
                                          int32_t v1) const
 {
     return (m_u0 == std::min(u0, u1)) && (m_v0 == std::min(v0, v1)) &&
@@ -981,7 +1027,7 @@ bool PaintResourceCommand::sameRectangle(int32_t u0, int32_t v0, int32_t u1,
 // ----------------------------------------------------------------------------
 bool PaintResourceCommand::redo(Simulation& simulation)
 {
-    City* city = findCity(simulation, m_city);
+    City const* city = findCity(simulation, m_city);
     if (city == nullptr)
         return false;
 
@@ -1023,7 +1069,7 @@ bool PaintResourceCommand::redo(Simulation& simulation)
 // ----------------------------------------------------------------------------
 void PaintResourceCommand::undo(Simulation& simulation)
 {
-    City* city = findCity(simulation, m_city);
+    City const* city = findCity(simulation, m_city);
     if (city == nullptr)
         return;
 
@@ -1053,8 +1099,8 @@ void PaintResourceCommand::undo(Simulation& simulation)
 std::string PaintResourceCommand::label() const
 {
     char buffer[64];
-    std::snprintf(buffer, sizeof(buffer), "paint %s to %u", m_layer.c_str(),
-                  m_amount);
+    std::snprintf(
+        buffer, sizeof(buffer), "paint %s to %u", m_layer.c_str(), m_amount);
     return buffer;
 }
 
@@ -1062,11 +1108,13 @@ std::string PaintResourceCommand::label() const
 // ADD AREA
 // =============================================================================
 
-namespace {
+namespace
+{
 
 bool regionsOverlap(CellRegion const& a, CellRegion const& b)
 {
-    return (a.u0 < b.getMaxU()) && (b.u0 < a.getMaxU()) && (a.v0 < b.getMaxV()) && (b.v0 < a.getMaxV());
+    return (a.u0 < b.getMaxU()) && (b.u0 < a.getMaxU()) &&
+           (a.v0 < b.getMaxV()) && (b.v0 < a.getMaxV());
 }
 
 CellRegion makeRegion(int32_t u0, int32_t v0, int32_t u1, int32_t v1)
@@ -1099,26 +1147,34 @@ std::vector<CellRegion> subtract(CellRegion const& from, CellRegion const& cut)
     if (from.v0 < v0)
         pieces.push_back(makeRegion(from.u0, from.v0, from.getMaxU(), v0));
     if (v1 < from.getMaxV())
-        pieces.push_back(makeRegion(from.u0, v1, from.getMaxU(), from.getMaxV()));
+        pieces.push_back(
+            makeRegion(from.u0, v1, from.getMaxU(), from.getMaxV()));
     if (from.u0 < cut.u0)
-        pieces.push_back(makeRegion(from.u0, v0, std::min(from.getMaxU(), cut.u0), v1));
+        pieces.push_back(
+            makeRegion(from.u0, v0, std::min(from.getMaxU(), cut.u0), v1));
     if (cut.getMaxU() < from.getMaxU())
-        pieces.push_back(makeRegion(std::max(from.u0, cut.getMaxU()), v0, from.getMaxU(), v1));
+        pieces.push_back(makeRegion(
+            std::max(from.u0, cut.getMaxU()), v0, from.getMaxU(), v1));
 
     return pieces;
 }
 
 } // namespace
 
-AddZoneCommand::AddZoneCommand(std::string city, std::string zoneType,
-                               int32_t u0, int32_t v0, int32_t u1, int32_t v1)
+AddZoneCommand::AddZoneCommand(std::string city,
+                               std::string zoneType,
+                               int32_t u0,
+                               int32_t v0,
+                               int32_t u1,
+                               int32_t v1)
     : m_city(std::move(city)),
       m_zoneType(std::move(zoneType)),
       m_u0(std::min(u0, u1)),
       m_v0(std::min(v0, v1)),
       m_u1(std::max(u0, u1)),
       m_v1(std::max(v0, v1))
-{}
+{
+}
 
 bool AddZoneCommand::redo(Simulation& simulation)
 {
@@ -1165,7 +1221,7 @@ bool AddZoneCommand::redo(Simulation& simulation)
     }
 
     m_leftovers.clear();
-    for (SavedZone const& saved: overlapped)
+    for (SavedZone const& saved : overlapped)
     {
         ZoneType const* savedType = nullptr;
         try
@@ -1177,10 +1233,12 @@ bool AddZoneCommand::redo(Simulation& simulation)
             continue;
         }
 
-        CellRegion const footprint = makeRegion(
-            saved.u0, saved.v0, saved.u0 + int32_t(saved.sizeU),
-            saved.v0 + int32_t(saved.sizeV));
-        for (CellRegion const& piece: subtract(footprint, region))
+        CellRegion const footprint =
+            makeRegion(saved.u0,
+                       saved.v0,
+                       saved.u0 + int32_t(saved.sizeU),
+                       saved.v0 + int32_t(saved.sizeV));
+        for (CellRegion const& piece : subtract(footprint, region))
         {
             if (piece.isEmpty())
                 continue;
@@ -1188,7 +1246,7 @@ bool AddZoneCommand::redo(Simulation& simulation)
         }
     }
 
-    Zone& zone = city->addZone(*type, region);
+    Zone const& zone = city->addZone(*type, region);
     m_zoneId = zone.getId();
     return true;
 }
@@ -1199,33 +1257,39 @@ void AddZoneCommand::undo(Simulation& simulation)
     if (city == nullptr)
         return;
 
-    auto const dropById = [city](uint32_t id) {
-        for (auto& it: city->getZones())
+    auto const dropById = [city](size_t id)
+    {
+        for (auto const& zone : city->getZones())
         {
-            if (it->getId() == id)
+            if (zone->getId() == id)
             {
-                city->removeZone(*it);
+                city->removeZone(*zone);
                 return;
             }
         }
     };
 
     dropById(m_zoneId);
-    for (uint32_t id: m_leftovers)
+    for (size_t id : m_leftovers)
         dropById(id);
     m_leftovers.clear();
 
-    for (SavedZone const& saved: m_removed)
+    for (SavedZone const& saved : m_removed)
     {
         try
         {
-            ZoneType const& type = simulation.getRuleset().getZoneType(saved.type);
-            city->addZone(type, makeRegion(saved.u0, saved.v0,
-                                           saved.u0 + int32_t(saved.sizeU),
-                                           saved.v0 + int32_t(saved.sizeV)));
+            ZoneType const& type =
+                simulation.getRuleset().getZoneType(saved.type);
+            city->addZone(type,
+                          makeRegion(saved.u0,
+                                     saved.v0,
+                                     saved.u0 + int32_t(saved.sizeU),
+                                     saved.v0 + int32_t(saved.sizeV)));
         }
         catch (...)
-        {}
+        {
+            // do nothing
+        }
     }
 }
 
@@ -1233,5 +1297,4 @@ std::string AddZoneCommand::label() const
 {
     return "zone " + m_zoneType;
 }
-} // namespace editor
-} // namespace ogb
+} // namespace ogb::editor

@@ -48,8 +48,8 @@ City& World::addCity(std::string const& name,
                      uint32_t sizeU,
                      uint32_t sizeV)
 {
-    City& city = *(m_cities[name] =
-                       std::make_unique<City>(name, position, sizeU, sizeV, *this));
+    City& city = *(m_cities[name] = std::make_unique<City>(
+                       name, position, sizeU, sizeV, *this));
     m_listener->onCityAdded(city);
     return city;
 }
@@ -99,16 +99,16 @@ void World::update(float dt)
     m_clock.setTicksPerMinute(m_config.time.ticksPerMinute);
     m_clock.tick();
 
-    for (auto& it : m_cities)
+    for (auto const& [_, city] : m_cities)
     {
-        it.second->update(dt);
+        city->update(dt);
     }
 
     // Layers are shared, so their rules run once for the whole world rather
     // than once per city.
-    for (auto& it : m_layers)
+    for (auto const& [_, layer] : m_layers)
     {
-        it.second->executeRules(m_cities);
+        layer->executeRules(m_cities);
     }
 }
 
@@ -133,10 +133,11 @@ Vector3f World::cellToWorld(Cell cell) const
 City* World::findCityAt(Vector3f const& position)
 {
     Cell const cell = worldToCell(position);
-    for (auto& it : m_cities)
+    for (auto const& [cityName, city] : m_cities)
     {
-        if (it.second->getRegion().contains(cell))
-            return it.second.get();
+        (void)cityName;
+        if (city->getRegion().contains(cell))
+            return city.get();
     }
     return nullptr;
 }
@@ -208,34 +209,64 @@ bool World::addRoad(City& owner,
                     std::string const& pathType,
                     SegmentType const& segmentType,
                     Vector3f const& from,
-                    Vector3f const& to)
+                    Vector3f const& to) const
 {
-    Listener::SegmentProposal const proposal{ from, to, segmentType.name.str() };
+    Listener::SegmentProposal const proposal{ from,
+                                              to,
+                                              segmentType.name.str() };
 
-    struct Piece
+    std::vector<RoadPiece> pieces;
+    if (!cutRoadPerCity(owner, from, to, proposal, pieces))
     {
-        City* city;
-        Vector3f a;
-        Vector3f b;
-    };
-    std::vector<Piece> pieces;
+        // A neighbour refused its share, and a road laid only on this side of
+        // the border is not the road that was asked for.
+        return false;
+    }
 
-    for (auto& it : m_cities)
+    if (pieces.empty())
+    {
+        // Entirely outside every city: still give it to the requester.
+        pieces.push_back({ &owner, from, to });
+    }
+
+    for (RoadPiece const& piece : pieces)
+    {
+        layRoadPiece(piece, owner, pathType, segmentType);
+    }
+
+    return true;
+}
+
+// -----------------------------------------------------------------------------
+bool World::cutRoadPerCity(City& owner,
+                           Vector3f const& from,
+                           Vector3f const& to,
+                           Listener::SegmentProposal const& proposal,
+                           std::vector<RoadPiece>& pieces) const
+{
+    for (auto& it : m_cities) // NOSONAR
     {
         City& city = *it.second;
+
+        // Keep the part of the road that falls inside the cells of that city,
+        // as two positions along the line rather than as a clipped copy of it.
         CellRegion const region = city.getRegion();
         Vector3f const p0 = cellToWorld(Cell{ region.u0, region.v0 });
-        Vector3f const p1 = cellToWorld(Cell{ region.getMaxU(), region.getMaxV() });
+        Vector3f const p1 =
+            cellToWorld(Cell{ region.getMaxU(), region.getMaxV() });
         float t0 = 0.0f;
         float t1 = 1.0f;
         if (!clipToBox(from, to, p0.x, p0.y, p1.x, p1.y, t0, t1))
             continue;
 
+        // A road that only grazes a corner of the city is not worth a segment
+        // of its own there.
         Vector3f const a = from + (to - from) * t0;
         Vector3f const b = from + (to - from) * t1;
         if (length(b - a) < 1e-3f)
             continue;
 
+        // Building on someone else's ground is theirs to refuse.
         if ((&city != &owner) &&
             !m_listener->allowSegmentAcross(owner, city, proposal))
         {
@@ -245,35 +276,38 @@ bool World::addRoad(City& owner,
         pieces.push_back({ &city, a, b });
     }
 
-    if (pieces.empty())
-    {
-        // Entirely outside every city: still give it to the requester.
-        pieces.push_back({ &owner, from, to });
-    }
-
-    for (Piece const& piece : pieces)
-    {
-        Path* path = nullptr;
-        auto const found = piece.city->getPaths().find(pathType);
-        if (found != piece.city->getPaths().end())
-        {
-            path = found->second.get();
-        }
-        else
-        {
-            auto const ownerPath = owner.getPaths().find(pathType);
-            if (ownerPath == owner.getPaths().end())
-                continue;
-            path = &piece.city->addPath(ownerPath->second->getType());
-        }
-
-        Node& n1 = ensureNode(*path, piece.a);
-        Node& n2 = ensureNode(*path, piece.b);
-        if (&n1 != &n2)
-            path->addSegment(segmentType, n1, n2);
-    }
-
     return true;
+}
+
+// -----------------------------------------------------------------------------
+void World::layRoadPiece(RoadPiece const& piece,
+                         City const& owner,
+                         std::string const& pathType,
+                         SegmentType const& segmentType)
+{
+    // The city may already have that network, or it has to be given one of the
+    // same kind as the requester's. A requester without one has nothing to copy
+    // from, and the piece is dropped.
+    Path* path = nullptr;
+    auto const found = piece.city->getPaths().find(pathType);
+    if (found != piece.city->getPaths().end())
+    {
+        path = found->second.get();
+    }
+    else
+    {
+        auto const ownerPath = owner.getPaths().find(pathType);
+        if (ownerPath == owner.getPaths().end())
+            return;
+        path = &piece.city->addPath(ownerPath->second->getType());
+    }
+
+    // Both ends join whatever crossroads already stands there, so two roads
+    // drawn to the same corner meet instead of passing through one another.
+    Node& n1 = ensureNode(*path, piece.a);
+    Node& n2 = ensureNode(*path, piece.b);
+    if (&n1 != &n2)
+        path->addSegment(segmentType, n1, n2);
 }
 
 } // namespace ogb

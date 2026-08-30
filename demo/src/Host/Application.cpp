@@ -11,9 +11,8 @@
 #include <iostream>
 #include <string>
 
-namespace ogb {
-namespace host {
-
+namespace ogb::host
+{
 
 //! \brief Upper bound on the frame duration handed to onUpdate(). Without it,
 //! a breakpoint or a window drag would hand over a huge delta and make the
@@ -21,9 +20,10 @@ namespace host {
 static constexpr float MAX_FRAME_TIME = 0.25f;
 
 // ----------------------------------------------------------------------------
-Application::Application(int width, int height, std::string title)
-    : m_width(width), m_height(height), m_title(std::move(title))
-{}
+Application::Application(int width, int height, std::string const& title)
+    : m_width(width), m_height(height), m_title(title)
+{
+}
 
 // ----------------------------------------------------------------------------
 Application::~Application()
@@ -37,7 +37,7 @@ Application::~Application()
 }
 
 // ----------------------------------------------------------------------------
-void Application::setTitle(std::string const& title)
+void Application::setTitle(std::string_view const& title)
 {
     if (title == m_title)
         return;
@@ -81,15 +81,19 @@ bool Application::shallBeHalted()
 // ----------------------------------------------------------------------------
 bool Application::initializeGLFW()
 {
-    glfwSetErrorCallback([](int code, char const* description) {
-        std::cerr << "GLFW error " << code << ": " << description << std::endl;
-    });
+    glfwSetErrorCallback(
+        [](int code, char const* description)
+        {
+            std::cerr << "GLFW error " << code << ": " << description
+                      << std::endl;
+        });
 
     // GLFW 3.4+ picks Wayland whenever it is available, and a Wayland window
     // cannot be driven by xdotool or captured by window id. OGB_PLATFORM=x11
     // forces XWayland, which is what makes scripted runs and screenshots
     // possible. Distro packages often ship GLFW 3.3, so guard these hints.
-#if GLFW_VERSION_MAJOR > 3 || (GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 4)
+#if GLFW_VERSION_MAJOR > 3 || \
+    (GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 4)
     char const* platform = std::getenv("OGB_PLATFORM");
     if (platform != nullptr)
     {
@@ -118,8 +122,8 @@ bool Application::initializeGLFW()
 // ----------------------------------------------------------------------------
 bool Application::createWindow()
 {
-    m_window = glfwCreateWindow(m_width, m_height, m_title.c_str(),
-                                nullptr, nullptr);
+    m_window =
+        glfwCreateWindow(m_width, m_height, m_title.c_str(), nullptr, nullptr);
     if (m_window == nullptr)
     {
         m_error = "Failed to create the GLFW window";
@@ -239,5 +243,4 @@ bool Application::run()
     teardown();
     return true;
 }
-} // namespace host
-} // namespace ogb
+} // namespace ogb::host

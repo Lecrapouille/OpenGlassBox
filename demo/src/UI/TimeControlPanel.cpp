@@ -9,9 +9,7 @@
 #include "UI/Theme.hpp"
 #include <algorithm>
 
-namespace ogb
-{
-namespace ui
+namespace ogb::ui
 {
 using namespace ogb::theme;
 
@@ -240,7 +238,7 @@ void TimeControlPanel::draw(Simulation& simulation)
             "is how many ticks a second of wall clock time is worth.");
     }
 
-    int maxTicks = int(config.time.maxTicksPerUpdate);
+    auto maxTicks = int(config.time.maxTicksPerUpdate);
     ImGui::SetNextItemWidth(-140.0f);
     if (ImGui::SliderInt("max catch-up", &maxTicks, 1, 200))
     {
@@ -256,5 +254,4 @@ void TimeControlPanel::draw(Simulation& simulation)
 
     ImGui::End();
 }
-} // namespace ui
-} // namespace ogb
+} // namespace ogb::ui

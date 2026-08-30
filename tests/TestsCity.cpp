@@ -409,8 +409,8 @@ TEST(TestsCity, UpdateTakesAwayTheAgentsThatAreDone)
     // Nothing to deliver: done as soon as it is asked to drive.
     city.addAgent(worker, home, Resources(), "nowhere");
 
-    uint32_t const id0 = looking0.getId();
-    uint32_t const id1 = looking1.getId();
+    size_t const id0 = looking0.getId();
+    size_t const id1 = looking1.getId();
     ASSERT_EQ(city.getAgents().size(), 3u);
 
     city.update();

@@ -7,29 +7,28 @@
 //! \file EditCommands.hpp
 //! \brief Undoable commands that mutate the city through the editor.
 
-
 #ifndef OPEN_GLASSBOX_DEMO_EDIT_COMMANDS_HPP
-#  define OPEN_GLASSBOX_DEMO_EDIT_COMMANDS_HPP
+#define OPEN_GLASSBOX_DEMO_EDIT_COMMANDS_HPP
 
-#  include "OpenGlassBox/Path.hpp"
-#  include "OpenGlassBox/Simulation.hpp"
-#  include "OpenGlassBox/Vector.hpp"
+#include "OpenGlassBox/Path.hpp"
+#include "OpenGlassBox/Simulation.hpp"
+#include "OpenGlassBox/Vector.hpp"
 
-#  include <cstdint>
-#  include <deque>
-#  include <memory>
-#  include <string>
-#  include <vector>
+#include <cstddef>
+#include <cstdint>
+#include <deque>
+#include <limits>
+#include <memory>
+#include <string>
+#include <vector>
 
-
-namespace ogb {
-namespace editor {
-
+namespace ogb::editor
+{
 
 //! \brief Stands for "no identifier yet". Identifiers are handed out by the
 //! engine on the first run of a command and replayed by the redos, so they need
 //! a value that cannot be mistaken for a real one before that first run.
-enum : uint32_t { NO_ID = 0xFFFFFFFFu };
+static constexpr size_t NO_ID = std::numeric_limits<size_t>::max();
 
 // ============================================================================
 //! \brief Where a piece of graph lives, by name and identifier rather than by
@@ -44,10 +43,10 @@ struct NodeRef
 {
     std::string city;
     std::string path;
-    uint32_t id = 0u;
+    size_t id = 0u;
 
     //! \brief Resolve to the live node, or nullptr when it no longer exists.
-    Node* resolve(Simulation& simulation) const;
+    Node* resolve(Simulation const& simulation) const;
 };
 
 // ============================================================================
@@ -81,7 +80,10 @@ public:
     //! Identifiers that address something the command did not create are kept:
     //! rebuilding the demo world is deterministic, so a segment keeps the
     //! identifier it had.
-    virtual void onWorldRebuilt() {}
+    virtual void onWorldRebuilt()
+    {
+        /* do nothing */
+    }
 };
 
 using CommandPtr = std::unique_ptr<ICommand>;
@@ -101,8 +103,14 @@ public:
     void undo(Simulation& simulation);
     void redo(Simulation& simulation);
 
-    bool canUndo() const { return !m_done.empty(); }
-    bool canRedo() const { return !m_undone.empty(); }
+    bool canUndo() const
+    {
+        return !m_done.empty();
+    }
+    bool canRedo() const
+    {
+        return !m_undone.empty();
+    }
 
     std::string undoLabel() const;
     std::string redoLabel() const;
@@ -120,10 +128,16 @@ public:
     void takeHistory(std::deque<CommandPtr>& out);
 
     //! \brief The undo stack, oldest first, for the history panel.
-    std::deque<CommandPtr> const& history() const { return m_done; }
+    std::deque<CommandPtr> const& history() const
+    {
+        return m_done;
+    }
 
     //! \brief How many commands are stacked above the ones already undone.
-    size_t pendingRedos() const { return m_undone.size(); }
+    size_t pendingRedos() const
+    {
+        return m_undone.size();
+    }
 
 private:
 
@@ -146,13 +160,13 @@ private:
 struct SegmentCut
 {
     //! \brief The crossroads the cut created.
-    uint32_t junctionId = NO_ID;
+    size_t junctionId = NO_ID;
     //! \brief The segment that was cut. It kept its identifier and is now the
     //! half on the side it ran from.
-    uint32_t firstId = NO_ID;
+    size_t firstId = NO_ID;
     //! \brief The half the cut created, running from the junction to the far
     //! end the segment used to reach.
-    uint32_t secondId = NO_ID;
+    size_t secondId = NO_ID;
     //! \brief Type of the segment, needed to lay it again as one.
     std::string type;
 };
@@ -173,8 +187,12 @@ class AddSegmentCommand: public ICommand
 {
 public:
 
-    AddSegmentCommand(std::string city, std::string path, std::string segmentType,
-                  Vector3f from, Vector3f to, float snapRadius);
+    AddSegmentCommand(std::string city,
+                      std::string path,
+                      std::string segmentType,
+                      Vector3f from,
+                      Vector3f to,
+                      float snapRadius);
 
     bool redo(Simulation& simulation) override;
     void undo(Simulation& simulation) override;
@@ -193,9 +211,9 @@ private:
     //! \brief Identifiers handed out by the first run, replayed by the redos so
     //! that the commands stacked above keep pointing at the right things.
     //! One per piece the road came out in, from the first end to the other.
-    std::vector<uint32_t> m_pieceIds;
-    uint32_t m_fromId = NO_ID;
-    uint32_t m_toId = NO_ID;
+    std::vector<size_t> m_pieceIds;
+    size_t m_fromId = NO_ID;
+    size_t m_toId = NO_ID;
     //! \brief The roads this one cut on its way, in the order it met them.
     std::vector<SegmentCut> m_cuts;
     //! \brief Whether the end points were created by this command, and so have
@@ -215,19 +233,24 @@ class SplitSegmentCommand: public ICommand
 {
 public:
 
-    SplitSegmentCommand(std::string city, std::string path, uint32_t segmentId,
+    SplitSegmentCommand(std::string city,
+                        std::string path,
+                        size_t segmentId,
                         float offset);
 
     bool redo(Simulation& simulation) override;
     void undo(Simulation& simulation) override;
     std::string label() const override;
-    void onWorldRebuilt() override { m_cut = SegmentCut(); }
+    void onWorldRebuilt() override
+    {
+        m_cut = SegmentCut();
+    }
 
 private:
 
     std::string m_city;
     std::string m_path;
-    uint32_t m_segmentId;
+    size_t m_segmentId;
     float m_offset;
     SegmentCut m_cut;
 };
@@ -244,8 +267,11 @@ class MoveNodeCommand: public ICommand
 {
 public:
 
-    MoveNodeCommand(std::string city, std::string path, uint32_t nodeId,
-                    Vector3f from, Vector3f to);
+    MoveNodeCommand(std::string city,
+                    std::string path,
+                    size_t nodeId,
+                    Vector3f from,
+                    Vector3f to);
 
     bool redo(Simulation& simulation) override;
     void undo(Simulation& simulation) override;
@@ -254,13 +280,13 @@ public:
 private:
 
     //! \brief Put the node at that position, or do nothing when it is gone.
-    void place(Simulation& simulation, Vector3f const& position);
+    void place(Simulation const& simulation, Vector3f const& position) const;
 
 private:
 
     std::string m_city;
     std::string m_path;
-    uint32_t m_nodeId;
+    size_t m_nodeId;
     Vector3f m_from;
     Vector3f m_to;
 };
@@ -277,12 +303,17 @@ class AddBuildingCommand: public ICommand
 {
 public:
 
-    AddBuildingCommand(std::string city, std::string path, std::string buildingType,
-                   uint32_t segmentId, float offset);
+    AddBuildingCommand(std::string city,
+                       std::string path,
+                       std::string buildingType,
+                       size_t segmentId,
+                       float offset);
 
     //! \brief Place the building on an existing node.
-    AddBuildingCommand(std::string city, std::string path, std::string buildingType,
-                   uint32_t nodeId);
+    AddBuildingCommand(std::string city,
+                       std::string path,
+                       std::string buildingType,
+                       size_t nodeId);
 
     bool redo(Simulation& simulation) override;
     void undo(Simulation& simulation) override;
@@ -293,17 +324,17 @@ private:
 
     //! \brief Put the two halves of the cut segment back into one, as long as
     //! nothing was built on them in the meantime.
-    void mergeBack(Simulation& simulation);
+    void mergeBack(Simulation const& simulation);
 
 private:
 
     std::string m_city;
     std::string m_path;
     std::string m_buildingType;
-    uint32_t m_segmentId = NO_ID;
+    size_t m_segmentId = NO_ID;
     float m_offset = 0.5f;
-    uint32_t m_nodeId = NO_ID;
-    uint32_t m_buildingId = NO_ID;
+    size_t m_nodeId = NO_ID;
+    size_t m_buildingId = NO_ID;
 
     //! \brief What the cut created, so that the undo can sew the segment back.
     //! Its junction is what carries the building.
@@ -317,8 +348,11 @@ class RemoveBuildingCommand: public ICommand
 {
 public:
 
-    RemoveBuildingCommand(std::string city, std::string path, uint32_t id,
-                      std::string buildingType, bool byBuildingId = false);
+    RemoveBuildingCommand(std::string city,
+                          std::string path,
+                          size_t id,
+                          std::string buildingType,
+                          bool byBuildingId = false);
 
     bool redo(Simulation& simulation) override;
     void undo(Simulation& simulation) override;
@@ -328,10 +362,10 @@ private:
 
     std::string m_city;
     std::string m_path;
-    uint32_t m_id;
+    size_t m_id;
     std::string m_buildingType;
     bool m_byBuildingId = false;
-    uint32_t m_segmentId = NO_ID;
+    size_t m_segmentId = NO_ID;
     float m_offset = 0.5f;
     Vector3f m_position;
     bool m_onNode = true;
@@ -348,21 +382,24 @@ class RemoveSegmentCommand: public ICommand
 {
 public:
 
-    RemoveSegmentCommand(std::string city, std::string path, uint32_t segmentId);
+    RemoveSegmentCommand(std::string city, std::string path, size_t segmentId);
 
     bool redo(Simulation& simulation) override;
     void undo(Simulation& simulation) override;
     std::string label() const override;
-    void onWorldRebuilt() override { m_captured = false; }
+    void onWorldRebuilt() override
+    {
+        m_captured = false;
+    }
 
 private:
 
     std::string m_city;
     std::string m_path;
-    uint32_t m_segmentId;
+    size_t m_segmentId;
     std::string m_segmentType;
-    uint32_t m_fromId = 0u;
-    uint32_t m_toId = 0u;
+    size_t m_fromId = 0u;
+    size_t m_toId = 0u;
     Vector3f m_fromPosition;
     Vector3f m_toPosition;
     bool m_captured = false;
@@ -378,28 +415,32 @@ class RemoveNodeCommand: public ICommand
 {
 public:
 
-    RemoveNodeCommand(std::string city, std::string path, uint32_t nodeId);
+    RemoveNodeCommand(std::string city, std::string path, size_t nodeId);
 
     bool redo(Simulation& simulation) override;
     void undo(Simulation& simulation) override;
     std::string label() const override;
-    void onWorldRebuilt() override { m_captured = false; m_segments.clear(); }
+    void onWorldRebuilt() override
+    {
+        m_captured = false;
+        m_segments.clear();
+    }
 
 private:
 
     struct SegmentSnapshot
     {
-        uint32_t id = 0u;
+        size_t id = 0u;
         std::string type;
-        uint32_t fromId = 0u;
-        uint32_t toId = 0u;
+        size_t fromId = 0u;
+        size_t toId = 0u;
         Vector3f fromPosition;
         Vector3f toPosition;
     };
 
     std::string m_city;
     std::string m_path;
-    uint32_t m_nodeId;
+    size_t m_nodeId;
     Vector3f m_position;
     std::vector<SegmentSnapshot> m_segments;
     bool m_captured = false;
@@ -415,15 +456,23 @@ class PaintResourceCommand: public ICommand
 {
 public:
 
-    PaintResourceCommand(std::string city, std::string layer, int32_t u0,
-                         int32_t v0, int32_t u1, int32_t v1, uint32_t amount);
+    PaintResourceCommand(std::string city,
+                         std::string layer,
+                         int32_t u0,
+                         int32_t v0,
+                         int32_t u1,
+                         int32_t v1,
+                         uint32_t amount);
 
     bool redo(Simulation& simulation) override;
     void undo(Simulation& simulation) override;
     std::string label() const override;
     //! \brief The cells of the rebuilt world hold whatever the new script put
     //! there, so what this command overwrote has to be sampled again.
-    void onWorldRebuilt() override { m_previous.clear(); }
+    void onWorldRebuilt() override
+    {
+        m_previous.clear();
+    }
 
     //! \brief Whether the given rectangle is the one this command paints, used
     //! to keep a dragged stroke from stacking one command per frame.
@@ -454,8 +503,12 @@ class AddZoneCommand: public ICommand
 {
 public:
 
-    AddZoneCommand(std::string city, std::string zoneType, int32_t u0,
-                   int32_t v0, int32_t u1, int32_t v1);
+    AddZoneCommand(std::string city,
+                   std::string zoneType,
+                   int32_t u0,
+                   int32_t v0,
+                   int32_t u1,
+                   int32_t v1);
 
     bool redo(Simulation& simulation) override;
     void undo(Simulation& simulation) override;
@@ -484,14 +537,13 @@ private:
     int32_t m_v0;
     int32_t m_u1;
     int32_t m_v1;
-    uint32_t m_zoneId = NO_ID;
+    size_t m_zoneId = NO_ID;
     //! \brief The Zones this command re-zoned, as they were before it ran.
     std::vector<SavedZone> m_removed;
     //! \brief Identifiers of the rectangles added back for the parts of those
     //! Zones the new one does not cover.
-    std::vector<uint32_t> m_leftovers;
+    std::vector<size_t> m_leftovers;
 };
-} // namespace editor
-} // namespace ogb
+} // namespace ogb::editor
 
 #endif

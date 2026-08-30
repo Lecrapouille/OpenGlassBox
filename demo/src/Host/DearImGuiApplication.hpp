@@ -20,8 +20,8 @@
 #  include <string>
 #  include <vector>
 
-namespace ogb {
-namespace host {
+namespace ogb::host
+{
 
 
 // ****************************************************************************
@@ -183,7 +183,6 @@ private:
     //! the callback has to outlive the frame that asked for them.
     std::vector<FileDialogRequest> m_open_dialogs;
 };
-} // namespace host
-} // namespace ogb
+} // namespace ogb::host
 
 #endif

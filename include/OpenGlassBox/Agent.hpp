@@ -87,7 +87,7 @@ public:
     //! \param[in] searchTarget the name it looks for. Matched against the
     //! \c targets of buildings.
     // -------------------------------------------------------------------------
-    Agent(uint32_t id,
+    Agent(size_t id,
           AgentType const& type,
           Building& owner,
           Resources const& resources,
@@ -311,10 +311,37 @@ private:
     bool unloadResources();
 
     // -------------------------------------------------------------------------
-    //! \brief Drive along the current Segment towards the next Node.
+    //! \brief Drive along the current Segment for one tick.
+    //!
+    //! There are two things to drive towards: the door of the destination when
+    //! it stands on this very Segment, and the crossroads at one of its ends
+    //! otherwise.
+    //!
     //! \param[in] dt seconds of game time in one tick.
     // -------------------------------------------------------------------------
     void moveTowardsNextNode(float dt);
+
+    // -------------------------------------------------------------------------
+    //! \brief Drive towards the door of the destination, which stands on the
+    //! Segment the Agent is already on.
+    //!
+    //! The door may lie behind the Agent, so this can drive either way. Landing
+    //! on it clears the next Node, which is what tells update() the leg is
+    //! over.
+    //!
+    //! \param[in] dt seconds of game time in one tick.
+    // -------------------------------------------------------------------------
+    void driveTowardsDoor(float dt);
+
+    // -------------------------------------------------------------------------
+    //! \brief Drive towards the crossroads at one end of the current Segment.
+    //!
+    //! A Segment is undirected, so which end is ahead decides whether the
+    //! offset grows towards one or shrinks towards zero.
+    //!
+    //! \param[in] dt seconds of game time in one tick.
+    // -------------------------------------------------------------------------
+    void driveTowardsCrossroads(float dt);
 
     // -------------------------------------------------------------------------
     //! \brief Take the next Segment of the itinerary. Recompute when there is
@@ -337,6 +364,20 @@ private:
     //! \param[in] config settings for routing intervals.
     // -------------------------------------------------------------------------
     void maybeRecomputeRoute(IRouter& router, RoutingConfig const& config);
+
+    // -------------------------------------------------------------------------
+    //! \brief Search for a shorter way to the destination and take it when it
+    //! beats the itinerary in hand by enough.
+    //!
+    //! This is the expensive half of maybeRecomputeRoute(), entered only on the
+    //! ticks that are due for a check. The search returns the itinerary and not
+    //! just its cost, so that switching to it costs nothing more.
+    //!
+    //! \param[in] router the router of the City.
+    //! \param[in] config read for RoutingConfig::pathCostDeviation, the share
+    //! of the remaining trip a new way has to save to be worth taking.
+    // -------------------------------------------------------------------------
+    void switchToCheaperRoute(IRouter& router, RoutingConfig const& config);
 
     // -------------------------------------------------------------------------
     //! \brief Ask the router for the cheapest building matching
@@ -430,13 +471,12 @@ private:
     //! \brief The building it left. Load returns here if nothing accepts it.
     //! Null once demolished. Not owned.
     Building* m_owner = nullptr;
-    //! \brief The name it looks for, from the \c to of the script.
-    Name m_searchTarget;
     //! \brief What it carries.
     Resources m_resources;
-    //! \brief Position along m_currentSegment, in [0..1] from
-    //! m_currentSegment->from().
-    float m_offset = 0.0f;
+    //! \brief Cached itinerary. Recomputed periodically and when remaining
+    //! cost drifts too far from the shortest path. Written only through
+    //! route().
+    Route m_route;
     //! \brief The Segment under it. It counts as traffic on it. Not owned.
     Segment* m_currentSegment = nullptr;
     //! \brief The crossroads it came from. Routing starts here. Not owned.
@@ -444,15 +484,16 @@ private:
     //! \brief The crossroads it drives to, or null when it stands still. Not
     //! owned.
     Node* m_nextNode = nullptr;
-    //! \brief Cached itinerary. Recomputed periodically and when remaining
-    //! cost drifts too far from the shortest path. Written only through
-    //! route().
-    Route m_route;
     //! \brief Building where a place is currently held, or nullptr. Tracks
     //! whether a claim is active. The route destination says where the Agent
     //! goes; this says what must be released. Not owned. Always cleared before
     //! the building is destroyed.
     Building* m_reservation = nullptr;
+    //! \brief The name it looks for, from the \c to of the script.
+    Name m_searchTarget;
+    //! \brief Position along m_currentSegment, in [0..1] from
+    //! m_currentSegment->from().
+    float m_offset = 0.0f;
     //! \brief Ticks on the current itinerary, compared to
     //! RoutingConfig::pathRecalcTicks.
     uint32_t m_ticksOnRoute = 0u;

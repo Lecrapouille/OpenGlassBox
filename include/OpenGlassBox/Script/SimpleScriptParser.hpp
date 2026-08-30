@@ -137,11 +137,75 @@ private:
     void parseBuilding();
     void parseZones();
     void parseZone();
+
+    //--------------------------------------------------------------------------
+    //! \brief Check that a layer does not give away and lose more than a cell
+    //! holds. Called once the whole declaration has been read, since the two
+    //! keywords may come in either order.
+    //! \param[in] name the token naming the layer, for the error position.
+    //! \param[in] layer the layer read, or nullptr on the declaring pass.
+    //--------------------------------------------------------------------------
+    void checkLayerShares(Token const& name, LayerType const* layer);
+
     void parseRules();
     void parseRuleLayer();
     void parseRuleBuilding();
     void parseRuleZone();
+
+    //--------------------------------------------------------------------------
+    //! \brief Read one line of a rule body and turn it into a command.
+    //!
+    //! Two shapes of line meet here. Some words name a whole command on their
+    //! own ("spawn Home at freeCell"). The others name a number the rule reads
+    //! or writes, and the word after it says what to do with that number
+    //! ("local People remove 1"). This dispatches to the reader for the shape
+    //! it sees.
+    //!
+    //! \param[in] token the first word of the line, already read.
+    //! \return the command, owned by the catalogue, or nullptr on error.
+    //--------------------------------------------------------------------------
     IRuleCommand* parseCommand(Token const& token);
+
+    // -------------------------------------------------------------------------
+    // One reader per command that stands on its own. Each is entered with its
+    // keyword already read, and leaves the stream just past the words it took.
+    // Each returns nullptr on error, after recording it.
+    // -------------------------------------------------------------------------
+
+    //! \brief "agent Worker to Work add [ People 1 ]": send a traveller out.
+    IRuleCommand* parseAgentCommand();
+
+    //! \brief "hour between 8 18": run only inside that part of the day.
+    IRuleCommand* parseHourCommand();
+
+    //! \brief "spawn Home at freeCell": grow a building in the zone.
+    IRuleCommand* parseSpawnCommand();
+
+    //! \brief "count Home less 4": test how many buildings of a type stand
+    //! in the zone.
+    IRuleCommand* parseCountCommand();
+
+    //! \brief "upgrade Shack to House": replace a building by a richer one.
+    IRuleCommand* parseUpgradeCommand();
+
+    //! \brief "destroy Shack": demolish a building of that type.
+    IRuleCommand* parseDestroyCommand();
+
+    //--------------------------------------------------------------------------
+    //! \brief Read the number a rule reads or writes: "local" and "global" name
+    //! a resource, "layer" names a value on the ground.
+    //! \param[in] token the first word of the line, already read.
+    //! \return the value, owned by the catalogue, or nullptr on error.
+    //--------------------------------------------------------------------------
+    IRuleValue* parseValueTarget(Token const& token);
+
+    //--------------------------------------------------------------------------
+    //! \brief Read what to do with a number: "add", "remove", or one of the
+    //! three comparisons. Entered once parseValueTarget() named the number.
+    //! \param[in] target the number to read or write.
+    //! \return the command, owned by the catalogue, or nullptr on error.
+    //--------------------------------------------------------------------------
+    IRuleCommand* parseValueAction(IRuleValue& target);
 
     void parseResourcesArray(Resources& resources);
     void parseCapacitiesArray(Resources& resources);
@@ -220,8 +284,8 @@ private:
     //--------------------------------------------------------------------------
     //! \brief Read a rule period as ticks or game time: "rate 7", "rate 30
     //! minutes", "rate 2 hours", "rate 1 day". The unit word is optional; ticks
-    //! are assumed without it. The unit must sit on the same line as the number,
-    //! because "hour" is also a command.
+    //! are assumed without it. The unit must sit on the same line as the
+    //! number, because "hour" is also a command.
     //! \param[out] rate tick count, used only when rateMinutes is zero.
     //! \param[out] rateMinutes duration in minutes of game time, zero when the
     //! script used ticks.

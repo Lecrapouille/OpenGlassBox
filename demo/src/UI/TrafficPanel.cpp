@@ -13,9 +13,7 @@
 #include <sstream>
 #include <vector>
 
-namespace ogb
-{
-namespace ui
+namespace ogb::ui
 {
 using namespace ogb::theme;
 
@@ -92,9 +90,8 @@ static bool beginMetrics(char const* id)
 //! \brief One measurement: what it is on the left, what it is worth on the
 //! right, and what it means under the cursor.
 // ----------------------------------------------------------------------------
-static void metric(char const* label,
-                   std::string const& value,
-                   char const* help = nullptr)
+static void
+metric(char const* label, std::string const& value, char const* help = nullptr)
 {
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
@@ -139,9 +136,10 @@ static void drawCongestionScale()
     {
         float const t0 = float(i) / 32.0f;
         float const t1 = float(i + 1) / 32.0f;
-        drawList->AddRectFilled(ImVec2(origin.x + t0 * width, origin.y),
-                                ImVec2(origin.x + t1 * width, origin.y + height),
-                                theme::congestionColor(t0));
+        drawList->AddRectFilled(
+            ImVec2(origin.x + t0 * width, origin.y),
+            ImVec2(origin.x + t1 * width, origin.y + height),
+            theme::congestionColor(t0));
     }
     ImGui::Dummy(ImVec2(width, height));
 
@@ -155,15 +153,15 @@ static void drawCongestionScale()
 }
 
 // ----------------------------------------------------------------------------
-float TrafficPanel::totalTravelTime(Simulation& simulation)
+float TrafficPanel::totalTravelTime(Simulation const& simulation)
 {
     float total = 0.0f;
 
-    for (auto& it : simulation.getCities())
+    for (auto const& [_, cityPtr] : simulation.getCities())
     {
-        for (auto const& path : it.second->getPaths())
+        for (auto const& [_, path] : cityPtr->getPaths())
         {
-            for (auto& segment : path.second->getSegments())
+            for (auto const& segment : path->getSegments())
             {
                 total += segment->getFlow() * segment->getTravelTime();
             }
@@ -246,7 +244,8 @@ void TrafficPanel::draw(Simulation& simulation, game::DebugState& state)
         ImGui::SetTooltip(
             "How often, in ticks, an Agent compares its itinerary against the\n"
             "shortest one. That comparison costs a whole graph search, so\n"
-            "lowering this is the quickest segment to make the simulation crawl.");
+            "lowering this is the quickest segment to make the simulation "
+            "crawl.");
     }
 
     std::vector<SegmentRow> rows;
@@ -256,12 +255,12 @@ void TrafficPanel::draw(Simulation& simulation, game::DebugState& state)
     uint32_t travelling = 0u;
     uint32_t crowded = 0u;
 
-    for (auto& it : simulation.getCities())
+    for (auto const& [_, cityPtr] : simulation.getCities())
     {
-        City& city = *it.second;
-        for (auto const& pathIt : city.getPaths())
+        City const& city = *cityPtr;
+        for (auto const& [_, pathPtr] : city.getPaths())
         {
-            Path const& path = *pathIt.second;
+            Path const& path = *pathPtr;
             for (auto const& segment : path.getSegments())
             {
                 SegmentRow row;
@@ -441,5 +440,4 @@ void TrafficPanel::draw(Simulation& simulation, game::DebugState& state)
 
     ImGui::End();
 }
-} // namespace ui
-} // namespace ogb
+} // namespace ogb::ui

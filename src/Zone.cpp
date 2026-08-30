@@ -5,8 +5,8 @@
 //-----------------------------------------------------------------------------
 
 #include "OpenGlassBox/Zone.hpp"
-#include "OpenGlassBox/Config.hpp"
 #include "OpenGlassBox/City.hpp"
+#include "OpenGlassBox/Config.hpp"
 #include "OpenGlassBox/World.hpp"
 
 #include <array>
@@ -14,17 +14,21 @@
 #include <limits>
 #include <optional>
 
-// -----------------------------------------------------------------------------
-namespace ogb {
+namespace ogb
+{
 
-Zone::Zone(uint32_t id, ZoneType const& type, CellRegion const& footprint, City& city)
+// -----------------------------------------------------------------------------
+Zone::Zone(size_t id,
+           ZoneType const& type,
+           CellRegion const& footprint,
+           City& city)
     : m_id(id), m_type(type), m_footprint(footprint), m_city(city)
 {
-    m_context.zone = this;
-    m_context.city = &city;
-    m_context.globals = &(city.getGlobals());
-    m_context.clock = &city.getClock();
-    m_context.cell = { footprint.u0, footprint.v0 };
+    m_rule_context.zone = this;
+    m_rule_context.city = &city;
+    m_rule_context.globals = &(city.getGlobals());
+    m_rule_context.clock = &city.getClock();
+    m_rule_context.cell = { footprint.u0, footprint.v0 };
 }
 
 // -----------------------------------------------------------------------------
@@ -51,13 +55,13 @@ Cell Zone::getRuleCell() const
 void Zone::executeRules()
 {
     m_ticks += 1u;
-    m_context.clock = &m_city.getClock();
+    m_rule_context.clock = &m_city.getClock();
 
     uint32_t const perMinute = m_city.getClock().getTicksPerMinute();
 
-    // Locating the plot walks the road network, so it happens once for the whole
-    // zone and only on the ticks where a rule actually runs. Periods are written
-    // in hours or in days, so that is rare.
+    // Locating the plot walks the road network, so it happens once for the
+    // whole zone and only on the ticks where a rule actually runs. Periods are
+    // written in hours or in days, so that is rare.
     bool located = false;
 
     size_t i = m_type.rules.size();
@@ -68,11 +72,11 @@ void Zone::executeRules()
 
         if (!located)
         {
-            m_context.cell = getRuleCell();
+            m_rule_context.cell = getRuleCell();
             located = true;
         }
 
-        m_type.rules[i]->execute(m_context);
+        m_type.rules[i]->execute(m_rule_context);
     }
 }
 
@@ -86,12 +90,12 @@ uint32_t Zone::countBuildings(Name const& buildingType) const
 std::vector<Building*> Zone::getBuildingsInside(Name const& buildingType) const
 {
     std::vector<Building*> found;
-    for (auto& it: m_city.getBuildings())
+    for (auto const& building : m_city.getBuildings())
     {
-        if (!buildingType.empty() && (it->getTypeName() != buildingType))
+        if (!buildingType.empty() && (building->getTypeName() != buildingType))
             continue;
-        if (m_footprint.contains(it->getCell()))
-            found.push_back(it.get());
+        if (m_footprint.contains(building->getCell()))
+            found.push_back(building.get());
     }
     return found;
 }
@@ -105,18 +109,19 @@ Vector3f Zone::getCellCentre(Cell cell) const
 }
 
 // -----------------------------------------------------------------------------
-Segment* Zone::findNearestSegment(Vector3f const& position, float& offset,
-                          float maxDistance) const
+Segment* Zone::findNearestSegment(Vector3f const& position,
+                                  float& offset,
+                                  float maxDistance) const
 {
     Segment* best = nullptr;
-    float bestDist = (maxDistance < 0.0f)
-                     ? ROUTING_INFINITY
-                     : (maxDistance * maxDistance);
+    float bestDist =
+        (maxDistance < 0.0f) ? ROUTING_INFINITY : (maxDistance * maxDistance);
     offset = 0.5f;
 
-    for (auto& pathIt: m_city.getPaths())
+    for (auto const& [pathName, path] : m_city.getPaths())
     {
-        for (auto& segment: pathIt.second->getSegments())
+        (void)pathName;
+        for (auto const& segment : path->getSegments())
         {
             Vector3f const a = segment->getFromPosition();
             Vector3f const b = segment->getToPosition();
@@ -125,10 +130,12 @@ Segment* Zone::findNearestSegment(Vector3f const& position, float& offset,
             float t = 0.5f;
             if (length2 > 1e-8f)
             {
-                t = ((position.x - a.x) * ab.x +
-                     (position.y - a.y) * ab.y) / length2;
-                if (t < 0.0f) t = 0.0f;
-                if (t > 1.0f) t = 1.0f;
+                t = ((position.x - a.x) * ab.x + (position.y - a.y) * ab.y) /
+                    length2;
+                if (t < 0.0f)
+                    t = 0.0f;
+                if (t > 1.0f)
+                    t = 1.0f;
             }
             Vector3f const projected = a + ab * t;
             float const dist = lengthSquared(position - projected);
@@ -152,8 +159,9 @@ std::optional<Cell> Zone::findFreeCell() const
 
     std::vector<Building*> const occupied = getBuildingsInside(Name());
 
-    auto taken = [&](Cell cell) {
-        for (Building* building: occupied)
+    auto taken = [&](Cell cell)
+    {
+        for (Building const* building : occupied)
         {
             if (building->getCell() == cell)
                 return true;
@@ -192,59 +200,88 @@ std::optional<Cell> Zone::findFreeCell() const
 // -----------------------------------------------------------------------------
 std::optional<Cell> Zone::findFreeCellNearRoad() const
 {
-    if (m_footprint.isEmpty())
+    // An empty zone has no plot, and a city with no street has nothing to build
+    // along: a building nobody can reach is worse than no building at all.
+    if (m_footprint.isEmpty() || m_city.getPaths().empty())
         return {};
 
-    if (m_city.getPaths().empty())
-        return {};
-
+    // Reading the whole zone once is cheaper than asking the city about every
+    // plot the walk below looks at.
     std::vector<Building*> const occupied = getBuildingsInside(Name());
 
-    auto taken = [&](Cell cell) {
-        for (Building* building: occupied)
+    // Walk the streets rather than the cells: a zone can be much larger than
+    // the part of it a road actually reaches.
+    for (auto const& [pathName, path] : m_city.getPaths())
+    {
+        (void)pathName;
+        for (auto const& segment : path->getSegments())
         {
-            if (building->getCell() == cell)
-                return true;
+            std::optional<Cell> const cell =
+                freeCellAlongSegment(*segment, occupied);
+            if (cell.has_value())
+                return cell;
         }
-        return false;
-    };
+    }
 
+    return {};
+}
+
+// -----------------------------------------------------------------------------
+std::optional<Cell>
+Zone::freeCellAlongSegment(Segment const& segment,
+                           std::vector<Building*> const& occupied) const
+{
+    Vector3f const a = segment.getFromPosition();
+    Vector3f const ab = segment.getToPosition() - a;
+
+    // One sample per cell crossed, so that no cell along the segment is
+    // missed and none is visited twice.
+    float const side = m_city.getCellSize();
+    int32_t const steps =
+        std::max(1, int32_t(std::sqrt(lengthSquared(ab)) / side));
+
+    for (int32_t step = 0; step <= steps; ++step)
+    {
+        Vector3f const point = a + ab * (float(step) / float(steps));
+        std::optional<Cell> const cell =
+            freeCellAround(m_city.worldToCell(point), occupied);
+        if (cell.has_value())
+            return cell;
+    }
+
+    return {};
+}
+
+// -----------------------------------------------------------------------------
+std::optional<Cell>
+Zone::freeCellAround(Cell const& crossed,
+                     std::vector<Building*> const& occupied) const
+{
     // The cell the road runs through, then the four it fronts.
     static std::array<Cell, 5u> const NEIGHBOURS = {
         Cell{ 0, 0 }, Cell{ 1, 0 }, Cell{ -1, 0 }, Cell{ 0, 1 }, Cell{ 0, -1 }
     };
 
-    float const side = m_city.getCellSize();
-
-    for (auto const& pathIt: m_city.getPaths())
+    for (Cell const& neighbour : NEIGHBOURS)
     {
-        for (auto const& segment: pathIt.second->getSegments())
+        Cell const cell{ crossed.u + neighbour.u, crossed.v + neighbour.v };
+
+        // The street may run outside the zone, or past a plot already built on.
+        if (!m_footprint.contains(cell))
+            continue;
+
+        bool taken = false;
+        for (Building const* building : occupied)
         {
-            Vector3f const a = segment->getFromPosition();
-            Vector3f const ab = segment->getToPosition() - a;
-            // One sample per cell crossed, so that no cell along the segment is
-            // missed and none is visited twice.
-            int32_t const steps =
-                std::max(1, int32_t(std::sqrt(lengthSquared(ab)) / side));
-
-            for (int32_t step = 0; step <= steps; ++step)
+            if (building->getCell() == cell)
             {
-                Vector3f const point = a + ab * (float(step) / float(steps));
-                Cell const crossed = m_city.worldToCell(point);
-
-                for (Cell const& neighbour: NEIGHBOURS)
-                {
-                    Cell const cell{ crossed.u + neighbour.u,
-                                     crossed.v + neighbour.v };
-                    if (!m_footprint.contains(cell))
-                        continue;
-                    if (taken(cell))
-                        continue;
-
-                    return cell;
-                }
+                taken = true;
+                break;
             }
         }
+
+        if (!taken)
+            return cell;
     }
 
     return {};

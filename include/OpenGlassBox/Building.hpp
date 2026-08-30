@@ -45,15 +45,16 @@ class Segment;
 //! reach it. Call hasSegments() to detect this. The demo inspector marks it
 //! in red.
 //!
-//! The Building does not own its BuildingType, Node, or Segment. The City owns the
-//! Building. Destroying the Building detaches it from its anchor.
+//! The Building does not own its BuildingType, Node, or Segment. The City owns
+//! the Building. Destroying the Building detaches it from its anchor.
 //!
 //! Example:
 //! \code
 //! // A house on a crossroads, and a shop halfway down the street.
 //! Node& corner = path.addNode(Vector3f(0.0f, 0.0f, 0.0f));
-//! Building& home = city.addBuilding(simulation.script().buildingType("Home"), corner);
-//! Building& shop = city.addBuilding(simulation.script().buildingType("Shop"),
+//! Building& home = city.addBuilding(simulation.script().buildingType("Home"),
+//! corner); Building& shop =
+//! city.addBuilding(simulation.script().buildingType("Shop"),
 //!                           path, street, 0.5f);
 //!
 //! if (!shop.hasSegments())
@@ -63,7 +64,8 @@ class Segment;
 //! Script example. \c rules make the building act. \c targets let an Agent
 //! end its trip here:
 //! \code
-//! building Shop color 0xFFAA00 layerRadius 2 rules [ SellGoods ReceiveShopper ]
+//! building Shop color 0xFFAA00 layerRadius 2 rules [ SellGoods ReceiveShopper
+//! ]
 //!      targets [ Shop ] caps [ People 6 Goods 30 ] resources [ ]
 //! \endcode
 //==============================================================================
@@ -76,8 +78,8 @@ public:
     //! The position follows the Node when the City moves.
     //! \param[in] type building recipe. Kept by reference. Must outlive the
     //! Building.
-    //! \param[in] node crossroads to stand on. The Building registers with it and
-    //! unregisters on destruction.
+    //! \param[in] node crossroads to stand on. The Building registers with it
+    //! and unregisters on destruction.
     //! \param[in] city City that owns the Building. Provides global resources,
     //! configuration, and clock.
     // -------------------------------------------------------------------------
@@ -93,7 +95,10 @@ public:
     //! position is interpolated between the two ends.
     //! \param[in] city City that owns the Building.
     // -------------------------------------------------------------------------
-    Building(BuildingType const& type, Segment& segment, float offset, City& city);
+    Building(BuildingType const& type,
+             Segment& segment,
+             float offset,
+             City& city);
 
     // -------------------------------------------------------------------------
     //! \brief Stand at a free world position with no anchor.
@@ -332,7 +337,7 @@ public:
     //! Called by City::addBuilding() and on load with the saved id.
     //! \param[in] value id, unique among buildings in the City.
     // -------------------------------------------------------------------------
-    void setId(uint32_t value)
+    void setId(size_t value)
     {
         m_id = value;
     }
@@ -392,24 +397,24 @@ private:
 
 private:
 
+    //! \brief Current stock. Starts as a copy of BuildingType::resources.
+    Resources m_resources;
+    //! \brief What rules read and write: this Building, its City, globals,
+    //! clock, and grid cell.
+    RuleContext m_context;
     //! \brief Crossroads it stands on, or nullptr. Not owned.
     Node* m_node = nullptr;
     //! \brief Street it stands along, or nullptr. Not owned.
     Segment* m_segment = nullptr;
     //! \brief Position along m_segment, in [0..1].
     float m_offset = 0.0f;
-    //! \brief True when m_position is the building footprint, not the anchor
-    //! position. Set by setPosition().
-    bool m_placed = false;
-    //! \brief Current stock. Starts as a copy of BuildingType::resources.
-    Resources m_resources;
-    //! \brief What rules read and write: this Building, its City, globals, clock,
-    //! and grid cell.
-    RuleContext m_context;
     //! \brief Tick count. Decides when rules run.
     uint32_t m_ticks = 0u;
     //! \brief Agents routed here that have not arrived yet. See reserve().
     uint32_t m_inbound = 0u;
+    //! \brief True when m_position is the building footprint, not the anchor
+    //! position. Set by setPosition().
+    bool m_placed = false;
 };
 
 //! \brief Buildings in a City. The City owns them.

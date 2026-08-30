@@ -9,8 +9,8 @@
 #include <algorithm>
 #include <sys/stat.h>
 
-namespace ogb {
-namespace theme {
+namespace ogb::theme
+{
 
 // ----------------------------------------------------------------------------
 void apply()
@@ -102,7 +102,8 @@ void apply()
     colors[ImGuiCol_TableRowBgAlt] = ImVec4(1.0f, 1.0f, 1.0f, 0.02f);
 }
 
-namespace {
+namespace
+{
 
 bool fileExists(char const* path)
 {
@@ -124,7 +125,7 @@ void loadFonts()
         "/usr/share/fonts/liberation-sans-fonts/LiberationSans-Regular.ttf",
     };
 
-    for (char const* const candidate: candidates)
+    for (char const* const candidate : candidates)
     {
         if (!fileExists(candidate))
             continue;
@@ -173,9 +174,16 @@ ImU32 congestionColor(float ratio, float alpha)
     return IM_COL32(int(r * 255.0f), int(g * 255.0f), 60, int(alpha * 255.0f));
 }
 
-namespace {
+namespace
+{
 
-struct ColorStop { float hour; int r; int g; int b; };
+struct ColorStop
+{
+    float hour;
+    int r;
+    int g;
+    int b;
+};
 
 ImU32 lerpStops(ColorStop const* stops, size_t count, float hourOfDay)
 {
@@ -198,9 +206,9 @@ ImU32 lerpStops(ColorStop const* stops, size_t count, float hourOfDay)
 
     float const span = b->hour - a->hour;
     float const t = (span <= 0.0f) ? 0.0f : (hour - a->hour) / span;
-    int const r = int(float(a->r) + t * float(b->r - a->r));
-    int const g = int(float(a->g) + t * float(b->g - a->g));
-    int const bl = int(float(a->b) + t * float(b->b - a->b));
+    auto const r = int(float(a->r) + t * float(b->r - a->r));
+    auto const g = int(float(a->g) + t * float(b->g - a->g));
+    auto const bl = int(float(a->b) + t * float(b->b - a->b));
     return IM_COL32(r, g, bl, 255);
 }
 
@@ -212,15 +220,9 @@ ImU32 canvasBackground(float hourOfDay)
     // Night, dawn, day, dusk. Day is clearly brighter than night so the clock
     // is readable on the canvas, while staying dark enough for the layers.
     static ColorStop const STOPS[] = {
-        {  0.0f,  10,  14,  32 },
-        {  5.0f,  22,  18,  40 },
-        {  6.5f,  72,  42,  38 },
-        {  8.0f,  52,  62,  78 },
-        { 12.0f,  62,  74,  92 },
-        { 16.0f,  58,  68,  86 },
-        { 18.5f,  86,  48,  36 },
-        { 20.5f,  28,  22,  40 },
-        { 24.0f,  10,  14,  32 },
+        { 0.0f, 10, 14, 32 },  { 5.0f, 22, 18, 40 },  { 6.5f, 72, 42, 38 },
+        { 8.0f, 52, 62, 78 },  { 12.0f, 62, 74, 92 }, { 16.0f, 58, 68, 86 },
+        { 18.5f, 86, 48, 36 }, { 20.5f, 28, 22, 40 }, { 24.0f, 10, 14, 32 },
     };
     return lerpStops(STOPS, sizeof(STOPS) / sizeof(STOPS[0]), hourOfDay);
 }
@@ -229,16 +231,12 @@ ImU32 canvasBackground(float hourOfDay)
 ImU32 clockHudColor(float hourOfDay)
 {
     static ColorStop const STOPS[] = {
-        {  0.0f, 170, 186, 220 },
-        {  6.0f, 240, 196, 150 },
-        {  8.0f, 248, 244, 228 },
-        { 17.0f, 248, 244, 228 },
-        { 19.0f, 244, 186, 140 },
-        { 21.0f, 180, 190, 220 },
+        { 0.0f, 170, 186, 220 },  { 6.0f, 240, 196, 150 },
+        { 8.0f, 248, 244, 228 },  { 17.0f, 248, 244, 228 },
+        { 19.0f, 244, 186, 140 }, { 21.0f, 180, 190, 220 },
         { 24.0f, 170, 186, 220 },
     };
     return lerpStops(STOPS, sizeof(STOPS) / sizeof(STOPS[0]), hourOfDay);
 }
 
-} // namespace theme
-} // namespace ogb
+} // namespace ogb::theme

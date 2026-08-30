@@ -21,18 +21,16 @@
 #include <string>
 #include <vector>
 
-namespace ogb
-{
-namespace game
+namespace ogb::game
 {
 class RuleTrace;
 }
-namespace editor
+namespace ogb::editor
 {
 class Editor;
 }
 
-namespace ui
+namespace ogb::ui
 {
 class CityViewer;
 
@@ -123,14 +121,15 @@ public:
 
 private:
 
-    void drawBuilding(Simulation& simulation,
-                  game::DebugState& state,
-                  game::RuleTrace const& trace) const;
-    void drawAgent(Simulation& simulation, game::DebugState const& state) const;
+    void drawBuilding(Simulation const& simulation,
+                      game::DebugState& state,
+                      game::RuleTrace const& trace) const;
+    void drawAgent(Simulation const& simulation,
+                   game::DebugState const& state) const;
     void drawNode(game::DebugState& state) const;
     void drawSegment(game::DebugState& state) const;
-    void drawCell(Simulation& simulation, game::DebugState& state) const;
-    void drawZone(Simulation& simulation, game::DebugState& state) const;
+    void drawCell(Simulation const& simulation, game::DebugState& state) const;
+    void drawZone(Simulation const& simulation, game::DebugState& state) const;
 };
 
 // ****************************************************************************
@@ -207,7 +206,7 @@ public:
         std::string openRuleset;
     };
 
-    void draw(Simulation& simulation,
+    void draw(Simulation const& simulation,
               std::string& text,
               std::string const& status,
               Checksum const& checksum,
@@ -222,7 +221,7 @@ private:
     //! entity runs it, how often, and what it does. It sits under the text it
     //! was parsed from, since that is what it answers questions about.
     // ------------------------------------------------------------------------
-    void drawRuleset(Simulation& simulation);
+    void drawRuleset(Simulation const& simulation);
 
 private:
 
@@ -265,7 +264,7 @@ public:
     //! \brief Append one sample of every tracked quantity. Called once per
     //! simulation tick, not once per frame, so that the abscissa is the tick.
     // ------------------------------------------------------------------------
-    void sample(Simulation& simulation);
+    void sample(Simulation const& simulation);
 
     void draw(Simulation& simulation, game::DebugState& state);
 
@@ -277,8 +276,8 @@ private:
 
 private:
 
-    //! \brief Histories by group ("Layers", "Agents", "Globals", "Traffic") then
-    //! by quantity name.
+    //! \brief Histories by group ("Layers", "Agents", "Globals", "Traffic")
+    //! then by quantity name.
     std::map<std::string, std::map<std::string, game::TimeSeries>> m_series;
     //! \brief Interval in ticks between two samples, to keep long runs cheap.
     int m_sample_period = 5;
@@ -334,31 +333,31 @@ private:
 //! never set, so no rule could hold a setting at its value.
 //!
 //! The list of dials is not written here. A ruleset is the game, so hard coding
-//! the services would tie the demo to one of them. The panel reads the resources
-//! the script declared and keeps them by their name: a name ending in "Budget"
-//! is a share of an asking price, from nothing to everything, and a name
-//! starting with "Tax" is a rate. The convention is documented in
+//! the services would tie the demo to one of them. The panel reads the
+//! resources the script declared and keeps them by their name: a name ending in
+//! "Budget" is a share of an asking price, from nothing to everything, and a
+//! name starting with "Tax" is a rate. The convention is documented in
 //! doc/script.md.
 // ****************************************************************************
 class BudgetPanel
 {
 public:
 
-    void draw(Simulation& simulation);
+    void draw(Simulation const& simulation);
 
     // ------------------------------------------------------------------------
     //! \brief Whether a resource is a share granted to a service.
     // ------------------------------------------------------------------------
-    static bool isBudget(std::string const& name);
+    static bool isBudget(std::string_view const& name);
 
     // ------------------------------------------------------------------------
     //! \brief Whether a resource is a rate of taxation.
     // ------------------------------------------------------------------------
-    static bool isTax(std::string const& name);
+    static bool isTax(std::string_view const& name);
 
 private:
 
-    void drawCity(City& city, Simulation& simulation);
+    void drawCity(City& city, Simulation const& simulation);
 
     //! \brief The treasury at the start of the game day being played, per city
     //! name, so that the panel can report what the day cost. The engine does
@@ -372,7 +371,7 @@ private:
         bool seen = false;
     };
 
-    std::map<std::string, Ledger> m_ledgers;
+    std::map<std::string_view, Ledger> m_ledgers;
 };
 
 // ****************************************************************************
@@ -386,13 +385,13 @@ public:
     void draw(Simulation& simulation, game::DebugState& state);
 
     // ------------------------------------------------------------------------
-    //! \brief Total travel time of the network, the sum over the Segments of the
-    //! flow times the travel time. This is the quantity the Wardrop equilibrium
-    //! minimizes, so watching it settle tells whether the routing converged.
+    //! \brief Total travel time of the network, the sum over the Segments of
+    //! the flow times the travel time. This is the quantity the Wardrop
+    //! equilibrium minimizes, so watching it settle tells whether the routing
+    //! converged.
     // ------------------------------------------------------------------------
-    static float totalTravelTime(Simulation& simulation);
+    static float totalTravelTime(Simulation const& simulation);
 };
-} // namespace ui
-} // namespace ogb
+} // namespace ogb::ui
 
 #endif

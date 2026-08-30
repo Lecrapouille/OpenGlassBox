@@ -7,18 +7,16 @@
 //! \file Application.hpp
 //! \brief GLFW window, OpenGL context and main loop for the demo application.
 
-
 #ifndef OPEN_GLASSBOX_DEMO_APPLICATION_HPP
-#  define OPEN_GLASSBOX_DEMO_APPLICATION_HPP
+#define OPEN_GLASSBOX_DEMO_APPLICATION_HPP
 
-#  include "Host/DearImGuiApplication.hpp"
+#include "Host/DearImGuiApplication.hpp"
 
-#  include <memory>
-#  include <string>
+#include <memory>
+#include <string>
 
-namespace ogb {
-namespace host {
-
+namespace ogb::host
+{
 
 // ****************************************************************************
 //! \brief Host of the demo: owns the GLFW window, the OpenGL context and the
@@ -35,7 +33,7 @@ public:
     //! \param[in] height: initial window height, in pixels.
     //! \param[in] title: initial window title.
     // ------------------------------------------------------------------------
-    Application(int width, int height, std::string title);
+    Application(int width, int height, std::string const& title);
 
     // ------------------------------------------------------------------------
     //! \brief Destructor releasing the window and GLFW.
@@ -53,13 +51,16 @@ public:
     // ------------------------------------------------------------------------
     //! \brief Reason of the failure of run().
     // ------------------------------------------------------------------------
-    std::string const& error() const { return m_error; }
+    std::string const& error() const
+    {
+        return m_error;
+    }
 
     // ------------------------------------------------------------------------
     //! \brief Change the title shown by the window manager. Cheap to call every
     //! frame: the call is ignored when the title did not change.
     // ------------------------------------------------------------------------
-    void setTitle(std::string const& title);
+    void setTitle(std::string_view const& title);
 
     // ------------------------------------------------------------------------
     //! \brief Close the application unconditionally, without asking
@@ -74,19 +75,28 @@ protected:
     //! been created.
     //! \return false to abort the startup.
     // ------------------------------------------------------------------------
-    virtual bool onSetup() { return true; }
+    virtual bool onSetup()
+    {
+        return true;
+    }
 
     // ------------------------------------------------------------------------
     //! \brief Called once, before the window is destroyed.
     // ------------------------------------------------------------------------
-    virtual void onTeardown() {}
+    virtual void onTeardown()
+    {
+        /* do nothing */
+    }
 
     // ------------------------------------------------------------------------
     //! \brief Called when the window manager asks to close the window. Return
     //! false to keep the application alive, typically while a confirmation
     //! popup is shown.
     // ------------------------------------------------------------------------
-    virtual bool onCloseRequested() { return true; }
+    virtual bool onCloseRequested()
+    {
+        return true;
+    }
 
     // ------------------------------------------------------------------------
     //! \brief Called every frame before drawing.
@@ -98,27 +108,42 @@ protected:
     // ------------------------------------------------------------------------
     //! \brief Called from inside the dockspace menu bar.
     // ------------------------------------------------------------------------
-    virtual void onDrawMenuBar() {}
+    virtual void onDrawMenuBar()
+    {
+        /* do nothing */
+    }
 
     // ------------------------------------------------------------------------
     //! \brief Called every frame to draw the dockable panels.
     // ------------------------------------------------------------------------
-    virtual void onDrawPanels() {}
+    virtual void onDrawPanels()
+    {
+        /* do nothing */
+    }
 
     // ------------------------------------------------------------------------
     //! \brief Called every frame to fill the status bar.
     // ------------------------------------------------------------------------
-    virtual void onDrawStatusBar() {}
+    virtual void onDrawStatusBar()
+    {
+        /* do nothing */
+    }
 
     // ------------------------------------------------------------------------
     //! \brief Access to the ImGui layer, to change the clear color.
     // ------------------------------------------------------------------------
-    DearImGuiApplication& imgui() { return *m_imgui; }
+    DearImGuiApplication& imgui()
+    {
+        return *m_imgui;
+    }
 
     // ------------------------------------------------------------------------
     //! \brief Where the dock layout is persisted. Override to change it.
     // ------------------------------------------------------------------------
-    virtual std::string imguiIniFilename() const { return "imgui.ini"; }
+    virtual std::string imguiIniFilename() const
+    {
+        return "imgui.ini";
+    }
 
 private:
 
@@ -144,7 +169,6 @@ private:
     bool m_halted = false;
     std::unique_ptr<DearImGuiApplication> m_imgui;
 };
-} // namespace host
-} // namespace ogb
+} // namespace ogb::host
 
 #endif

@@ -422,7 +422,7 @@ TEST(TestsPath, RemoveSegmentDetachesItsExtremities)
     Segment& s1 = p.addSegment(type2, n1, n2);
     p.addSegment(type2, n2, n3);
 
-    uint32_t const id = s1.getId();
+    size_t const id = s1.getId();
     ASSERT_EQ(n1.getSegments().size(), 1u);
     ASSERT_EQ(n2.getSegments().size(), 2u);
 
@@ -452,7 +452,7 @@ TEST(TestsPath, RemoveNodeTakesItsIncidentSegments)
     p.addSegment(type2, n2, n3);
     p.addSegment(type2, n3, n1);
 
-    uint32_t const id = n2.getId();
+    size_t const id = n2.getId();
     p.removeNode(n2);
 
     ASSERT_EQ(p.getNodes().size(), 2u);
@@ -470,7 +470,7 @@ TEST(TestsPath, RecreatedNodeKeepsItsIdentifier)
 
     Node& n1 = p.addNode(Vector3f(0.0f, 0.0f, 0.0f));
     Node& n2 = p.addNode(Vector3f(10.0f, 0.0f, 0.0f));
-    uint32_t const id = n2.getId();
+    size_t const id = n2.getId();
     ASSERT_NE(n1.getId(), id);
 
     p.removeNode(n2);

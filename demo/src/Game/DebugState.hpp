@@ -18,8 +18,8 @@
 #  include <string>
 
 
-namespace ogb {
-namespace game {
+namespace ogb::game
+{
 
 
 // ****************************************************************************
@@ -101,7 +101,7 @@ struct Selection
 
     //! \brief Resolve the selected Agent, or nullptr when it has been removed
     //! from the simulation since the selection was made.
-    Agent* resolveAgent(Simulation& simulation) const;
+    Agent* resolveAgent(Simulation const& simulation) const;
 };
 
 // ****************************************************************************
@@ -176,7 +176,6 @@ struct DebugState
     //--------------------------------------------------------------------------
     bool drawsZones(Simulation const& simulation) const;
 };
-} // namespace game
-} // namespace ogb
+} // namespace ogb::game
 
 #endif

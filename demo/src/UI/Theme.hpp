@@ -13,8 +13,8 @@
 
 #  include "Host/OpenGL.hpp"
 
-namespace ogb {
-namespace theme {
+namespace ogb::theme
+{
 
 //! \brief Accent used for the selection and the active widgets.
 ImU32 const ACCENT = IM_COL32(86, 156, 214, 255);
@@ -65,7 +65,6 @@ ImU32 fromScript(uint32_t color, float alpha = 1.0f);
 // ----------------------------------------------------------------------------
 ImU32 congestionColor(float ratio, float alpha = 1.0f);
 
-} // namespace theme
-} // namespace ogb
+} // namespace ogb::theme
 
 #endif

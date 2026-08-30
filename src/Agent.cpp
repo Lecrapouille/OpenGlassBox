@@ -6,8 +6,8 @@
 //-----------------------------------------------------------------------------
 
 #include "OpenGlassBox/Agent.hpp"
-#include "OpenGlassBox/Config.hpp"
 #include "OpenGlassBox/Building.hpp"
+#include "OpenGlassBox/Config.hpp"
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -24,8 +24,8 @@ static const float ARRIVED_OFFSET = 0.05f;
 namespace
 {
 Building* findAcceptingBuildingOnSegment(Segment const& segment,
-                                 Name const& searchTarget,
-                                 Resources const& resources)
+                                         Name const& searchTarget,
+                                         Resources const& resources)
 {
     for (Building* building : segment.getBuildings())
     {
@@ -178,15 +178,15 @@ void Agent::followRouteApproach()
 // =============================================================================
 
 //------------------------------------------------------------------------------
-Agent::Agent(uint32_t id,
+Agent::Agent(size_t id,
              AgentType const& type,
              Building& owner,
              Resources const& resources,
              Name const& searchTarget)
     : Entity(id, type, owner.getPosition()),
       m_owner(&owner),
-      m_searchTarget(searchTarget),
-      m_resources(resources)
+      m_resources(resources),
+      m_searchTarget(searchTarget)
 {
     if (owner.getSegment() != nullptr && owner.getNode() == nullptr)
     {
@@ -208,8 +208,8 @@ Agent::~Agent()
 {
     setCurrentSegment(nullptr);
     // Covers the deliveries, the give-ups and the Agents the City takes away
-    // when they end up stranded. A City destroys its Agents before its Buildings,
-    // so the building is still there to be told.
+    // when they end up stranded. A City destroys its Agents before its
+    // Buildings, so the building is still there to be told.
     releaseDestination();
 }
 
@@ -346,8 +346,8 @@ void Agent::forget(Building const& building)
         m_owner = nullptr;
     }
 
-    // City::removeBuilding calls this while the building is still standing, which
-    // is the last moment a place held there can be given back.
+    // City::removeBuilding calls this while the building is still standing,
+    // which is the last moment a place held there can be given back.
     if (m_reservation == &building)
     {
         releaseDestination();
@@ -444,8 +444,8 @@ float Agent::getRemainingCost() const
     // Sum the segments still to drive, then the fraction of the last one that
     // leads to the door.
     float cost = 0.0f;
-    Node* current = getNextRoutingNode();
-    for (Node* next : m_route)
+    Node const* current = getNextRoutingNode();
+    for (Node const* next : m_route)
     {
         if (current == nullptr || next == nullptr)
         {
@@ -514,6 +514,14 @@ void Agent::maybeRecomputeRoute(IRouter& router, RoutingConfig const& config)
         return;
     }
 
+    switchToCheaperRoute(router, config);
+}
+
+//------------------------------------------------------------------------------
+void Agent::switchToCheaperRoute(IRouter& router, RoutingConfig const& config)
+{
+    // A search starts from a crossroads. Without one there is nothing to
+    // compare against, so fall back on rebuilding the itinerary outright.
     Node* from = getNextRoutingNode();
     if (from == nullptr)
     {
@@ -521,6 +529,7 @@ void Agent::maybeRecomputeRoute(IRouter& router, RoutingConfig const& config)
         return;
     }
 
+    // Almost there: no way round can save anything worth the search.
     float const remaining = getRemainingCost();
     if (remaining <= 1e-4f)
     {
@@ -536,6 +545,9 @@ void Agent::maybeRecomputeRoute(IRouter& router, RoutingConfig const& config)
         return;
     }
 
+    // A new way has to save a share of what is left, not merely a second of it.
+    // Without that margin every Agent would swap streets on every check and the
+    // traffic would oscillate between two routes.
     if (candidate.getCost() + remaining * config.pathCostDeviation >= remaining)
     {
         return;
@@ -667,10 +679,11 @@ void Agent::followRoute(IRouter& router, RoutingConfig const& config)
 //------------------------------------------------------------------------------
 bool Agent::update(IRouter& router, RoutingConfig const& config, float dt)
 {
-    // The claim is against the other Agents, not against oneself. Building::accepts
-    // counts it in, so an Agent holding it through its own tick would find its
-    // own destination full: it would be refused at the door it was sent to, and
-    // every recomputation would send it somewhere else and back again.
+    // The claim is against the other Agents, not against oneself.
+    // Building::accepts counts it in, so an Agent holding it through its own
+    // tick would find its own destination full: it would be refused at the door
+    // it was sent to, and every recomputation would send it somewhere else and
+    // back again.
     releaseDestination();
     bool const done = tick(router, config, dt);
 
@@ -811,49 +824,65 @@ void Agent::moveTowardsNextNode(float dt)
         return;
     }
 
-    // Destination is a point on the current Segment rather than a Node.
+    // The destination stands on this very Segment, so the Agent drives to a
+    // point on it rather than to one of its ends.
     if ((m_route.getApproachSegment() == m_currentSegment) &&
         !m_route.hasWaypointsLeft())
     {
-        float const target = m_route.getApproachOffset();
-        float const segmentLength = m_currentSegment->getLength();
-
-        // A segment of zero length has no direction to drive along, so land on
-        // the door at once rather than divide by it.
-        if (segmentLength <= MIN_WAY_LENGTH)
-        {
-            m_offset = target;
-            m_position = m_currentSegment->getPositionAt(m_offset);
-            m_nextNode = nullptr;
-            m_lastNode = (m_offset <= 0.5f) ? &m_currentSegment->getFrom()
-                                            : &m_currentSegment->getTo();
-            return;
-        }
-
-        // The door may lie behind the Agent, hence the signed direction.
-        float const direction = (target >= m_offset) ? 1.0f : -1.0f;
-        m_offset += direction * m_type.speed * dt / segmentLength;
-
-        bool const arrived =
-            (direction > 0.0f) ? (m_offset >= target) : (m_offset <= target);
-        if (arrived)
-        {
-            m_offset = target;
-            m_nextNode = nullptr;
-            m_lastNode = (m_offset <= 0.5f) ? &m_currentSegment->getFrom()
-                                            : &m_currentSegment->getTo();
-        }
-
-        m_position = m_currentSegment->getPositionAt(m_offset);
+        driveTowardsDoor(dt);
         return;
     }
 
-    // Ordinary case: drive towards a crossroads, m_offset growing towards 1
-    // when it is the far end of the segment and towards 0 when it is the near
-    // one, since a Segment is undirected.
-    float direction =
+    driveTowardsCrossroads(dt);
+}
+
+//------------------------------------------------------------------------------
+void Agent::driveTowardsDoor(float dt)
+{
+    float const target = m_route.getApproachOffset();
+    float const segmentLength = m_currentSegment->getLength();
+
+    // A segment of zero length has no direction to drive along, so land on
+    // the door at once rather than divide by it.
+    if (segmentLength <= MIN_WAY_LENGTH)
+    {
+        m_offset = target;
+        m_position = m_currentSegment->getPositionAt(m_offset);
+        m_nextNode = nullptr;
+        m_lastNode = (m_offset <= 0.5f) ? &m_currentSegment->getFrom()
+                                        : &m_currentSegment->getTo();
+        return;
+    }
+
+    // The door may lie behind the Agent, hence the signed direction.
+    float const direction = (target >= m_offset) ? 1.0f : -1.0f;
+    m_offset += direction * m_type.speed * dt / segmentLength;
+
+    // Landing on the door ends the leg. The nearer end of the segment becomes
+    // the Node the Agent is attached to, since it stands between the two.
+    bool const arrived =
+        (direction > 0.0f) ? (m_offset >= target) : (m_offset <= target);
+    if (arrived)
+    {
+        m_offset = target;
+        m_nextNode = nullptr;
+        m_lastNode = (m_offset <= 0.5f) ? &m_currentSegment->getFrom()
+                                        : &m_currentSegment->getTo();
+    }
+
+    m_position = m_currentSegment->getPositionAt(m_offset);
+}
+
+//------------------------------------------------------------------------------
+void Agent::driveTowardsCrossroads(float dt)
+{
+    // A Segment is undirected: the offset grows towards 1 when the crossroads
+    // ahead is the far end, and shrinks towards 0 when it is the near one.
+    float const direction =
         (m_nextNode == &(m_currentSegment->getTo())) ? 1.0f : -1.0f;
 
+    // Same as above: a segment with no length cannot be driven along, so step
+    // straight onto the crossroads.
     float const segmentLength = m_currentSegment->getLength();
     if (segmentLength <= MIN_WAY_LENGTH)
     {

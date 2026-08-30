@@ -13,6 +13,8 @@
 #include "OpenGlassBox/Name.hpp"
 #include "OpenGlassBox/Vector.hpp"
 
+#include <cstddef>
+
 namespace ogb
 {
 
@@ -50,7 +52,7 @@ public:
     //! \return the id given by the City. Unique among entities of this
     //! kind in that city. Saved to disk and used by undo. Survives a reload.
     //--------------------------------------------------------------------------
-    [[nodiscard]] uint32_t getId() const
+    [[nodiscard]] size_t getId() const
     {
         return m_id;
     }
@@ -92,13 +94,13 @@ protected:
     //! outlive the entity.
     //! \param[in] position position in world coordinates.
     //--------------------------------------------------------------------------
-    Entity(uint32_t id, TYPE const& type, Vector3f const& position)
+    Entity(size_t id, TYPE const& type, Vector3f const& position)
         : m_id(id), m_type(type), m_position(position)
     {
     }
 
     //! \brief Id inside the City. Not const: a save restores the saved id.
-    uint32_t m_id;
+    size_t m_id;
 
     //! \brief The type, shared by every entity of the same kind.
     TYPE const& m_type;

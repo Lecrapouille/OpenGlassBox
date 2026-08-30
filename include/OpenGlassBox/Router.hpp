@@ -185,11 +185,14 @@ private:
     //! \brief Segment the destination sits on, or nullptr at a crossroads.
     Segment* m_approachSegment = nullptr;
 
-    //! \brief Position on m_approachSegment, in [0..1].
-    float m_approachOffset = 0.0f;
-
     //! \brief Building for the load, or nullptr when none was found.
     Building* m_destination = nullptr;
+
+    // The small members come last, together, so that they fill one gap instead
+    // of leaving one between each pointer. Every Agent owns a Route.
+
+    //! \brief Position on m_approachSegment, in [0..1].
+    float m_approachOffset = 0.0f;
 
     //! \brief Total travel time in seconds of game time, using traffic at
     //! search time.

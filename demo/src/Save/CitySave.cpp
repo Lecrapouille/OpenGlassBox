@@ -26,7 +26,7 @@ uint32_t rotr(uint32_t value, uint32_t bits)
     return (value >> bits) | (value << (32u - bits));
 }
 
-std::string sha256(std::string const& input)
+std::string sha256(std::string_view const& input)
 {
     static uint32_t const K[64] = {
         0x428a2f98u, 0x71374491u, 0xb5c0fbcfu, 0xe9b5dba5u, 0x3956c25bu,
@@ -159,6 +159,29 @@ bool readUint(Lexer& lexer, uint32_t& value, std::string& error)
     return true;
 }
 
+//! \brief Read an entity identifier. Kept apart from readUint because ids are
+//! sized like the containers they index, and a save written by a bigger city
+//! must not be truncated on the way in.
+bool readId(Lexer& lexer, size_t& value, std::string& error)
+{
+    Token const token = lexer.next();
+    if (!token.valid())
+    {
+        error = "Expected an identifier";
+        return false;
+    }
+    try
+    {
+        value = size_t(std::stoull(token.text));
+    }
+    catch (...)
+    {
+        error = "Not an identifier: " + token.text;
+        return false;
+    }
+    return true;
+}
+
 bool readInt(Lexer& lexer, int32_t& value, std::string& error)
 {
     Token const token = lexer.next();
@@ -262,16 +285,18 @@ std::vector<std::string> usedTypes(Simulation const& simulation)
         names.push_back(name.str());
     };
 
-    for (auto const& cityIt : simulation.getCities())
+    for (auto const& [cityName, cityPtr] : simulation.getCities())
     {
-        City const& city = *cityIt.second;
-        for (auto const& pathIt : city.getPaths())
+        (void)cityName;
+        City const& city = *cityPtr;
+        for (auto const& [pathName, pathPtr] : city.getPaths())
         {
-            add(pathIt.second->getTypeName());
-            for (auto const& segment : pathIt.second->getSegments())
+            (void)pathName;
+            add(pathPtr->getTypeName());
+            for (auto const& segment : pathPtr->getSegments())
                 add(segment->getTypeName());
         }
-        for (auto const& building: city.getBuildings())
+        for (auto const& building : city.getBuildings())
             add(building->getTypeName());
         for (auto const& zone : city.getZones())
             add(zone->getTypeName());
@@ -358,7 +383,8 @@ CitySave::savesUsingRuleset(std::string const& rulesetPath)
 
     for (auto const& entry : fs::directory_iterator(directory, code))
     {
-        if (!entry.is_regular_file(code) || (entry.path().extension() != ".ogc"))
+        if (!entry.is_regular_file(code) ||
+            (entry.path().extension() != ".ogc"))
             continue;
 
         CitySaveHeader header;
@@ -403,9 +429,8 @@ bool CitySave::restamp(std::string const& savePath,
     // it is copied through untouched rather than parsed and written back.
     std::string text = buffer.str();
     size_t const key = text.find("\thash ");
-    size_t const end = (key == std::string::npos)
-                           ? std::string::npos
-                           : text.find('\n', key);
+    size_t const end =
+        (key == std::string::npos) ? std::string::npos : text.find('\n', key);
     if (end == std::string::npos)
     {
         error = "'" + savePath + "' has no hash line to stamp";
@@ -462,20 +487,22 @@ bool CitySave::write(std::string const& path,
     writeResources(out, city.getGlobals());
     out << "\n";
 
-    for (auto const& pathIt : city.getPaths())
+    for (auto const& [pathName, pathPtr] : city.getPaths())
     {
-        Path const& road = *pathIt.second;
+        (void)pathName;
+        Path const& road = *pathPtr;
         out << "path " << road.getTypeName() << "\n";
         for (auto const& node : road.getNodes())
         {
             Cell const cell = city.worldToCell(node->getPosition());
-            out << "\tnode " << node->getId() << " " << cell.u << " "
-                << cell.v << "\n";
+            out << "\tnode " << node->getId() << " " << cell.u << " " << cell.v
+                << "\n";
         }
         for (auto const& segment : road.getSegments())
         {
-            out << "\tsegment " << segment->getId() << " " << segment->getTypeName() << " "
-                << segment->getFrom().getId() << " " << segment->getTo().getId() << " flow "
+            out << "\tsegment " << segment->getId() << " "
+                << segment->getTypeName() << " " << segment->getFrom().getId()
+                << " " << segment->getTo().getId() << " flow "
                 << segment->getFlow() << "\n";
         }
         out << "end\n";
@@ -486,7 +513,8 @@ bool CitySave::write(std::string const& path,
         out << "building " << building->getTypeName();
         if (building->getSegment() != nullptr)
         {
-            out << " on segment " << building->getSegment()->getId() << " " << building->getSegmentOffset();
+            out << " on segment " << building->getSegment()->getId() << " "
+                << building->getSegmentOffset();
         }
         else if (building->getNode() != nullptr)
         {
@@ -505,13 +533,14 @@ bool CitySave::write(std::string const& path,
     for (auto const& zone : city.getZones())
     {
         CellRegion const& region = zone->getRegion();
-        out << "zone " << zone->getTypeName() << " " << region.u0 << " " << region.v0
-            << " " << region.sizeU << " " << region.sizeV << "\n";
+        out << "zone " << zone->getTypeName() << " " << region.u0 << " "
+            << region.v0 << " " << region.sizeU << " " << region.sizeV << "\n";
     }
 
-    for (auto const& layerIt : city.getLayers())
+    for (auto const& [layerName, layerPtr] : city.getLayers())
     {
-        Layer const& layer = *layerIt.second;
+        (void)layerName;
+        Layer const& layer = *layerPtr;
         out << "layer " << layer.getTypeName() << "\n";
         layer.forEachCell(
             [&](int32_t u, int32_t v, uint32_t amount)
@@ -522,8 +551,8 @@ bool CitySave::write(std::string const& path,
     for (auto const& agent : city.getAgents())
     {
         out << "agent " << agent->getTypeName() << " to " << agent->getTarget()
-            << " pos " << agent->getPosition().x << " " << agent->getPosition().y
-            << " offset " << agent->getOffset();
+            << " pos " << agent->getPosition().x << " "
+            << agent->getPosition().y << " offset " << agent->getOffset();
         if (agent->getSegment() != nullptr)
             out << " segment " << agent->getSegment()->getId();
         if (agent->getPreviousNode() != nullptr)
@@ -588,8 +617,11 @@ bool CitySave::read(std::string const& filePath,
                 return false;
             city = &simulation.addCity(
                 name.text, Vector3f(0.0f, 0.0f, 0.0f), sizeU, sizeV);
-            for (auto const& it : script.getLayerTypes())
-                city->addLayer(*it.second);
+            for (auto const& [layerName, layerType] : script.getLayerTypes())
+            {
+                (void)layerName;
+                city->addLayer(*layerType);
+            }
         }
         else if (token.text == "globals")
         {
@@ -615,10 +647,10 @@ bool CitySave::read(std::string const& filePath,
                 Token const kind = lexer.next();
                 if (kind.text == "node")
                 {
-                    uint32_t id = 0u;
+                    size_t id = 0u;
                     int32_t u = 0;
                     int32_t v = 0;
-                    if (!readUint(lexer, id, error) ||
+                    if (!readId(lexer, id, error) ||
                         !readInt(lexer, u, error) || !readInt(lexer, v, error))
                     {
                         return false;
@@ -627,14 +659,14 @@ bool CitySave::read(std::string const& filePath,
                 }
                 else if (kind.text == "segment")
                 {
-                    uint32_t id = 0u;
-                    uint32_t from = 0u;
-                    uint32_t to = 0u;
-                    if (!readUint(lexer, id, error))
+                    size_t id = 0u;
+                    size_t from = 0u;
+                    size_t to = 0u;
+                    if (!readId(lexer, id, error))
                         return false;
                     Token const type = lexer.next();
-                    if (!readUint(lexer, from, error) ||
-                        !readUint(lexer, to, error))
+                    if (!readId(lexer, from, error) ||
+                        !readId(lexer, to, error))
                     {
                         return false;
                     }
@@ -679,9 +711,9 @@ bool CitySave::read(std::string const& filePath,
             if ((where.text == "on") && (lexer.peek().text == "segment"))
             {
                 lexer.next();
-                uint32_t segmentId = 0u;
+                size_t segmentId = 0u;
                 float offset = 0.5f;
-                if (!readUint(lexer, segmentId, error) ||
+                if (!readId(lexer, segmentId, error) ||
                     !readFloat(lexer, offset, error))
                     return false;
                 Segment* segment = path->findSegment(segmentId);
@@ -696,8 +728,8 @@ bool CitySave::read(std::string const& filePath,
             else if ((where.text == "on") && (lexer.peek().text == "node"))
             {
                 lexer.next();
-                uint32_t nodeId = 0u;
-                if (!readUint(lexer, nodeId, error))
+                size_t nodeId = 0u;
+                if (!readId(lexer, nodeId, error))
                     return false;
                 Node* node = path->findNode(nodeId);
                 if (node == nullptr)
@@ -705,7 +737,8 @@ bool CitySave::read(std::string const& filePath,
                     error = "Unknown node for building";
                     return false;
                 }
-                building = &city->addBuilding(script.getBuildingType(type.text), *node);
+                building = &city->addBuilding(script.getBuildingType(type.text),
+                                              *node);
             }
             else if (where.text == "at")
             {
@@ -714,7 +747,7 @@ bool CitySave::read(std::string const& filePath,
                 if (!readInt(lexer, u, error) || !readInt(lexer, v, error))
                     return false;
                 building = &city->addBuilding(script.getBuildingType(type.text),
-                                      city->cellToWorld({ u, v }));
+                                              city->cellToWorld({ u, v }));
             }
             else
             {
@@ -792,17 +825,17 @@ bool CitySave::read(std::string const& filePath,
             Token const target = lexer.next();
             Vector3f position;
             float offset = 0.0f;
-            uint32_t segmentId = 0u;
-            uint32_t lastId = 0u;
+            size_t segmentId = 0u;
+            size_t lastId = 0u;
             bool hasSegment = false;
             bool hasLast = false;
             Resources cargo;
             while (lexer.peek().valid())
             {
                 std::string const& look = lexer.peek().text;
-                if ((look == "city") || (look == "path") || (look == "building") ||
-                    (look == "zone") || (look == "layer") || (look == "agent") ||
-                    (look == "clock"))
+                if ((look == "city") || (look == "path") ||
+                    (look == "building") || (look == "zone") ||
+                    (look == "layer") || (look == "agent") || (look == "clock"))
                 {
                     break;
                 }
@@ -822,13 +855,13 @@ bool CitySave::read(std::string const& filePath,
                 }
                 else if (key.text == "segment")
                 {
-                    hasSegment = readUint(lexer, segmentId, error);
+                    hasSegment = readId(lexer, segmentId, error);
                     if (!hasSegment)
                         return false;
                 }
                 else if (key.text == "last")
                 {
-                    hasLast = readUint(lexer, lastId, error);
+                    hasLast = readId(lexer, lastId, error);
                     if (!hasLast)
                         return false;
                 }
@@ -851,7 +884,7 @@ bool CitySave::read(std::string const& filePath,
             Node* last = nullptr;
             if (!city->getPaths().empty())
             {
-                Path& path = *city->getPaths().begin()->second;
+                Path const& path = *city->getPaths().begin()->second;
                 if (hasSegment)
                     segment = path.findSegment(segmentId);
                 if (hasLast)

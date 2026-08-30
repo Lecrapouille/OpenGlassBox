@@ -15,8 +15,8 @@
 #  include <string>
 #  include <vector>
 
-namespace ogb {
-namespace game {
+namespace ogb::game
+{
 
 
 // ****************************************************************************
@@ -116,7 +116,6 @@ private:
     //! \brief Running average, which is also the last entry of m_smoothed.
     float m_average = 0.0f;
 };
-} // namespace game
-} // namespace ogb
+} // namespace ogb::game
 
 #endif

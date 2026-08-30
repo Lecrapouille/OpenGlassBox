@@ -19,9 +19,7 @@
 #include <string>
 #include <vector>
 
-namespace ogb
-{
-namespace ui
+namespace ogb::ui
 {
 using namespace ogb::theme;
 
@@ -260,8 +258,8 @@ OpeningStatus openingStatus(Building const& building, uint32_t hourOfDay)
 // ----------------------------------------------------------------------------
 //! \brief List the rules of the selected entity: how often each one is
 //! attempted and how long until the next attempt, both counted in ticks, which
-//! is the building the engine actually runs on. Hovering a row spells the period
-//! out in game time and names what the rule does.
+//! is the building the engine actually runs on. Hovering a row spells the
+//! period out in game time and names what the rule does.
 //!
 //! A rule that never fires with many ticks to go is simply not due yet; one
 //! that is due every tick and still does nothing is blocked, and the Rule Log
@@ -296,7 +294,8 @@ static void drawRules(RuleContainer const& rules,
         if (rule == nullptr)
             continue;
 
-        uint32_t const period = std::max(1u, rule->getPeriodTicks(ticksPerMinute));
+        uint32_t const period =
+            std::max(1u, rule->getPeriodTicks(ticksPerMinute));
         uint32_t const remaining = ticksToGo(period, ticks);
         OpeningHours const hours = ruleHours(*rule);
         bool const asleep = hours.isRestricted() && !hours.isOpen(hourOfDay);
@@ -306,8 +305,9 @@ static void drawRules(RuleContainer const& rules,
 
         // The name spans the row so that hovering anywhere on it explains the
         // whole line rather than the cell under the cursor.
-        ImGui::Selectable(
-            rule->getName().c_str(), false, ImGuiSelectableFlags_SpanAllColumns);
+        ImGui::Selectable(rule->getName().c_str(),
+                          false,
+                          ImGuiSelectableFlags_SpanAllColumns);
         if (ImGui::BeginItemTooltip())
         {
             ImGui::TextUnformatted(rule->getName().c_str());
@@ -391,8 +391,8 @@ static void drawAgentLine(Agent const& agent)
             continue;
         if (!carried.empty())
             carried += ", ";
-        carried +=
-            std::to_string(resource.getAmount()) + " " + resource.getTypeName().str();
+        carried += std::to_string(resource.getAmount()) + " " +
+                   resource.getTypeName().str();
     }
     if (carried.empty())
         carried = "empty";
@@ -401,7 +401,7 @@ static void drawAgentLine(Agent const& agent)
     ImGui::TableNextColumn();
     ImGui::TextColored(
         ImGui::ColorConvertU32ToFloat4(theme::fromScript(agent.getColor())),
-        "%s #%u",
+        "%s #%zu",
         agent.getTypeName().c_str(),
         agent.getId());
     ImGui::TableNextColumn();
@@ -422,7 +422,7 @@ static void drawAgentLine(Agent const& agent)
 //! thing as a population sitting inside a building. What a building does have
 //! is traffic: what left it and what is coming.
 // ----------------------------------------------------------------------------
-static void drawBuildingAgents(City& city, Building const& building)
+static void drawBuildingAgents(City const& city, Building const& building)
 {
     std::vector<Agent const*> outbound;
     std::vector<Agent const*> inbound;
@@ -523,9 +523,9 @@ void InspectorPanel::draw(Simulation& simulation,
 }
 
 // ----------------------------------------------------------------------------
-void InspectorPanel::drawBuilding(Simulation& simulation,
-                              game::DebugState& state,
-                              game::RuleTrace const& trace) const
+void InspectorPanel::drawBuilding(Simulation const& simulation,
+                                  game::DebugState& state,
+                                  game::RuleTrace const& trace) const
 {
     Building* const building = state.selection.building;
     if (building == nullptr)
@@ -536,14 +536,15 @@ void InspectorPanel::drawBuilding(Simulation& simulation,
 
     ImGui::TextColored(
         ImGui::ColorConvertU32ToFloat4(theme::fromScript(building->getColor())),
-        "Building %s #%u",
+        "Building %s #%zu",
         building->getTypeName().c_str(),
         building->getId());
     ImGui::Spacing();
 
     auto const cityIt = simulation.getCities().find(state.selection.city);
-    City* const city =
-        (cityIt == simulation.getCities().end()) ? nullptr : cityIt->second.get();
+    City* const city = (cityIt == simulation.getCities().end())
+                           ? nullptr
+                           : cityIt->second.get();
 
     // Which zone the building stands in decides which zone rules may upgrade
     // or demolish it, so it belongs with the rest of its identity.
@@ -595,7 +596,8 @@ void InspectorPanel::drawBuilding(Simulation& simulation,
         field("Zone", zones.empty() ? "outside any zone" : zones);
         if (building->getNode() != nullptr)
         {
-            field("Stands on", "node #" + std::to_string(building->getNode()->getId()));
+            field("Stands on",
+                  "node #" + std::to_string(building->getNode()->getId()));
         }
         else if (building->getSegment() != nullptr)
         {
@@ -703,7 +705,7 @@ void InspectorPanel::drawBuilding(Simulation& simulation,
 }
 
 // ----------------------------------------------------------------------------
-void InspectorPanel::drawAgent(Simulation& simulation,
+void InspectorPanel::drawAgent(Simulation const& simulation,
                                game::DebugState const& state) const
 {
     Agent* const agent = state.selection.resolveAgent(simulation);
@@ -715,7 +717,7 @@ void InspectorPanel::drawAgent(Simulation& simulation,
 
     ImGui::TextColored(
         ImGui::ColorConvertU32ToFloat4(theme::fromScript(agent->getColor())),
-        "Agent %s #%u",
+        "Agent %s #%zu",
         agent->getTypeName().c_str(),
         agent->getId());
     ImGui::Spacing();
@@ -726,8 +728,7 @@ void InspectorPanel::drawAgent(Simulation& simulation,
         field("City", state.selection.city);
         field("Looking for",
               "a building accepting " + agent->getTarget().str());
-        field("Speed",
-              fixed(agent->getSpeed(), 2) + " world units per second");
+        field("Speed", fixed(agent->getSpeed(), 2) + " world units per second");
         field("Position",
               "(" + fixed(agent->getPosition().x, 1) + ", " +
                   fixed(agent->getPosition().y, 1) + ")");
@@ -755,7 +756,8 @@ void InspectorPanel::drawAgent(Simulation& simulation,
             if (route.getDestination() != nullptr)
             {
                 field("Destination",
-                      std::string(route.getDestination()->getTypeName()) + " #" +
+                      std::string(route.getDestination()->getTypeName()) +
+                          " #" +
                           std::to_string(route.getDestination()->getId()));
             }
             if (route.getApproachSegment() != nullptr)
@@ -774,14 +776,14 @@ void InspectorPanel::drawAgent(Simulation& simulation,
 // ----------------------------------------------------------------------------
 void InspectorPanel::drawNode(game::DebugState& state) const
 {
-    Node* const node = state.selection.node;
+    Node const* node = state.selection.node;
     if (node == nullptr)
     {
         state.selection.clear();
         return;
     }
 
-    ImGui::Text("Node #%u", node->getId());
+    ImGui::Text("Node #%zu", node->getId());
     ImGui::Spacing();
 
     if (beginFields("node"))
@@ -816,21 +818,23 @@ void InspectorPanel::drawNode(game::DebugState& state) const
     }
     for (Building const* building : node->getBuildings())
     {
-        ImGui::BulletText("%s #%u", building->getTypeName().c_str(), building->getId());
+        ImGui::BulletText(
+            "%s #%zu", building->getTypeName().c_str(), building->getId());
     }
 }
 
 // ----------------------------------------------------------------------------
 void InspectorPanel::drawSegment(game::DebugState& state) const
 {
-    Segment* const segment = state.selection.segment;
+    Segment const* segment = state.selection.segment;
     if (segment == nullptr)
     {
         state.selection.clear();
         return;
     }
 
-    ImGui::Text("Road %s #%u", segment->getTypeName().c_str(), segment->getId());
+    ImGui::Text(
+        "Road %s #%zu", segment->getTypeName().c_str(), segment->getId());
     ImGui::Spacing();
 
     if (beginFields("segment"))
@@ -858,7 +862,7 @@ void InspectorPanel::drawSegment(game::DebugState& state) const
 }
 
 // ----------------------------------------------------------------------------
-void InspectorPanel::drawZone(Simulation& simulation,
+void InspectorPanel::drawZone(Simulation const& simulation,
                               game::DebugState& state) const
 {
     Zone const* zone = state.selection.zone;
@@ -872,7 +876,7 @@ void InspectorPanel::drawZone(Simulation& simulation,
 
     ImGui::TextColored(
         ImGui::ColorConvertU32ToFloat4(theme::fromScript(zone->getColor())),
-        "Zone %s #%u",
+        "Zone %s #%zu",
         zone->getTypeName().c_str(),
         zone->getId());
     ImGui::Spacing();
@@ -905,9 +909,9 @@ void InspectorPanel::drawZone(Simulation& simulation,
         for (Building const* building : buildings)
             ++counts[building->getTypeName().str()];
 
-        for (auto const& it : counts)
+        for (auto const& [typeName, count] : counts)
         {
-            ImGui::BulletText("%u x %s", it.second, it.first.c_str());
+            ImGui::BulletText("%u x %s", count, typeName.c_str());
         }
         ImGui::TextDisabled("%zu building(s) on %llu cell(s)",
                             buildings.size(),
@@ -926,14 +930,15 @@ void InspectorPanel::drawZone(Simulation& simulation,
     if (it == simulation.getCities().end())
         return;
 
-    City& city = *it->second;
-    std::string const header =
-        "Cell (" + std::to_string(state.selection.u) + ", " +
-        std::to_string(state.selection.v) + ") under the zone";
+    City const& city = *it->second;
+    std::string const header = "Cell (" + std::to_string(state.selection.u) +
+                               ", " + std::to_string(state.selection.v) +
+                               ") under the zone";
     ImGui::SeparatorText(header.c_str());
-    for (auto const& layerIt : city.getLayers())
+    for (auto const& [layerName, layerPtr] : city.getLayers())
     {
-        Layer const& layer = *layerIt.second;
+        (void)layerName;
+        Layer const& layer = *layerPtr;
         ImGui::TextColored(
             ImGui::ColorConvertU32ToFloat4(theme::fromScript(layer.getColor())),
             "%s",
@@ -946,7 +951,7 @@ void InspectorPanel::drawZone(Simulation& simulation,
 }
 
 // ----------------------------------------------------------------------------
-void InspectorPanel::drawCell(Simulation& simulation,
+void InspectorPanel::drawCell(Simulation const& simulation,
                               game::DebugState& state) const
 {
     auto const it = simulation.getCities().find(state.selection.city);
@@ -956,7 +961,7 @@ void InspectorPanel::drawCell(Simulation& simulation,
         return;
     }
 
-    City& city = *it->second;
+    City const& city = *it->second;
     ImGui::Text("Cell (%d, %d) of %s",
                 state.selection.u,
                 state.selection.v,
@@ -964,15 +969,16 @@ void InspectorPanel::drawCell(Simulation& simulation,
     ImGui::Spacing();
 
     ImGui::SeparatorText("Layers");
-    for (auto const& layerIt : city.getLayers())
+    for (auto const& [layerName, layerPtr] : city.getLayers())
     {
-        Layer const& layer = *layerIt.second;
+        (void)layerName;
+        Layer const& layer = *layerPtr;
         uint32_t const amount =
             layer.getResource({ state.selection.u, state.selection.v });
         uint32_t const capacity = std::max(1u, layer.getCellCapacity());
 
-        std::string const overlay =
-            std::to_string(amount) + " / " + std::to_string(layer.getCellCapacity());
+        std::string const overlay = std::to_string(amount) + " / " +
+                                    std::to_string(layer.getCellCapacity());
 
         ImGui::TextColored(
             ImGui::ColorConvertU32ToFloat4(theme::fromScript(layer.getColor())),
@@ -987,5 +993,4 @@ void InspectorPanel::drawCell(Simulation& simulation,
 
     drawResources("City globals", city.getGlobals().getAll());
 }
-} // namespace ui
-} // namespace ogb
+} // namespace ogb::ui

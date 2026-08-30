@@ -231,12 +231,13 @@ public:
         //! Valid only during the notification.
         //! It points at a live entity context. It moves on by the next tick.
         RuleContext const* context = nullptr;
-        //! \brief True when every command passed and all ran.
-        bool success = false;
         //! \brief Index of the command that failed, in getCommands().
         //! NO_BLOCKING_COMMAND when the Rule ran.
         //! Answers: "why does this Rule never do anything?"
         size_t blockingCommand = NO_BLOCKING_COMMAND;
+        //! \brief True when every command passed and all ran. Declared last so
+        //! that it sits in the gap the struct ends on rather than opening one.
+        bool success = false;
     };
 
     //--------------------------------------------------------------------------
@@ -431,7 +432,7 @@ protected:
         if (s_listener == nullptr)
             return;
 
-        Trace const trace{ this, &context, success, blockingCommand };
+        Trace const trace{ this, &context, blockingCommand, success };
         s_listener->onRuleExecuted(trace);
     }
 
@@ -476,8 +477,8 @@ public:
     //--------------------------------------------------------------------------
     explicit RuleLayer(RuleLayerType const& type)
         : IRule(type.name, type.rate, type.rateMinutes, type.commands),
-          m_randomTiles(type.randomTiles),
-          m_randomTilesPercent(std::min(100u, type.randomTilesPercent))
+          m_randomTilesPercent(std::min(100u, type.randomTilesPercent)),
+          m_randomTiles(type.randomTiles)
     {
     }
 
@@ -515,10 +516,11 @@ public:
 
 private:
 
-    //! \brief Visit a random share of cells instead of all cells.
-    bool m_randomTiles;
     //! \brief Share in percent, clamped to 100.
     uint32_t m_randomTilesPercent;
+    //! \brief Visit a random share of cells instead of all cells. Declared last
+    //! so that it sits in the gap the class ends on rather than opening one.
+    bool m_randomTiles;
 };
 
 //==============================================================================

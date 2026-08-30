@@ -1,0 +1,8 @@
+CompileFlags:
+  Add:
+    - -Wno-unknown-warning-option
+    - -Wno-unused-command-line-argument
+
+Diagnostics:
+  UnusedIncludes: None
+  MissingIncludes: None

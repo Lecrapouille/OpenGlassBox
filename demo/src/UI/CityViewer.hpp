@@ -17,14 +17,9 @@
 
 #include <functional>
 
-namespace ogb
-{
-namespace editor
-{
-class Editor;
-}
+namespace ogb::editor { class Editor; }
 
-namespace ui
+namespace ogb::ui
 {
 
 // ****************************************************************************
@@ -52,7 +47,7 @@ public:
     //! \brief Frame the whole simulation in the view. Called on startup and by
     //! the recenter button.
     // ------------------------------------------------------------------------
-    void frameAll(Simulation& simulation);
+    void frameAll(Simulation const& simulation);
 
     // ------------------------------------------------------------------------
     //! \brief Ask for a reframing at the next draws, once the size of the
@@ -95,25 +90,25 @@ public:
     //! \return the segment, or nullptr when nothing is close enough.
     // ------------------------------------------------------------------------
     Segment*
-    pickSegment(City& city, ImVec2 const& world, float pixels, float& offset) const;
+    pickSegment(City const& city, ImVec2 const& world, float pixels, float& offset) const;
 
     // ------------------------------------------------------------------------
     //! \brief Node of the given city closest to a world position, within a
     //! tolerance in pixels.
     // ------------------------------------------------------------------------
-    Node* pickNode(City& city, ImVec2 const& world, float pixels) const;
+    Node* pickNode(City const& city, ImVec2 const& world, float pixels) const;
 
     // ------------------------------------------------------------------------
     //! \brief Building of the given city closest to a world position, within a
     //! tolerance in pixels.
     // ------------------------------------------------------------------------
-    Building* pickBuilding(City& city, ImVec2 const& world, float pixels) const;
+    Building* pickBuilding(City const& city, ImVec2 const& world, float pixels) const;
 
     // ------------------------------------------------------------------------
     //! \brief Agent of the given city closest to a world position, within a
     //! tolerance in pixels.
     // ------------------------------------------------------------------------
-    Agent* pickAgent(City& city, ImVec2 const& world, float pixels) const;
+    Agent* pickAgent(City const& city, ImVec2 const& world, float pixels) const;
 
 private:
 
@@ -131,12 +126,12 @@ private:
     //! click on nothing falls back on the grid cell.
     // ------------------------------------------------------------------------
     void
-    pick(Simulation& simulation, game::DebugState& state, ImVec2 const& screen);
+    pick(Simulation const& simulation, game::DebugState& state, ImVec2 const& screen);
 
     // ------------------------------------------------------------------------
     //! \brief Entity under the given canvas position, without writing state.
     // ------------------------------------------------------------------------
-    game::Selection pickAt(Simulation& simulation,
+    game::Selection pickAt(Simulation const& simulation,
                            game::DebugState const& state,
                            ImVec2 const& screen) const;
 
@@ -153,16 +148,16 @@ private:
     // ------------------------------------------------------------------------
     static int32_t cellsPerSquare(float const pixels, CellRegion const& visible);
 
-    void drawLayers(Simulation& simulation, game::DebugState const& state);
-    void drawPaths(City& city, game::DebugState const& state);
-    void drawBuildings(City& city, game::DebugState const& state);
-    void drawAgents(City& city, game::DebugState const& state);
+    void drawLayers(Simulation const& simulation, game::DebugState const& state);
+    void drawPaths(City const& city, game::DebugState const& state);
+    void drawBuildings(City const& city, game::DebugState const& state);
+    void drawAgents(City const& city, game::DebugState const& state);
     void drawCityFrame(City const& city, game::DebugState const& state);
-    void drawZones(City& city, game::DebugState const& state);
-    void drawSelectionOverlay(Simulation& simulation,
+    void drawZones(City const& city, game::DebugState const& state);
+    void drawSelectionOverlay(Simulation const& simulation,
                               game::DebugState const& state,
                               editor::Editor const& editor);
-    void drawInspectHover(Simulation& simulation,
+    void drawInspectHover(Simulation const& simulation,
                           game::DebugState const& state,
                           editor::Editor const& editor);
     void drawLegend(game::DebugState const& state);
@@ -178,12 +173,12 @@ private:
     //! the frame the brushes need the cell on.
     // ------------------------------------------------------------------------
     void
-    updateHover(Simulation& simulation, game::DebugState& state, bool hovered);
+    updateHover(Simulation const& simulation, game::DebugState& state, bool hovered);
 
     // ------------------------------------------------------------------------
     //! \brief Tooltip listing the value of every Layer on the hovered cell.
     // ------------------------------------------------------------------------
-    void drawHoverTooltip(Simulation& simulation,
+    void drawHoverTooltip(Simulation const& simulation,
                           game::DebugState const& state,
                           editor::Editor const& editor);
     void drawDisplayToggles(game::DebugState& state) const;
@@ -232,7 +227,6 @@ private:
     static constexpr int REFRAME_FRAMES = 4;
     int m_frames_to_reframe = REFRAME_FRAMES;
 };
-} // namespace ui
-} // namespace ogb
+} // namespace ogb::ui
 
 #endif

@@ -446,6 +446,25 @@ private:
     // -------------------------------------------------------------------------
     void updateTrafficMetrics() const;
 
+    // -------------------------------------------------------------------------
+    //! \brief Add the travel times of the agents of one city to the two running
+    //! sums the relative gap is made of.
+    //!
+    //! Only part of the population is looked at when the city is a large one,
+    //! one agent in every stride. That samples the whole population instead of
+    //! whichever end of the list the loop starts at, and since both sums are
+    //! scaled the same way, their ratio needs no correction.
+    //!
+    //! \param[in] city the city to walk.
+    //! \param[in] budget how many agents may be sampled, zero for all of them.
+    //! \param[in,out] tstt what the agents will actually spend on the road.
+    //! \param[in,out] sptt what they would spend on the shortest way there.
+    // -------------------------------------------------------------------------
+    static void sampleCityTravelTimes(City const& city,
+                                      uint32_t budget,
+                                      float& tstt,
+                                      float& sptt);
+
 private:
 
     //! \brief The ruleset. Declared before the world on purpose. Destruction
@@ -461,15 +480,16 @@ private:
     float m_time = 0.0f;
     //! \brief Game time per second of wall time.
     float m_timeScale = 1.0f;
-    //! \brief When true, update() does nothing.
-    bool m_paused = true;
-    //! \brief Last traffic metrics. Mutable because caching happens in a const
-    //! method.
-    mutable TrafficMetrics m_trafficMetrics;
-    //! \brief Tick when the metrics above were computed. Start with a tick no
+    //! \brief Tick when the metrics below were computed. Start with a tick no
     //! run reaches, so the first call always computes.
     mutable uint64_t m_trafficMetricsTick =
         std::numeric_limits<uint64_t>::max();
+    //! \brief Last traffic metrics. Mutable because caching happens in a const
+    //! method.
+    mutable TrafficMetrics m_trafficMetrics;
+    //! \brief When true, update() does nothing. Declared last, with the three
+    //! floats above, so that it does not open a gap of its own.
+    bool m_paused = true;
 };
 
 } // namespace ogb
