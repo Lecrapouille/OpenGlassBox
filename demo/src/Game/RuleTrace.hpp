@@ -18,8 +18,8 @@
 #  include <string>
 #  include <vector>
 
-namespace ogb {
-namespace game {
+namespace ogb::game
+{
 
 
 // ****************************************************************************
@@ -117,7 +117,6 @@ private:
     bool m_recording = false;
     bool m_failures_only = true;
 };
-} // namespace game
-} // namespace ogb
+} // namespace ogb::game
 
 #endif

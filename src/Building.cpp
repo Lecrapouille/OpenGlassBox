@@ -28,8 +28,8 @@ void Building::bind(City& city)
 // -----------------------------------------------------------------------------
 Building::Building(BuildingType const& type, Node& node, City& city)
     : Entity(0u, type, node.getPosition()),
-      m_node(&node),
-      m_resources(type.resources)
+      m_resources(type.resources),
+      m_node(&node)
 {
     m_node->addBuilding(*this);
     bind(city);
@@ -38,9 +38,9 @@ Building::Building(BuildingType const& type, Node& node, City& city)
 // -----------------------------------------------------------------------------
 Building::Building(BuildingType const& type, Segment& segment, float offset, City& city)
     : Entity(0u, type, {}),
+      m_resources(type.resources),
       m_segment(&segment),
-      m_offset(offset),
-      m_resources(type.resources)
+      m_offset(offset)
 {
     if (m_offset < 0.0f)
         m_offset = 0.0f;
@@ -70,8 +70,11 @@ void Building::spreadRuleStart()
     uint32_t const spread = std::max(1u, perMinute * 60u);
 
     // A cheap integer hash, so that consecutive identifiers do not come out as
-    // consecutive phases.
-    uint32_t hash = m_context.city->getConfig().randomSeed ^ (m_id * 2654435761u);
+    // consecutive phases. The id is folded down to 32 bits on purpose: the
+    // mixing constants below are 32-bit ones, and a city never holds enough
+    // buildings for the high half to carry anything.
+    uint32_t hash = m_context.city->getConfig().randomSeed ^
+                    (uint32_t(m_id) * 2654435761u);
     hash ^= hash >> 15;
     hash *= 2246822519u;
     hash ^= hash >> 13;

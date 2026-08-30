@@ -18,12 +18,11 @@
             "cppStandard": "c++17",
             "intelliSenseMode": "linux-gcc-x64",
             "compileCommands": "${workspaceFolder}/compile_commands.json",
-            "configurationProvider": "ms-vscode.makefile-tools",
             "browse": {
                 "path": [
                     "${workspaceFolder}/**"
                 ],
-                "limitSymbolsToIncludedHeaders": true,
+                "limitSymbolsToIncludedHeaders": false,
                 "databaseFilename": "${workspaceFolder}/.vscode/browse.vc.db"
             }
         }

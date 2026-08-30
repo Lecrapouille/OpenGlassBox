@@ -57,3 +57,4 @@ One window shows one city. The simulation starts paused: press **Play** on the c
 - Moving cars: [http://lo-th.github.io/root/traffic/](http://lo-th.github.io/root/traffic/) (source code: [https://github.com/lo-th/root/tree/gh-pages/traffic](https://github.com/lo-th/root/tree/gh-pages/traffic), a fork of [https://github.com/volkhin/RoadTrafficSimulator](https://github.com/volkhin/RoadTrafficSimulator))
 - A work-in-progress, open-source, multiplayer city simulation game: [https://github.com/citybound/citybound](https://github.com/citybound/citybound)
 - An open-source version of Transport Tycoon: [https://github.com/OpenTTD/OpenTTD](https://github.com/OpenTTD/OpenTTD)
+- [Free and open source urbanism: Software for urban planning practice](https://www.sciencedirect.com/science/article/pii/S0198971522000692?via%3Dihub)

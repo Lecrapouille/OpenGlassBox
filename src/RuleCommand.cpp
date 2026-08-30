@@ -7,14 +7,15 @@
 
 #include "OpenGlassBox/RuleCommand.hpp"
 #include "OpenGlassBox/City.hpp"
-#include "OpenGlassBox/Zone.hpp"
 #include "OpenGlassBox/World.hpp"
+#include "OpenGlassBox/Zone.hpp"
 #include <cassert>
 #include <iostream>
 #include <optional>
 #include <sstream>
 
-namespace ogb {
+namespace ogb
+{
 
 bool RuleCommandAdd::validate(RuleContext& context)
 {
@@ -54,15 +55,17 @@ bool RuleCommandTest::validate(RuleContext& context)
 {
     switch (m_comparison)
     {
-    case Comparison::EQUALS:
-        return m_target.get(context) == m_amount;
-    case Comparison::GREATER:
-        return m_target.get(context) > m_amount;
-    case Comparison::LESS:
-        return m_target.get(context) < m_amount;
-    default:
-        assert(0 && "Unhandled special enum constant in RuleCommandTest::validate");
-        return false;
+        case Comparison::EQUALS:
+            return m_target.get(context) == m_amount;
+        case Comparison::GREATER:
+            return m_target.get(context) > m_amount;
+        case Comparison::LESS:
+            return m_target.get(context) < m_amount;
+        default:
+            assert(
+                0 &&
+                "Unhandled special enum constant in RuleCommandTest::validate");
+            return false;
     }
 }
 
@@ -76,17 +79,17 @@ std::string RuleCommandTest::getDescription() const
     std::stringstream ss;
     switch (m_comparison)
     {
-    case Comparison::EQUALS:
-        ss << "Test Equal ";
-        break;
-    case Comparison::GREATER:
-        ss << "Test Greater ";
-        break;
-    case Comparison::LESS:
-        ss << "Test Less ";
-        break;
-    default:
-        break;
+        case Comparison::EQUALS:
+            ss << "Test Equal ";
+            break;
+        case Comparison::GREATER:
+            ss << "Test Greater ";
+            break;
+        case Comparison::LESS:
+            ss << "Test Less ";
+            break;
+        default:
+            break;
     }
     ss << m_amount << " Resources " << m_target.getTypeName();
     return ss.str().c_str();
@@ -101,7 +104,7 @@ bool RuleCommandAgent::validate(RuleContext& context)
         return false;
 
     Resources probe;
-    for (auto const& resource: m_resources.getAll())
+    for (auto const& resource : m_resources.getAll())
     {
         if (context.building->getResources().getAmount(resource.getTypeName()) <
             resource.getAmount())
@@ -114,9 +117,10 @@ bool RuleCommandAgent::validate(RuleContext& context)
     // What an Agent looks for is a name in the targets of a Building, not the
     // name of its type. Building::accepts is what the router and the Agent both
     // use, so asking anything more here refuses Rules the run time would have
-    // honoured: a ruleset with tiers names its houses Shack, House and Villa and
-    // has none called Home, and every "agent Worker to Home" stopped validating.
-    for (auto& building: context.city->getBuildings())
+    // honoured: a ruleset with tiers names its houses Shack, House and Villa
+    // and has none called Home, and every "agent Worker to Home" stopped
+    // validating.
+    for (auto const& building : context.city->getBuildings())
     {
         if (building->accepts(m_target, probe))
             return true;
@@ -138,16 +142,17 @@ void RuleCommandAgent::execute(RuleContext& context)
 #if !defined(NDEBUG)
     else
     {
-       std::cerr << "Ill-formed: Building " << context.building->getId() << " is attached "
-                 << "to a orphan Path Node and its Agent will not be able to "
-                 << "move towards the City." << std::endl;
+        std::cerr << "Ill-formed: Building " << context.building->getId()
+                  << " is attached "
+                  << "to a orphan Path Node and its Agent will not be able to "
+                  << "move towards the City." << std::endl;
     }
 #endif
 }
 
 std::string RuleCommandAgent::getDescription() const
 {
-    return {"Add Agent"};
+    return { "Add Agent" };
 }
 
 bool RuleCommandHour::validate(RuleContext& context)
@@ -157,8 +162,7 @@ bool RuleCommandHour::validate(RuleContext& context)
     return context.clock->isHourBetween(m_from, m_to);
 }
 
-void RuleCommandHour::execute(RuleContext& /*context*/)
-{}
+void RuleCommandHour::execute(RuleContext& /*context*/) {}
 
 std::string RuleCommandHour::getDescription() const
 {
@@ -175,19 +179,21 @@ bool RuleCommandCount::validate(RuleContext& context)
     uint32_t const n = context.zone->countBuildings(m_buildingType);
     switch (m_comparison)
     {
-    case RuleCommandTest::Comparison::EQUALS:
-        return n == m_amount;
-    case RuleCommandTest::Comparison::GREATER:
-        return n > m_amount;
-    case RuleCommandTest::Comparison::LESS:
-        return n < m_amount;
-    default:
-        return false;
+        case RuleCommandTest::Comparison::EQUALS:
+            return n == m_amount;
+        case RuleCommandTest::Comparison::GREATER:
+            return n > m_amount;
+        case RuleCommandTest::Comparison::LESS:
+            return n < m_amount;
+        default:
+            return false;
     }
 }
 
 void RuleCommandCount::execute(RuleContext& /*context*/)
-{}
+{
+    // Do nothing
+}
 
 std::string RuleCommandCount::getDescription() const
 {
@@ -221,9 +227,10 @@ bool RuleCommandSpawn::validate(RuleContext& context)
         return false;
 
     float offset = 0.5f;
-    Segment const* segment = context.zone->findNearestSegment(
-        context.zone->getCellCentre(*cell), offset,
-        maxAccessDistance(*context.city));
+    Segment const* segment =
+        context.zone->findNearestSegment(context.zone->getCellCentre(*cell),
+                                         offset,
+                                         maxAccessDistance(*context.city));
     return (segment != nullptr) && (segment->getFrom().getPath() != nullptr);
 }
 
@@ -238,7 +245,7 @@ void RuleCommandSpawn::execute(RuleContext& context)
         if (!free.has_value())
             return;
         context.city->addBuilding(m_buildingType,
-                              context.zone->getCellCentre(*free));
+                                  context.zone->getCellCentre(*free));
         return;
     }
 
@@ -248,17 +255,18 @@ void RuleCommandSpawn::execute(RuleContext& context)
 
     Vector3f const world = context.zone->getCellCentre(*cell);
     float offset = 0.5f;
-    Segment* segment = context.zone->findNearestSegment(world, offset,
-                                            maxAccessDistance(*context.city));
+    Segment* segment = context.zone->findNearestSegment(
+        world, offset, maxAccessDistance(*context.city));
     Path* path = (segment == nullptr) ? nullptr : segment->getFrom().getPath();
     if ((segment == nullptr) || (path == nullptr))
         return;
 
-    // The Segment is how the building reaches the network, not where it stands: it
-    // keeps the cell the Zone picked for it. Reading the cell of the road
+    // The Segment is how the building reaches the network, not where it stands:
+    // it keeps the cell the Zone picked for it. Reading the cell of the road
     // instead would leave that cell free, and the next tick would grow another
     // building on the very same spot.
-    Building& building = context.city->addBuilding(m_buildingType, *path, *segment, offset);
+    Building& building =
+        context.city->addBuilding(m_buildingType, *path, *segment, offset);
     building.setPosition(world);
 }
 
@@ -296,14 +304,16 @@ void RuleCommandUpgrade::execute(RuleContext& context)
     if (node != nullptr)
         upgraded = &(context.city->addBuilding(m_toType, *node));
     else if ((segment != nullptr) && (path != nullptr))
-        upgraded = &(context.city->addBuilding(m_toType, *path, *segment, offset));
+        upgraded =
+            &(context.city->addBuilding(m_toType, *path, *segment, offset));
     else
         upgraded = &(context.city->addBuilding(m_toType, position));
 
     transferStock(stock, *upgraded);
 }
 
-void RuleCommandUpgrade::transferStock(Resources const& stock, Building& upgraded)
+void RuleCommandUpgrade::transferStock(Resources const& stock,
+                                       Building& upgraded)
 {
     // A house that becomes a better house keeps the people who live in it. The
     // new building used to start from the resources of its type, so every
@@ -345,8 +355,8 @@ void RuleCommandDestroy::execute(RuleContext& context)
 
     // A neighbourhood in decline loses its empty houses first. The command used
     // to take the first building of the zone, which is the oldest one, so a
-    // crowded house could fall while an empty one beside it stayed: the zone lost
-    // its inhabitants faster than it lost its buildings.
+    // crowded house could fall while an empty one beside it stayed: the zone
+    // lost its inhabitants faster than it lost its buildings.
     Building* emptiest = buildings.front();
     uint32_t fewest = countStock(*emptiest);
 

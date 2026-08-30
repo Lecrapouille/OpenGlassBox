@@ -164,7 +164,7 @@ public:
     RuleCommandAgent(AgentType const& type,
                      Name const& target,
                      Resources const& resources)
-        : m_type(type), m_target(target), m_resources(resources)
+        : m_type(type), m_resources(resources), m_target(target)
     {
     }
 
@@ -200,10 +200,11 @@ private:
 
     //! \brief Agent type to send.
     AgentType m_type;
-    //! \brief Name the Agent looks for.
-    Name m_target;
     //! \brief Load the Agent carries.
     Resources m_resources;
+    //! \brief Name the Agent looks for. Declared last so that it sits in the
+    //! gap the command ends on rather than opening one.
+    Name m_target;
 };
 
 //! \brief Check the hour. The Rule runs only inside a time window.

@@ -5,40 +5,44 @@
 // for users who cannot use the GPL, under a commercial license.
 // See LICENSING.md for details.
 
-#include "UI/Panels.hpp"
-#include "UI/Theme.hpp"
 #include "Game/RuleTrace.hpp"
 #include "OpenGlassBox/Simulation.hpp"
+#include "UI/Panels.hpp"
+#include "UI/Theme.hpp"
 
 #include <imgui_stdlib.h>
 
 #include <algorithm>
 #include <cctype>
 
-namespace ogb {
-namespace ui {
+namespace ogb::ui
+{
 using namespace ogb::theme;
 
-
 // ----------------------------------------------------------------------------
-static bool containsInsensitive(std::string const& haystack,
-                                  std::string const& needle)
+static bool containsInsensitive(std::string_view const& haystack,
+                                std::string_view const& needle)
 {
     if (needle.empty())
         return true;
 
-    auto const it = std::search(
-        haystack.begin(), haystack.end(), needle.begin(), needle.end(),
-        [](char a, char b) {
-            return std::tolower(static_cast<unsigned char>(a)) ==
-                   std::tolower(static_cast<unsigned char>(b));
-        });
+    auto const it =
+        std::search(haystack.begin(),
+                    haystack.end(),
+                    needle.begin(),
+                    needle.end(),
+                    [](char a, char b)
+                    {
+                        return std::tolower(static_cast<unsigned char>(a)) ==
+                               std::tolower(static_cast<unsigned char>(b));
+                    });
 
     return it != haystack.end();
 }
 
 // ----------------------------------------------------------------------------
-void RuleLogPanel::draw(Simulation& simulation, game::DebugState& state,
+void RuleLogPanel::draw(Simulation& /*simulation*/,
+                        game::DebugState& /*state*/,
                         game::RuleTrace& trace)
 {
     if (!ImGui::Begin("Rule Log"))
@@ -76,14 +80,15 @@ void RuleLogPanel::draw(Simulation& simulation, game::DebugState& state,
     ImGui::Checkbox("Follow", &m_auto_scroll);
 
     ImGui::SetNextItemWidth(-1.0f);
-    ImGui::InputTextWithHint("##filter", "filter on the entity or the rule",
-                             &m_filter);
+    ImGui::InputTextWithHint(
+        "##filter", "filter on the entity or the rule", &m_filter);
 
     ImGui::Checkbox("ok", &m_show_success);
     ImGui::SameLine();
     ImGui::Checkbox("blocked", &m_show_failure);
     ImGui::SameLine();
-    ImGui::TextDisabled("%zu kept, %llu recorded", trace.size(),
+    ImGui::TextDisabled("%zu kept, %llu recorded",
+                        trace.size(),
                         (unsigned long long)trace.totalRecorded());
 
     ImGui::Separator();
@@ -106,8 +111,10 @@ void RuleLogPanel::draw(Simulation& simulation, game::DebugState& state,
     if (ImGui::BeginTable("log", 5, flags))
     {
         ImGui::TableSetupScrollFreeze(0, 1);
-        ImGui::TableSetupColumn("tick", ImGuiTableColumnFlags_WidthFixed, 70.0f);
-        ImGui::TableSetupColumn("city", ImGuiTableColumnFlags_WidthFixed, 80.0f);
+        ImGui::TableSetupColumn(
+            "tick", ImGuiTableColumnFlags_WidthFixed, 70.0f);
+        ImGui::TableSetupColumn(
+            "city", ImGuiTableColumnFlags_WidthFixed, 80.0f);
         ImGui::TableSetupColumn("entity");
         ImGui::TableSetupColumn("rule");
         ImGui::TableSetupColumn("outcome");
@@ -149,7 +156,8 @@ void RuleLogPanel::draw(Simulation& simulation, game::DebugState& state,
             {
                 ImGui::TextColored(
                     ImGui::ColorConvertU32ToFloat4(theme::FAILURE),
-                    "blocked by %s", event.blockedBy.c_str());
+                    "blocked by %s",
+                    event.blockedBy.c_str());
             }
         }
 
@@ -163,5 +171,4 @@ void RuleLogPanel::draw(Simulation& simulation, game::DebugState& state,
 
     ImGui::End();
 }
-} // namespace ui
-} // namespace ogb
+} // namespace ogb::ui

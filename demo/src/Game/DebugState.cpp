@@ -8,12 +8,11 @@
 #include "Game/DebugState.hpp"
 #include "OpenGlassBox/Simulation.hpp"
 
-namespace ogb {
-namespace game {
-
+namespace ogb::game
+{
 
 // ----------------------------------------------------------------------------
-Agent* Selection::resolveAgent(Simulation& simulation) const
+Agent* Selection::resolveAgent(Simulation const& simulation) const
 {
     if (kind != Kind::Agent)
         return nullptr;
@@ -22,7 +21,7 @@ Agent* Selection::resolveAgent(Simulation& simulation) const
     if (it == simulation.getCities().end())
         return nullptr;
 
-    for (auto& agent: it->second->getAgents())
+    for (auto const& agent : it->second->getAgents())
     {
         if (agent->getId() == agentId)
             return agent.get();
@@ -34,9 +33,9 @@ Agent* Selection::resolveAgent(Simulation& simulation) const
 // ----------------------------------------------------------------------------
 bool DebugState::anyLayerVisible(Simulation const& simulation) const
 {
-    for (auto const& it: simulation.getLayers())
+    for (auto const& [_, layer] : simulation.getLayers())
     {
-        if (isLayerVisible(it.second->getTypeName().str()))
+        if (isLayerVisible(layer->getTypeName().str()))
             return true;
     }
 
@@ -57,5 +56,4 @@ bool DebugState::drawsZones(Simulation const& simulation) const
             return !anyLayerVisible(simulation);
     }
 }
-} // namespace game
-} // namespace ogb
+} // namespace ogb::game

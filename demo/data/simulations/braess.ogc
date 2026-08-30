@@ -1,6 +1,6 @@
 save
 	ruleset braess.ogs
-	hash 98ea6456c776901b2d75bda9fe4f0a5a75578620247925d9d3406ecce5f7b490
+	hash 952cd269d7bcc37ddd4228003dd0968af19870ee361c1bb12f4bc78633fbc61b
 	types [ Road Fast Slow Shortcut Start End ]
 end
 

@@ -15,10 +15,9 @@
 #include <algorithm>
 #include <fstream>
 
-namespace ogb {
-namespace host {
+namespace ogb::host
+{
 using namespace ogb::theme;
-
 
 //! \brief Height of the status bar, in unscaled pixels.
 static constexpr float STATUS_BAR_HEIGHT = 26.0f;
@@ -132,13 +131,13 @@ void DearImGuiApplication::draw()
 // ----------------------------------------------------------------------------
 void DearImGuiApplication::requestFileDialog(FileDialogRequest request)
 {
-    auto sameKey = [&request](FileDialogRequest const& it) {
-        return it.key == request.key;
-    };
+    auto sameKey = [&request](FileDialogRequest const& it)
+    { return it.key == request.key; };
 
     // Asking again for a dialog already on screen just brings it forward.
     if (std::any_of(m_open_dialogs.begin(), m_open_dialogs.end(), sameKey) ||
-        std::any_of(m_pending_dialogs.begin(), m_pending_dialogs.end(), sameKey))
+        std::any_of(
+            m_pending_dialogs.begin(), m_pending_dialogs.end(), sameKey))
     {
         return;
     }
@@ -149,7 +148,7 @@ void DearImGuiApplication::requestFileDialog(FileDialogRequest request)
 // ----------------------------------------------------------------------------
 void DearImGuiApplication::serveFileDialogs()
 {
-    for (auto& request: m_pending_dialogs)
+    for (auto& request : m_pending_dialogs)
     {
         IGFD::FileDialogConfig config;
         config.path = request.startPath;
@@ -165,7 +164,7 @@ void DearImGuiApplication::serveFileDialogs()
     // and it returns true only on the frame the user closes it.
     for (size_t i = m_open_dialogs.size(); i-- != 0u;)
     {
-        FileDialogRequest& request = m_open_dialogs[i];
+        FileDialogRequest const& request = m_open_dialogs[i];
 
         if (!ImGuiFileDialog::Instance()->Display(request.key,
                                                   ImGuiWindowFlags_NoCollapse,
@@ -178,7 +177,7 @@ void DearImGuiApplication::serveFileDialogs()
         {
             // Copy the callback out: serving it may load a script, which can
             // request another dialog and reallocate the vector under us.
-            auto const callback = request.onAccepted;
+            auto const& callback = request.onAccepted;
             std::string const path =
                 ImGuiFileDialog::Instance()->GetFilePathName();
 
@@ -258,9 +257,9 @@ void DearImGuiApplication::drawStatusBar() const
 
     ImGuiViewport const* const viewport = ImGui::GetMainViewport();
 
-    ImGui::SetNextWindowPos(ImVec2(
-        viewport->WorkPos.x,
-        viewport->WorkPos.y + viewport->WorkSize.y - STATUS_BAR_HEIGHT));
+    ImGui::SetNextWindowPos(
+        ImVec2(viewport->WorkPos.x,
+               viewport->WorkPos.y + viewport->WorkSize.y - STATUS_BAR_HEIGHT));
     ImGui::SetNextWindowSize(ImVec2(viewport->WorkSize.x, STATUS_BAR_HEIGHT));
     ImGui::SetNextWindowViewport(viewport->ID);
 
@@ -280,5 +279,4 @@ void DearImGuiApplication::drawStatusBar() const
     ImGui::End();
     ImGui::PopStyleVar(3);
 }
-} // namespace host
-} // namespace ogb
+} // namespace ogb::host

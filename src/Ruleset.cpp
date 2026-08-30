@@ -21,7 +21,7 @@ namespace ogb
 template <class Load>
 static bool loadInto(ScriptDefinitions& definitions,
                      std::vector<ParseError>& errors,
-                     std::unique_ptr<IScriptParser>& parser,
+                     std::unique_ptr<IScriptParser> const& parser,
                      Load load)
 {
     ScriptDefinitions parsed;

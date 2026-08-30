@@ -57,6 +57,10 @@ struct RuleType
     //! \brief Name from the script.
     //! Buildings, Layers and Zones list Rules by this name. Interned. See Name.
     Name name;
+    //! \brief Rule body in script order.
+    //! ScriptDefinitions owns the command pointers.
+    //! They stay valid as long as the Rule may run.
+    std::vector<IRuleCommand*> commands;
     //! \brief Period in simulation ticks, from \c rate \c 7.
     //! One means every tick. Not used when \c rateMinutes is set.
     uint32_t rate = 1u;
@@ -64,10 +68,6 @@ struct RuleType
     //! Zero when the script counted ticks.
     //! IRule::getPeriodTicks() converts this using TimeConfig::ticksPerMinute.
     uint32_t rateMinutes = 0u;
-    //! \brief Rule body in script order.
-    //! ScriptDefinitions owns the command pointers.
-    //! They stay valid as long as the Rule may run.
-    std::vector<IRuleCommand*> commands;
 };
 
 //! \brief Recipe for a Layer Rule. It runs on one grid cell at a time.
@@ -98,11 +98,12 @@ public:
         name = name_;
     }
 
-    //! \brief Run on a sample of Layer cells instead of every cell.
-    bool randomTiles = false;
-
     //! \brief Sample size in percent of Layer cells. RuleLayer clamps to 100.
     uint32_t randomTilesPercent = 10u;
+
+    //! \brief Run on a sample of Layer cells instead of every cell. Declared
+    //! after the share so that it does not open a gap in front of it.
+    bool randomTiles = false;
 };
 
 //! \brief Recipe for a Building Rule. It runs on the Building every \c rate ticks.
@@ -196,10 +197,6 @@ public:
         name = name_;
     }
 
-    //! \brief How far Building Rules read and write Layers, in grid cells.
-    //! One means the Building cell and its neighbours.
-    uint32_t radius = 1u;
-
     //! \brief Starting resources and capacities for a new Building of this type.
     //! Amounts are the starting stock.
     //! Capacities limit Rules and deliveries.
@@ -216,6 +213,11 @@ public:
     //! Names are interned.
     //! The router checks these thousands of times per tick.
     std::vector<Name> targets;
+
+    //! \brief How far Building Rules read and write Layers, in grid cells.
+    //! One means the Building cell and its neighbours. Declared last so that it
+    //! sits in the gap the recipe ends on rather than opening one.
+    uint32_t radius = 1u;
 };
 
 //! \brief Recipe for a heatmap Layer: one value per grid cell and its Rules.
@@ -256,11 +258,14 @@ public:
             uint32_t color_,
             uint32_t capacity_,
             std::initializer_list<RuleLayer*> list = {})
-        : capacity(capacity_), rules(list)
+        : rules(list), capacity(capacity_)
     {
         name = name_;
         color = color_;
     }
+
+    //! \brief Rules the Layer tries. Owned by ScriptDefinitions.
+    std::vector<RuleLayer*> rules;
 
     //! \brief Maximum amount one cell may hold. Same for every cell.
     uint32_t capacity = Resource::MAX_CAPACITY;
@@ -291,9 +296,6 @@ public:
     //! \brief Period of \c diffusion and \c decay in game minutes, from
     //! \c rate \c 30 \c minutes. Zero when the script counted ticks.
     uint32_t rateMinutes = 0u;
-
-    //! \brief Rules the Layer tries. Owned by ScriptDefinitions.
-    std::vector<RuleLayer*> rules;
 
     //--------------------------------------------------------------------------
     //! \brief Ticks between two transport passes.

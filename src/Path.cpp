@@ -9,6 +9,7 @@
 #include "OpenGlassBox/Building.hpp"
 #include <algorithm>
 #include <cmath>
+#include <optional>
 
 // =============================================================================
 // NODE
@@ -18,7 +19,7 @@
 namespace ogb
 {
 
-Node::Node(uint32_t id, Vector3f const& position)
+Node::Node(size_t id, Vector3f const& position)
     : m_id(id), m_position(position)
 {
 }
@@ -32,17 +33,18 @@ void Node::addBuilding(Building& building)
 // -----------------------------------------------------------------------------
 void Node::removeBuilding(Building& building)
 {
-    m_buildings.erase(std::remove(m_buildings.begin(), m_buildings.end(), &building),
-                  m_buildings.end());
+    m_buildings.erase(
+        std::remove(m_buildings.begin(), m_buildings.end(), &building),
+        m_buildings.end());
 }
 
 // -----------------------------------------------------------------------------
 void Node::translate(Vector3f const& direction)
 {
     m_position += direction;
-    for (auto& it : m_segments)
+    for (auto const& segment : m_segments)
     {
-        it->updateLength();
+        segment->updateLength();
     }
 }
 
@@ -53,7 +55,8 @@ Segment* Node::findSegmentTo(Node const& node) const
     size_t i = m_segments.size();
     while (i--)
     {
-        if (((m_segments[i]->m_from == &node) && (m_segments[i]->m_to == this)) ||
+        if (((m_segments[i]->m_from == &node) &&
+             (m_segments[i]->m_to == this)) ||
             ((m_segments[i]->m_to == &node) && (m_segments[i]->m_from == this)))
         {
             return m_segments[i];
@@ -68,7 +71,7 @@ Segment* Node::findSegmentTo(Node const& node) const
 // =============================================================================
 
 // -----------------------------------------------------------------------------
-Segment::Segment(uint32_t id, SegmentType const& type, Node& node1, Node& node2)
+Segment::Segment(size_t id, SegmentType const& type, Node& node1, Node& node2)
     : m_id(id), m_type(type), m_from(&node1), m_to(&node2)
 {
     m_from->m_segments.push_back(this);
@@ -105,8 +108,7 @@ void Segment::updateTravelTime()
 // -----------------------------------------------------------------------------
 Vector3f Segment::getPositionAt(float offset) const
 {
-    return getFromPosition() +
-           (getToPosition() - getFromPosition()) * offset;
+    return getFromPosition() + (getToPosition() - getFromPosition()) * offset;
 }
 
 // -----------------------------------------------------------------------------
@@ -118,8 +120,9 @@ void Segment::addBuilding(Building& building)
 // -----------------------------------------------------------------------------
 void Segment::removeBuilding(Building& building)
 {
-    m_buildings.erase(std::remove(m_buildings.begin(), m_buildings.end(), &building),
-                  m_buildings.end());
+    m_buildings.erase(
+        std::remove(m_buildings.begin(), m_buildings.end(), &building),
+        m_buildings.end());
 }
 
 // -----------------------------------------------------------------------------
@@ -178,7 +181,7 @@ Node& Path::addNode(Vector3f const& position)
 }
 
 // -----------------------------------------------------------------------------
-Node& Path::addNode(uint32_t id, Vector3f const& position)
+Node& Path::addNode(size_t id, Vector3f const& position)
 {
     Node* existing = findNode(id);
     if (existing != nullptr)
@@ -186,7 +189,7 @@ Node& Path::addNode(uint32_t id, Vector3f const& position)
 
     m_nodes.push_back(std::make_unique<Node>(id, position));
     m_nodes.back()->m_path = this;
-    m_nodes.back()->m_index = uint32_t(m_nodes.size() - 1u);
+    m_nodes.back()->m_index = m_nodes.size() - 1u;
 
     // Identifiers handed out from now on must not collide with the one just
     // reused, otherwise two nodes would answer to the same reference.
@@ -199,7 +202,7 @@ Node& Path::addNode(uint32_t id, Vector3f const& position)
 }
 
 // -----------------------------------------------------------------------------
-Node* Path::findNode(uint32_t id) const
+Node* Path::findNode(size_t id) const
 {
     for (auto const& it : m_nodes)
     {
@@ -218,13 +221,15 @@ Segment& Path::addSegment(SegmentType const& type, Node& p1, Node& p2)
 }
 
 // -----------------------------------------------------------------------------
-Segment& Path::addSegment(uint32_t id, SegmentType const& type, Node& p1, Node& p2)
+Segment&
+Path::addSegment(size_t id, SegmentType const& type, Node& p1, Node& p2)
 {
     Segment* existing = findSegment(id);
     if (existing != nullptr)
         return *existing;
 
-    m_segments.push_back(std::make_unique<Segment>(id, type, p1, p2 /*, *this*/));
+    m_segments.push_back(
+        std::make_unique<Segment>(id, type, p1, p2 /*, *this*/));
     m_maxFreeFlowSpeed = std::max(m_maxFreeFlowSpeed, type.speed);
 
     if (id >= m_nextSegmentId)
@@ -236,7 +241,7 @@ Segment& Path::addSegment(uint32_t id, SegmentType const& type, Node& p1, Node& 
 }
 
 // -----------------------------------------------------------------------------
-Segment* Path::findSegment(uint32_t id) const
+Segment* Path::findSegment(size_t id) const
 {
     for (auto const& it : m_segments)
     {
@@ -251,15 +256,18 @@ Segment* Path::findSegment(uint32_t id) const
 void Path::removeSegment(Segment& segment)
 {
     auto detach = [&segment](std::vector<Segment*>& segments)
-    { segments.erase(std::remove(segments.begin(), segments.end(), &segment), segments.end()); };
+    {
+        segments.erase(std::remove(segments.begin(), segments.end(), &segment),
+                       segments.end());
+    };
     detach(segment.m_from->m_segments);
     detach(segment.m_to->m_segments);
 
     m_segments.erase(std::remove_if(m_segments.begin(),
-                                m_segments.end(),
-                                [&segment](SegmentPtr const& it)
-                                { return it.get() == &segment; }),
-                 m_segments.end());
+                                    m_segments.end(),
+                                    [&segment](SegmentPtr const& it)
+                                    { return it.get() == &segment; }),
+                     m_segments.end());
 
     updateMaxFreeFlowSpeed();
 }
@@ -284,11 +292,11 @@ void Path::removeNode(Node& node)
 }
 
 // -----------------------------------------------------------------------------
-void Path::reindexNodes()
+void Path::reindexNodes() const
 {
     // Linear, but demolishing a crossroads is something a player does, not
     // something a tick does, and the routers rely on the indices staying dense.
-    uint32_t index = 0u;
+    size_t index = 0u;
     for (auto const& it : m_nodes)
     {
         it->m_index = index++;
@@ -321,7 +329,7 @@ void Path::updateMaxFreeFlowSpeed()
 }
 
 // -----------------------------------------------------------------------------
-void Path::updateTrafficSmoothing(float alpha)
+void Path::updateTrafficSmoothing(float alpha) const
 {
     for (auto const& segment : m_segments)
     {
@@ -358,16 +366,77 @@ Node& Path::splitSegment(Segment& segment, float offset)
 static constexpr float END_TOLERANCE = 1e-3f;
 
 // -----------------------------------------------------------------------------
-std::vector<Crossing> Path::findCrossings(Vector3f const& from,
-                                          Vector3f const& to) const
+//! \brief Where a straight line being drawn meets one street already laid, if
+//! it meets it anywhere worth cutting.
+//!
+//! \param[in] segment the street already laid.
+//! \param[in] from the start of the line being drawn.
+//! \param[in] rx horizontal part of the direction of that line, not normalised.
+//! \param[in] ry vertical part of the same direction.
+//! \param[in] lineLength the length of that line.
+//! \return the crossing, or nothing when the two do not meet.
+// -----------------------------------------------------------------------------
+static std::optional<Crossing> crossingWithSegment(Segment& segment,
+                                                   Vector3f const& from,
+                                                   float const rx,
+                                                   float const ry,
+                                                   float const lineLength)
 {
-
     //! \brief Smallest angle between two lines worth calling a crossing, as the
     //! sine of that angle. Two nearly parallel lines do meet, but a long way
     //! from where either of them was drawn, and the point moves by metres for
     //! a rounding error on the ends.
     static constexpr float MIN_SINE = 1e-4f;
 
+    Vector3f const& a = segment.getFromPosition();
+    Vector3f const& b = segment.getToPosition();
+    float const sx = b.x - a.x;
+    float const sy = b.y - a.y;
+    float const segmentLength = segment.getLength();
+    if (segmentLength <= 0.0f)
+        return std::nullopt;
+
+    // Twice the area of the parallelogram the two directions span, which is
+    // zero when they point the same way. Divided by both lengths it is the
+    // sine of the angle between them, and so free of how long either is.
+    float const denominator = (rx * sy) - (ry * sx);
+    if (std::fabs(denominator) < (MIN_SINE * lineLength * segmentLength))
+        return std::nullopt;
+
+    // How far along each of the two lines the meeting point sits, as a share
+    // of that line.
+    float const qpx = a.x - from.x;
+    float const qpy = a.y - from.y;
+    float const lineOffset = ((qpx * sy) - (qpy * sx)) / denominator;
+    float segmentOffset = ((qpx * ry) - (qpy * rx)) / denominator;
+
+    // The ends of the line being drawn are junctions already: whoever asked
+    // is about to put a node there.
+    if ((lineOffset <= END_TOLERANCE) || (lineOffset >= 1.0f - END_TOLERANCE))
+        return std::nullopt;
+
+    // The meeting point has to be on the segment, not on the line it lies on
+    // somewhere past its ends.
+    if ((segmentOffset < -END_TOLERANCE) ||
+        (segmentOffset > 1.0f + END_TOLERANCE))
+    {
+        return std::nullopt;
+    }
+
+    // Meeting a segment on one of its ends is a junction that needs no cut,
+    // and is reported as such rather than as a cut a hair away from it.
+    if (segmentOffset <= END_TOLERANCE)
+        segmentOffset = 0.0f;
+    else if (segmentOffset >= 1.0f - END_TOLERANCE)
+        segmentOffset = 1.0f;
+
+    return Crossing{ &segment, segmentOffset, lineOffset };
+}
+
+// -----------------------------------------------------------------------------
+std::vector<Crossing> Path::findCrossings(Vector3f const& from,
+                                          Vector3f const& to) const
+{
     std::vector<Crossing> crossings;
 
     // What the type says about its own lines is the whole of the rule: streets
@@ -375,56 +444,25 @@ std::vector<Crossing> Path::findCrossings(Vector3f const& from,
     if (!m_type.crossings)
         return crossings;
 
+    // A line of no length runs nowhere and meets nothing.
     float const rx = to.x - from.x;
     float const ry = to.y - from.y;
     float const lineLength = std::sqrt((rx * rx) + (ry * ry));
     if (lineLength <= 0.0f)
         return crossings;
 
-    for (auto const& segment: m_segments)
+    for (auto const& segment : m_segments)
     {
-        Vector3f const& a = segment->getFromPosition();
-        Vector3f const& b = segment->getToPosition();
-        float const sx = b.x - a.x;
-        float const sy = b.y - a.y;
-        float const segmentLength = segment->getLength();
-        if (segmentLength <= 0.0f)
-            continue;
-
-        // Twice the area of the parallelogram the two directions span, which is
-        // zero when they point the same way. Divided by both lengths it is the
-        // sine of the angle between them, and so free of how long either is.
-        float const denominator = (rx * sy) - (ry * sx);
-        if (std::fabs(denominator) < (MIN_SINE * lineLength * segmentLength))
-            continue;
-
-        float const qpx = a.x - from.x;
-        float const qpy = a.y - from.y;
-        float lineOffset = ((qpx * sy) - (qpy * sx)) / denominator;
-        float segmentOffset = ((qpx * ry) - (qpy * rx)) / denominator;
-
-        // The ends of the line being drawn are junctions already: whoever asked
-        // is about to put a node there.
-        if ((lineOffset <= END_TOLERANCE) || (lineOffset >= 1.0f - END_TOLERANCE))
-            continue;
-
-        // Meeting a segment on one of its ends is a junction that needs no cut,
-        // and is reported as such rather than as a cut a hair away from it.
-        if (segmentOffset < -END_TOLERANCE)
-            continue;
-        if (segmentOffset > 1.0f + END_TOLERANCE)
-            continue;
-        if (segmentOffset <= END_TOLERANCE)
-            segmentOffset = 0.0f;
-        else if (segmentOffset >= 1.0f - END_TOLERANCE)
-            segmentOffset = 1.0f;
-
-        crossings.push_back({ segment.get(), segmentOffset, lineOffset });
+        std::optional<Crossing> const crossing =
+            crossingWithSegment(*segment, from, rx, ry, lineLength);
+        if (crossing.has_value())
+            crossings.push_back(*crossing);
     }
 
     // In the order the line meets them, so that the caller can lay one piece
     // of street after another without sorting the graph out afterwards.
-    std::sort(crossings.begin(), crossings.end(),
+    std::sort(crossings.begin(),
+              crossings.end(),
               [](Crossing const& lhs, Crossing const& rhs)
               { return lhs.lineOffset < rhs.lineOffset; });
 
@@ -432,7 +470,8 @@ std::vector<Crossing> Path::findCrossings(Vector3f const& from,
 }
 
 // -----------------------------------------------------------------------------
-Segment* Path::findSegmentAt(Vector3f const& position, float tolerance,
+Segment* Path::findSegmentAt(Vector3f const& position,
+                             float tolerance,
                              float& offset) const
 {
     offset = 0.0f;
@@ -442,7 +481,7 @@ Segment* Path::findSegmentAt(Vector3f const& position, float tolerance,
     Segment* best = nullptr;
     float bestDistance = tolerance;
 
-    for (auto const& segment: m_segments)
+    for (auto const& segment : m_segments)
     {
         Vector3f const& a = segment->getFromPosition();
         Vector3f const& b = segment->getToPosition();
@@ -461,8 +500,9 @@ Segment* Path::findSegmentAt(Vector3f const& position, float tolerance,
 
         float const footX = a.x + (dx * along);
         float const footY = a.y + (dy * along);
-        float const distance = std::sqrt(((position.x - footX) * (position.x - footX)) +
-                                         ((position.y - footY) * (position.y - footY)));
+        float const distance =
+            std::sqrt(((position.x - footX) * (position.x - footX)) +
+                      ((position.y - footY) * (position.y - footY)));
         if (distance > bestDistance)
             continue;
 
@@ -481,16 +521,16 @@ Segment* Path::findSegmentAt(Vector3f const& position, float tolerance,
 }
 
 // -----------------------------------------------------------------------------
-void Path::translate(Vector3f const& direction)
+void Path::translate(Vector3f const& direction) const
 {
-    for (auto const& it : m_nodes)
+    for (auto const& node : m_nodes)
     {
-        it->m_position += direction;
+        node->m_position += direction;
     }
 
-    for (auto const& it : m_segments)
+    for (auto const& segment : m_segments)
     {
-        it->updateLength();
+        segment->updateLength();
     }
 }
 

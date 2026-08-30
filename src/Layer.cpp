@@ -60,8 +60,8 @@ Layer::Chunk& Layer::createChunk(int64_t const key, Cell const cell)
 
 // -----------------------------------------------------------------------------
 uint32_t Layer::sumInRadius(Cell const centre,
-                          uint32_t const radius,
-                          CellRegion const& region) const
+                            uint32_t const radius,
+                            CellRegion const& region) const
 {
     uint32_t totalInsideRadius = 0u;
     int32_t x = centre.u;
@@ -84,8 +84,8 @@ uint32_t Layer::sumInRadius(Cell const centre,
 
 // -----------------------------------------------------------------------------
 uint32_t Layer::walkCellsInRadius(Cell const centre,
-                                uint32_t const radius,
-                                CellRegion const& region) const
+                                  uint32_t const radius,
+                                  CellRegion const& region) const
 {
     uint32_t count = 0u;
     int32_t x = centre.u;
@@ -108,10 +108,10 @@ uint32_t Layer::walkCellsInRadius(Cell const centre,
 
 // -----------------------------------------------------------------------------
 void Layer::addResourceInRadius(Cell const centre,
-                              uint32_t const radius,
-                              CellRegion const& region,
-                              uint32_t const wanted,
-                              bool const distributed)
+                                uint32_t const radius,
+                                CellRegion const& region,
+                                uint32_t const wanted,
+                                bool const distributed)
 {
     uint32_t toAdd = wanted;
     uint32_t remainingToAdd = wanted;
@@ -145,10 +145,10 @@ void Layer::addResourceInRadius(Cell const centre,
 
 // -----------------------------------------------------------------------------
 void Layer::removeResourceInRadius(Cell const centre,
-                                 uint32_t const radius,
-                                 CellRegion const& region,
-                                 uint32_t const wanted,
-                                 bool const distributed)
+                                   uint32_t const radius,
+                                   CellRegion const& region,
+                                   uint32_t const wanted,
+                                   bool const distributed)
 {
     uint32_t toRemove = wanted;
     uint32_t remainingToRemove = wanted;
@@ -191,9 +191,9 @@ uint64_t Layer::getTotalResource() const
 {
     uint64_t total = 0u;
 
-    for (auto const& it : m_chunks)
+    for (auto const& [_, chunk] : m_chunks)
     {
-        total += it.second.total;
+        total += chunk.total;
     }
 
     return total;
@@ -213,17 +213,16 @@ void Layer::executeRules(Cities const& cities)
 
         // The grid has no bounds of its own: what a rule walks is the cells
         // owned by each city.
-        for (auto const& it : cities)
+        for (auto const& [_, city] : cities)
         {
-            executeRule(*rule, *(it.second));
+            executeRule(*rule, *city);
         }
     }
 
     // Transport comes after the rules, so that what a factory produced this
     // period is carried by the next one. The other order would let one amount
     // cross several cells in a single tick.
-    if (m_type.spreads() &&
-        (m_ticks % m_type.getPeriodTicks(perMinute) == 0u))
+    if (m_type.spreads() && (m_ticks % m_type.getPeriodTicks(perMinute) == 0u))
     {
         spreadAndFade();
     }
@@ -232,43 +231,14 @@ void Layer::executeRules(Cities const& cities)
 // -----------------------------------------------------------------------------
 void Layer::spreadAndFade()
 {
-    // Copy the amounts this pass reads. Empty blocks are left out: they read as
-    // zero anyway, and a large grid holds many of them.
-    m_previous.clear();
-    m_spreadBlocks.clear();
+    collectBlocksToSpread();
 
-    for (auto const& it : m_chunks)
-    {
-        if (it.second.total == 0u)
-            continue;
-
-        m_previous[it.first] = it.second.cells;
-
-        // A cell on the border of a block gives to a cell of the next block,
-        // which may not exist yet: the pass has to write there too, and a write
-        // of a non-zero amount allocates the block on its own.
-        Cell const origin{ it.second.u0, it.second.v0 };
-        m_spreadBlocks.push_back(origin);
-        m_spreadBlocks.push_back(Cell{ origin.u - CHUNK_SIZE, origin.v });
-        m_spreadBlocks.push_back(Cell{ origin.u + CHUNK_SIZE, origin.v });
-        m_spreadBlocks.push_back(Cell{ origin.u, origin.v - CHUNK_SIZE });
-        m_spreadBlocks.push_back(Cell{ origin.u, origin.v + CHUNK_SIZE });
-    }
-
+    // Nothing anywhere on the grid: no amount to move and none to lose.
     if (m_previous.empty())
         return;
 
-    // Two blocks side by side each name the other, so the list repeats itself.
-    std::sort(m_spreadBlocks.begin(),
-              m_spreadBlocks.end(),
-              [](Cell const& a, Cell const& b)
-              { return (a.v != b.v) ? (a.v < b.v) : (a.u < b.u); });
-    m_spreadBlocks.erase(std::unique(m_spreadBlocks.begin(),
-                                     m_spreadBlocks.end(),
-                                     [](Cell const& a, Cell const& b)
-                                     { return (a.u == b.u) && (a.v == b.v); }),
-                         m_spreadBlocks.end());
-
+    // Every cell of every listed block is written from the copy, so the order
+    // the cells are visited in changes nothing.
     for (Cell const& origin : m_spreadBlocks)
     {
         for (int32_t dv = 0; dv < CHUNK_SIZE; ++dv)
@@ -283,20 +253,58 @@ void Layer::spreadAndFade()
 }
 
 // -----------------------------------------------------------------------------
+void Layer::collectBlocksToSpread()
+{
+    m_previous.clear();
+    m_spreadBlocks.clear();
+
+    for (auto const& [key, chunk] : m_chunks)
+    {
+        if (chunk.total == 0u)
+            continue;
+
+        m_previous[key] = chunk.cells;
+
+        // A cell on the border of a block gives to a cell of the next block,
+        // which may not exist yet: the pass has to write there too, and a write
+        // of a non-zero amount allocates the block on its own.
+        Cell const origin{ chunk.u0, chunk.v0 };
+        m_spreadBlocks.push_back(origin);
+        m_spreadBlocks.push_back(Cell{ origin.u - CHUNK_SIZE, origin.v });
+        m_spreadBlocks.push_back(Cell{ origin.u + CHUNK_SIZE, origin.v });
+        m_spreadBlocks.push_back(Cell{ origin.u, origin.v - CHUNK_SIZE });
+        m_spreadBlocks.push_back(Cell{ origin.u, origin.v + CHUNK_SIZE });
+    }
+
+    // Two blocks side by side each name the other, so the list repeats itself.
+    std::sort(m_spreadBlocks.begin(),
+              m_spreadBlocks.end(),
+              [](Cell const& a, Cell const& b)
+              { return (a.v != b.v) ? (a.v < b.v) : (a.u < b.u); });
+    m_spreadBlocks.erase(std::unique(m_spreadBlocks.begin(),
+                                     m_spreadBlocks.end(),
+                                     [](Cell const& a, Cell const& b)
+                                     { return (a.u == b.u) && (a.v == b.v); }),
+                         m_spreadBlocks.end());
+}
+
+// -----------------------------------------------------------------------------
 uint32_t Layer::nextAmount(Cell const cell) const
 {
     uint32_t const before = previousAmount(cell);
 
-    // What the cell gives away, and what it loses on the way. The parser refuses
-    // a sum above one hundred, so the two shares never exceed the amount.
+    // What the cell gives away, and what it loses on the way. The parser
+    // refuses a sum above one hundred, so the two shares never exceed the
+    // amount.
     uint64_t const leaving = uint64_t(before) * m_type.diffusion / 100u;
     uint64_t const share = leaving / 4u;
     uint64_t fading = uint64_t(before) * m_type.decay / 100u;
 
-    // A share of a small amount rounds down to nothing, so a cell holding one or
-    // two units would keep them for ever and the whole grid would settle just
-    // above zero. A layer that loses always loses at least one unit, which is
-    // what lets a threshold such as "layer Pollution less 1" ever pass again.
+    // A share of a small amount rounds down to nothing, so a cell holding one
+    // or two units would keep them for ever and the whole grid would settle
+    // just above zero. A layer that loses always loses at least one unit, which
+    // is what lets a threshold such as "layer Pollution less 1" ever pass
+    // again.
     if ((m_type.decay != 0u) && (before != 0u) && (fading == 0u))
         fading = 1u;
 
@@ -316,11 +324,11 @@ uint32_t Layer::nextAmount(Cell const cell) const
     amount += uint64_t(previousAmount(Cell{ cell.u, cell.v + 1 })) *
               m_type.diffusion / 100u / 4u;
 
-    // setResource() clamps to the capacity of a cell. A cell already full simply
-    // refuses what its neighbours push, which is what a saturated Layer means.
-    return (amount > uint64_t(Resource::MAX_CAPACITY))
-               ? Resource::MAX_CAPACITY
-               : uint32_t(amount);
+    // setResource() clamps to the capacity of a cell. A cell already full
+    // simply refuses what its neighbours push, which is what a saturated Layer
+    // means.
+    return (amount > uint64_t(Resource::MAX_CAPACITY)) ? Resource::MAX_CAPACITY
+                                                       : uint32_t(amount);
 }
 
 // -----------------------------------------------------------------------------
@@ -346,15 +354,16 @@ void Layer::executeRule(RuleLayer& rule, City& city)
         // A share of the cells, drawn over the whole region but handed out in
         // reading order, for the same reason the full sweep below reads in
         // that order.
-        m_randomCoordinates.init(
-            region.sizeU, region.sizeV, rule.takePercent(region.getCellCount()));
+        m_randomCoordinates.init(region.sizeU,
+                                 region.sizeV,
+                                 rule.takePercent(region.getCellCount()));
 
         uint32_t du;
         uint32_t dv;
         while (m_randomCoordinates.next(du, dv))
         {
-            m_context.cell = Cell{ region.u0 + int32_t(du),
-                                   region.v0 + int32_t(dv) };
+            m_context.cell =
+                Cell{ region.u0 + int32_t(du), region.v0 + int32_t(dv) };
             rule.execute(m_context);
         }
     }
