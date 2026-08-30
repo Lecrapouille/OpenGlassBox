@@ -1,4 +1,9 @@
-September 2026: version 1.0
+September 2026: version 1.1.0
+        * Add a more complete rulesets SimCity like
+        * Manage buget
+        * Cleaning code
+
+August 2026: version 1.0.0
         * Switch from MIT to dual licensing (GNU GPLv3 or commercial); see LICENSING.md
         * Ship LICENSE and LICENSING.md in CI and release artifacts; refresh source headers
         * After four years, refresh the whole project :)
