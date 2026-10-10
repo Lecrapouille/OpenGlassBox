@@ -238,6 +238,7 @@ jobs:
           fi
 
           cp LICENSE "$RELEASE_DIR/"
+          cp LICENSING.md "$RELEASE_DIR/"
           echo "${{ steps.version.outputs.version }}" > "$RELEASE_DIR/VERSION"
 
       - name: Create release archive

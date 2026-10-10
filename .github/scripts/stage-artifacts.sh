@@ -54,6 +54,7 @@ esac
 copy_if_exists "$root/build/OpenGlassBox.pc" "$dest/lib"
 cp -R "$root/include/OpenGlassBox" "$dest/include/"
 [[ -f "$root/LICENSE" ]] && cp "$root/LICENSE" "$dest/"
+[[ -f "$root/LICENSING.md" ]] && cp "$root/LICENSING.md" "$dest/"
 grep '^PROJECT_VERSION' "$root/Makefile.common" | awk '{print $3}' > "$dest/VERSION"
 
 echo "Staged $platform artifacts:"
