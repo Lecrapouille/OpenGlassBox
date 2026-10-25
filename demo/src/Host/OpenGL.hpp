@@ -18,11 +18,16 @@
 #    define IMGUI_DEFINE_MATH_OPERATORS
 #endif
 
-// GLEW has to come before any other OpenGL header.
-#if defined(_WIN32) && !defined(GLEW_STATIC)
-#    define GLEW_STATIC
+// GLEW has to come before any other OpenGL header. The web build is WebGL 2
+// (OpenGL ES 3): Emscripten provides it, and GLEW is not there.
+#if defined(__EMSCRIPTEN__)
+#    include <GLES3/gl3.h>
+#else
+#    if defined(_WIN32) && !defined(GLEW_STATIC)
+#        define GLEW_STATIC
+#    endif
+#    include <GL/glew.h>
 #endif
-#include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
 #include <imgui.h>

@@ -12,6 +12,28 @@
 
 #include <ImGuiFileDialog.h>
 
+#if defined(__EMSCRIPTEN__) && !defined(EXAEQUOS)
+#    include <emscripten.h>
+#    include <emscripten/html5.h>
+
+namespace
+{
+
+//! \brief The window fills the page. Emscripten writes the size of the window
+//! in the style of the canvas, so the canvas cannot follow the page by CSS.
+EM_BOOL resizeToPage(int /*event_type*/,
+                     EmscriptenUiEvent const* event,
+                     void* window)
+{
+    glfwSetWindowSize(static_cast<GLFWwindow*>(window),
+                      event->windowInnerWidth,
+                      event->windowInnerHeight);
+    return EM_TRUE;
+}
+
+} // namespace
+#endif
+
 #include <algorithm>
 #include <fstream>
 
@@ -63,12 +85,27 @@ bool DearImGuiApplication::setup(std::string const& iniFilename)
         return false;
     }
 
-    if (!ImGui_ImplOpenGL3_Init("#version 330"))
+#if defined(__EMSCRIPTEN__)
+    char const* const glsl_version = "#version 300 es";
+#else
+    char const* const glsl_version = "#version 330";
+#endif
+    if (!ImGui_ImplOpenGL3_Init(glsl_version))
     {
         ImGui_ImplGlfw_Shutdown();
         ImGui::DestroyContext();
         return false;
     }
+
+#if defined(__EMSCRIPTEN__) && !defined(EXAEQUOS)
+    // Dear ImGui fixes the mouse wheel; the window follows the page.
+    ImGui_ImplGlfw_InstallEmscriptenCallbacks(m_window, "#canvas");
+    emscripten_set_resize_callback(
+        EMSCRIPTEN_EVENT_TARGET_WINDOW, m_window, false, resizeToPage);
+    int const page_width = EM_ASM_INT({ return window.innerWidth; });
+    int const page_height = EM_ASM_INT({ return window.innerHeight; });
+    glfwSetWindowSize(m_window, page_width, page_height);
+#endif
 
     m_initialized = true;
     return true;
@@ -166,9 +203,17 @@ void DearImGuiApplication::serveFileDialogs()
     {
         FileDialogRequest const& request = m_open_dialogs[i];
 
-        if (!ImGuiFileDialog::Instance()->Display(request.key,
-                                                  ImGuiWindowFlags_NoCollapse,
-                                                  ImVec2(620.0f, 420.0f)))
+        // Without a size, the dialog opens at its smallest: give it 70% of
+        // the window the first time, centered, and never less than 40%.
+        ImGuiViewport const* viewport = ImGui::GetMainViewport();
+        ImVec2 const area = viewport->WorkSize;
+        ImGui::SetNextWindowPos(
+            viewport->GetWorkCenter(), ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));
+        ImGui::SetNextWindowSize(
+            ImVec2(area.x * 0.7f, area.y * 0.7f), ImGuiCond_FirstUseEver);
+        ImVec2 const min_size(area.x * 0.4f, area.y * 0.4f);
+        if (!ImGuiFileDialog::Instance()->Display(
+                request.key, ImGuiWindowFlags_NoCollapse, min_size))
         {
             continue;
         }

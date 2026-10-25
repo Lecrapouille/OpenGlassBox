@@ -1,5 +1,7 @@
 # Project specific
 build/
+build-*/
+media/
 .cache/
 ci-artifacts/
 release/

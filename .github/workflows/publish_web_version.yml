@@ -1,0 +1,80 @@
+name: Publish the online OpenGlassBox demo on GitHub page
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+    branches:
+      - master
+
+jobs:
+  # A page opened alone in a browser needs the plain Emscripten build. The
+  # ExaequOS build only runs inside the ExaequOS desktop (see build_exaequos).
+  build_html5:
+    name: Publish on gh-pages
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install pkg-config
+      - name: Install Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+      - name: Checkout OpenGlassBox
+        uses: actions/checkout@v6
+        with:
+          submodules: true
+      - name: Compile OpenGlassBox-demo
+        run: |
+          make download-external-libs
+          emmake make compile-external-libs
+          emmake make -j`nproc --all`
+      - name: Deploy
+        run: |
+          git config --global user.name 'GitHub CI'
+          git config --global user.email 'github-ci@users.noreply.github.com'
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+          git fetch origin gh-pages || true
+          if git show-ref --verify --quiet refs/remotes/origin/gh-pages; then
+            git checkout gh-pages
+          else
+            git checkout --orphan gh-pages
+            git rm -rf . >/dev/null 2>&1 || true
+          fi
+          cp build/OpenGlassBox-demo.* .
+          touch .nojekyll
+          git add .nojekyll OpenGlassBox-demo.*
+          if git diff --cached --quiet; then
+            echo "Nothing new to publish"
+          else
+            git commit -m "Automated commit"
+            git push -u origin gh-pages
+          fi
+
+  # The image sets EXAEQUOS and puts emscripten-exa on PATH. `make` then
+  # writes the demo, kept as an artifact of the run.
+  build_exaequos:
+    name: Compile for ExaequOS
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout OpenGlassBox
+        uses: actions/checkout@v6
+        with:
+          submodules: true
+      - name: Compile with ExaequOS
+        run: |
+          mkdir -p "$HOME/.cache/exaequos"
+          docker run --rm \
+            -u "$(id -u):$(id -g)" \
+            -v "$PWD:$PWD" \
+            -v "$HOME/.cache/exaequos:/opt/emscripten-exa/cache" \
+            -w "$PWD" \
+            lecrapouille/exaequos:light \
+            bash -c 'make download-external-libs && make compile-external-libs && make -j"$(nproc)"'
+      - name: Keep the ExaequOS build
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenGlassBox-demo-exaequos
+          path: build/OpenGlassBox-demo.*

@@ -44,7 +44,22 @@ INCLUDES := $(P)/external/imgui $(P)/external/imgui/backends \
     $(P)/external/ImGuiFileDialog
 
 # GLFW and GLEW everywhere; OpenGL is platform-specific (see below and the
-# macOS bundle block).
+# macOS bundle block). The web build uses the GLFW and WebGL 2 that
+# Emscripten ships, and embeds demo/data (the simulations live in there).
+ifeq ($(OS),Emscripten)
+    ifdef EXAEQUOS
+        LINKER_FLAGS += -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -sFULL_ES3
+        PKG_LIBS := exa-wayland --static glfw
+    else
+        PKG_LIBS :=
+        LINKER_FLAGS += -s USE_GLFW=3 -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -sFULL_ES3
+        LINKER_FLAGS += --shell-file $(abspath $(P)/demo/src/Host/shell.html)
+        LINKER_FLAGS += --preload-file $(abspath $(P)/demo/data)@demo/data
+        LINKER_FLAGS += -s FORCE_FILESYSTEM=1 -s ASYNCIFY -s ALLOW_MEMORY_GROWTH=1
+        LINKER_FLAGS += -s GL_ENABLE_GET_PROC_ADDRESS
+    endif
+    USER_CXXFLAGS += -Wno-unknown-warning-option
+else
 PKG_LIBS := glfw3 glew
 ifeq ($(OS),Linux)
     PKG_LIBS += gl
@@ -58,6 +73,7 @@ else ifeq ($(OS),Windows)
     # LDFLAGS precedes pkg-config libraries on the final link command.
     LDFLAGS += -static
     LINKER_FLAGS += $(shell pkg-config --static --libs $(STATIC_PKG_LIBS)) -lopengl32
+endif
 endif
 
 USER_CXXFLAGS += -Wno-format-nonliteral -Wno-conversion -Wno-sign-conversion -Wno-float-equal

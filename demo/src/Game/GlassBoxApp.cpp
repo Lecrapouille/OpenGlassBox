@@ -8,6 +8,7 @@
 #include "OpenGlassBox/DijkstraRouter.hpp"
 
 #include "Game/GlassBoxApp.hpp"
+#include "Host/Browser.hpp"
 #include "Save/CitySave.hpp"
 #include "UI/Theme.hpp"
 
@@ -192,7 +193,11 @@ bool writeAll(std::string const& path, std::string const& text)
     if (!file)
         return false;
     file << text;
-    return bool(file);
+    if (!file)
+        return false;
+    file.close();
+    ogb::host::download(path);
+    return true;
 }
 
 bool typeExists(Ruleset const& script, std::string const& name)
@@ -753,6 +758,7 @@ bool GlassBoxApp::saveCity(std::string const& filename)
     }
 
     m_save_path = filename;
+    ogb::host::download(filename);
     m_reload_notice = "city saved";
     m_reload_notice_timer = NOTICE_DURATION;
     computeChecksum();

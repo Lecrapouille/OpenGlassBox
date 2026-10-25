@@ -77,6 +77,8 @@ Run the demo:
 ./build/OpenGlassBox-demo demo/data/simulations/chicago.ogc
 ```
 
+A web version, built with Emscripten by the CI, publishes the same demo: [OpenGlassBox-demo.html](https://lecrapouille.github.io/OpenGlassBox/OpenGlassBox-demo.html). The simulations in `demo/data/simulations/` are inside the page, and File > Open starts there. A save is downloaded by the browser. The same sources also build for [ExaequOS](https://www.exaequos.com).
+
 ## Simulation Engine Libraries
 
 After `make`, the build folder contains `libOpenGlassBox.a` and, on most platforms, `libOpenGlassBox.so`. Headers live in `include/OpenGlassBox/`.

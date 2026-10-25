@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OpenGlassBox</title>
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #1b1d20; }
+    #canvas { display: block; outline: none; }
+    #status { position: absolute; top: 45%; width: 100%; text-align: center;
+              color: #d0d0d0; font: 16px sans-serif; }
+  </style>
+</head>
+<body>
+  <div id="status">Loading OpenGlassBox…</div>
+  <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+  <script>
+    // Not "status": window.status is a string, so the element would be lost.
+    var statusElement = document.getElementById('status');
+    // The editor fills the page: the program sets the size of the canvas
+    // from its CSS size and the density of the screen.
+    var canvas = document.getElementById('canvas');
+    var Module = {
+      canvas: canvas,
+      setStatus: function (text) {
+        statusElement.textContent = text;
+        statusElement.style.display = text ? 'block' : 'none';
+      },
+      print: function (text) { console.log(text); },
+      printErr: function (text) { console.error(text); },
+    };
+  </script>
+  {{{ SCRIPT }}}
+</body>
+</html>

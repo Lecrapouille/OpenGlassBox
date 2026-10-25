@@ -1,5 +1,8 @@
 # OpenGlassBox
 
+> **🌐 Try the online version instantly:**
+> 👉 [Click here to launch OpenGlassBox in your browser!](https://lecrapouille.github.io/OpenGlassBox/OpenGlassBox-demo.html)
+
 **Note: I am also looking for a game developer or an artist able to turn this library into a real game.**
 
 [OpenGlassBox](https://github.com/Lecrapouille/OpenGlassBox) is a C++17 city-simulation engine inspired by **GlassBox**, the engine behind Maxis's SimCity (2013). It is a port and extension of Federico D'Angelo's C#/Unity project, [MultiAgentSimulation](https://github.com/federicodangelo/MultiAgentSimulation), itself based on the [2012 GDC presentation](http://www.andrewwillmott.com/talks/inside-glassbox).

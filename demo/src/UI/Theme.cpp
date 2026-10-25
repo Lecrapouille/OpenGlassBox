@@ -87,9 +87,9 @@ void apply()
 
     colors[ImGuiCol_Tab] = surface;
     colors[ImGuiCol_TabHovered] = accentDim;
-    colors[ImGuiCol_TabActive] = surfaceHigh;
-    colors[ImGuiCol_TabUnfocused] = surface;
-    colors[ImGuiCol_TabUnfocusedActive] = surfaceHigh;
+    colors[ImGuiCol_TabSelected] = surfaceHigh;
+    colors[ImGuiCol_TabDimmed] = surface;
+    colors[ImGuiCol_TabDimmedSelected] = surfaceHigh;
 
     colors[ImGuiCol_PlotLines] = accent;
     colors[ImGuiCol_PlotHistogram] = accent;
