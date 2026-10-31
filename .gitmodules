@@ -1,3 +1,4 @@
 [submodule ".makefile"]
 	path = .makefile
 	url = https://github.com/Lecrapouille/MyMakefile.git
+	branch = version-3

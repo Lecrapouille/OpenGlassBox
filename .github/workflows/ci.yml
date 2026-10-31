@@ -1,4 +1,5 @@
 name: Non regression tests for OpenGlassBox
+run-name: "Non regression tests on ${{ github.head_ref || github.ref_name }}"
 
 on:
   workflow_dispatch:
@@ -14,6 +15,11 @@ on:
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+# The logs of GitHub show the colors of MyMakefile, which turns them off by
+# itself when its output is not a terminal.
+env:
+  COLORS: 1
 
 jobs:
   # ============================================================================
@@ -31,6 +37,12 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Cache the third parties
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/mymakefile
+          key: mymakefile-${{ runner.os }}-${{ hashFiles('external/versions.lock') }}
+
       - name: Install packages
         run: |
           sudo apt-get update
@@ -44,26 +56,21 @@ jobs:
           cmake -DBUILD_SHARED_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON .
           sudo make install
 
-      - name: Compile OpenGlassBox
-        run: |
-          make download-external-libs
-          V=1 make compile-external-libs
-          V=1 make -j$(nproc --all)
+      - name: Describe the build
+        id: info
+        run: make -s ci-info >> "$GITHUB_OUTPUT"
 
-      - name: Run non regression tests
-        run: |
-          cd tests
-          V=1 make -j$(nproc --all)
-          ../build/OpenGlassBox-tests
+      - name: Compile OpenGlassBox and run the non regression tests
+        run: make ci
 
-      - name: Stage build artifacts
-        run: bash .github/scripts/stage-artifacts.sh linux
+      - name: Gather the build artifacts
+        run: make dist
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v6
         with:
           name: openglassbox-linux-x86_64
-          path: ci-artifacts/linux/
+          path: ${{ steps.info.outputs.dist_dir }}/
           if-no-files-found: error
 
   # ============================================================================
@@ -97,12 +104,14 @@ jobs:
             mingw-w64-x86_64-gtest
             mingw-w64-x86_64-make
 
-      - name: Compile OpenGlassBox
+      - name: Describe the build
+        id: info
         shell: msys2 {0}
-        run: |
-          mingw32-make download-external-libs
-          V=1 mingw32-make compile-external-libs
-          V=1 mingw32-make -j8
+        run: mingw32-make -s ci-info >> "$GITHUB_OUTPUT"
+
+      - name: Compile OpenGlassBox and run the non regression tests
+        shell: msys2 {0}
+        run: mingw32-make ci
 
       - name: Verify Windows runtime dependencies
         shell: msys2 {0}
@@ -116,25 +125,18 @@ jobs:
                 failed=1
                 ;;
             esac
-          done < <(objdump -p build/OpenGlassBox-demo.exe | awk '/DLL Name:/ { print $3 }')
+          done < <(objdump -p ${{ steps.info.outputs.build }}/bin/OpenGlassBox-demo.exe | awk '/DLL Name:/ { print $3 }')
           exit "$failed"
 
-      - name: Run non regression tests
+      - name: Gather the build artifacts
         shell: msys2 {0}
-        run: |
-          cd tests
-          V=1 mingw32-make -j8
-          ../build/OpenGlassBox-tests
-
-      - name: Stage build artifacts
-        shell: msys2 {0}
-        run: bash .github/scripts/stage-artifacts.sh windows
+        run: mingw32-make dist
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v6
         with:
           name: openglassbox-windows-x86_64
-          path: ci-artifacts/windows/
+          path: ${{ steps.info.outputs.dist_dir }}/
           if-no-files-found: error
 
   # ============================================================================
@@ -152,9 +154,15 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Cache the third parties
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/mymakefile
+          key: mymakefile-${{ runner.os }}-${{ hashFiles('external/versions.lock') }}
+
       - name: Install packages
         run: |
-          brew install pkg-config lcov glfw glew
+          brew install make pkg-config lcov glfw glew
           echo "PKG_CONFIG_PATH=$(brew --prefix)/lib/pkgconfig:$(brew --prefix)/share/pkgconfig" >> "$GITHUB_ENV"
 
       - name: Download, configure and install Google test
@@ -165,26 +173,22 @@ jobs:
           cmake -DBUILD_SHARED_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON .
           sudo make install
 
-      - name: Compile OpenGlassBox
-        run: |
-          make download-external-libs
-          make compile-external-libs
-          make -j$(sysctl -n hw.logicalcpu)
+      # The make of macOS is GNU Make 3.81: MyMakefile needs the gmake of brew.
+      - name: Describe the build
+        id: info
+        run: gmake -s ci-info >> "$GITHUB_OUTPUT"
 
-      - name: Run non regression tests
-        run: |
-          cd tests
-          make -j$(sysctl -n hw.logicalcpu)
-          ../build/OpenGlassBox-tests
+      - name: Compile OpenGlassBox and run the non regression tests
+        run: gmake ci
 
-      - name: Stage build artifacts
-        run: bash .github/scripts/stage-artifacts.sh macos
+      - name: Gather the build artifacts
+        run: gmake dist
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v6
         with:
           name: openglassbox-macos-arm64
-          path: ci-artifacts/macos/
+          path: ${{ steps.info.outputs.dist_dir }}/
           if-no-files-found: error
 
   # ============================================================================
@@ -203,12 +207,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          submodules: true
 
       - name: Read version
         id: version
-        run: |
-          VERSION=$(grep '^PROJECT_VERSION' Makefile.common | awk '{print $3}')
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(make -s print-PROJECT_VERSION)" >> "$GITHUB_OUTPUT"
 
       - name: Download all artifacts
         uses: actions/download-artifact@v7

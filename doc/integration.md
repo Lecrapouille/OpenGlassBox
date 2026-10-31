@@ -11,12 +11,11 @@ From the OpenGlassBox repository root:
 ```sh
 git clone https://github.com/Lecrapouille/OpenGlassBox.git --recursive
 cd OpenGlassBox/
-make download-external-libs
-make -j8
+make
 sudo make install   # optional
 ```
 
-After `make`, the build folder contains `libOpenGlassBox.a` and, on most platforms, `libOpenGlassBox.so`. Headers live in `include/OpenGlassBox/`, with the entry point header `OpenGlassBox/OpenGlassBox.hpp`.
+After `make`, the `lib/` folder of the build (`build/linux-gcc-normal/lib/` on Linux) contains `libOpenGlassBox.a` and, on most platforms, `libOpenGlassBox.so`. Headers live in `include/OpenGlassBox/`, with the entry point header `OpenGlassBox/OpenGlassBox.hpp`.
 
 After `make install`, pkg-config can find the library:
 
@@ -54,7 +53,7 @@ make -j8
 ./build/OpenGlassBox
 ```
 
-If OpenGlassBox is not installed system-wide, set `PKG_CONFIG_PATH` to its `build/` folder before running `make`.
+If OpenGlassBox is not installed system-wide, `make dist` gathers the library, its headers and its pkg-config file in `build/dist/OpenGlassBox-<version>-<os>-<arch>/`: set `PKG_CONFIG_PATH` to its `lib/pkgconfig/` folder before running `make`.
 
 ## Minimal program
 

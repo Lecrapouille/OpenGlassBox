@@ -25,7 +25,7 @@
 #include <sstream>
 #include <vector>
 
-#include "project_info.hpp"
+#include "OpenGlassBox-demo/project_info.hpp"
 
 namespace ogb::game
 {
@@ -94,7 +94,8 @@ std::string joinPath(std::string const& dir, std::string const& name)
 
 //! \brief Every directory a data file may sit in.
 //!
-//! project::info::paths::data is a colon separated search path, not a single
+//! paths::data of project_info.hpp is a search path (directories separated by
+//! paths::separator: ':', or ';' on Windows), not a single
 //! directory: reading it as one is why the demo could not find its own
 //! simulations when started from the repository. None of its entries names the
 //! sources either, where the data of the demo lives under demo/.
@@ -112,11 +113,12 @@ std::vector<std::string> dataDirectories()
         directories.push_back(std::move(path));
     };
 
-    std::string const search = project::info::paths::data;
+    namespace info = generated::openglassbox_demo;
+    std::string const search = info::paths::data;
     size_t start = 0u;
     while (start <= search.size())
     {
-        size_t const end = search.find(':', start);
+        size_t const end = search.find(info::paths::separator, start);
         push(search.substr(start,
                            (end == std::string::npos) ? end : end - start));
         if (end == std::string::npos)

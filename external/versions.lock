@@ -1,0 +1,14 @@
+# Commits of the third parties of OpenGlassBox, written by MyMakefile:
+# commit this file. 'make update-externals' moves them to the last commit of
+# their VERSION.
+
+ImGuiFileDialog.LOCKED_REF := HEAD
+ImGuiFileDialog.LOCKED := d0e97b2adc3d3452d72c750c7305dc0291acd052
+backward-cpp.LOCKED_REF := HEAD
+backward-cpp.LOCKED := 78b2541c9d3c44bc81e2c5f4f34aa3503ac985de
+dbg-macro.LOCKED_REF := HEAD
+dbg-macro.LOCKED := a94fa67eca61e245cf33bdd340110329ea9f1b05
+imgui.LOCKED_REF := docking
+imgui.LOCKED := d682dc41f58b98c9343ffbaa7d94f07e9024b3ca
+implot.LOCKED_REF := HEAD
+implot.LOCKED := 72de27832d1e6299bcc930ce01073d899d420392

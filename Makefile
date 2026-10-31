@@ -1,3 +1,4 @@
+###############################################################################
 # SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-OpenGlassBox-Commercial
 # Copyright (c) 2020-2026 Quentin Quadrat
 #
@@ -5,36 +6,32 @@
 # for users who cannot use the GPL, under a commercial license.
 # See LICENSING.md for details.
 
-# Location of the project directory and Makefiles
-#
-P := .
-M := $(P)/.makefile
+PROJECT_NAME := OpenGlassBox
+PROJECT_VERSION := 0.2.0
+CXX_STANDARD := c++17
 
-###################################################
-# Project definition
-#
-include $(P)/Makefile.common
-TARGET_NAME := $(PROJECT_NAME)
-TARGET_DESCRIPTION := An open source implementation of the SimCity 2013 simulation engine GlassBox
-include $(M)/project/Makefile
+# -O2 with debug symbols and assertions kept. A city the size of Chicago runs
+# its rules over three hundred thousand cells per tick, which an -O0 build
+# cannot keep up with, and the stack traces of the demo still name their lines.
+# Use COMPILATION_MODE=debug to step through the code, =release to ship.
+COMPILATION_MODE ?= normal
 
-###################################################
-# Compile shared and static libraries
+###############################################################################
+# The simulation engine, as static and shared libraries.
 #
-LIB_FILES := $(call rwildcard,src,*.cpp)
-INCLUDES := $(P)/include
-VPATH := $(P)/src
+TARGETS := OpenGlassBox
+OpenGlassBox.TYPE := library
+OpenGlassBox.DESCRIPTION := An open source implementation of the SimCity 2013 simulation engine GlassBox
+OpenGlassBox.SOURCES := src/**/*.cpp
+OpenGlassBox.PUBLIC_INCLUDES := include
 
-###################################################
+###############################################################################
+# The other targets, each declared in the directory of its sources.
+#
+SUBMAKEFILES := external/external.mk utils/utils.mk demo/demo.mk tests/tests.mk
+
+###############################################################################
 # Generic Makefile rules
 #
-include $(M)/rules/Makefile
-
-###################################################
-# Extra rules
-#
-post-build:: build-demo
-
-.PHONY: build-demo
-build-demo: $(TARGET_STATIC_LIB_NAME)
-	$(Q)$(MAKE) --no-print-directory --directory=demo all
+M ?= .makefile
+include $(M)/MyMakefile.mk
