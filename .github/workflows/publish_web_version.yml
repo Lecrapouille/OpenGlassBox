@@ -8,14 +8,21 @@ on:
     branches:
       - master
 
+# GitHub Pages serves the page from an artifact of the run (no gh-pages
+# branch): Settings > Pages > Source must be "GitHub Actions".
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
 jobs:
   # A page opened alone in a browser needs the plain Emscripten build. The
   # ExaequOS build only runs inside the ExaequOS desktop (see build_exaequos).
   build_html5:
-    name: Publish on gh-pages
+    name: Build the web demo
     runs-on: ubuntu-22.04
-    permissions:
-      contents: write
     steps:
       - name: Install system packages
         run: |
@@ -33,27 +40,34 @@ jobs:
         run: |
           emmake make
           emmake make -s ci-info >> "$GITHUB_OUTPUT"
-      - name: Deploy
+      # The old address (OpenGlassBox-demo.html) keeps working; index.html
+      # opens the demo at the root of the site too.
+      - name: Gather the page
         run: |
-          git config --global user.name 'GitHub CI'
-          git config --global user.email 'github-ci@users.noreply.github.com'
-          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
-          git fetch origin gh-pages || true
-          if git show-ref --verify --quiet refs/remotes/origin/gh-pages; then
-            git checkout gh-pages
-          else
-            git checkout --orphan gh-pages
-            git rm -rf . >/dev/null 2>&1 || true
-          fi
-          cp ${{ steps.build.outputs.build }}/bin/OpenGlassBox-demo.* .
-          touch .nojekyll
-          git add .nojekyll OpenGlassBox-demo.*
-          if git diff --cached --quiet; then
-            echo "Nothing new to publish"
-          else
-            git commit -m "Automated commit"
-            git push -u origin gh-pages
-          fi
+          mkdir -p site
+          cp ${{ steps.build.outputs.build }}/bin/OpenGlassBox-demo.* site/
+          cp site/OpenGlassBox-demo.html site/index.html
+          touch site/.nojekyll
+          ls -la site
+      - name: Keep the page for GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy_html5:
+    name: Publish on GitHub Pages
+    needs: build_html5
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
 
   # The image sets EXAEQUOS and puts emscripten-exa on PATH. `make` then
   # writes the demo, kept as an artifact of the run.
