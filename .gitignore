@@ -7,7 +7,6 @@ ci-artifacts/
 release/
 doc/code-coverage/*
 doc/doxygen/*
-external/*/
 compile_commands.json
 
 # Prerequisites
