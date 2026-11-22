@@ -91,18 +91,19 @@ jobs:
       - name: Install MSYS2
         uses: msys2/setup-msys2@v2
         with:
-          msystem: MINGW64
+          msystem: UCRT64
           install: >-
-            mingw-w64-x86_64-toolchain
             git
-            mingw-w64-x86_64-cmake
-            mingw-w64-x86_64-ninja
-            mingw-w64-x86_64-bc
-            mingw-w64-x86_64-pkg-config
-            mingw-w64-x86_64-glfw
-            mingw-w64-x86_64-glew
-            mingw-w64-x86_64-gtest
-            mingw-w64-x86_64-make
+            bc
+          pacboy: >-
+            toolchain:p
+            cmake:p
+            ninja:p
+            pkgconf:p
+            glfw:p
+            glew:p
+            gtest:p
+            make:p
 
       - name: Describe the build
         id: info
