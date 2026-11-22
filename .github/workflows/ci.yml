@@ -16,11 +16,6 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# The logs of GitHub show the colors of MyMakefile, which turns them off by
-# itself when its output is not a terminal.
-env:
-  COLORS: 1
-
 jobs:
   # ============================================================================
   # Linux
@@ -37,24 +32,12 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Cache the third parties
-        uses: actions/cache@v4
+      - name: Install MyMakefile, the packages and Google Test
+        id: mymakefile
+        uses: ./.makefile/.github/actions/setup
         with:
-          path: ~/.cache/mymakefile
-          key: mymakefile-${{ runner.os }}-${{ hashFiles('external/versions.lock') }}
-
-      - name: Install packages
-        run: |
-          sudo apt-get update
-          sudo apt-get install pkg-config libdw-dev lcov libglfw3-dev libglew-dev libgl1-mesa-dev
-
-      - name: Download, configure and install Google test
-        run: |
-          wget https://github.com/google/googletest/releases/download/v1.17.0/googletest-1.17.0.tar.gz
-          tar xf googletest-1.17.0.tar.gz
-          cd googletest-1.17.0
-          cmake -DBUILD_SHARED_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON .
-          sudo make install
+          apt: libdw-dev lcov libglfw3-dev libglew-dev libgl1-mesa-dev
+          gtest: 1.17.0
 
       - name: Describe the build
         id: info
@@ -81,6 +64,9 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: read
+    defaults:
+      run:
+        shell: msys2 {0}
 
     steps:
       - name: Checkout
@@ -88,34 +74,21 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install MSYS2
-        uses: msys2/setup-msys2@v2
+      - name: Install MyMakefile, the packages and Google Test
+        id: mymakefile
+        uses: ./.makefile/.github/actions/setup
         with:
-          msystem: UCRT64
-          install: >-
-            git
-            bc
-          pacboy: >-
-            toolchain:p
-            cmake:p
-            ninja:p
-            pkgconf:p
-            glfw:p
-            glew:p
-            gtest:p
-            make:p
+          msys2: ninja:p glfw:p glew:p bc
+          gtest: 1.17.0
 
       - name: Describe the build
         id: info
-        shell: msys2 {0}
         run: mingw32-make -s ci-info >> "$GITHUB_OUTPUT"
 
       - name: Compile OpenGlassBox and run the non regression tests
-        shell: msys2 {0}
         run: mingw32-make ci
 
       - name: Verify Windows runtime dependencies
-        shell: msys2 {0}
         run: |
           failed=0
           while read -r dll; do
@@ -130,7 +103,6 @@ jobs:
           exit "$failed"
 
       - name: Gather the build artifacts
-        shell: msys2 {0}
         run: mingw32-make dist
 
       - name: Upload Windows artifacts
@@ -155,24 +127,12 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Cache the third parties
-        uses: actions/cache@v4
+      - name: Install MyMakefile, the packages and Google Test
+        id: mymakefile
+        uses: ./.makefile/.github/actions/setup
         with:
-          path: ~/.cache/mymakefile
-          key: mymakefile-${{ runner.os }}-${{ hashFiles('external/versions.lock') }}
-
-      - name: Install packages
-        run: |
-          brew install make pkg-config lcov glfw glew
-          echo "PKG_CONFIG_PATH=$(brew --prefix)/lib/pkgconfig:$(brew --prefix)/share/pkgconfig" >> "$GITHUB_ENV"
-
-      - name: Download, configure and install Google test
-        run: |
-          wget https://github.com/google/googletest/releases/download/v1.17.0/googletest-1.17.0.tar.gz
-          tar xf googletest-1.17.0.tar.gz
-          cd googletest-1.17.0
-          cmake -DBUILD_SHARED_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON .
-          sudo make install
+          brew: lcov glfw glew
+          gtest: 1.17.0
 
       # The make of macOS is GNU Make 3.81: MyMakefile needs the gmake of brew.
       - name: Describe the build

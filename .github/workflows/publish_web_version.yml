@@ -24,16 +24,14 @@ jobs:
     name: Build the web demo
     runs-on: ubuntu-22.04
     steps:
-      - name: Install system packages
-        run: |
-          sudo apt-get update
-          sudo apt-get install pkg-config
-      - name: Install Emscripten
-        uses: mymindstorm/setup-emsdk@v14
       - name: Checkout OpenGlassBox
         uses: actions/checkout@v6
         with:
           submodules: true
+      - name: Install MyMakefile and Emscripten
+        uses: ./.makefile/.github/actions/setup
+        with:
+          emscripten: true
       # emmake gives em++ as compiler: MyMakefile builds for Emscripten.
       - name: Compile OpenGlassBox-demo
         id: build
